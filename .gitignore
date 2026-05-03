@@ -1,0 +1,40 @@
+# Node
+node_modules/
+dist/
+build/
+.vite/
+.eslintcache
+.nyc_output/
+coverage/
+*.log
+
+# TypeScript build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Env
+.env
+.env.local
+
+# Misc
+.cache/
+public/build/
+*.local
+
+# Mac
+.DS_Store
+
+# Vite
+dist/
+
+# Ignore outputs
+*.tgz
+
+# Lockfiles (keep one if needed)
+# package-lock.json
+# yarn.lock

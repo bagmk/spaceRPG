@@ -1,0 +1,1311 @@
+import { memo, useEffect, useRef } from 'react';
+import { drawCluster } from '../canvas/drawCluster';
+import { drawCore } from '../canvas/drawCore';
+import { drawEffects } from '../canvas/drawEffects';
+import { drawParticles } from '../canvas/drawParticles';
+import { drawRogues } from '../canvas/drawRogues';
+import { drawStars } from '../canvas/drawStars';
+import { drawWake } from '../canvas/drawWake';
+import { ROGUE_TYPES, TUNING } from '../game/constants';
+import { getProgress } from '../game/formulas';
+import { getMechanic } from '../game/mechanics';
+import { getStageRogueColor, getStageRogueName } from '../canvas/stageSprites';
+import type {
+  AmbientParticle,
+  Burst,
+  CanvasWorld,
+  FloatingClickEvent,
+  Mote,
+  MoteCluster,
+  Rogue,
+  RogueTypeKey,
+  Shockwave,
+  Stage,
+  Star,
+  WakeTrail,
+} from '../game/types';
+import { useGameLoop } from '../hooks/useGameLoop';
+
+interface CollisionPayload {
+  x: number;
+  y: number;
+  bonus: number;
+  entropyBonus: number;
+  tier: RogueTypeKey;
+  name: string;
+}
+
+interface EncounterPayload {
+  name: string;
+  color: string;
+}
+
+interface ParticleFieldProps {
+  stage: Stage;
+  quanta: number;
+  autoRate: number;
+  effectiveThreshold: number;
+  totalClicks: number;
+  imploding: boolean;
+  interactionLocked: boolean;
+  lastClickEvent: FloatingClickEvent | null;
+  stageTransitionStartedAt: number | null;
+  onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
+  onEncounter: (payload: EncounterPayload) => void;
+  onCollision: (payload: CollisionPayload) => void;
+}
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function createWorld(width: number, height: number, stage: Stage): CanvasWorld {
+  const world: CanvasWorld = {
+    coreVX: 0,
+    coreVY: 0,
+    driftAngle: Math.random() * Math.PI * 2,
+    stars: createStars(width, height),
+    particles: createParticles(width, height, stage),
+    flyers: [],
+    bursts: [],
+    wakeTrails: [],
+    rogues: [],
+    shockwaves: [],
+    rogueCooldown: TUNING.FIRST_ENCOUNTER_DELAY_MS,
+    nextId: 1,
+    cluster: createMoteCluster(),
+    moteNeighborCache: new Map<number, number[]>(),
+    moteLastNeighborRefresh: 0,
+    moteLastAutoSpawnAt: 0,
+    mechanicState: {},
+  };
+  getMechanic(stage.mechanic).init?.(world);
+  return world;
+}
+
+function createMoteCluster(): MoteCluster {
+  return {
+    motes: [],
+    nextMoteId: 1,
+    physicalRadius: TUNING.MOTE_CLUSTER_MIN_RADIUS,
+    diskTilt: TUNING.BLACKHOLE_DISK_TILT,
+    diskRotation: 0,
+    earthRotation: 0,
+  };
+}
+
+function createStars(width: number, height: number): Star[] {
+  return TUNING.STAR_LAYERS.flatMap((layer) =>
+    Array.from({ length: layer.count }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: randomBetween(layer.rMin, layer.rMax),
+      a: randomBetween(layer.alphaMin, layer.alphaMax),
+      depth: layer.depth,
+      twinkle: Math.random() * Math.PI * 2,
+    })),
+  );
+}
+
+function spawnParticleAtEdge(
+  particle: AmbientParticle,
+  width: number,
+  height: number,
+): AmbientParticle {
+  const cx = width / 2;
+  const cy = height / 2;
+  const angle = Math.random() * Math.PI * 2;
+  const radius =
+    Math.max(width, height) * TUNING.PARTICLE_EDGE_RADIUS_FRAC +
+    Math.random() * TUNING.PARTICLE_EDGE_VARIANCE;
+  const tangentialVelocity = 0.9 + Math.random() * 0.7;
+  const direction = Math.random() < 0.5 ? 1 : -1;
+  return {
+    ...particle,
+    x: cx + Math.cos(angle) * radius,
+    y: cy + Math.sin(angle) * radius,
+    vx: -Math.sin(angle) * tangentialVelocity * direction,
+    vy: Math.cos(angle) * tangentialVelocity * direction,
+  };
+}
+
+function createParticles(width: number, height: number, stage: Stage): AmbientParticle[] {
+  return Array.from({ length: TUNING.AMBIENT_PARTICLE_COUNT }, () => {
+    const particle = spawnParticleAtEdge(
+      {
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: 0,
+        vy: 0,
+        r: Math.random() * 2 + 0.5,
+        color: stage.particleColors[Math.floor(Math.random() * stage.particleColors.length)],
+        phase: Math.random() * Math.PI * 2,
+        alpha: Math.random() * 0.5 + 0.4,
+      },
+      width,
+      height,
+    );
+    return {
+      ...particle,
+      x: Math.random() * width,
+      y: Math.random() * height,
+    };
+  });
+}
+
+function pickRogueType(): RogueTypeKey {
+  const keys = Object.keys(ROGUE_TYPES) as RogueTypeKey[];
+  const totalWeight = keys.reduce((sum, key) => sum + ROGUE_TYPES[key].weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (const key of keys) {
+    roll -= ROGUE_TYPES[key].weight;
+    if (roll <= 0) {
+      return key;
+    }
+  }
+  return 'minor';
+}
+
+function createShockwave(color: string): Shockwave {
+  return { startedAt: performance.now(), color };
+}
+
+function createBurstSet(
+  x: number,
+  y: number,
+  count: number,
+  color: string,
+  speedBase: number,
+): Burst[] {
+  return Array.from({ length: count }, (_, index) => {
+    const angle = (index / count) * Math.PI * 2 + Math.random() * 0.4;
+    const speed = speedBase + Math.random() * 3;
+    return {
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      r: 2 + Math.random() * 2.5,
+      life: 1,
+      color,
+    };
+  });
+}
+
+function getMoteRadius(mass: number): number {
+  return TUNING.MOTE_BASE_RADIUS + Math.sqrt(mass) * TUNING.MOTE_RADIUS_PER_MASS;
+}
+
+function getClusterTargetRadius(stage: Stage, moteCount: number, progress: number): number {
+  const growth = Math.sqrt(Math.max(1, moteCount));
+  switch (stage.clusterMode) {
+    case 'galaxy':
+      return Math.min(
+        TUNING.GALAXY_DISK_MAX_RADIUS,
+        TUNING.GALAXY_DISK_MIN_RADIUS +
+          growth * TUNING.GALAXY_DISK_GROW_PER_SQRT_MOTE +
+          progress * 42,
+      );
+    case 'planetary':
+      return Math.min(
+        TUNING.PLANETARY_ORBIT_MAX_RADIUS,
+        TUNING.PLANETARY_ORBIT_MIN_RADIUS +
+          growth * TUNING.PLANETARY_ORBIT_GROW_PER_SQRT_MOTE +
+          progress * 30,
+      );
+    case 'redGiant':
+      return Math.min(
+        TUNING.MOTE_CLUSTER_MAX_RADIUS + 48,
+        58 + growth * (TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE + 2.4) + progress * 76,
+      );
+    case 'remnant':
+      return Math.min(136, 32 + growth * 5.8 + progress * 20);
+    case 'heatDeath':
+      return Math.min(TUNING.MOTE_CLUSTER_MAX_RADIUS + 70, 48 + growth * 9.4 + progress * 55);
+    case 'blackHole':
+      return Math.min(
+        TUNING.BLACKHOLE_DISK_OUTER_MAX,
+        TUNING.BLACKHOLE_DISK_OUTER_BASE + moteCount * TUNING.BLACKHOLE_DISK_GROW_PER_MOTE,
+      );
+    case 'lifeSurface':
+      return TUNING.LIFE_SURFACE_R;
+    case 'generic':
+      return Math.min(
+        TUNING.MOTE_CLUSTER_MAX_RADIUS,
+        TUNING.MOTE_CLUSTER_MIN_RADIUS +
+          growth * TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE +
+          progress * 28,
+      );
+  }
+}
+
+function pickStageColor(stage: Stage): string {
+  return stage.particleColors[Math.floor(Math.random() * stage.particleColors.length)] ?? stage.accent;
+}
+
+function createBaseMote(
+  cluster: MoteCluster,
+  stage: Stage,
+  x: number,
+  y: number,
+  vx: number,
+  vy: number,
+  now: number,
+): Mote {
+  const hue = Math.random();
+  return {
+    id: cluster.nextMoteId++,
+    x,
+    y,
+    vx,
+    vy,
+    mass: TUNING.MOTE_BASE_MASS,
+    r: getMoteRadius(TUNING.MOTE_BASE_MASS),
+    color: pickStageColor(stage),
+    hue,
+    age: 0,
+    bornAt: now,
+  };
+}
+
+function addMoteToCluster(cluster: MoteCluster, stage: Stage, mote: Mote): void {
+  if (cluster.motes.length < TUNING.MOTE_MAX) {
+    cluster.motes.push(mote);
+    return;
+  }
+  enrichExistingMote(cluster, stage, mote);
+}
+
+function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote): void {
+  if (cluster.motes.length === 0) {
+    cluster.motes.push(incoming);
+    return;
+  }
+
+  let target =
+    stage.clusterMode === 'lifeSurface'
+      ? cluster.motes[Math.floor(Math.random() * cluster.motes.length)]
+      : cluster.motes[0];
+
+  if (stage.clusterMode !== 'lifeSurface') {
+    let bestDistance = Number.POSITIVE_INFINITY;
+    cluster.motes.forEach((mote) => {
+      const dx = mote.x - incoming.x;
+      const dy = mote.y - incoming.y;
+      const distance = dx * dx + dy * dy;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        target = mote;
+      }
+    });
+  }
+
+  const totalMass = Math.min(TUNING.MOTE_MERGE_MAX_MASS * 2.2, target.mass + incoming.mass * 0.55);
+  const blend = incoming.mass / Math.max(target.mass + incoming.mass, 1);
+  target.x += (incoming.x - target.x) * blend * 0.25;
+  target.y += (incoming.y - target.y) * blend * 0.25;
+  target.vx += incoming.vx * 0.35;
+  target.vy += incoming.vy * 0.35;
+  target.mass = totalMass;
+  target.r = getMoteRadius(totalMass);
+  target.age = Math.max(target.age, incoming.age);
+
+  if (stage.clusterMode === 'lifeSurface') {
+    if (incoming.surfaceLat !== undefined && Math.random() < 0.35) {
+      target.surfaceLat = incoming.surfaceLat;
+      target.surfaceLon = incoming.surfaceLon;
+    }
+    if (Math.random() < 0.7) {
+      target.surfaceKind = 'plant';
+      target.color = '#65e88f';
+    }
+  }
+}
+
+function createSurfaceMote(cluster: MoteCluster, stage: Stage, cx: number, cy: number, now: number): Mote {
+  const count = cluster.motes.length;
+  const roll = Math.random();
+  const surfaceKind: Mote['surfaceKind'] =
+    count > 90 && roll > 0.78 ? 'city' : count > 38 && roll > 0.86 ? 'water' : 'plant';
+  return {
+    ...createBaseMote(cluster, stage, cx, cy, 0, 0, now),
+    surfaceLat: (Math.random() - 0.5) * Math.PI * 0.86,
+    surfaceLon: Math.random() * Math.PI * 2,
+    surfaceKind,
+    color:
+      surfaceKind === 'city'
+        ? '#ffeeaa'
+        : surfaceKind === 'water'
+          ? '#9de8ff'
+          : '#65e88f',
+  };
+}
+
+function createPhotonMote(
+  cluster: MoteCluster,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  now: number,
+  clickX?: number,
+  clickY?: number,
+): Mote {
+  const clickAngle = Math.atan2((clickY ?? cy) - cy, (clickX ?? cx + 1) - cx);
+  const angle =
+    Math.random() < 0.45
+      ? clickAngle + (Math.random() - 0.5) * 1.6
+      : Math.random() * Math.PI * 2;
+  const outer = Math.max(TUNING.BLACKHOLE_DISK_OUTER_BASE, cluster.physicalRadius);
+  const spawnR = outer * (0.78 + Math.random() * 0.38);
+  const x = cx + Math.cos(angle) * spawnR;
+  const y = cy + Math.sin(angle) * spawnR;
+  const mote = createBaseMote(
+    cluster,
+    stage,
+    x,
+    y,
+    -Math.sin(angle) * 1.4,
+    Math.cos(angle) * 1.4,
+    now,
+  );
+  mote.color = Math.random() > 0.42 ? stage.coreColor : '#fff0c8';
+  mote.orbitRadius = Math.random() * Math.max(36, outer - TUNING.BLACKHOLE_DISK_INNER);
+  mote.orbitAngle = angle;
+  mote.spiralPhase = Math.random() * Math.PI * 2;
+  return mote;
+}
+
+function spawnMotesAtClick(
+  cluster: MoteCluster,
+  stage: Stage,
+  clickX: number,
+  clickY: number,
+  cx: number,
+  cy: number,
+  width: number,
+  height: number,
+  isCrit: boolean,
+  now: number,
+): void {
+  const count = (isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0);
+  for (let i = 0; i < count; i += 1) {
+    if (stage.clusterMode === 'lifeSurface') {
+      addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now));
+      continue;
+    }
+    if (stage.clusterMode === 'blackHole') {
+      addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now, clickX, clickY));
+      continue;
+    }
+
+    const clickAngle = Math.atan2(clickY - cy, clickX - cx);
+    const angle =
+      Math.random() < 0.32
+        ? clickAngle + (Math.random() - 0.5) * Math.PI * 1.35
+        : Math.random() * Math.PI * 2;
+    const clusterRadius = Math.max(TUNING.MOTE_CLUSTER_MIN_RADIUS, cluster.physicalRadius);
+    const spawnSpread = Math.max(8, Math.max(width, height) * TUNING.MOTE_SPAWN_RADIUS_FRAC * 0.05);
+    const radius = clusterRadius * (0.16 + Math.random() * 0.94);
+    const x = cx + Math.cos(angle) * radius + (Math.random() - 0.5) * spawnSpread;
+    const y = cy + Math.sin(angle) * radius + (Math.random() - 0.5) * spawnSpread;
+    const mote = createBaseMote(
+      cluster,
+      stage,
+      x,
+      y,
+      Math.cos(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
+      Math.sin(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
+      now,
+    );
+    if (stage.clusterMode === 'planetary') {
+      const growthRadius = getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
+      mote.orbitRadius = 48 + Math.random() * Math.max(38, growthRadius - 36);
+      mote.orbitAngle = Math.atan2(y - cy, x - cx);
+    }
+    if (stage.clusterMode === 'galaxy') {
+      const dx = x - cx;
+      const dy = y - cy;
+      const d = Math.max(1, Math.hypot(dx, dy));
+      mote.vx += (-dy / d) * 1.15;
+      mote.vy += (dx / d) * 1.15;
+      mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
+      mote.spiralPhase = Math.random() * Math.PI * 2;
+    }
+    addMoteToCluster(cluster, stage, mote);
+  }
+}
+
+function spawnAutoMote(
+  cluster: MoteCluster,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  now: number,
+): void {
+  if (stage.clusterMode === 'lifeSurface') {
+    addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now));
+    return;
+  }
+  if (stage.clusterMode === 'blackHole') {
+    addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now));
+    return;
+  }
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 28 + Math.random() * 86;
+  const mote = createBaseMote(
+    cluster,
+    stage,
+    cx + Math.cos(angle) * radius,
+    cy + Math.sin(angle) * radius,
+    -Math.sin(angle) * 0.7,
+    Math.cos(angle) * 0.7,
+    now,
+  );
+  if (stage.clusterMode === 'planetary') {
+    const growthRadius = getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
+    mote.orbitRadius = 48 + Math.random() * Math.max(38, growthRadius - 36);
+    mote.orbitAngle = angle;
+  }
+  if (stage.clusterMode === 'galaxy') {
+    mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
+  }
+  addMoteToCluster(cluster, stage, mote);
+}
+
+function resetForStage(world: CanvasWorld, width: number, height: number, stage: Stage): CanvasWorld {
+  const nextWorld = {
+    ...createWorld(width, height, stage),
+    nextId: world.nextId,
+  };
+  getMechanic(stage.mechanic).init?.(nextWorld);
+  return nextWorld;
+}
+
+function stepClusterPhysics(
+  world: CanvasWorld,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  dt: number,
+  now: number,
+  progress: number,
+): void {
+  const cluster = world.cluster;
+  const motes = cluster.motes;
+  if (motes.length === 0) {
+    return;
+  }
+
+  const shouldRefreshNeighbors =
+    now - world.moteLastNeighborRefresh >= TUNING.MOTE_NEIGHBOR_REFRESH_MS;
+  if (shouldRefreshNeighbors) {
+    refreshNeighborCache(motes, world.moteNeighborCache);
+    world.moteLastNeighborRefresh = now;
+    if (motes.length > TUNING.MOTE_MAX * 0.7) {
+      mergeCloseMotes(cluster, world.moteNeighborCache);
+      world.moteNeighborCache.clear();
+    }
+  }
+
+  cluster.diskRotation = (cluster.diskRotation ?? 0) + dt * 0.0011;
+  cluster.earthRotation = (cluster.earthRotation ?? 0) + dt * TUNING.LIFE_EARTH_ROT_RATE;
+
+  const dtScale = Math.min(2.2, Math.max(0.2, dt / 16.67));
+  const clusterMass = motes.reduce((sum, mote) => sum + mote.mass, 0);
+  const targetClusterRadius = getClusterTargetRadius(stage, Math.max(motes.length, clusterMass), progress);
+  cluster.physicalRadius += (targetClusterRadius - cluster.physicalRadius) * 0.045 * dtScale;
+  const moteById = new Map(motes.map((mote) => [mote.id, mote]));
+
+  motes.forEach((mote) => {
+    applyAnchorForce(mote, stage, cx, cy, cluster.physicalRadius, dtScale);
+    applyMoteWander(mote, stage, cx, cy, now, dtScale);
+    const neighbors = world.moteNeighborCache.get(mote.id) ?? [];
+    neighbors.forEach((neighborId) => {
+      const neighbor = moteById.get(neighborId);
+      if (!neighbor) {
+        return;
+      }
+      const dx = neighbor.x - mote.x;
+      const dy = neighbor.y - mote.y;
+      const d = Math.max(1, Math.hypot(dx, dy));
+      const preferredDistance = mote.r + neighbor.r + TUNING.MOTE_REPULSION_DISTANCE;
+      if (d < preferredDistance) {
+        const pressure = ((preferredDistance - d) / preferredDistance) * TUNING.MOTE_REPULSION_STRENGTH * dtScale;
+        mote.vx -= (dx / d) * pressure;
+        mote.vy -= (dy / d) * pressure;
+      }
+      const dSq = d * d + 25;
+      const force = (TUNING.MOTE_PEER_GRAVITY * neighbor.mass * dtScale) / dSq;
+      mote.vx += dx * force;
+      mote.vy += dy * force;
+    });
+
+    mote.vx *= TUNING.MOTE_DAMPENING;
+    mote.vy *= TUNING.MOTE_DAMPENING;
+    const speed = Math.hypot(mote.vx, mote.vy);
+    if (speed > TUNING.MOTE_MAX_SPEED) {
+      mote.vx = (mote.vx / speed) * TUNING.MOTE_MAX_SPEED;
+      mote.vy = (mote.vy / speed) * TUNING.MOTE_MAX_SPEED;
+    }
+    mote.x += mote.vx * dtScale;
+    mote.y += mote.vy * dtScale;
+    mote.age += dt;
+    mote.orbitAngle = Math.atan2(mote.y - cy, mote.x - cx);
+  });
+}
+
+function refreshNeighborCache(motes: Mote[], cache: Map<number, number[]>): void {
+  cache.clear();
+  motes.forEach((mote) => {
+    const neighbors = motes
+      .filter((other) => other.id !== mote.id)
+      .map((other) => {
+        const dx = other.x - mote.x;
+        const dy = other.y - mote.y;
+        return { id: other.id, distanceSq: dx * dx + dy * dy };
+      })
+      .sort((a, b) => a.distanceSq - b.distanceSq)
+      .slice(0, TUNING.MOTE_NEIGHBOR_K)
+      .map((entry) => entry.id);
+    cache.set(mote.id, neighbors);
+  });
+}
+
+function applyAnchorForce(
+  mote: Mote,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  clusterRadius: number,
+  dtScale: number,
+): void {
+  const dx = cx - mote.x;
+  const dy = cy - mote.y;
+  const dist = Math.hypot(dx, dy) + 1;
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  switch (stage.clusterMode) {
+    case 'generic': {
+      const targetR = clusterRadius * Math.pow(mote.hue, 1.75) * 0.96;
+      const radial = (dist - targetR) / Math.max(targetR, 20);
+      mote.vx += nx * radial * TUNING.MOTE_ANCHOR_GRAVITY * 0.82 * dtScale;
+      mote.vy += ny * radial * TUNING.MOTE_ANCHOR_GRAVITY * 0.82 * dtScale;
+      break;
+    }
+    case 'galaxy': {
+      const targetR = Math.min(clusterRadius, (mote.orbitRadius ?? clusterRadius * mote.hue) + clusterRadius * 0.18);
+      const radial = (dist - targetR) / Math.max(targetR, 34);
+      mote.vx += nx * radial * TUNING.MOTE_ANCHOR_GRAVITY * 0.74 * dtScale;
+      mote.vy += ny * radial * TUNING.MOTE_ANCHOR_GRAVITY * 0.74 * dtScale;
+      mote.vx += -ny * TUNING.GALAXY_TANGENTIAL_BOOST * (50 / dist) * dtScale;
+      mote.vy += nx * TUNING.GALAXY_TANGENTIAL_BOOST * (50 / dist) * dtScale;
+      mote.vy *= TUNING.GALAXY_FLAT_BIAS;
+      mote.y += (cy + (mote.y - cy) * 0.58 - mote.y) * 0.018 * dtScale;
+      break;
+    }
+    case 'planetary': {
+      const orbitGrowth = Math.max(0, clusterRadius - TUNING.PLANETARY_ORBIT_MIN_RADIUS);
+      const targetR = Math.min(
+        TUNING.PLANETARY_ORBIT_MAX_RADIUS,
+        (mote.orbitRadius ?? 88) + orbitGrowth * (0.22 + mote.hue * 0.58),
+      );
+      const radial = (dist - targetR) / targetR;
+      mote.vx += nx * radial * TUNING.PLANETARY_ORBIT_LOCK * dtScale;
+      mote.vy += ny * radial * TUNING.PLANETARY_ORBIT_LOCK * dtScale;
+      mote.vx += -ny * 0.42 * dtScale;
+      mote.vy += nx * 0.42 * dtScale;
+      break;
+    }
+    case 'lifeSurface':
+      mote.x = cx;
+      mote.y = cy;
+      mote.vx = 0;
+      mote.vy = 0;
+      break;
+    case 'redGiant': {
+      const targetR = clusterRadius * (mote.hue < 0.5 ? 0.34 + mote.hue * 0.48 : 0.85 + mote.hue * 0.36);
+      const radial = (dist - targetR) / Math.max(targetR, 32);
+      const strength = mote.hue < 0.5 ? 0.54 : 0.36;
+      mote.vx += nx * radial * strength * dtScale;
+      mote.vy += ny * radial * strength * dtScale;
+      break;
+    }
+    case 'remnant': {
+      const targetR = clusterRadius * (0.12 + mote.hue * 0.5);
+      const radial = (dist - targetR) / Math.max(targetR, 36);
+      mote.vx += nx * radial * 0.22 * dtScale;
+      mote.vy += ny * radial * 0.22 * dtScale;
+      break;
+    }
+    case 'blackHole': {
+      const inner = TUNING.BLACKHOLE_DISK_INNER;
+      if (dist > inner * 1.45) {
+        const force = 2.5 / Math.max(dist, 30);
+        mote.vx += nx * force * 30 * dtScale;
+        mote.vy += ny * force * 30 * dtScale;
+        mote.vx += -ny * 1.2 * (60 / dist) * dtScale;
+        mote.vy += nx * 1.2 * (60 / dist) * dtScale;
+      } else {
+        const targetR = Math.min(clusterRadius * 0.94, inner * 1.08 + (mote.orbitRadius ?? 0));
+        const radial = (dist - targetR) / targetR;
+        mote.vx += nx * radial * 1.2 * dtScale;
+        mote.vy += ny * radial * 1.2 * dtScale;
+        mote.vx += -ny * 1.65 * dtScale;
+        mote.vy += nx * 1.65 * dtScale;
+      }
+      break;
+    }
+    case 'heatDeath':
+      mote.vx += (Math.random() - 0.5) * 0.24 * dtScale;
+      mote.vy += (Math.random() - 0.5) * 0.24 * dtScale;
+      if (dist < clusterRadius * (0.35 + mote.hue * 0.62)) {
+        mote.vx -= nx * 0.035 * dtScale;
+        mote.vy -= ny * 0.035 * dtScale;
+      }
+      break;
+  }
+}
+
+function applyMoteWander(
+  mote: Mote,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  now: number,
+  dtScale: number,
+): void {
+  if (stage.clusterMode === 'lifeSurface' || stage.clusterMode === 'planetary') {
+    return;
+  }
+
+  const dx = mote.x - cx;
+  const dy = mote.y - cy;
+  const dist = Math.max(1, Math.hypot(dx, dy));
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const waveA = Math.sin(now * 0.0011 + mote.id * 1.731);
+  const waveB = Math.cos(now * 0.00083 + mote.id * 2.417);
+
+  switch (stage.clusterMode) {
+    case 'generic':
+      mote.vx += (-ny * 0.026 + nx * waveA * 0.012 + waveB * 0.006) * dtScale;
+      mote.vy += (nx * 0.026 + ny * waveB * 0.012 - waveA * 0.006) * dtScale;
+      break;
+    case 'galaxy':
+      mote.vx += (-ny * 0.018 + waveB * 0.004) * dtScale;
+      mote.vy += (nx * 0.018 + waveA * 0.004) * dtScale;
+      break;
+    case 'redGiant':
+      mote.vx += (nx * waveA * 0.032 - ny * 0.012) * dtScale;
+      mote.vy += (ny * waveB * 0.032 + nx * 0.012) * dtScale;
+      break;
+    case 'remnant':
+      mote.vx += waveA * 0.004 * dtScale;
+      mote.vy += waveB * 0.004 * dtScale;
+      break;
+    case 'blackHole':
+      mote.vx += -ny * 0.04 * dtScale;
+      mote.vy += nx * 0.04 * dtScale;
+      break;
+    case 'heatDeath':
+      break;
+  }
+}
+
+function mergeCloseMotes(cluster: MoteCluster, neighborCache: Map<number, number[]>): void {
+  const byId = new Map(cluster.motes.map((mote) => [mote.id, mote]));
+  const removed = new Set<number>();
+
+  cluster.motes.forEach((mote) => {
+    if (removed.has(mote.id) || mote.mass >= TUNING.MOTE_MERGE_MAX_MASS) {
+      return;
+    }
+    const neighbors = neighborCache.get(mote.id) ?? [];
+    const neighbor = neighbors
+      .map((id) => byId.get(id))
+      .find((candidate): candidate is Mote => {
+        if (!candidate || removed.has(candidate.id) || candidate.mass >= TUNING.MOTE_MERGE_MAX_MASS) {
+          return false;
+        }
+        return Math.hypot(candidate.x - mote.x, candidate.y - mote.y) <= TUNING.MOTE_MERGE_DISTANCE + (mote.r + candidate.r) * 0.18;
+      });
+    if (!neighbor) {
+      return;
+    }
+
+    const totalMass = Math.min(TUNING.MOTE_MERGE_MAX_MASS, mote.mass + neighbor.mass);
+    const blend = neighbor.mass / (mote.mass + neighbor.mass);
+    mote.x += (neighbor.x - mote.x) * blend;
+    mote.y += (neighbor.y - mote.y) * blend;
+    mote.vx += (neighbor.vx - mote.vx) * blend;
+    mote.vy += (neighbor.vy - mote.vy) * blend;
+    mote.mass = totalMass;
+    mote.r = getMoteRadius(totalMass);
+    removed.add(neighbor.id);
+  });
+
+  if (removed.size > 0) {
+    cluster.motes = cluster.motes.filter((mote) => !removed.has(mote.id));
+  }
+}
+
+function createRogue(world: CanvasWorld, stage: Stage, width: number, height: number): Rogue {
+  const cx = width / 2;
+  const cy = height / 2;
+  const speed = Math.hypot(world.coreVX, world.coreVY);
+  const angle =
+    speed > 0.3 && Math.random() < TUNING.TRAVEL_DIRECTION_BIAS
+      ? Math.atan2(world.coreVY, world.coreVX) + (Math.random() - 0.5) * 1.2
+      : Math.random() * Math.PI * 2;
+  const radius = Math.max(width, height) * TUNING.ROGUE_SPAWN_RADIUS_FRAC;
+  const x = cx + Math.cos(angle) * radius;
+  const y = cy + Math.sin(angle) * radius;
+  const targetX = cx + (Math.random() - 0.5) * width * TUNING.ROGUE_TARGET_RECT_FRAC;
+  const targetY = cy + (Math.random() - 0.5) * height * TUNING.ROGUE_TARGET_RECT_FRAC;
+  const dx = targetX - x;
+  const dy = targetY - y;
+  const distance = Math.max(1, Math.hypot(dx, dy));
+  const typeKey = pickRogueType();
+  const type = ROGUE_TYPES[typeKey];
+  const moveSpeed = randomBetween(TUNING.ROGUE_SPEED_MIN, TUNING.ROGUE_SPEED_MAX);
+  const id = world.nextId + 1;
+  world.nextId = id;
+
+  return {
+    id,
+    stageId: stage.id,
+    typeKey,
+    x,
+    y,
+    vx: (dx / distance) * moveSpeed,
+    vy: (dy / distance) * moveSpeed,
+    r: type.r,
+    color: getStageRogueColor(stage, typeKey),
+    glowColor: stage.coreColor,
+    name: getStageRogueName(stage.id, typeKey),
+    bonus: Math.floor(stage.threshold * type.bonusMultiplier * (0.3 + Math.random() * 0.3)),
+    entropyBonus: type.entropyBonus,
+    age: 0,
+    spotted: false,
+    rotation: 0,
+  };
+}
+
+export const ParticleField = memo(function ParticleField({
+  stage,
+  quanta,
+  autoRate,
+  effectiveThreshold,
+  totalClicks,
+  imploding,
+  interactionLocked,
+  lastClickEvent,
+  stageTransitionStartedAt,
+  onGatherClick,
+  onEncounter,
+  onCollision,
+}: ParticleFieldProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const worldRef = useRef<CanvasWorld | null>(null);
+  const sizeRef = useRef({ width: 0, height: 0 });
+  const lastStageId = useRef(stage.id);
+  const lastClickId = useRef<number | null>(null);
+  const transitionExplosionAt = useRef<number | null>(null);
+  const mountedAt = useRef<number>(performance.now());
+  const dragPointerId = useRef<number | null>(null);
+
+  const applySteerNudge = (
+    rect: DOMRect,
+    clientX: number,
+    clientY: number,
+    strengthMultiplier = 1,
+  ) => {
+    const world = worldRef.current;
+    if (!world) {
+      return { x: 0, y: 0, hitRogue: false };
+    }
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const dx = x - cx;
+    const dy = y - cy;
+    const distance = Math.hypot(dx, dy);
+    const hitRogue = world.rogues.some((rogue) => {
+      const hitDistance = Math.hypot(x - rogue.x, y - rogue.y);
+      return hitDistance <= rogue.r + 10;
+    });
+    if (distance > 0) {
+      world.coreVX += (dx / distance) * TUNING.CLICK_NUDGE_STRENGTH * strengthMultiplier;
+      world.coreVY += (dy / distance) * TUNING.CLICK_NUDGE_STRENGTH * strengthMultiplier;
+      world.driftAngle = Math.atan2(dy, dx);
+    }
+    return { x, y, hitRogue };
+  };
+
+  useEffect(() => {
+    if (stageTransitionStartedAt === null) {
+      transitionExplosionAt.current = null;
+    }
+  }, [stageTransitionStartedAt]);
+
+  useEffect(() => {
+    console.log('[debug] ParticleField MOUNT stage', stage.id);
+    return () => console.log('[debug] ParticleField UNMOUNT stage', stage.id);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return undefined;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return undefined;
+    }
+
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = bounds.width * dpr;
+      canvas.height = bounds.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      sizeRef.current = { width: bounds.width, height: bounds.height };
+      if (!worldRef.current) {
+        worldRef.current = createWorld(bounds.width, bounds.height, stage);
+      } else {
+        worldRef.current.stars = createStars(bounds.width, bounds.height);
+      }
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, [stage]);
+
+  useEffect(() => {
+    const size = sizeRef.current;
+    if (!size.width || !size.height) {
+      return;
+    }
+    if (!worldRef.current) {
+      worldRef.current = createWorld(size.width, size.height, stage);
+      lastStageId.current = stage.id;
+      return;
+    }
+    if (lastStageId.current !== stage.id) {
+      worldRef.current = resetForStage(worldRef.current, size.width, size.height, stage);
+      lastStageId.current = stage.id;
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    if (!lastClickEvent || !worldRef.current || lastClickId.current === lastClickEvent.id) {
+      return;
+    }
+    lastClickId.current = lastClickEvent.id;
+    const { width, height } = sizeRef.current;
+    const cx = width / 2;
+    const cy = height / 2;
+    spawnMotesAtClick(
+      worldRef.current.cluster,
+      stage,
+      lastClickEvent.x,
+      lastClickEvent.y,
+      cx,
+      cy,
+      width,
+      height,
+      lastClickEvent.isCrit,
+      performance.now(),
+    );
+    worldRef.current.flyers.push({ x: lastClickEvent.x, y: lastClickEvent.y, life: 1 });
+    worldRef.current.bursts.push(
+      ...createBurstSet(
+        lastClickEvent.x,
+        lastClickEvent.y,
+        lastClickEvent.isCrit ? TUNING.CRIT_BURST_COUNT : TUNING.CLICK_BURST_COUNT,
+        lastClickEvent.isCrit ? '#ffffff' : stage.coreColor,
+        lastClickEvent.isCrit ? 4.5 : 2.2,
+      ),
+    );
+  }, [lastClickEvent, stage]);
+
+  useGameLoop((now, dt) => {
+    const canvas = canvasRef.current;
+    const world = worldRef.current;
+    if (!canvas || !world) {
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    const { width, height } = sizeRef.current;
+    if (!width || !height) {
+      return;
+    }
+    if (!(world as CanvasWorld & { _firstFrameLogged?: boolean })._firstFrameLogged) {
+      (world as CanvasWorld & { _firstFrameLogged?: boolean })._firstFrameLogged = true;
+      console.log('[debug] particle field mounted, stage:', stage.id);
+    }
+
+    const progress = getProgress(quanta, effectiveThreshold);
+    const cx = width / 2;
+    const cy = height / 2;
+    const coreRadius = TUNING.CORE_BASE_RADIUS + progress * TUNING.CORE_PROGRESS_RADIUS;
+    const transitionElapsed =
+      stageTransitionStartedAt === null
+        ? null
+        : stageTransitionStartedAt < mountedAt.current
+          ? null
+          : now - stageTransitionStartedAt;
+    const transitionSucking =
+      transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_SUCK_MS;
+    const transitionActive =
+      transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_TOTAL_MS;
+    if (
+      transitionElapsed !== null &&
+      transitionElapsed > 0 &&
+      !(world as CanvasWorld & { _loggedTransition?: boolean })._loggedTransition
+    ) {
+      (world as CanvasWorld & { _loggedTransition?: boolean })._loggedTransition = true;
+      console.log('[debug] transition active', { elapsed: transitionElapsed, stageId: stage.id });
+    }
+
+    world.driftAngle += dt * TUNING.CAMERA_DRIFT_ROTATION;
+    world.coreVX += Math.cos(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
+    world.coreVY += Math.sin(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
+    world.coreVX *= TUNING.CAMERA_DAMPENING;
+    world.coreVY *= TUNING.CAMERA_DAMPENING;
+    const velocity = Math.hypot(world.coreVX, world.coreVY);
+    if (velocity > TUNING.CAMERA_MAX_VELOCITY) {
+      world.coreVX = (world.coreVX / velocity) * TUNING.CAMERA_MAX_VELOCITY;
+      world.coreVY = (world.coreVY / velocity) * TUNING.CAMERA_MAX_VELOCITY;
+    }
+
+    world.stars.forEach((star) => {
+      star.x -= world.coreVX * star.depth;
+      star.y -= world.coreVY * star.depth;
+      star.twinkle += dt * 0.002;
+      if (star.x < -TUNING.STAR_WRAP_MARGIN) {
+        star.x = width + TUNING.STAR_WRAP_MARGIN;
+      }
+      if (star.x > width + TUNING.STAR_WRAP_MARGIN) {
+        star.x = -TUNING.STAR_WRAP_MARGIN;
+      }
+      if (star.y < -TUNING.STAR_WRAP_MARGIN) {
+        star.y = height + TUNING.STAR_WRAP_MARGIN;
+      }
+      if (star.y > height + TUNING.STAR_WRAP_MARGIN) {
+        star.y = -TUNING.STAR_WRAP_MARGIN;
+      }
+    });
+
+    if (velocity > TUNING.WAKE_MIN_SPEED && world.wakeTrails.length < TUNING.WAKE_TRAIL_MAX) {
+      if (Math.random() < velocity * TUNING.WAKE_SPAWN_CHANCE_MULT) {
+        world.wakeTrails.push({
+          x: cx - (world.coreVX / velocity) * coreRadius + (Math.random() - 0.5) * coreRadius,
+          y: cy - (world.coreVY / velocity) * coreRadius + (Math.random() - 0.5) * coreRadius,
+          vx: -world.coreVX * (0.4 + Math.random() * 0.3) + (Math.random() - 0.5) * 0.3,
+          vy: -world.coreVY * (0.4 + Math.random() * 0.3) + (Math.random() - 0.5) * 0.3,
+          r: 1.5 + Math.random() * 1.5,
+          life: 1,
+          color: stage.coreColor,
+        });
+      }
+    }
+    world.wakeTrails = world.wakeTrails.filter((trail) => {
+      trail.x += trail.vx;
+      trail.y += trail.vy;
+      trail.life -= TUNING.WAKE_LIFE_DECAY;
+      return trail.life > 0;
+    });
+
+    const gravity = imploding
+      ? TUNING.IMPLOSION_GRAVITY
+      : transitionSucking
+        ? TUNING.IMPLOSION_GRAVITY * 0.62
+        : TUNING.GRAVITY_BASE * (0.35 + progress * TUNING.GRAVITY_PROGRESS_SCALE);
+    const captureRadius = coreRadius + (transitionSucking ? 18 : 4);
+    const dampening = imploding || transitionSucking ? 0.97 : TUNING.PARTICLE_DAMPENING;
+
+    world.particles = world.particles.map((particle) => {
+      const dx = cx - particle.x;
+      const dy = cy - particle.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 1) {
+        return spawnParticleAtEdge(particle, width, height);
+      }
+      if (distance < captureRadius && !imploding) {
+        return spawnParticleAtEdge(particle, width, height);
+      }
+      const softenedDistance = Math.max(distance, TUNING.PARTICLE_CAPTURE_SOFTENING);
+      const force = gravity / (softenedDistance * 0.3 + 8);
+      particle.vx += (dx / distance) * force;
+      particle.vy += (dy / distance) * force;
+      particle.vx *= dampening;
+      particle.vy *= dampening;
+      const particleSpeed = Math.hypot(particle.vx, particle.vy);
+      const maxVelocity = imploding ? 18 : TUNING.PARTICLE_MAX_V;
+      if (particleSpeed > maxVelocity) {
+        particle.vx = (particle.vx / particleSpeed) * maxVelocity;
+        particle.vy = (particle.vy / particleSpeed) * maxVelocity;
+      }
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.phase += dt * 0.0015;
+      if (
+        particle.x < -TUNING.PARTICLE_RESPAWN_MARGIN ||
+        particle.x > width + TUNING.PARTICLE_RESPAWN_MARGIN ||
+        particle.y < -TUNING.PARTICLE_RESPAWN_MARGIN ||
+        particle.y > height + TUNING.PARTICLE_RESPAWN_MARGIN
+      ) {
+        return spawnParticleAtEdge(particle, width, height);
+      }
+      return particle;
+    });
+
+    if (
+      !interactionLocked &&
+      autoRate > 0 &&
+      now - world.moteLastAutoSpawnAt >= TUNING.MOTE_AUTO_SPAWN_INTERVAL_MS
+    ) {
+      for (let i = 0; i < TUNING.MOTE_PER_AUTO_TICK; i += 1) {
+        spawnAutoMote(world.cluster, stage, cx, cy, now);
+      }
+      world.moteLastAutoSpawnAt = now;
+    }
+
+    stepClusterPhysics(world, stage, cx, cy, dt, now, progress);
+
+    world.flyers = world.flyers.filter((flyer) => {
+      const dx = cx - flyer.x;
+      const dy = cy - flyer.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 12) {
+        return false;
+      }
+      const speed =
+        (flyer.auto ? TUNING.FLYER_AUTO_SPEED : TUNING.FLYER_CLICK_SPEED) +
+        (1 / Math.max(distance, 1)) * TUNING.FLYER_GRAVITY_PULL;
+      flyer.x += (dx / distance) * speed;
+      flyer.y += (dy / distance) * speed;
+      flyer.life -= flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY;
+      return flyer.life > 0;
+    });
+
+    world.bursts = world.bursts.filter((burst) => {
+      burst.x += burst.vx;
+      burst.y += burst.vy;
+      burst.vx *= TUNING.BURST_VELOCITY_DECAY;
+      burst.vy *= TUNING.BURST_VELOCITY_DECAY;
+      burst.life -= TUNING.BURST_DECAY;
+      return burst.life > 0;
+    });
+
+    if (
+      transitionElapsed !== null &&
+      transitionElapsed >= TUNING.STAGE_TRANSITION_SUCK_MS &&
+      transitionExplosionAt.current !== stageTransitionStartedAt
+    ) {
+      transitionExplosionAt.current = stageTransitionStartedAt;
+      world.bursts.push(
+        ...createBurstSet(
+          cx,
+          cy,
+          TUNING.STAGE_TRANSITION_BURST_COUNT,
+          '#ffffff',
+          6.5,
+        ),
+        ...createBurstSet(
+          cx,
+          cy,
+          Math.floor(TUNING.STAGE_TRANSITION_BURST_COUNT * 0.75),
+          stage.accent,
+          4.8,
+        ),
+      );
+      world.shockwaves.push(createShockwave('#ffffff'), createShockwave(stage.accent));
+    }
+
+    if (!interactionLocked) {
+      world.rogueCooldown -= dt;
+      if (world.rogueCooldown <= 0) {
+        world.rogues.push(createRogue(world, stage, width, height));
+        world.rogueCooldown =
+          TUNING.ENCOUNTER_INTERVAL_MIN_MS +
+          Math.random() *
+            (TUNING.ENCOUNTER_INTERVAL_MAX_MS - TUNING.ENCOUNTER_INTERVAL_MIN_MS);
+      }
+    }
+
+    const nextRogues: Rogue[] = [];
+    world.rogues.forEach((rogue) => {
+      rogue.x += rogue.vx - world.coreVX;
+      rogue.y += rogue.vy - world.coreVY;
+      rogue.age += dt;
+      rogue.rotation += dt * 0.001;
+      const dx = cx - rogue.x;
+      const dy = cy - rogue.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < coreRadius + rogue.r) {
+        const burstCount =
+          rogue.typeKey === 'massive'
+            ? TUNING.MASSIVE_COLLISION_BURST_COUNT
+            : rogue.typeKey === 'major'
+              ? TUNING.MAJOR_COLLISION_BURST_COUNT
+              : TUNING.MINOR_COLLISION_BURST_COUNT;
+        world.bursts.push(
+          ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4),
+        );
+        world.shockwaves.push(createShockwave(stage.accent));
+        onCollision({
+          x: cx,
+          y: cy - 20,
+          bonus: rogue.bonus,
+          entropyBonus: rogue.entropyBonus,
+          tier: rogue.typeKey,
+          name: rogue.name,
+        });
+        return;
+      }
+      const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
+      if (onScreen && !rogue.spotted) {
+        rogue.spotted = true;
+        onEncounter({ name: rogue.name, color: rogue.color });
+      }
+      if (rogue.age > TUNING.ROGUE_EXPIRE_MS) {
+        return;
+      }
+      if (Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
+        return;
+      }
+      nextRogues.push(rogue);
+    });
+    world.rogues = nextRogues;
+    world.shockwaves = world.shockwaves.filter(
+      (shockwave) => now - shockwave.startedAt <= TUNING.SHOCKWAVE_FADE_MS,
+    );
+
+    ctx.clearRect(0, 0, width, height);
+    drawStars(ctx, world.stars, world.coreVX, world.coreVY);
+    drawWake(ctx, world.wakeTrails as WakeTrail[]);
+    drawCore({
+      ctx,
+      stage,
+      width,
+      height,
+      progress,
+      showThresholdRing: quanta >= effectiveThreshold && !interactionLocked,
+      now,
+    });
+    drawCluster({
+      ctx,
+      cluster: world.cluster,
+      stage,
+      cx,
+      cy,
+      width,
+      height,
+      now,
+      progress,
+    });
+    drawParticles({
+      ctx,
+      stage,
+      particles: world.particles,
+      flyers: world.flyers,
+      bursts: world.bursts,
+    });
+    drawRogues(ctx, world.rogues, width, height, now);
+    drawEffects({
+      ctx,
+      width,
+      height,
+      now,
+      color: stage.accent,
+      rogues: world.rogues,
+      shockwaves: world.shockwaves,
+    });
+    getMechanic(stage.mechanic).draw?.(
+      ctx,
+      { state: null, stage, now, progress01: progress },
+      world,
+      width,
+      height,
+    );
+
+    if (transitionActive && transitionElapsed !== null) {
+      const washOpacity =
+        transitionElapsed < TUNING.STAGE_TRANSITION_SUCK_MS
+          ? (transitionElapsed / TUNING.STAGE_TRANSITION_SUCK_MS) * 0.12
+          : Math.max(
+              0,
+              0.9 -
+                ((transitionElapsed - TUNING.STAGE_TRANSITION_SUCK_MS) /
+                  (TUNING.STAGE_TRANSITION_TOTAL_MS - TUNING.STAGE_TRANSITION_SUCK_MS)) *
+                  0.9,
+            );
+      const flare = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.42);
+      flare.addColorStop(0, `rgba(255,255,255,${Math.min(1, washOpacity * 1.4)})`);
+      flare.addColorStop(0.32, `rgba(255,255,255,${washOpacity * 0.9})`);
+      flare.addColorStop(0.55, `rgba(255,255,255,${washOpacity * 0.28})`);
+      flare.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = flare;
+      ctx.fillRect(0, 0, width, height);
+    }
+  });
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="game-canvas"
+      onPointerDown={(event) => {
+        if (interactionLocked || !worldRef.current) {
+          return;
+        }
+        event.preventDefault();
+        dragPointerId.current = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const rect = event.currentTarget.getBoundingClientRect();
+        const { x, y, hitRogue } = applySteerNudge(rect, event.clientX, event.clientY);
+        if (event.button !== 1) {
+          onGatherClick(x, y, hitRogue);
+        }
+      }}
+      onPointerMove={(event) => {
+        if (
+          interactionLocked ||
+          dragPointerId.current !== event.pointerId ||
+          event.buttons === 0
+        ) {
+          return;
+        }
+        event.preventDefault();
+        const rect = event.currentTarget.getBoundingClientRect();
+        applySteerNudge(rect, event.clientX, event.clientY, event.button === 1 ? 1.25 : 0.55);
+      }}
+      onPointerUp={(event) => {
+        if (dragPointerId.current === event.pointerId) {
+          dragPointerId.current = null;
+        }
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      onPointerCancel={(event) => {
+        if (dragPointerId.current === event.pointerId) {
+          dragPointerId.current = null;
+        }
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      role="presentation"
+      aria-label={totalClicks > 0 ? `${stage.name} field` : `${stage.name} field, click to gather`}
+    />
+  );
+});

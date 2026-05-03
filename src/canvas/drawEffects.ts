@@ -1,0 +1,89 @@
+import { TUNING } from '../game/constants';
+import { hexToRgba } from '../game/formulas';
+import type { Rogue, Shockwave } from '../game/types';
+
+interface DrawEffectsArgs {
+  ctx: CanvasRenderingContext2D;
+  width: number;
+  height: number;
+  now: number;
+  color: string;
+  rogues: Rogue[];
+  shockwaves: Shockwave[];
+}
+
+export function drawEffects({
+  ctx,
+  width,
+  height,
+  now,
+  color,
+  rogues,
+  shockwaves,
+}: DrawEffectsArgs): void {
+  const cx = width / 2;
+  const cy = height / 2;
+
+  shockwaves.forEach((shockwave) => {
+    const ageMs = now - shockwave.startedAt;
+    if (ageMs > TUNING.SHOCKWAVE_FADE_MS) {
+      return;
+    }
+    const age = ageMs / 1000;
+    const opacity = Math.max(0, 1 - ageMs / TUNING.SHOCKWAVE_FADE_MS);
+    const radius = age * TUNING.SHOCKWAVE_SPEED_PX_PER_SEC;
+    ctx.strokeStyle = hexToRgba(shockwave.color, opacity);
+    ctx.lineWidth = 6 * opacity;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = hexToRgba('#ffffff', opacity * 0.5);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  rogues.forEach((rogue) => {
+    const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
+    if (onScreen) {
+      return;
+    }
+    const dx = rogue.x - cx;
+    const dy = rogue.y - cy;
+    const angle = Math.atan2(dy, dx);
+    const halfWidth = width / 2 - TUNING.ROGUE_INDICATOR_MARGIN;
+    const halfHeight = height / 2 - TUNING.ROGUE_INDICATOR_MARGIN;
+    const cosAngle = Math.cos(angle);
+    const sinAngle = Math.sin(angle);
+    const distanceX = halfWidth / Math.abs(cosAngle || 0.0001);
+    const distanceY = halfHeight / Math.abs(sinAngle || 0.0001);
+    const travel = Math.min(distanceX, distanceY);
+    const indicatorX = cx + cosAngle * travel;
+    const indicatorY = cy + sinAngle * travel;
+    const pulse = 1 + Math.sin(now / TUNING.ROGUE_INDICATOR_PULSE_MS) * 0.25;
+
+    ctx.save();
+    ctx.translate(indicatorX, indicatorY);
+    ctx.rotate(angle);
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = rogue.color;
+    ctx.fillStyle = rogue.color;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-14 * pulse, -7);
+    ctx.lineTo(-14 * pulse, 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const distance = Math.hypot(dx, dy);
+    const intensity = Math.max(0, 1 - distance / (Math.max(width, height) * 1.2));
+    if (intensity > 0.2) {
+      ctx.fillStyle = hexToRgba(rogue.color, intensity * 0.4);
+      ctx.fillRect(-22, -1, 6, 2);
+    }
+    ctx.restore();
+  });
+}
