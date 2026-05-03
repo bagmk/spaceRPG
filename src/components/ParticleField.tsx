@@ -11,6 +11,7 @@ import { getProgress } from '../game/formulas';
 import { getMechanic } from '../game/mechanics';
 import { getStageRogueColor, getStageRogueName } from '../canvas/stageSprites';
 import type {
+  AnomalyType,
   AmbientParticle,
   Burst,
   CanvasWorld,
@@ -44,12 +45,17 @@ interface ParticleFieldProps {
   stage: Stage;
   quanta: number;
   autoRate: number;
+  timeMult: number;
   effectiveThreshold: number;
   totalClicks: number;
   imploding: boolean;
   interactionLocked: boolean;
   lastClickEvent: FloatingClickEvent | null;
   stageTransitionStartedAt: number | null;
+  clickEmissionCount: number;
+  clickVfxScale: number;
+  gravityMod: number;
+  anomaly: AnomalyType | null;
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   onEncounter: (payload: EncounterPayload) => void;
   onCollision: (payload: CollisionPayload) => void;
@@ -166,8 +172,15 @@ function pickRogueType(): RogueTypeKey {
   return 'minor';
 }
 
-function createShockwave(color: string): Shockwave {
-  return { startedAt: performance.now(), color };
+function createShockwave(
+  color: string,
+  x?: number,
+  y?: number,
+  maxRadius?: number,
+  lifeMs?: number,
+  lineWidth?: number,
+): Shockwave {
+  return { startedAt: performance.now(), color, x, y, maxRadius, lifeMs, lineWidth };
 }
 
 function createBurstSet(
@@ -176,6 +189,7 @@ function createBurstSet(
   count: number,
   color: string,
   speedBase: number,
+  stageId?: number,
 ): Burst[] {
   return Array.from({ length: count }, (_, index) => {
     const angle = (index / count) * Math.PI * 2 + Math.random() * 0.4;
@@ -188,6 +202,7 @@ function createBurstSet(
       r: 2 + Math.random() * 2.5,
       life: 1,
       color,
+      spriteId: stageId,
     };
   });
 }
@@ -229,7 +244,21 @@ function getClusterTargetRadius(stage: Stage, moteCount: number, progress: numbe
       );
     case 'lifeSurface':
       return TUNING.LIFE_SURFACE_R;
-    case 'generic':
+    case 'inflation':
+    case 'baryogenesis':
+    case 'qgPlasma':
+    case 'nucleosynthesis':
+    case 'recombination':
+    case 'darkAge':
+    case 'firstStars':
+    case 'reionization':
+      return Math.min(
+        TUNING.MOTE_CLUSTER_MAX_RADIUS,
+        TUNING.MOTE_CLUSTER_MIN_RADIUS +
+          growth * TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE +
+          progress * 28,
+      );
+    default:
       return Math.min(
         TUNING.MOTE_CLUSTER_MAX_RADIUS,
         TUNING.MOTE_CLUSTER_MIN_RADIUS +
@@ -268,15 +297,15 @@ function createBaseMote(
   };
 }
 
-function addMoteToCluster(cluster: MoteCluster, stage: Stage, mote: Mote): void {
+function addMoteToCluster(cluster: MoteCluster, stage: Stage, mote: Mote, maxMassCap: number): void {
   if (cluster.motes.length < TUNING.MOTE_MAX) {
     cluster.motes.push(mote);
     return;
   }
-  enrichExistingMote(cluster, stage, mote);
+  enrichExistingMote(cluster, stage, mote, maxMassCap);
 }
 
-function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote): void {
+function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote, maxMassCap: number): void {
   if (cluster.motes.length === 0) {
     cluster.motes.push(incoming);
     return;
@@ -300,7 +329,7 @@ function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote):
     });
   }
 
-  const totalMass = Math.min(TUNING.MOTE_MERGE_MAX_MASS * 2.2, target.mass + incoming.mass * 0.55);
+  const totalMass = Math.min(maxMassCap, target.mass + incoming.mass * 0.55);
   const blend = incoming.mass / Math.max(target.mass + incoming.mass, 1);
   target.x += (incoming.x - target.x) * blend * 0.25;
   target.y += (incoming.y - target.y) * blend * 0.25;
@@ -320,6 +349,10 @@ function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote):
       target.color = '#65e88f';
     }
   }
+}
+
+function getEffectiveMaxMass(progress01: number): number {
+  return 12 + Math.floor(progress01 * 100);
 }
 
 function createSurfaceMote(cluster: MoteCluster, stage: Stage, cx: number, cy: number, now: number): Mote {
@@ -385,16 +418,25 @@ function spawnMotesAtClick(
   width: number,
   height: number,
   isCrit: boolean,
+  clickEmissionCount: number,
+  maxMassCap: number,
   now: number,
 ): void {
-  const count = (isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0);
+  const count =
+    ((isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0)) *
+    Math.max(1, clickEmissionCount);
   for (let i = 0; i < count; i += 1) {
     if (stage.clusterMode === 'lifeSurface') {
-      addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now));
+      addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now), maxMassCap);
       continue;
     }
     if (stage.clusterMode === 'blackHole') {
-      addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now, clickX, clickY));
+      addMoteToCluster(
+        cluster,
+        stage,
+        createPhotonMote(cluster, stage, cx, cy, now, clickX, clickY),
+        maxMassCap,
+      );
       continue;
     }
 
@@ -431,7 +473,7 @@ function spawnMotesAtClick(
       mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
       mote.spiralPhase = Math.random() * Math.PI * 2;
     }
-    addMoteToCluster(cluster, stage, mote);
+    addMoteToCluster(cluster, stage, mote, maxMassCap);
   }
 }
 
@@ -440,14 +482,15 @@ function spawnAutoMote(
   stage: Stage,
   cx: number,
   cy: number,
+  maxMassCap: number,
   now: number,
 ): void {
   if (stage.clusterMode === 'lifeSurface') {
-    addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now));
+    addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now), maxMassCap);
     return;
   }
   if (stage.clusterMode === 'blackHole') {
-    addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now));
+    addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now), maxMassCap);
     return;
   }
   const angle = Math.random() * Math.PI * 2;
@@ -469,7 +512,7 @@ function spawnAutoMote(
   if (stage.clusterMode === 'galaxy') {
     mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
   }
-  addMoteToCluster(cluster, stage, mote);
+  addMoteToCluster(cluster, stage, mote, maxMassCap);
 }
 
 function resetForStage(world: CanvasWorld, width: number, height: number, stage: Stage): CanvasWorld {
@@ -492,6 +535,7 @@ function stepClusterPhysics(
 ): void {
   const cluster = world.cluster;
   const motes = cluster.motes;
+  const effectiveMaxMass = getEffectiveMaxMass(progress);
   if (motes.length === 0) {
     return;
   }
@@ -502,7 +546,7 @@ function stepClusterPhysics(
     refreshNeighborCache(motes, world.moteNeighborCache);
     world.moteLastNeighborRefresh = now;
     if (motes.length > TUNING.MOTE_MAX * 0.7) {
-      mergeCloseMotes(cluster, world.moteNeighborCache);
+      mergeCloseMotes(cluster, world.moteNeighborCache, effectiveMaxMass);
       world.moteNeighborCache.clear();
     }
   }
@@ -586,7 +630,14 @@ function applyAnchorForce(
   const ny = dy / dist;
 
   switch (stage.clusterMode) {
-    case 'generic': {
+    case 'inflation':
+    case 'baryogenesis':
+    case 'qgPlasma':
+    case 'nucleosynthesis':
+    case 'recombination':
+    case 'darkAge':
+    case 'firstStars':
+    case 'reionization': {
       const targetR = clusterRadius * Math.pow(mote.hue, 1.75) * 0.96;
       const radial = (dist - targetR) / Math.max(targetR, 20);
       mote.vx += nx * radial * TUNING.MOTE_ANCHOR_GRAVITY * 0.82 * dtScale;
@@ -688,7 +739,14 @@ function applyMoteWander(
   const waveB = Math.cos(now * 0.00083 + mote.id * 2.417);
 
   switch (stage.clusterMode) {
-    case 'generic':
+    case 'inflation':
+    case 'baryogenesis':
+    case 'qgPlasma':
+    case 'nucleosynthesis':
+    case 'recombination':
+    case 'darkAge':
+    case 'firstStars':
+    case 'reionization':
       mote.vx += (-ny * 0.026 + nx * waveA * 0.012 + waveB * 0.006) * dtScale;
       mote.vy += (nx * 0.026 + ny * waveB * 0.012 - waveA * 0.006) * dtScale;
       break;
@@ -713,19 +771,19 @@ function applyMoteWander(
   }
 }
 
-function mergeCloseMotes(cluster: MoteCluster, neighborCache: Map<number, number[]>): void {
+function mergeCloseMotes(cluster: MoteCluster, neighborCache: Map<number, number[]>, maxMassCap: number): void {
   const byId = new Map(cluster.motes.map((mote) => [mote.id, mote]));
   const removed = new Set<number>();
 
   cluster.motes.forEach((mote) => {
-    if (removed.has(mote.id) || mote.mass >= TUNING.MOTE_MERGE_MAX_MASS) {
+    if (removed.has(mote.id) || mote.mass >= maxMassCap) {
       return;
     }
     const neighbors = neighborCache.get(mote.id) ?? [];
     const neighbor = neighbors
       .map((id) => byId.get(id))
       .find((candidate): candidate is Mote => {
-        if (!candidate || removed.has(candidate.id) || candidate.mass >= TUNING.MOTE_MERGE_MAX_MASS) {
+        if (!candidate || removed.has(candidate.id) || candidate.mass >= maxMassCap) {
           return false;
         }
         return Math.hypot(candidate.x - mote.x, candidate.y - mote.y) <= TUNING.MOTE_MERGE_DISTANCE + (mote.r + candidate.r) * 0.18;
@@ -734,7 +792,7 @@ function mergeCloseMotes(cluster: MoteCluster, neighborCache: Map<number, number
       return;
     }
 
-    const totalMass = Math.min(TUNING.MOTE_MERGE_MAX_MASS, mote.mass + neighbor.mass);
+    const totalMass = Math.min(maxMassCap, mote.mass + neighbor.mass);
     const blend = neighbor.mass / (mote.mass + neighbor.mass);
     mote.x += (neighbor.x - mote.x) * blend;
     mote.y += (neighbor.y - mote.y) * blend;
@@ -796,12 +854,17 @@ export const ParticleField = memo(function ParticleField({
   stage,
   quanta,
   autoRate,
+  timeMult,
   effectiveThreshold,
   totalClicks,
   imploding,
   interactionLocked,
   lastClickEvent,
   stageTransitionStartedAt,
+  clickEmissionCount,
+  clickVfxScale,
+  gravityMod,
+  anomaly,
   onGatherClick,
   onEncounter,
   onCollision,
@@ -849,11 +912,6 @@ export const ParticleField = memo(function ParticleField({
       transitionExplosionAt.current = null;
     }
   }, [stageTransitionStartedAt]);
-
-  useEffect(() => {
-    console.log('[debug] ParticleField MOUNT stage', stage.id);
-    return () => console.log('[debug] ParticleField UNMOUNT stage', stage.id);
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -908,6 +966,7 @@ export const ParticleField = memo(function ParticleField({
     const { width, height } = sizeRef.current;
     const cx = width / 2;
     const cy = height / 2;
+    const maxMassCap = getEffectiveMaxMass(getProgress(quanta, effectiveThreshold));
     spawnMotesAtClick(
       worldRef.current.cluster,
       stage,
@@ -918,19 +977,44 @@ export const ParticleField = memo(function ParticleField({
       width,
       height,
       lastClickEvent.isCrit,
+      clickEmissionCount,
+      maxMassCap,
       performance.now(),
     );
-    worldRef.current.flyers.push({ x: lastClickEvent.x, y: lastClickEvent.y, life: 1 });
+    for (let index = 0; index < clickEmissionCount; index += 1) {
+      const angle = (index / Math.max(1, clickEmissionCount)) * Math.PI * 2;
+      const radius = clickEmissionCount > 1 ? 10 + clickEmissionCount * 2 : 0;
+      worldRef.current.flyers.push({
+        x: lastClickEvent.x + Math.cos(angle) * radius,
+        y: lastClickEvent.y + Math.sin(angle) * radius,
+        life: 1,
+        spriteId: stage.id,
+      });
+    }
     worldRef.current.bursts.push(
       ...createBurstSet(
         lastClickEvent.x,
         lastClickEvent.y,
-        lastClickEvent.isCrit ? TUNING.CRIT_BURST_COUNT : TUNING.CLICK_BURST_COUNT,
+        (lastClickEvent.isCrit ? TUNING.CRIT_BURST_COUNT : TUNING.CLICK_BURST_COUNT) *
+          Math.max(1, clickEmissionCount),
         lastClickEvent.isCrit ? '#ffffff' : stage.coreColor,
-        lastClickEvent.isCrit ? 4.5 : 2.2,
+        (lastClickEvent.isCrit ? 4.5 : 2.2) * clickVfxScale,
+        stage.id,
       ),
     );
-  }, [lastClickEvent, stage]);
+    if (clickEmissionCount >= 4) {
+      worldRef.current.shockwaves.push(
+        createShockwave(
+          clickEmissionCount >= 5 ? '#ffbf6b' : stage.accent,
+          lastClickEvent.x,
+          lastClickEvent.y,
+          30 + clickEmissionCount * 5,
+          clickEmissionCount >= 5 ? 1000 : 800,
+          clickEmissionCount >= 6 ? 8 : 5,
+        ),
+      );
+    }
+  }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 
   useGameLoop((now, dt) => {
     const canvas = canvasRef.current;
@@ -947,11 +1031,8 @@ export const ParticleField = memo(function ParticleField({
     if (!width || !height) {
       return;
     }
-    if (!(world as CanvasWorld & { _firstFrameLogged?: boolean })._firstFrameLogged) {
-      (world as CanvasWorld & { _firstFrameLogged?: boolean })._firstFrameLogged = true;
-      console.log('[debug] particle field mounted, stage:', stage.id);
-    }
-
+    const motionScale = anomaly === 'high_energy' ? 1.5 : 1;
+    const frameDt = dt * motionScale;
     const progress = getProgress(quanta, effectiveThreshold);
     const cx = width / 2;
     const cy = height / 2;
@@ -966,16 +1047,7 @@ export const ParticleField = memo(function ParticleField({
       transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_SUCK_MS;
     const transitionActive =
       transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_TOTAL_MS;
-    if (
-      transitionElapsed !== null &&
-      transitionElapsed > 0 &&
-      !(world as CanvasWorld & { _loggedTransition?: boolean })._loggedTransition
-    ) {
-      (world as CanvasWorld & { _loggedTransition?: boolean })._loggedTransition = true;
-      console.log('[debug] transition active', { elapsed: transitionElapsed, stageId: stage.id });
-    }
-
-    world.driftAngle += dt * TUNING.CAMERA_DRIFT_ROTATION;
+    world.driftAngle += frameDt * TUNING.CAMERA_DRIFT_ROTATION;
     world.coreVX += Math.cos(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
     world.coreVY += Math.sin(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
     world.coreVX *= TUNING.CAMERA_DAMPENING;
@@ -989,7 +1061,7 @@ export const ParticleField = memo(function ParticleField({
     world.stars.forEach((star) => {
       star.x -= world.coreVX * star.depth;
       star.y -= world.coreVY * star.depth;
-      star.twinkle += dt * 0.002;
+      star.twinkle += frameDt * 0.002;
       if (star.x < -TUNING.STAR_WRAP_MARGIN) {
         star.x = width + TUNING.STAR_WRAP_MARGIN;
       }
@@ -1020,15 +1092,15 @@ export const ParticleField = memo(function ParticleField({
     world.wakeTrails = world.wakeTrails.filter((trail) => {
       trail.x += trail.vx;
       trail.y += trail.vy;
-      trail.life -= TUNING.WAKE_LIFE_DECAY;
+      trail.life -= TUNING.WAKE_LIFE_DECAY * motionScale;
       return trail.life > 0;
     });
 
     const gravity = imploding
-      ? TUNING.IMPLOSION_GRAVITY
+      ? TUNING.IMPLOSION_GRAVITY * gravityMod
       : transitionSucking
-        ? TUNING.IMPLOSION_GRAVITY * 0.62
-        : TUNING.GRAVITY_BASE * (0.35 + progress * TUNING.GRAVITY_PROGRESS_SCALE);
+        ? TUNING.IMPLOSION_GRAVITY * 0.62 * gravityMod
+        : TUNING.GRAVITY_BASE * gravityMod * (0.35 + progress * TUNING.GRAVITY_PROGRESS_SCALE);
     const captureRadius = coreRadius + (transitionSucking ? 18 : 4);
     const dampening = imploding || transitionSucking ? 0.97 : TUNING.PARTICLE_DAMPENING;
 
@@ -1054,9 +1126,9 @@ export const ParticleField = memo(function ParticleField({
         particle.vx = (particle.vx / particleSpeed) * maxVelocity;
         particle.vy = (particle.vy / particleSpeed) * maxVelocity;
       }
-      particle.x += particle.vx;
-      particle.y += particle.vy;
-      particle.phase += dt * 0.0015;
+      particle.x += particle.vx * motionScale;
+      particle.y += particle.vy * motionScale;
+      particle.phase += frameDt * 0.0015;
       if (
         particle.x < -TUNING.PARTICLE_RESPAWN_MARGIN ||
         particle.x > width + TUNING.PARTICLE_RESPAWN_MARGIN ||
@@ -1073,13 +1145,14 @@ export const ParticleField = memo(function ParticleField({
       autoRate > 0 &&
       now - world.moteLastAutoSpawnAt >= TUNING.MOTE_AUTO_SPAWN_INTERVAL_MS
     ) {
+      const effectiveMaxMass = getEffectiveMaxMass(progress);
       for (let i = 0; i < TUNING.MOTE_PER_AUTO_TICK; i += 1) {
-        spawnAutoMote(world.cluster, stage, cx, cy, now);
+        spawnAutoMote(world.cluster, stage, cx, cy, effectiveMaxMass, now);
       }
       world.moteLastAutoSpawnAt = now;
     }
 
-    stepClusterPhysics(world, stage, cx, cy, dt, now, progress);
+    stepClusterPhysics(world, stage, cx, cy, frameDt, now, progress);
 
     world.flyers = world.flyers.filter((flyer) => {
       const dx = cx - flyer.x;
@@ -1093,7 +1166,8 @@ export const ParticleField = memo(function ParticleField({
         (1 / Math.max(distance, 1)) * TUNING.FLYER_GRAVITY_PULL;
       flyer.x += (dx / distance) * speed;
       flyer.y += (dy / distance) * speed;
-      flyer.life -= flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY;
+      flyer.life -=
+        (flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY) * motionScale;
       return flyer.life > 0;
     });
 
@@ -1102,7 +1176,7 @@ export const ParticleField = memo(function ParticleField({
       burst.y += burst.vy;
       burst.vx *= TUNING.BURST_VELOCITY_DECAY;
       burst.vy *= TUNING.BURST_VELOCITY_DECAY;
-      burst.life -= TUNING.BURST_DECAY;
+      burst.life -= TUNING.BURST_DECAY * motionScale;
       return burst.life > 0;
     });
 
@@ -1119,6 +1193,7 @@ export const ParticleField = memo(function ParticleField({
           TUNING.STAGE_TRANSITION_BURST_COUNT,
           '#ffffff',
           6.5,
+          stage.id,
         ),
         ...createBurstSet(
           cx,
@@ -1126,13 +1201,14 @@ export const ParticleField = memo(function ParticleField({
           Math.floor(TUNING.STAGE_TRANSITION_BURST_COUNT * 0.75),
           stage.accent,
           4.8,
+          stage.id,
         ),
       );
       world.shockwaves.push(createShockwave('#ffffff'), createShockwave(stage.accent));
     }
 
     if (!interactionLocked) {
-      world.rogueCooldown -= dt;
+      world.rogueCooldown -= frameDt * Math.max(1, timeMult);
       if (world.rogueCooldown <= 0) {
         world.rogues.push(createRogue(world, stage, width, height));
         world.rogueCooldown =
@@ -1146,8 +1222,8 @@ export const ParticleField = memo(function ParticleField({
     world.rogues.forEach((rogue) => {
       rogue.x += rogue.vx - world.coreVX;
       rogue.y += rogue.vy - world.coreVY;
-      rogue.age += dt;
-      rogue.rotation += dt * 0.001;
+      rogue.age += frameDt;
+      rogue.rotation += frameDt * 0.001;
       const dx = cx - rogue.x;
       const dy = cy - rogue.y;
       const distance = Math.hypot(dx, dy);
@@ -1159,7 +1235,7 @@ export const ParticleField = memo(function ParticleField({
               ? TUNING.MAJOR_COLLISION_BURST_COUNT
               : TUNING.MINOR_COLLISION_BURST_COUNT;
         world.bursts.push(
-          ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4),
+          ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4, stage.id),
         );
         world.shockwaves.push(createShockwave(stage.accent));
         onCollision({
@@ -1263,6 +1339,10 @@ export const ParticleField = memo(function ParticleField({
     <canvas
       ref={canvasRef}
       className="game-canvas"
+      style={{
+        filter: anomaly === 'dim' ? 'brightness(0.72)' : undefined,
+        imageRendering: anomaly === 'crystalline' ? 'pixelated' : 'auto',
+      }}
       onPointerDown={(event) => {
         if (interactionLocked || !worldRef.current) {
           return;

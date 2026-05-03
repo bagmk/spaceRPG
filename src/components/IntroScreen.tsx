@@ -16,11 +16,13 @@ interface IntroParticle {
 
 interface IntroScreenProps {
   canResume: boolean;
+  canOpenAtlas: boolean;
   onResume: () => void;
   onNewStart: () => void;
   onComplete: () => void;
   onUnlockAudio: () => void;
   onPlayBigBang: () => void;
+  onOpenAtlas: () => void;
 }
 
 const INTRO_TIMES = ['10⁻⁴³ s', '10⁻³⁵ s', '10⁻⁶ s', '10⁻¹² s'] as const;
@@ -61,11 +63,13 @@ function createBurstParticles(width: number, height: number): IntroParticle[] {
 
 export function IntroScreen({
   canResume,
+  canOpenAtlas,
   onResume,
   onNewStart,
   onComplete,
   onUnlockAudio,
   onPlayBigBang,
+  onOpenAtlas,
 }: IntroScreenProps) {
   const [phase, setPhase] = useState<IntroPhase>('idle');
   const [elapsed, setElapsed] = useState(0);
@@ -230,11 +234,23 @@ export function IntroScreen({
               >
                 NEW BIG BANG
               </button>
+              {canOpenAtlas ? (
+                <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
+                  MULTIVERSE ATLAS
+                </button>
+              ) : null}
             </div>
           ) : (
-            <button className="q-continue intro-button" type="button" onClick={beginBigBang}>
-              BEGIN
-            </button>
+            <div className="intro-actions">
+              <button className="q-continue intro-button" type="button" onClick={beginBigBang}>
+                BEGIN
+              </button>
+              {canOpenAtlas ? (
+                <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
+                  MULTIVERSE ATLAS
+                </button>
+              ) : null}
+            </div>
           )
         ) : null}
       </div>

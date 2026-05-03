@@ -33,7 +33,7 @@ export function drawParticles({ ctx, stage, particles, flyers, bursts }: DrawPar
     ctx.shadowColor = stage.accent;
     drawStageSprite(
       ctx,
-      stage.id,
+      flyer.spriteId ?? stage.id,
       flyer.x,
       flyer.y,
       flyer.auto ? 1.7 : 2.6,
@@ -45,6 +45,15 @@ export function drawParticles({ ctx, stage, particles, flyers, bursts }: DrawPar
   });
 
   bursts.forEach((burst) => {
-    drawStageSprite(ctx, stage.id, burst.x, burst.y, burst.r * burst.life, burst.color, burst.life, burst.life);
+    drawStageSprite(
+      ctx,
+      burst.spriteId ?? stage.id,
+      burst.x,
+      burst.y,
+      burst.r * burst.life,
+      burst.color,
+      burst.life,
+      burst.life,
+    );
   });
 }

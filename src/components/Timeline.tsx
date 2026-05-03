@@ -10,6 +10,7 @@ interface TimelineProps {
   universeLabel: string | null;
   muted: boolean;
   onToggleMute: () => void;
+  onOpenInfo: () => void;
   onRequestReset: () => void;
 }
 
@@ -25,6 +26,7 @@ export function Timeline({
   universeLabel,
   muted,
   onToggleMute,
+  onOpenInfo,
   onRequestReset,
 }: TimelineProps) {
   return (
@@ -60,6 +62,9 @@ export function Timeline({
         {universeLabel ? <div className="universe-badge">{universeLabel}</div> : null}
         <button className="mini-button" type="button" onClick={onToggleMute}>
           {muted ? 'UNMUTE' : 'MUTE'}
+        </button>
+        <button className="mini-button" type="button" onClick={onOpenInfo}>
+          INFO
         </button>
         <button className="mini-button" type="button" onClick={onRequestReset}>
           RESET

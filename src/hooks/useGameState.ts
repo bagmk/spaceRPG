@@ -3,6 +3,7 @@ import { gameReducer, createInitialGameState } from '../game/reducer';
 import { clearSave, loadGame, saveGame } from '../game/storage';
 import { TUNING } from '../game/constants';
 import { getAutoRate, safeAdd } from '../game/formulas';
+import { getActiveModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
 import { getCosmicTimePerRealSec } from '../game/timeFlow';
 import type { Dispatch } from 'react';
@@ -20,6 +21,7 @@ export function useGameState(): UseGameStateResult {
   const saved = useRef(loadGame());
   const hadSavedGame = saved.current !== null;
   const stateRef = useRef<GameState | null>(null);
+  const getDayKey = (date: Date) => date.toISOString().slice(0, 10);
   const [state, dispatch] = useReducer(
     gameReducer,
     saved.current,
@@ -54,13 +56,26 @@ export function useGameState(): UseGameStateResult {
         return baseState;
       }
       const stage = STAGES[Math.min(payload.stageIdx, STAGES.length - 1)];
-      const autoRate = getAutoRate(stage, payload.autoLevel, payload.cumulativeBoost);
-      const offlineMultiplier = payload.singularityUnlocks.includes('hawking_echo')
+      const modifiers = getActiveModifiers(payload.skills, {
+        currentQuanta: payload.quanta,
+        stagesCleared: payload.stageIdx,
+        secondsInStage: Math.max(0, (now - payload.stageStartedAt) / 1000),
+        stageId: stage.id,
+        clickLevel: payload.skills.click.level,
+      });
+      const autoRate = getAutoRate(modifiers);
+      const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')
         ? 1
         : TUNING.OFFLINE_BASE_RATE;
       const gained = autoRate * awaySec * offlineMultiplier;
       const previousStage = payload.stageIdx > 0 ? STAGES[payload.stageIdx - 1] : null;
-      const cosmicRate = getCosmicTimePerRealSec(stage, previousStage, 0) * offlineMultiplier;
+      const timeMult = modifiers.timeMultMult;
+      const cosmicRate =
+        getCosmicTimePerRealSec(stage, previousStage, timeMult) *
+        payload.currentUniverseSeed.timeMod *
+        offlineMultiplier;
+      const todayKey = getDayKey(new Date(now));
+      const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
       return {
         ...baseState,
         quanta: safeAdd(baseState.quanta, gained),
@@ -68,6 +83,12 @@ export function useGameState(): UseGameStateResult {
         lastSaveAt: now,
         offlineElapsedMs: awaySec * 1000,
         offlineGained: gained,
+        dailyCheckIns: isDailyCheckIn
+          ? {
+              lastDayKey: todayKey,
+              streakDays: payload.dailyCheckIns.lastDayKey ? payload.dailyCheckIns.streakDays + 1 : 1,
+            }
+          : payload.dailyCheckIns,
       };
     },
   );

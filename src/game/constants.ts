@@ -6,7 +6,7 @@ import type {
 } from './types';
 
 export const STORAGE_KEYS = {
-  save: 'cosmic_coalescence_save_v2',
+  save: 'cosmic_coalescence_save_v4',
   muted: 'cosmic_coalescence_muted',
 } as const;
 
@@ -183,6 +183,10 @@ export const TUNING = {
   OVERLAY_Z_INDEX: 30,
   MOBILE_MIN_WIDTH: 768,
   BLACK_HOLE_ALPHA_BOOST: 1.5,
+  TOTAL_REAL_SECONDS: 360_000,
+  ACTIVE_PLAY_FRACTION: 0.3,
+  IDLE_PLAY_FRACTION: 0.7,
+  MOBILE_MAX_CPS: 10,
 } as const;
 
 export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [

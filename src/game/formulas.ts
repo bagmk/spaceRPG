@@ -1,31 +1,6 @@
 import { TUNING } from './constants';
-import type { EndingId, EndingOption, Stage } from './types';
-
-const WHOLE_NUMBER_SUFFIXES = [
-  '',
-  'K',
-  'M',
-  'B',
-  'T',
-  'Qa',
-  'Qi',
-  'Sx',
-  'Sp',
-  'Oc',
-  'No',
-  'Dc',
-  'UDc',
-  'DDc',
-  'TDc',
-  'QaDc',
-  'QiDc',
-  'SxDc',
-  'SpDc',
-  'ODc',
-  'NDc',
-  'V',
-  'UV',
-] as const;
+import type { EndingId, Stage } from './types';
+import type { Modifiers } from './skills/effects';
 
 const SECONDS_PER_YEAR = 31_557_600;
 
@@ -40,24 +15,20 @@ export function safeAdd(a: number, b: number): number {
   return a + b;
 }
 
-export function getClickPower(stage: Stage, clickLevel: number, prestigeBoost: number): number {
-  const base = Math.max(1, stage.threshold / (stage.realPlayTargetSec * 5));
-  const levelMult = Math.pow(1.12, clickLevel);
-  const prestigeMult = 1 + prestigeBoost * 0.5;
-  return base * levelMult * prestigeMult;
+export function getClickPower(mods: Modifiers): number {
+  return Math.max(1, (1 + mods.clickPowerAdd) * mods.clickPowerMult);
 }
 
-export function getAutoRate(stage: Stage, autoLevel: number, prestigeBoost: number): number {
-  if (autoLevel === 0) {
-    return 0;
-  }
-  const basePerLevel = stage.threshold / (stage.realPlayTargetSec * 30);
-  const levelMult = autoLevel * Math.pow(1.04, autoLevel);
-  return basePerLevel * levelMult * (1 + prestigeBoost * 0.3);
+export function formatGameNumber(value: number): string {
+  return formatWhole(value);
 }
 
-export function getCritMultiplier(critLevel: number): number {
-  return 5 + critLevel * 2 + Math.floor(critLevel / 10) * 5;
+export function getAutoRate(mods: Modifiers): number {
+  return Math.max(0, (0 + mods.autoRateAdd) * mods.autoRateMult);
+}
+
+export function getCritMultiplier(mods: Modifiers): number {
+  return 3 * mods.critMultMult;
 }
 
 export function getClickCost(stage: Stage, level: number): number {
@@ -86,11 +57,14 @@ export function getComboMult(combo: number, comboCapBonus = 0): number {
   );
 }
 
-export function getCritChance(combo: number): number {
-  return (
-    TUNING.CRIT_BASE_CHANCE +
-    Math.min(TUNING.CRIT_MAX - TUNING.CRIT_BASE_CHANCE, combo * TUNING.CRIT_PER_COMBO)
-  );
+export function getCritChance(combo: number, mods: Modifiers): number {
+  const base = mods.critChanceAdd + combo * 0.005;
+  const cap = 0.5 + mods.critChanceCapAdd;
+  return Math.min(cap, base);
+}
+
+export function getTimeMultiplier(mods: Modifiers): number {
+  return mods.timeMultMult;
 }
 
 export function getEntropyOnCondense(quanta: number, threshold: number): number {
@@ -118,6 +92,7 @@ export function getCondensedMassReward(
     big_rip: 1.5,
     big_crunch: 1.2,
     vacuum_decay: 2,
+    bounce: 2.5,
   };
   const firstTimeBonus = universeCount === 1 ? 3 : 1;
   return base * endingMult[endingId] * firstTimeBonus;
@@ -125,43 +100,6 @@ export function getCondensedMassReward(
 
 export function getEchoReward(uniqueEndingsCompleted: number): number {
   return Math.pow(2, uniqueEndingsCompleted);
-}
-
-export function getEndingOptions(
-  cumulativeBoost: number,
-  condensedMass: number,
-  unlocks: string[],
-): EndingOption[] {
-  return [
-    {
-      id: 'heat_death',
-      label: 'Heat Death',
-      description: 'The clock continues into equilibrium.',
-      unlocked: true,
-      requirement: 'Always available',
-    },
-    {
-      id: 'big_crunch',
-      label: 'Big Crunch',
-      description: 'Expansion reverses and all structure falls inward.',
-      unlocked: condensedMass >= 1000,
-      requirement: 'Requires 1000 condensed mass',
-    },
-    {
-      id: 'big_rip',
-      label: 'Big Rip',
-      description: 'Acceleration tears apart every bound scale.',
-      unlocked: cumulativeBoost >= 100,
-      requirement: 'Requires 100 cumulative boost',
-    },
-    {
-      id: 'vacuum_decay',
-      label: 'Vacuum Decay',
-      description: 'A truer vacuum expands through everything that was.',
-      unlocked: unlocks.includes('vacuum_stability'),
-      requirement: 'Requires Vacuum Stability',
-    },
-  ];
 }
 
 export function getLifeStep(progress01: number): number {
@@ -181,79 +119,67 @@ export function getProgress(quanta: number, threshold: number): number {
 }
 
 export function formatWhole(value: number): string {
-  if (!Number.isFinite(value)) {
-    return '∞';
+  if (!Number.isFinite(value) || value < 0) {
+    return '0';
   }
-  if (value < 0) {
-    return `-${formatWhole(Math.abs(value))}`;
+  const whole = Math.floor(value);
+  if (whole < 1_000) {
+    return whole.toString();
   }
-  if (value < 1000) {
-    return Math.floor(value).toString();
+  if (whole < 1_000_000) {
+    return whole.toLocaleString('en-US');
   }
-
-  if (value >= 1e33) {
-    return value.toExponential(2).replace('+', '');
+  if (whole < 1e9) {
+    return `${Math.floor(whole / 1e6)}M`;
   }
-
-  let unitIdx = Math.floor(Math.log10(value) / 3);
-  unitIdx = clamp(unitIdx, 0, WHOLE_NUMBER_SUFFIXES.length - 1);
-  const scaled = value / Math.pow(1000, unitIdx);
-
-  if (unitIdx === 0) {
-    return Math.floor(scaled).toString();
+  if (whole < 1e12) {
+    return `${Math.floor(whole / 1e9)}B`;
   }
-
-  return `${scaled.toFixed(2)}${WHOLE_NUMBER_SUFFIXES[unitIdx]}`;
+  if (whole < 1e15) {
+    return `${Math.floor(whole / 1e12)}T`;
+  }
+  const exp = Math.floor(Math.log10(whole));
+  const mantissa = Math.floor(whole / Math.pow(10, exp));
+  return `${mantissa}e${exp}`;
 }
 
 export function formatCosmicTime(seconds: number): string {
-  if (!Number.isFinite(seconds)) {
-    return '∞ yr';
-  }
-  if (seconds <= 0) {
-    return '0 s';
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return '0ms';
   }
   if (seconds < 1) {
-    return `${seconds.toExponential(1).replace('+', '')} s`;
+    return `${Math.floor(seconds * 1e3)}ms`;
   }
   if (seconds < 60) {
-    return `${seconds.toFixed(seconds >= 10 ? 1 : 2)} s`;
+    return `${Math.floor(seconds)}s`;
   }
   if (seconds < 3600) {
-    return `${(seconds / 60).toFixed(2)} min`;
+    return `${Math.floor(seconds / 60)}min`;
   }
   if (seconds < 86_400) {
-    return `${(seconds / 3600).toFixed(2)} hr`;
+    return `${Math.floor(seconds / 3600)}hr`;
   }
   if (seconds < SECONDS_PER_YEAR) {
-    return `${(seconds / 86_400).toFixed(2)} days`;
+    return `${Math.floor(seconds / 86_400)}d`;
   }
 
   const years = seconds / SECONDS_PER_YEAR;
-  if (years < 1e3) {
-    return `${years.toFixed(2)} yr`;
-  }
   if (years < 1e6) {
-    return `${(years / 1e3).toFixed(2)} Kyr`;
+    return `${Math.floor(years)}yr`;
   }
   if (years < 1e9) {
-    return `${(years / 1e6).toFixed(2)} Myr`;
+    return `${Math.floor(years / 1e6)}Myr`;
   }
   if (years < 1e12) {
-    return `${(years / 1e9).toFixed(2)} Gyr`;
+    return `${Math.floor(years / 1e9)}Gyr`;
   }
-  return `${years.toExponential(1).replace('+', '')} yr`;
+  const exp = Math.floor(Math.log10(years));
+  const mantissa = Math.floor(years / Math.pow(10, exp));
+  return `${mantissa}e${exp}yr`;
 }
 
 export function formatRate(value: number): string {
-  if (!Number.isFinite(value)) {
-    return '∞';
-  }
-  if (value >= 1e6) {
-    return formatWhole(value);
-  }
-  const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
-  return value.toFixed(digits);
+  return `${formatWhole(value)}/s`;
 }
 
 export function formatDuration(totalMs: number): string {

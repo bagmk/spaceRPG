@@ -1,3 +1,5 @@
+import type { SkillState, SkillTreeId } from './skills/types';
+
 export interface Stage {
   id: number;
   name: string;
@@ -39,7 +41,45 @@ export type StageMechanicId =
   | 'hawking_radiation'
   | 'ending_choice';
 
-export type EndingId = 'heat_death' | 'big_rip' | 'big_crunch' | 'vacuum_decay';
+export type EndingId = 'heat_death' | 'big_rip' | 'big_crunch' | 'vacuum_decay' | 'bounce';
+
+export type AnomalyType =
+  | 'crystalline'
+  | 'inverted_time'
+  | 'high_energy'
+  | 'dim'
+  | 'echoing';
+
+export interface UniverseSeed {
+  index: number;
+  gravityMod: number;
+  timeMod: number;
+  paletteShift: number;
+  anomaly: AnomalyType | null;
+  atlasName: string;
+}
+
+export interface UniverseAtlasEntry {
+  universeIndex: number;
+  atlasName: string;
+  endingId: EndingId;
+  durationMs: number;
+  totalClicks: number;
+  collisions: number;
+  completedAt: number;
+  seed: UniverseSeed;
+}
+
+export interface EndingProgressFlags {
+  bigRipEverEligible: boolean;
+  bigCrunchEligible: boolean;
+  vacuumDecayEligible: boolean;
+}
+
+export interface CondenseProgressEntry {
+  stageId: number;
+  progressAtCondense: number;
+}
 
 export type SingularityUnlockId =
   | 'quark_foam'
@@ -61,6 +101,8 @@ export interface FloatingClickEvent {
   isCrit: boolean;
   combo: number;
   comboMult: number;
+  particleName: string;
+  particleDefinition?: string;
 }
 
 export interface FloatingCollisionEvent {
@@ -78,8 +120,13 @@ export interface EncounterEvent {
   color: string;
 }
 
+export interface DailyCheckInState {
+  lastDayKey: string;
+  streakDays: number;
+}
+
 export interface SaveState {
-  version: 2;
+  version: 4;
   stageIdx: number;
   quanta: number;
   clickLevel: number;
@@ -107,6 +154,19 @@ export interface SaveState {
   mechanicCharge: number;
   mechanicStep: number;
   mechanicTriggered: boolean;
+  tutorialDone: boolean;
+  cosmicHoursThisRun: number;
+  dailyCheckIns: DailyCheckInState;
+  skillPoints: number;
+  skills: SkillState;
+  endingsUnlocked: EndingId[];
+  endingProgressFlags: EndingProgressFlags;
+  clickRateLog: number[];
+  condenseProgressHistory: CondenseProgressEntry[];
+  universeAtlas: UniverseAtlasEntry[];
+  currentUniverseSeed: UniverseSeed;
+  stageClicksAtStageStart: number;
+  tutorialFlags: Record<number, boolean>;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
@@ -181,6 +241,7 @@ export interface Flyer {
   y: number;
   life: number;
   auto?: boolean;
+  spriteId?: number;
 }
 
 export interface Burst {
@@ -191,6 +252,7 @@ export interface Burst {
   r: number;
   life: number;
   color: string;
+  spriteId?: number;
 }
 
 export interface WakeTrail {
@@ -206,15 +268,28 @@ export interface WakeTrail {
 export interface Shockwave {
   startedAt: number;
   color: string;
+  x?: number;
+  y?: number;
+  maxRadius?: number;
+  lifeMs?: number;
+  lineWidth?: number;
 }
 
 export type ClusterMode =
-  | 'generic'
+  | 'inflation'
+  | 'baryogenesis'
+  | 'qgPlasma'
+  | 'nucleosynthesis'
+  | 'recombination'
+  | 'darkAge'
+  | 'firstStars'
+  | 'reionization'
   | 'galaxy'
   | 'planetary'
   | 'lifeSurface'
   | 'redGiant'
   | 'remnant'
+  | 'degenerate'
   | 'blackHole'
   | 'heatDeath';
 
@@ -230,6 +305,7 @@ export interface Mote {
   hue: number;
   age: number;
   bornAt: number;
+  temperature?: number;
   surfaceLat?: number;
   surfaceLon?: number;
   surfaceKind?: 'plant' | 'city' | 'water';
@@ -295,3 +371,12 @@ export interface SingularityUnlockDefinition {
   effect: string;
   description: string;
 }
+
+export interface TutorialStepState {
+  active: boolean;
+  step: 1 | 2 | 3;
+}
+
+export type SkillPurchaseTarget =
+  | { kind: 'track'; treeId: SkillTreeId }
+  | { kind: 'cross'; nodeId: string };

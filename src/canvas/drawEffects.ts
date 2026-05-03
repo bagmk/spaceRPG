@@ -26,22 +26,28 @@ export function drawEffects({
 
   shockwaves.forEach((shockwave) => {
     const ageMs = now - shockwave.startedAt;
-    if (ageMs > TUNING.SHOCKWAVE_FADE_MS) {
+    const lifeMs = shockwave.lifeMs ?? TUNING.SHOCKWAVE_FADE_MS;
+    if (ageMs > lifeMs) {
       return;
     }
     const age = ageMs / 1000;
-    const opacity = Math.max(0, 1 - ageMs / TUNING.SHOCKWAVE_FADE_MS);
-    const radius = age * TUNING.SHOCKWAVE_SPEED_PX_PER_SEC;
+    const opacity = Math.max(0, 1 - ageMs / lifeMs);
+    const radius = Math.min(
+      shockwave.maxRadius ?? Number.POSITIVE_INFINITY,
+      age * TUNING.SHOCKWAVE_SPEED_PX_PER_SEC,
+    );
+    const waveX = shockwave.x ?? cx;
+    const waveY = shockwave.y ?? cy;
     ctx.strokeStyle = hexToRgba(shockwave.color, opacity);
-    ctx.lineWidth = 6 * opacity;
+    ctx.lineWidth = (shockwave.lineWidth ?? 6) * opacity;
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.arc(waveX, waveY, radius, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.strokeStyle = hexToRgba('#ffffff', opacity * 0.5);
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+    ctx.arc(waveX, waveY, radius * 0.6, 0, Math.PI * 2);
     ctx.stroke();
   });
 

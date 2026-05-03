@@ -2,6 +2,16 @@ import { hexToRgba } from '../game/formulas';
 import type { Rogue } from '../game/types';
 import { drawStageSprite } from './stageSprites';
 
+function formatRogueDistance(stageId: number, fracOfScreen: number): string {
+  const v = Math.max(1, Math.floor(fracOfScreen * 20));
+  if (stageId <= 3) return `${v} ps·c`;
+  if (stageId <= 6) return `${v} AU`;
+  if (stageId <= 9) return `${v} ly`;
+  if (stageId <= 12) return `${v} AU`;
+  if (stageId <= 14) return `${v} ly`;
+  return `${v} Mpc`;
+}
+
 export function drawRogues(
   ctx: CanvasRenderingContext2D,
   rogues: Rogue[],
@@ -60,6 +70,18 @@ export function drawRogues(
         ctx.lineTo(rogue.x + Math.cos(angle) * length, rogue.y + Math.sin(angle) * length);
         ctx.stroke();
       }
+    }
+
+    const dx = rogue.x - width / 2;
+    const dy = rogue.y - height / 2;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const fracOfScreen = dist / Math.min(width, height) / 2;
+    if (fracOfScreen > 0.5) {
+      const alpha = Math.min(0.9, (fracOfScreen - 0.5) * 1.4);
+      ctx.fillStyle = hexToRgba('#ffffff', alpha);
+      ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(formatRogueDistance(rogue.stageId, fracOfScreen), rogue.x, rogue.y - rogue.r - 10);
     }
   });
 }

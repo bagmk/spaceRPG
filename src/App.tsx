@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { IntroScreen } from './components/IntroScreen';
 import { FinalScreen } from './components/FinalScreen';
+import { MultiverseAtlas } from './components/MultiverseAtlas';
 import { SoundManager } from './game/audio';
 import { clearAllStoredState, clearSave, loadMutedPreference, saveMutedPreference } from './game/storage';
 import { useGameState } from './hooks/useGameState';
@@ -9,7 +10,7 @@ import { createInitialGameState } from './game/reducer';
 import { STAGES } from './game/stages';
 import { getStageStartCosmicTime } from './game/timeFlow';
 
-type Route = 'intro' | 'game' | 'final';
+type Route = 'intro' | 'game' | 'final' | 'atlas';
 
 export default function App() {
   const { state, dispatch, hadSavedGame } = useGameState();
@@ -76,6 +77,7 @@ export default function App() {
       {route === 'intro' ? (
         <IntroScreen
           canResume={resumeAvailable}
+          canOpenAtlas={state.universeAtlas.length > 0}
           onResume={() => {
             soundManagerRef.current?.unlock();
             setRoute(state.completedRun ? 'final' : 'game');
@@ -96,6 +98,7 @@ export default function App() {
           onPlayBigBang={() => {
             soundManagerRef.current?.playBigBang();
           }}
+          onOpenAtlas={() => setRoute('atlas')}
         />
       ) : null}
 
@@ -114,12 +117,22 @@ export default function App() {
         <FinalScreen
           state={state}
           onUnlock={(unlockId) => dispatch({ type: 'BUY_SINGULARITY_UNLOCK', unlockId })}
+          onOpenAtlas={() => setRoute('atlas')}
           onPrestige={() => {
             soundManagerRef.current?.unlock();
             dispatch({ type: 'PRESTIGE', now: Date.now() });
             setResumeAvailable(false);
             setRoute('game');
           }}
+        />
+      ) : null}
+
+      {route === 'atlas' ? (
+        <MultiverseAtlas
+          entries={state.universeAtlas}
+          currentSeed={state.currentUniverseSeed}
+          currentUniverseCount={state.universeCount}
+          onBack={() => setRoute(state.completedRun ? 'final' : 'intro')}
         />
       ) : null}
 

@@ -14,22 +14,75 @@ import {
   getEntropyOnCondense,
   getLifeStep,
   getProgress,
+  getTimeMultiplier,
   getUniverseBoost,
   safeAdd,
 } from './formulas';
+import { getActiveModifiers } from './skills/effects';
+import { PARTICLE_DEFINITIONS, pickParticleName } from './particles';
 import { getMechanic } from './mechanics';
 import { STAGES } from './stages';
 import { getCosmicTimePerRealSec, getStageStartCosmicTime } from './timeFlow';
-import type {
+import {
+  CondenseProgressEntry,
+  DailyCheckInState,
   EncounterEvent,
   EndingId,
+  EndingProgressFlags,
   FloatingClickEvent,
   FloatingCollisionEvent,
   GameState,
   PersistentGameState,
   RogueTypeKey,
   SingularityUnlockId,
+  UniverseAtlasEntry,
+  UniverseSeed,
 } from './types';
+import { findNode, findTree } from './skills/definitions';
+import {
+  ALL_ENDINGS,
+  createInitialUniverseSeed,
+  generateUniverseSeed,
+  getEndingOptions,
+  isBigCrunchEligible,
+  isBigRipEligible,
+  isVacuumDecayProgress,
+} from './multiverse';
+
+function createDefaultDailyCheckIns(): DailyCheckInState {
+  return { lastDayKey: '', streakDays: 0 };
+}
+
+function createDefaultEndingProgressFlags(): EndingProgressFlags {
+  return {
+    bigRipEverEligible: false,
+    bigCrunchEligible: false,
+    vacuumDecayEligible: false,
+  };
+}
+
+function createDefaultUniverseAtlas(): UniverseAtlasEntry[] {
+  return [];
+}
+
+function createDefaultCondenseProgressHistory(): CondenseProgressEntry[] {
+  return [];
+}
+
+function createDefaultUniverseSeed(): UniverseSeed {
+  return createInitialUniverseSeed();
+}
+
+function createDefaultSkills() {
+  return {
+    click: { level: 0 },
+    auto: { level: 0 },
+    crit: { level: 0 },
+    time: { level: 0 },
+    unlockedTracks: [],
+    ownedCrossNodes: [],
+  };
+}
 
 export type GameAction =
   | { type: 'HYDRATE'; payload: PersistentGameState; now: number }
@@ -56,7 +109,6 @@ export type GameAction =
   | { type: 'ADVANCE_STAGE'; now: number }
   | { type: 'ADMIN_NEXT_STAGE'; now: number }
   | { type: 'ADMIN_RESTART_RUN'; now: number }
-  | { type: 'SPEND_DARK_AGE_SKIP' }
   | { type: 'SELECT_ENDING'; endingId: EndingId; now: number }
   | { type: 'COMPLETE_ENDING'; now: number }
   | { type: 'BUY_SINGULARITY_UNLOCK'; unlockId: SingularityUnlockId }
@@ -74,7 +126,12 @@ export type GameAction =
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
   | { type: 'CLEAR_ENCOUNTER_EVENT'; id: number }
-  | { type: 'PRESTIGE'; now: number };
+  | { type: 'SET_TUTORIAL_DONE' }
+  | { type: 'PRESTIGE'; now: number }
+  | { type: 'BUY_TRACK_LEVEL'; trackId: 'click' | 'auto' | 'crit' | 'time' }
+  | { type: 'BUY_CROSS_NODE'; nodeId: string }
+  | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
+  | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number };
 
 export function createInitialGameState(now: number): GameState {
   return {
@@ -105,6 +162,9 @@ export function createInitialGameState(now: number): GameState {
     mechanicCharge: 0,
     mechanicStep: 0,
     mechanicTriggered: false,
+    tutorialDone: false,
+    cosmicHoursThisRun: 0,
+    dailyCheckIns: createDefaultDailyCheckIns(),
     combo: 0,
     lastClick: 0,
     imploding: false,
@@ -116,6 +176,16 @@ export function createInitialGameState(now: number): GameState {
     offlineElapsedMs: 0,
     offlineGained: 0,
     endingStartedAt: null,
+    skillPoints: 0,
+    skills: createDefaultSkills(),
+    endingsUnlocked: [],
+    endingProgressFlags: createDefaultEndingProgressFlags(),
+    clickRateLog: [],
+    condenseProgressHistory: createDefaultCondenseProgressHistory(),
+    universeAtlas: createDefaultUniverseAtlas(),
+    currentUniverseSeed: createDefaultUniverseSeed(),
+    stageClicksAtStageStart: 0,
+    tutorialFlags: {},
   };
 }
 
@@ -148,6 +218,19 @@ export function toPersistentState(state: GameState): PersistentGameState {
     mechanicCharge: state.mechanicCharge,
     mechanicStep: state.mechanicStep,
     mechanicTriggered: state.mechanicTriggered,
+    tutorialDone: state.tutorialDone,
+    cosmicHoursThisRun: state.cosmicHoursThisRun,
+    dailyCheckIns: state.dailyCheckIns,
+    skillPoints: state.skillPoints,
+    skills: state.skills,
+    endingsUnlocked: state.endingsUnlocked,
+    endingProgressFlags: state.endingProgressFlags,
+    clickRateLog: state.clickRateLog,
+    condenseProgressHistory: state.condenseProgressHistory,
+    universeAtlas: state.universeAtlas,
+    currentUniverseSeed: state.currentUniverseSeed,
+    stageClicksAtStageStart: state.stageClicksAtStageStart,
+    tutorialFlags: state.tutorialFlags,
   };
 }
 
@@ -165,6 +248,19 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     offlineElapsedMs: 0,
     offlineGained: 0,
     endingStartedAt: null,
+    tutorialDone: payload.tutorialDone ?? false,
+    cosmicHoursThisRun: payload.cosmicHoursThisRun ?? 0,
+    dailyCheckIns: payload.dailyCheckIns ?? createDefaultDailyCheckIns(),
+    skillPoints: payload.skillPoints ?? 0,
+    skills: payload.skills ?? createDefaultSkills(),
+    endingsUnlocked: payload.endingsUnlocked ?? [],
+    endingProgressFlags: payload.endingProgressFlags ?? createDefaultEndingProgressFlags(),
+    clickRateLog: payload.clickRateLog ?? [],
+    condenseProgressHistory: payload.condenseProgressHistory ?? createDefaultCondenseProgressHistory(),
+    universeAtlas: payload.universeAtlas ?? createDefaultUniverseAtlas(),
+    currentUniverseSeed: payload.currentUniverseSeed ?? createDefaultUniverseSeed(),
+    stageClicksAtStageStart: payload.stageClicksAtStageStart ?? payload.totalClicks ?? 0,
+    tutorialFlags: payload.tutorialFlags ?? {},
   };
 }
 
@@ -188,8 +284,19 @@ function createClickEvent(
   isCrit: boolean,
   combo: number,
   comboMult: number,
+  particleName: string,
 ): FloatingClickEvent {
-  return { id, x, y, gained, isCrit, combo, comboMult };
+  return {
+    id,
+    x,
+    y,
+    gained,
+    isCrit,
+    combo,
+    comboMult,
+    particleName,
+    particleDefinition: PARTICLE_DEFINITIONS[particleName],
+  };
 }
 
 function createCollisionEvent(
@@ -223,10 +330,31 @@ function getEncounterRewardMultiplier(state: GameState): number {
   return hasUnlock(state, 'cosmic_web') ? 2 : 1;
 }
 
+function getCurrentModifiers(state: GameState) {
+  return getActiveModifiers(state.skills, {
+    currentQuanta: state.quanta,
+    stagesCleared: state.stageIdx,
+    secondsInStage: Math.max(0, (state.totalTimePlayed - Math.max(0, state.stageStartedAt - state.runStartTime)) / 1000),
+    stageId: getCurrentStage(state).id,
+    progress01: getProgress(state.quanta, getCurrentStage(state).threshold),
+    clickLevel: state.skills.click.level,
+  });
+}
+
 function getAdjustedClickPower(state: GameState): number {
-  const stage = getCurrentStage(state);
-  const base = getClickPower(stage, state.clickLevel, state.cumulativeBoost);
-  return hasUnlock(state, 'quark_foam') ? base + state.clickLevel + 1 : base;
+  const modifiers = getCurrentModifiers(state);
+  const adjusted = getClickPower(modifiers);
+  const unlocked = hasUnlock(state, 'quark_foam') ? adjusted + state.skills.click.level + 1 : adjusted;
+  return unlocked;
+}
+
+function unlockTrackForStage(skills: GameState['skills'], stageId: number): GameState['skills'] {
+  const unlockedTracks = [...skills.unlockedTracks];
+  if (stageId === 2 && !unlockedTracks.includes('click')) unlockedTracks.push('click');
+  if (stageId === 3 && !unlockedTracks.includes('crit')) unlockedTracks.push('crit');
+  if (stageId === 4 && !unlockedTracks.includes('auto')) unlockedTracks.push('auto');
+  if (stageId === 5 && !unlockedTracks.includes('time')) unlockedTracks.push('time');
+  return { ...skills, unlockedTracks };
 }
 
 function resetMechanicState(state: GameState): Pick<GameState, 'mechanicCharge' | 'mechanicStep' | 'mechanicTriggered'> {
@@ -234,6 +362,33 @@ function resetMechanicState(state: GameState): Pick<GameState, 'mechanicCharge' 
     return { mechanicCharge: 0, mechanicStep: 0, mechanicTriggered: false };
   }
   return { mechanicCharge: 0, mechanicStep: 0, mechanicTriggered: false };
+}
+
+function recordLateStageClickRate(state: GameState, now: number): number[] {
+  const stage = getCurrentStage(state);
+  if (stage.id < 13 || stage.id > 16) {
+    return state.clickRateLog;
+  }
+  const elapsedSec = Math.max(1, (now - state.stageStartedAt) / 1000);
+  const clickRate = Math.max(0, state.totalClicks - state.stageClicksAtStageStart) / elapsedSec;
+  return [...state.clickRateLog, clickRate].slice(-4);
+}
+
+function buildAtlasEntry(state: GameState, now: number): UniverseAtlasEntry | null {
+  const endingId = state.selectedEndingId ?? state.lastEndingId;
+  if (!endingId) {
+    return null;
+  }
+  return {
+    universeIndex: state.universeCount,
+    atlasName: state.currentUniverseSeed.atlasName,
+    endingId,
+    durationMs: state.totalTimePlayed,
+    totalClicks: state.totalClicks,
+    collisions: state.collisions,
+    completedAt: now,
+    seed: state.currentUniverseSeed,
+  };
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -247,15 +402,25 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.imploding &&
         state.condenseStartedAt !== null &&
         action.now - state.condenseStartedAt >= TUNING.CONDENSE_IMPLOSION_MS;
+      const modifiers = getActiveModifiers(state.skills, {
+        currentQuanta: state.quanta,
+        stagesCleared: state.stageIdx,
+        secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
+        stageId: stage.id,
+        progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
+        clickLevel: state.skills.click.level,
+      });
       const shouldClearCombo =
-        state.combo > 0 && action.now - state.lastClick >= TUNING.COMBO_CLEAR_MS;
+        state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
       const canAccrue =
         !state.completedRun &&
         state.pendingCondenseStageIdx === null &&
         !state.imploding &&
         state.selectedEndingId === null;
       const progress = getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost));
-      const autoRate = getAutoRate(stage, state.autoLevel, state.cumulativeBoost);
+      const baseAuto = getAutoRate(modifiers);
+      const timeMult = getTimeMultiplier(modifiers);
+      const autoRate = baseAuto * timeMult;
       const stageAutoBonus =
         stage.mechanic === 'reionization'
           ? autoRate * state.mechanicCharge * 0.5
@@ -269,7 +434,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ? mechanic.onTick({ state, stage, now: action.now, progress01: progress })
           : null;
       const rawClockRate =
-        getCosmicTimePerRealSec(stage, previousStage, progress) * getLateStageCompression(state);
+        getCosmicTimePerRealSec(stage, previousStage, timeMult) *
+        getLateStageCompression(state) *
+        state.currentUniverseSeed.timeMod;
       const cosmicClockSec = state.completedRun
         ? state.cosmicClockSec
         : Math.min(
@@ -299,17 +466,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return state;
       }
       const stage = getCurrentStage(state);
+      const modifiers = getActiveModifiers(state.skills, {
+        currentQuanta: state.quanta,
+        stagesCleared: state.stageIdx,
+        secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
+        stageId: stage.id,
+        progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
+        clickLevel: state.skills.click.level,
+      });
       const combo =
-        action.now - state.lastClick < TUNING.COMBO_TIMEOUT_MS ? state.combo + 1 : 1;
+        action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
       const clickPower = getAdjustedClickPower(state);
       const comboMult = getComboMult(combo, getComboCapBonus(state));
-      const isCrit = action.forceCrit === true || action.randomValue < getCritChance(combo);
-      const critMult = isCrit ? getCritMultiplier(state.critLevel) : 1;
+      const isCrit = action.forceCrit === true || action.randomValue < getCritChance(combo, modifiers);
+      const critMult = isCrit ? getCritMultiplier(modifiers) : 1;
       const gainMultiplier = action.gainMultiplier ?? 1;
       const gained = Math.floor(clickPower * comboMult * critMult * gainMultiplier + (action.gainFlat ?? 0));
       const eventId = nextEventId(state);
       const nextQuanta = safeAdd(state.quanta, gained + (action.quantaDelta ?? 0));
       const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
+      const particleName = pickParticleName(stage.id);
       return {
         ...state,
         quanta: nextQuanta,
@@ -326,6 +502,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           isCrit,
           combo,
           comboMult,
+          particleName,
         ),
         mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
         mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
@@ -405,6 +582,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return state;
       }
       const earned = getEntropyOnCondense(state.quanta, effectiveThreshold);
+      const progressAtCondense = getProgress(state.quanta, effectiveThreshold);
+      const condenseEntry = { stageId: stage.id, progressAtCondense };
+      const vacuumDecayEligible =
+        state.endingProgressFlags.vacuumDecayEligible ||
+        (stage.id === 14 && isVacuumDecayProgress(progressAtCondense));
+      const endingsUnlocked: EndingId[] =
+        vacuumDecayEligible && !state.endingsUnlocked.includes('vacuum_decay')
+          ? [...state.endingsUnlocked, 'vacuum_decay']
+          : state.endingsUnlocked;
       return {
         ...state,
         entropy: state.entropy + earned,
@@ -414,6 +600,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         lastClick: 0,
         imploding: true,
         condenseStartedAt: action.now,
+        endingsUnlocked,
+        endingProgressFlags: {
+          ...state.endingProgressFlags,
+          vacuumDecayEligible,
+        },
+        condenseProgressHistory: [...state.condenseProgressHistory, condenseEntry].slice(-16),
       };
     }
     case 'ADVANCE_STAGE': {
@@ -430,15 +622,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           completedRun: true,
         };
       }
-      const inheritFrac = hasUnlock(state, 'stellar_memory') ? 0.25 : 0.1;
+      const stage = getCurrentStage(state);
+      const nextClickRateLog = recordLateStageClickRate(state, action.now);
+      const excess = Math.max(0, state.quanta - getEffectiveThreshold(stage, state.cumulativeBoost));
       const nextStageIdx = state.stageIdx + 1;
+      const nextStageId = nextStageIdx + 1;
       const nextState = {
         ...state,
         stageIdx: nextStageIdx,
-        quanta: 0,
-        clickLevel: Math.floor(state.clickLevel * inheritFrac),
-        autoLevel: Math.floor(state.autoLevel * inheritFrac),
-        critLevel: Math.floor(state.critLevel * inheritFrac),
+        quanta: excess,
         combo: 0,
         lastClick: 0,
         pendingCondenseStageIdx: null,
@@ -447,6 +639,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         condenseStartedAt: null,
         stageStartedAt: action.now,
         cosmicClockSec: getStageStartCosmicTime(nextStageIdx),
+        skills: unlockTrackForStage(state.skills, nextStageId),
+        clickRateLog: nextClickRateLog,
+        stageClicksAtStageStart: state.totalClicks,
       };
       return {
         ...nextState,
@@ -485,6 +680,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         completedRun: false,
         stageStartedAt: action.now,
         cosmicClockSec: getStageStartCosmicTime(nextStageIdx),
+        tutorialDone: true,
+        skills: unlockTrackForStage(state.skills, nextStageIdx + 1),
+        stageClicksAtStageStart: state.totalClicks,
       };
       return {
         ...nextState,
@@ -505,20 +703,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         singularityUnlocks: state.singularityUnlocks,
         endingsCompleted: state.endingsCompleted,
         lastEndingId: state.lastEndingId,
-      };
-    }
-    case 'SPEND_DARK_AGE_SKIP': {
-      const stage = getCurrentStage(state);
-      if (stage.mechanic !== 'dark_age' || state.entropy < 100) {
-        return state;
-      }
-      const span = stage.cosmicTimeSpanSec;
-      return {
-        ...state,
-        entropy: state.entropy - 100,
-        quanta: safeAdd(state.quanta, stage.threshold * 0.1),
-        cosmicClockSec: Math.min(stage.cosmicTimeSec, state.cosmicClockSec + span * 0.1),
-        mechanicCharge: state.mechanicCharge + 0.1,
+        tutorialDone: state.tutorialDone,
+        cosmicHoursThisRun: state.cosmicHoursThisRun,
+        dailyCheckIns: state.dailyCheckIns,
+        skillPoints: state.skillPoints,
+        endingsUnlocked: state.endingsUnlocked,
+        endingProgressFlags: createDefaultEndingProgressFlags(),
+        clickRateLog: [],
+        condenseProgressHistory: [],
+        universeAtlas: state.universeAtlas,
+        currentUniverseSeed: state.currentUniverseSeed,
+        stageClicksAtStageStart: 0,
+        tutorialFlags: state.tutorialFlags,
+        skills:
+          state.universeCount > 1
+            ? { ...state.skills, unlockedTracks: ['click', 'crit', 'auto', 'time'] }
+            : state.skills,
       };
     }
     case 'SELECT_ENDING': {
@@ -526,34 +726,66 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (stage.id !== STAGES.length || state.quanta < stage.threshold) {
         return state;
       }
+      const options = getEndingOptions(state, action.now);
+      const selectedOption = options.find((option) => option.id === action.endingId);
+      if (!selectedOption?.unlocked) {
+        return state;
+      }
+      const nextClickRateLog = recordLateStageClickRate(state, action.now);
+      const bigCrunchEligible = isBigCrunchEligible(
+        { ...state, clickRateLog: nextClickRateLog },
+        action.now,
+      );
+      const endingsUnlocked = new Set(state.endingsUnlocked);
+      if (bigCrunchEligible) endingsUnlocked.add('big_crunch');
+      if (isBigRipEligible(state)) endingsUnlocked.add('big_rip');
+      if (state.endingProgressFlags.vacuumDecayEligible) endingsUnlocked.add('vacuum_decay');
       return {
         ...state,
         selectedEndingId: action.endingId,
         endingStartedAt: action.now,
+        clickRateLog: nextClickRateLog,
+        endingsUnlocked: Array.from(endingsUnlocked) as EndingId[],
+        endingProgressFlags: {
+          ...state.endingProgressFlags,
+          bigCrunchEligible,
+          bigRipEverEligible: state.endingProgressFlags.bigRipEverEligible || isBigRipEligible(state),
+        },
       };
     }
     case 'COMPLETE_ENDING':
       if (state.selectedEndingId === null) {
         return state;
       }
-      return {
-        ...state,
-        completedRun: true,
-        condensedMass:
-          state.condensedMass +
-          getCondensedMassReward(state.entropy, state.selectedEndingId, state.universeCount),
-        echoes:
-          state.echoes +
-          (state.endingsCompleted.includes(state.selectedEndingId)
-            ? 0
-            : getEchoReward(state.endingsCompleted.length)),
-        endingsCompleted: Array.from(
+      {
+        const completedEndings = Array.from(
           new Set([...state.endingsCompleted, state.selectedEndingId]),
-        ),
-        lastEndingId: state.selectedEndingId,
-        selectedEndingId: null,
-        endingStartedAt: null,
-      };
+        );
+        const atlasEntry = buildAtlasEntry(state, action.now);
+        const universeAtlas = atlasEntry ? [...state.universeAtlas, atlasEntry] : state.universeAtlas;
+        const permanentUnlocks: EndingId[] =
+          state.selectedEndingId === 'bounce' || completedEndings.includes('bounce')
+            ? ALL_ENDINGS
+            : (Array.from(new Set([...state.endingsUnlocked, state.selectedEndingId])) as EndingId[]);
+        return {
+          ...state,
+          completedRun: true,
+          condensedMass:
+            state.condensedMass +
+            getCondensedMassReward(state.entropy, state.selectedEndingId, state.universeCount),
+          echoes:
+            state.echoes +
+            (state.endingsCompleted.includes(state.selectedEndingId)
+              ? 0
+              : getEchoReward(state.endingsCompleted.length)),
+          endingsCompleted: completedEndings,
+          endingsUnlocked: permanentUnlocks,
+          lastEndingId: state.selectedEndingId,
+          selectedEndingId: null,
+          endingStartedAt: null,
+          universeAtlas,
+        };
+      }
     case 'BUY_SINGULARITY_UNLOCK': {
       const unlock = SINGULARITY_UNLOCK_LOOKUP[action.unlockId];
       if (!unlock || state.singularityUnlocks.includes(action.unlockId) || state.condensedMass < unlock.cost) {
@@ -586,11 +818,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.pendingCondenseStageIdx !== null || state.completedRun) {
         return state;
       }
+      const stage = getCurrentStage(state);
+      const modifiers = getCurrentModifiers(state);
       const mult = getEncounterRewardMultiplier(state);
+      const cappedBonus = Math.min(action.bonus * mult, stage.threshold * 0.05 * modifiers.manyWorldsCapMult);
       const eventId = nextEventId(state);
       return {
         ...state,
-        quanta: safeAdd(state.quanta, action.bonus * mult),
+        quanta: safeAdd(state.quanta, cappedBonus),
         entropy: safeAdd(state.entropy, action.entropyBonus * mult),
         collisions: state.collisions + 1,
         eventCounter: eventId,
@@ -598,7 +833,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           eventId,
           action.x,
           action.y,
-          action.bonus * mult,
+          cappedBonus,
           action.name,
           action.tier,
         ),
@@ -614,10 +849,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return state.lastEncounterEvent?.id === action.id
         ? { ...state, lastEncounterEvent: null }
         : state;
+    case 'SET_TUTORIAL_DONE':
+      return { ...state, tutorialDone: true };
     case 'PRESTIGE': {
       const universeBoost = getUniverseBoost(state.entropy);
       const startStageIdx = hasUnlock(state, 'inflaton_spark') ? 1 : 0;
       const resetState = createInitialGameState(action.now);
+      const nextSeed = generateUniverseSeed(state.universeCount);
       return {
         ...resetState,
         stageIdx: startStageIdx,
@@ -629,8 +867,104 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         singularityUnlocks: state.singularityUnlocks,
         endingsCompleted: state.endingsCompleted,
         lastEndingId: state.lastEndingId,
+        tutorialDone: state.tutorialDone,
+        cosmicHoursThisRun: 0,
+        dailyCheckIns: state.dailyCheckIns,
+        skillPoints: state.skillPoints,
+        endingsUnlocked: state.endingsUnlocked,
+        endingProgressFlags: createDefaultEndingProgressFlags(),
+        clickRateLog: [],
+        condenseProgressHistory: [],
+        universeAtlas: state.universeAtlas,
+        currentUniverseSeed: nextSeed,
+        stageClicksAtStageStart: 0,
+        tutorialFlags: state.tutorialFlags,
+        skills: { ...state.skills, unlockedTracks: ['click', 'crit', 'auto', 'time'] },
       };
     }
+    case 'BUY_TRACK_LEVEL': {
+      const treeId = action.trackId;
+      const treeDef = findTree(treeId);
+      if (!treeDef) return state;
+      if (!state.skills.unlockedTracks.includes(treeId)) return state;
+      const branch = state.skills[treeId];
+      const nextLevel = branch.level + 1;
+      if (nextLevel > treeDef.rootMaxLevel) return state;
+      const cost = Math.ceil(treeDef.rootCostCurve(nextLevel));
+      if (state.quanta < cost) return state;
+      const nextSkills = {
+        ...state.skills,
+        [treeId]: { ...branch, level: nextLevel },
+      };
+      const bigRipEverEligible =
+        state.endingProgressFlags.bigRipEverEligible ||
+        (treeId === 'time' &&
+          nextLevel >= 30 &&
+          nextSkills.ownedCrossNodes.includes('inflaton_echo'));
+      const endingsUnlocked: EndingId[] =
+        bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
+          ? [...state.endingsUnlocked, 'big_rip']
+          : state.endingsUnlocked;
+      return {
+        ...state,
+        quanta: state.quanta - cost,
+        clickLevel: treeId === 'click' ? nextLevel : state.clickLevel,
+        autoLevel: treeId === 'auto' ? nextLevel : state.autoLevel,
+        critLevel: treeId === 'crit' ? nextLevel : state.critLevel,
+        skills: nextSkills,
+        endingsUnlocked,
+        endingProgressFlags: {
+          ...state.endingProgressFlags,
+          bigRipEverEligible,
+        },
+      };
+    }
+    case 'BUY_CROSS_NODE': {
+      const { nodeId } = action;
+      const nodeDef = findNode(nodeId);
+      if (!nodeDef) return state;
+      if (state.skills.ownedCrossNodes.includes(nodeId)) return state;
+      const meetsRequirements = Object.entries(nodeDef.requires).every(([trackId, requiredLevel]) => {
+        const branch = state.skills[trackId as 'click' | 'auto' | 'crit' | 'time'];
+        return branch.level >= (requiredLevel ?? 0);
+      });
+      if (!meetsRequirements || state.quanta < nodeDef.cost) return state;
+      const nextSkills = {
+        ...state.skills,
+        ownedCrossNodes: [...state.skills.ownedCrossNodes, nodeId],
+      };
+      const bigRipEverEligible =
+        state.endingProgressFlags.bigRipEverEligible ||
+        (nodeId === 'inflaton_echo' && state.skills.time.level >= 30);
+      const endingsUnlocked: EndingId[] =
+        bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
+          ? [...state.endingsUnlocked, 'big_rip']
+          : state.endingsUnlocked;
+      return {
+        ...state,
+        quanta: state.quanta - nodeDef.cost,
+        skills: nextSkills,
+        endingsUnlocked,
+        endingProgressFlags: {
+          ...state.endingProgressFlags,
+          bigRipEverEligible,
+        },
+      };
+    }
+    case 'UNLOCK_TRACK':
+      return state.skills.unlockedTracks.includes(action.trackId)
+        ? state
+        : { ...state, skills: { ...state.skills, unlockedTracks: [...state.skills.unlockedTracks, action.trackId] } };
+    case 'MARK_TUTORIAL_STAGE_SEEN':
+      return state.tutorialFlags[action.stageId]
+        ? state
+        : {
+            ...state,
+            tutorialFlags: {
+              ...state.tutorialFlags,
+              [action.stageId]: true,
+            },
+          };
     default: {
       const exhaustiveAction: never = action;
       return exhaustiveAction;

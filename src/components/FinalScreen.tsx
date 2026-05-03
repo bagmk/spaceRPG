@@ -7,9 +7,10 @@ interface FinalScreenProps {
   state: GameState;
   onPrestige: () => void;
   onUnlock: (unlockId: SingularityUnlockId) => void;
+  onOpenAtlas: () => void;
 }
 
-export function FinalScreen({ state, onPrestige, onUnlock }: FinalScreenProps) {
+export function FinalScreen({ state, onPrestige, onUnlock, onOpenAtlas }: FinalScreenProps) {
   const finalStage = STAGES[STAGES.length - 1];
   const universeBoost = getUniverseBoost(state.entropy);
   const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
@@ -47,6 +48,7 @@ export function FinalScreen({ state, onPrestige, onUnlock }: FinalScreenProps) {
           </div>
         </div>
         <div className="final-summary">{`Universe #${state.universeCount} completed.`}</div>
+        <div className="final-boost">{`Atlas name: ${state.currentUniverseSeed.atlasName}`}</div>
         <div className="final-boost">{`Prestige reward: +${formatWhole(universeBoost)} universe boost`}</div>
         <div className="final-boost">{`Completion reward: +${formatWhole(condensedMassReward)} condensed mass`}</div>
         {echoReward > 0 ? (
@@ -59,6 +61,9 @@ export function FinalScreen({ state, onPrestige, onUnlock }: FinalScreenProps) {
         />
         <button className="q-continue final-button" type="button" onClick={onPrestige}>
           INITIATE NEXT BIG BANG
+        </button>
+        <button className="mini-button atlas-back" type="button" onClick={onOpenAtlas}>
+          OPEN MULTIVERSE ATLAS
         </button>
       </div>
     </section>

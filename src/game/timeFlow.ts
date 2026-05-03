@@ -11,10 +11,10 @@ export function getStageStartCosmicTime(stageIdx: number): number {
 export function getCosmicTimePerRealSec(
   stage: Stage,
   prevStage: Stage | null,
-  _progress01: number,
+  timeMult = 1,
 ): number {
   const span = stage.cosmicTimeSec - (prevStage?.cosmicTimeSec ?? 0);
-  return span / Math.max(1, stage.realPlayTargetSec);
+  return (span / Math.max(1, stage.realPlayTargetSec)) * timeMult;
 }
 
 export function getStageClockTarget(stageIdx: number): number {
