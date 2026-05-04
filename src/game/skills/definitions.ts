@@ -127,15 +127,6 @@ const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number]
   },
 };
 
-function getCrossUnlockStage(tier: (typeof CROSS_TIERS)[number]): number {
-  if (tier === 30) return 16;
-  if (tier === 25) return 15;
-  if (tier === 20) return 14;
-  if (tier === 15) return 11;
-  if (tier === 10) return 7;
-  return 5;
-}
-
 export const CROSS_NODES: CrossNodeDef[] = SKILL_TREES.flatMap((tree) =>
   CROSS_TIERS.map((tier) => ({
     id: `${tree.id}_lv${tier}`,
@@ -146,7 +137,7 @@ export const CROSS_NODES: CrossNodeDef[] = SKILL_TREES.flatMap((tree) =>
     spCost: CROSS_SP_COST[tier],
     costCurrency: 'quanta',
     requires: { [tree.id]: tier },
-    unlockStageId: getCrossUnlockStage(tier),
+    unlockStageId: 1,
   })),
 );
 
@@ -158,12 +149,7 @@ export function findNode(nodeId: string): CrossNodeDef | undefined {
   return CROSS_NODES.find((node) => node.id === nodeId);
 }
 
-export function getVisibleCrossTier(stageId: number): 0 | 5 | 10 | 15 | 20 | 25 | 30 {
-  if (stageId >= 16) return 30;
-  if (stageId >= 15) return 25;
-  if (stageId >= 14) return 20;
-  if (stageId >= 11) return 15;
-  if (stageId >= 7) return 10;
-  if (stageId >= 5) return 5;
-  return 0;
+// All cross-node tiers are visible regardless of stage; unlock is level-based only.
+export function getVisibleCrossTier(_stageId: number): 0 | 5 | 10 | 15 | 20 | 25 | 30 {
+  return 30;
 }

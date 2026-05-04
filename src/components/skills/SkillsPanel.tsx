@@ -4,15 +4,7 @@ import { CROSS_NODES, SKILL_TREES, findNode, findTree, getVisibleCrossTier } fro
 import type { CrossNodeDef, SkillTreeId } from '../../game/skills/types';
 import type { GameAction } from '../../game/reducer';
 import type { GameState } from '../../game/types';
-import {
-  formatGameNumber,
-  formatWhole,
-  getAutoRate,
-  getClickPower,
-  getCritMultiplier,
-  getTimeMultiplier,
-} from '../../game/formulas';
-import { getActiveModifiers } from '../../game/skills/effects';
+import { formatGameNumber, formatWhole } from '../../game/formulas';
 
 interface SkillsPanelProps {
   state: GameState;
@@ -187,8 +179,6 @@ function TrackColumn({
           const crossOwned = crossNode ? state.skills.ownedCrossNodes.includes(crossNode.id) : false;
           const crossAvailable =
             crossNode && getCrossLockedReason(state, crossNode.id, visibleTier) === null;
-          const crossStageLocked = milestone !== null && milestone > visibleTier;
-
           return (
             <div key={slot} className={`skill-row ${milestone ? 'milestone-row' : ''}`}>
               <button
@@ -206,21 +196,17 @@ function TrackColumn({
                 <button
                   type="button"
                   className={`cross-slot ${crossOwned ? 'owned' : crossAvailable ? 'available' : 'locked'} ${
-                    crossStageLocked ? 'stage-locked' : ''
-                  } ${crossSelected ? 'selected' : ''}`}
+                    crossSelected ? 'selected' : ''
+                  }`}
                   disabled={!unlocked}
                   onClick={(event) =>
                     crossNode
                       ? onSelect({ kind: 'cross', nodeId: crossNode.id }, event)
                       : onSelect({ kind: 'crossSlot', trackId: treeId, tier: milestone }, event)
                   }
-                  title={
-                    crossNode
-                      ? crossNode.label
-                      : `Milestone cross-node slot, Stage ${getSlotUnlockStage(milestone)}`
-                  }
+                  title={crossNode ? crossNode.label : `Milestone cross-node slot, Lv ${milestone}`}
                 >
-                  {crossOwned ? '*' : crossStageLocked ? 'L' : '+'}
+                  {crossOwned ? '*' : '+'}
                 </button>
               ) : null}
             </div>
@@ -321,15 +307,6 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     setPopup(null);
   };
 
-  const currentModifiers = getActiveModifiers(state.skills, {
-    currentQuanta: state.quanta,
-    stagesCleared: state.stageIdx,
-    secondsInStage: Math.max(0, (Date.now() - state.stageStartedAt) / 1000),
-    stageId: state.stageIdx + 1,
-    progress01: 0,
-    clickLevel: state.skills.click.level,
-  });
-
   let heading = 'Select a node';
   let previewText = '';
   let costLine = '';
@@ -391,19 +368,19 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
   const selectWithPopup = (nextSelection: Selection, event: ReactMouseEvent<HTMLElement>) => {
     event.stopPropagation();
     setSelection(nextSelection);
-    const flipBelow = event.clientY < 150;
     setPopup({
       selection: nextSelection,
       x: event.clientX,
-      y: event.clientY + (flipBelow ? 36 : -12),
+      y: event.clientY,
     });
   };
 
-  const popupLeft = popup ? Math.max(12, Math.min(window.innerWidth - 224, popup.x - 100)) : 0;
+  const popupBelow = popup ? popup.y < window.innerHeight * 0.45 : false;
+  const popupLeft = popup ? Math.max(8, Math.min(window.innerWidth - 230, popup.x - 110)) : 0;
   const popupTop = popup
-    ? popup.y < 150
-      ? Math.max(12, popup.y)
-      : Math.max(12, popup.y - 132)
+    ? popupBelow
+      ? Math.min(window.innerHeight - 160, popup.y + 10)
+      : Math.max(8, popup.y - 148)
     : 0;
 
   return (
@@ -454,31 +431,15 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
         {popup ? (
         <div
           ref={popupRef}
-          className={`skills-detail skill-popup ${popup.y < 150 ? 'below' : 'above'}`}
+          className={`skills-detail skill-popup ${popupBelow ? 'below' : 'above'}`}
           style={{ left: popupLeft, top: popupTop }}
         >
           <strong>{heading}</strong>
-          <p>{previewText}</p>
-          {selection.kind === 'cross' && selectedCross ? (
-            <div className="cross-req-list">
-              {Object.entries(selectedCross.requires).map(([trackId, requiredLevel]) => {
-                const tree = findTree(trackId as SkillTreeId);
-                const current = state.skills[trackId as SkillTreeId].level;
-                const met = current >= (requiredLevel ?? 0);
-                return (
-                  <span key={trackId} className={met ? 'met' : 'unmet'}>
-                    {`${met ? 'OK' : 'NO'} ${tree?.label ?? trackId} Lv ${requiredLevel} (you: ${current})`}
-                  </span>
-                );
-              })}
-            </div>
-          ) : null}
           <div className="skills-detail-line">{costLine}</div>
-          <div className="skills-detail-line">{`Balance: ${formatWhole(state.skillPoints)} SP · ${formatGameNumber(state.quanta)} quanta`}</div>
-          <div className="skills-detail-line">{`Now: Click ${formatWhole(getClickPower(currentModifiers))} · Auto ${formatWhole(getAutoRate(currentModifiers))}/s · Crit x${formatWhole(getCritMultiplier(state.skills.crit.level, currentModifiers))} · Time x${formatWhole(getTimeMultiplier(state.skills.time.level, currentModifiers))}`}</div>
+          {previewText ? <div className="skill-popup-after">{`After: ${previewText}`}</div> : null}
           {lockedReason ? <div className="skills-locked-reason">{lockedReason}</div> : null}
           <button type="button" className="q-continue skills-buy" disabled={!canBuy} onClick={buy}>
-            {selection.kind === 'track' ? 'Buy +1 Level' : 'Buy Cross Node'}
+            Buy
           </button>
         </div>
         ) : null}

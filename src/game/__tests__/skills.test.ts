@@ -105,13 +105,13 @@ describe('skills reducer basics', () => {
     };
     const withoutNode = getActiveModifiers(skills, { clickLevel: 5 });
     expect(withoutNode.clickEmissionCount).toBe(1);
-    expect(getClickPower(withoutNode)).toBe(100_000);
+    expect(getClickPower(withoutNode)).toBe(32);   // 2^5 (V8-B)
 
     const withNode = getActiveModifiers(
       { ...skills, ownedCrossNodes: ['click_lv5'] },
       { clickLevel: 5 },
     );
-    expect(getClickPower(withNode)).toBe(200_000);
+    expect(getClickPower(withNode)).toBe(64);   // 32 * x2 cross node
   });
 
   it('does not auto-unlock cross nodes when root prerequisites are reached', () => {
