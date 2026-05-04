@@ -36,16 +36,6 @@ export const SHOP_ITEMS: ShopItem[] = [
     }),
   },
   {
-    id: 'skill_pack_s',
-    label: 'Skill Pack S',
-    description: '+10 Skill Points immediately.',
-    priceUSD: 1.99,
-    applyEffect: (state) => ({
-      ...state,
-      skillPoints: state.skillPoints + 10,
-    }),
-  },
-  {
     id: 'time_boost_xl',
     label: 'Aeon Surge',
     description: 'Time x100 for 30 minutes.',

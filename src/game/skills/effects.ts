@@ -112,9 +112,9 @@ export function getActiveModifiers(
   const clickLevel = skills.click.level;
   const autoLevel = skills.auto.level;
 
-  mods.clickPowerMult = Math.pow(10, clickLevel);
+  mods.clickPowerMult = Math.pow(2, clickLevel);
 
-  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(10, autoLevel);
+  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(2, autoLevel);
 
   for (const nodeId of skills.ownedCrossNodes) {
     const mult = CROSS_NODE_MULTS[nodeId];

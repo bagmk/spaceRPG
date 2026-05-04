@@ -65,14 +65,14 @@ export function drawRogues(
     const dx = rogue.x - width / 2;
     const dy = rogue.y - height / 2;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const fracOfScreen = Math.min(1, (dist / Math.min(width, height)) * 2);
-    if (fracOfScreen > 0.2) {
+    const fracOfScreen = dist / Math.min(width, height);
+    if (fracOfScreen > 0.1) {
       const alpha = Math.min(0.9, 0.35 + fracOfScreen * 0.55);
       ctx.fillStyle = hexToRgba('#ffffff', alpha);
       ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(formatEncounterDistance(rogue.stageId, fracOfScreen), rogue.x, rogue.y - rogue.r - 10);
+      ctx.fillText(formatEncounterDistance(rogue.stageId, dist), rogue.x, rogue.y - rogue.r - 10);
     }
   });
 }

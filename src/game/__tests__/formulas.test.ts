@@ -60,7 +60,7 @@ describe('scaling formulas', () => {
     expect(getAutoRate(scaled)).toBeGreaterThan(getAutoRate(none));
   });
 
-  it('uses V6 logarithmic 10x scaling for roots and time', () => {
+  it('uses V8 2x scaling for click/auto and 10x scaling for time at level 5', () => {
     const skills = {
       click: { level: 5 },
       auto: { level: 5 },
@@ -75,10 +75,10 @@ describe('scaling formulas', () => {
       progress01: 0,
       clickLevel: 5,
     });
-    expect(getClickPower(modifiers)).toBe(1e5);
-    expect(getAutoRate(modifiers)).toBe(1e5);
-    expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);
-    expect(getCosmicTimeFillRate(skills.time.level, modifiers)).toBe(1e5);
+    expect(getClickPower(modifiers)).toBe(32);   // 2^5
+    expect(getAutoRate(modifiers)).toBe(32);      // 2^5
+    expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);   // 10^5 unchanged
+    expect(getCosmicTimeFillRate(skills.time.level, modifiers)).toBe(1e5); // 10^5 unchanged
   });
 
   it('scales prestige rewards without a hard cap', () => {

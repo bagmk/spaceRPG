@@ -62,11 +62,6 @@ interface EncounterEntry {
   color: string;
 }
 
-interface AlmanacToast {
-  stageId: number;
-  text: string;
-}
-
 interface TutorialBubble {
   flagId: string;
   anchor: 'skills' | 'shop' | 'resource';
@@ -123,7 +118,6 @@ export function GameScreen({
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
-  const [almanacToast, setAlmanacToast] = useState<AlmanacToast | null>(null);
   const [statPopup, setStatPopup] = useState<{ trackId: StatPopupTrack; x: number; y: number } | null>(null);
   const skillsAnchorRef = useRef<HTMLDivElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -180,7 +174,8 @@ export function GameScreen({
   const logicAccumulator = useRef(0);
   const lastWhooshAt = useRef(0);
   const civPlayed = useRef(false);
-  const lastToastStageId = useRef(stage.id);
+  const lastToastStageIdRef = useRef(stage.id);
+  void lastToastStageIdRef; // suppress unused-variable lint
   const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers);
   const cosmicClockFromGauge = state.cosmicClockSec;
   const displayedCosmicClock =
@@ -269,26 +264,6 @@ export function GameScreen({
     state.universeCount,
   ]);
 
-  useEffect(() => {
-    if (stage.id !== lastToastStageId.current) {
-      const entry = ALMANAC[stage.id];
-      lastToastStageId.current = stage.id;
-      setAlmanacToast({
-        stageId: stage.id,
-        text: entry ? `${entry.short} · ${entry.cosmicEra.timeRange}` : stage.quote,
-      });
-    }
-  }, [stage.id, stage.quote]);
-
-  useEffect(() => {
-    if (!almanacToast) {
-      return;
-    }
-    const timeoutId = window.setTimeout(() => {
-      setAlmanacToast((current) => (current?.stageId === almanacToast.stageId ? null : current));
-    }, 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [almanacToast]);
 
   useGameLoop((now, dt) => {
     logicAccumulator.current += dt;
@@ -533,11 +508,14 @@ export function GameScreen({
           <SkillsPanel state={state} dispatch={dispatch} onClose={() => setSkillsOpen(false)} />
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
-          <div className="hud-cosmic-time">{formatCosmicTime(displayedCosmicClock)}</div>
           <div className="hud-stage-title">{`Stage ${stage.id}: ${stage.name}`}</div>
           <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumber(effectiveThreshold)}`}</div>
-          <div className="hud-gauge" aria-label="Cosmic time gauge">
-            <div className="hud-gauge-fill" style={{ width: `${Math.min(100, timeProgress01 * 100)}%` }} />
+          <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
+            <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, progress01 * 100)}%` }} />
+          </div>
+          <div className="hud-cosmic-time">{formatCosmicTime(displayedCosmicClock)}</div>
+          <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
+            <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, timeProgress01 * 100)}%` }} />
           </div>
           <button
             type="button"
@@ -691,13 +669,6 @@ export function GameScreen({
               CLOSE
             </button>
           </div>
-        </div>
-      ) : null}
-
-      {almanacToast ? (
-        <div className="almanac-toast" role="status" aria-live="polite">
-          <div className="q-stage">{`Stage ${String(almanacToast.stageId).padStart(2, '0')}`}</div>
-          <div>{almanacToast.text}</div>
         </div>
       ) : null}
 

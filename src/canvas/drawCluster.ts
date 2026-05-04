@@ -674,15 +674,13 @@ function drawTTauriIgnition(args: DrawClusterArgs): void {
     ctx.stroke();
   }
   drawSolarDust(args, 0.46);
-  drawDevelopingEarth(ctx, cx, cy, progress, now);
 }
 
 function drawPlanetesimalCollisions(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
+  const { ctx, stage, cx, cy, now } = args;
   drawSolarSun(ctx, stage, cx, cy, 30, 0.95);
   drawSolarBodies(ctx, cx, cy, 0.35, now, 1);
   drawSolarDust(args, 0.82);
-  drawDevelopingEarth(ctx, cx, cy, progress, now);
   for (let i = 0; i < 16; i += 1) {
     const angle = now / 900 + i * 0.72;
     const orbit = 78 + (i % 6) * 24;
@@ -706,7 +704,6 @@ function drawInnerPlanets(args: DrawClusterArgs): void {
   const { ctx, stage, cx, cy, progress, now } = args;
   drawSolarSun(ctx, stage, cx, cy, 31, 0.9);
   drawSolarBodies(ctx, cx, cy, progress, now);
-  drawDevelopingEarth(ctx, cx, cy, progress, now);
   drawSolarDust(args, 0.34);
 }
 
@@ -714,7 +711,6 @@ function drawOuterPlanets(args: DrawClusterArgs): void {
   const { ctx, stage, cx, cy, progress, now } = args;
   drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
   drawSolarBodies(ctx, cx, cy, progress, now);
-  drawDevelopingEarth(ctx, cx, cy, progress, now);
   drawSolarDust(args, 0.22);
 }
 
@@ -733,10 +729,9 @@ function drawMeteorStreaks(ctx: CanvasRenderingContext2D, cx: number, cy: number
 }
 
 function drawLateBombardment(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
+  const { ctx, stage, cx, cy, now } = args;
   drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
   drawSolarBodies(ctx, cx, cy, 1, now, 0, 'bombarded');
-  drawDevelopingEarth(ctx, cx, cy, progress, now);
   drawMeteorStreaks(ctx, cx, cy, now);
   drawSolarDust(args, 0.18);
 }
@@ -745,7 +740,6 @@ function drawStableSystem(args: DrawClusterArgs): void {
   const { ctx, stage, cx, cy, now } = args;
   drawSolarSun(ctx, stage, cx, cy, 32, 0.82);
   drawSolarBodies(ctx, cx, cy, 1, now);
-  drawDevelopingEarth(ctx, cx, cy, 0.86, now);
   drawSolarDust(args, 0.12);
 }
 

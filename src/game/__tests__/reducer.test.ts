@@ -41,7 +41,7 @@ describe('gameReducer', () => {
       tier: 'major',
       name: 'test',
     });
-    expect(next.quanta).toBe(0.2);
+    expect(next.quanta).toBe(0.1);   // 2% of stage-1 threshold (5)
     expect(next.skillPoints).toBe(1);
   });
 
@@ -68,10 +68,13 @@ describe('gameReducer', () => {
   });
 
   it('fills the logarithmic cosmic clock according to Aeon Drive level', () => {
+    // V8-D: cosmicClockSec accumulates directly at rate = 10^aeonLevel per second
     const state = createInitialGameState(0);
     const next = gameReducer(state, { type: 'TICK', now: 1000, dt: 1000 });
-    expect(next.timeGauge).toBeCloseTo(1, 5);
-    expect(next.cosmicClockSec).toBeCloseTo(getCosmicClockForGauge(0, 1), 40);
+    // level 0: rate = 1/s, dt=1s → cosmicClockSec ≈ 1
+    expect(next.cosmicClockSec).toBeCloseTo(1, 5);
+    // timeGauge is capped at 125 since rate=1 vastly overshoots the 1e-32 target
+    expect(next.timeGauge).toBe(125);
 
     const aeonState = {
       ...state,
@@ -81,8 +84,9 @@ describe('gameReducer', () => {
       },
     };
     const aeonNext = gameReducer(aeonState, { type: 'TICK', now: 1000, dt: 1000 });
+    // level 5: rate = 10^5/s, dt=1s → cosmicClockSec ≈ 1e5
+    expect(aeonNext.cosmicClockSec).toBeCloseTo(1e5, 5);
     expect(aeonNext.timeGauge).toBe(125);
-    expect(aeonNext.cosmicClockSec).toBe(STAGES[0].cosmicTimeSec);
   });
 
   it('uses the softer V5 crit multiplier at low Quantum Lens level', () => {

@@ -8,7 +8,7 @@ import {
   getClickPower,
   getComboMult,
   getCondensedMassReward,
-  getCosmicClockForGauge,
+  getCosmicTimeFillRate,
   getCritChance,
   getCritCost,
   getCritMultiplier,
@@ -18,7 +18,7 @@ import {
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
-  getTimeFillRate,
+
   safeAdd,
 } from './formulas';
 import { getActiveModifiers } from './skills/effects';
@@ -453,15 +453,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ? autoRate * Math.min(1.5, state.mechanicCharge * 0.12)
             : 0;
       const gained = canAccrue ? (((autoRate + stageAutoBonus) * action.dt) / 1000) * quantaBoost : 0;
-      const cosmicDelta = canAccrue
-        ? (getTimeFillRate(stage, state.skills.time.level, modifiers, timeBoost) * action.dt) / 1000
-        : 0;
-      const nextTimeGauge = state.completedRun
-        ? state.timeGauge
-        : Math.min(125, state.timeGauge + cosmicDelta);
-      const cosmicClockSec = state.completedRun
+      // V8-D: accumulate cosmic seconds directly; rate = 10^aeonLevel cosmic-sec/real-sec.
+      const cosmicRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost);
+      const cosmicDelta = canAccrue ? cosmicRate * (action.dt / 1000) : 0;
+      const nextCosmicClockSec = state.completedRun
         ? state.cosmicClockSec
-        : getCosmicClockForGauge(state.stageIdx, nextTimeGauge);
+        : state.cosmicClockSec + cosmicDelta;
+      const nextTimeGauge = getTimeGaugeForCosmicClock(state.stageIdx, nextCosmicClockSec);
       const mechanic = getMechanic(stage.mechanic);
       const tickResult =
         canAccrue && mechanic.onTick
@@ -475,7 +473,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         totalTimePlayed: state.completedRun ? state.totalTimePlayed : state.totalTimePlayed + action.dt,
         combo: shouldClearCombo ? 0 : state.combo,
         imploding: shouldEndImplosion ? false : state.imploding,
-        cosmicClockSec,
+        cosmicClockSec: nextCosmicClockSec,
         mechanicCharge: Math.max(0, state.mechanicCharge + (tickResult?.mechanicChargeDelta ?? 0)),
         mechanicStep: tickResult?.mechanicStep ?? state.mechanicStep,
         mechanicTriggered: state.mechanicTriggered || Boolean(tickResult?.trigger),
@@ -608,6 +606,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
     case 'START_CONDENSE': {
+      if (import.meta.env.DEV) {
+        const _s = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
+        console.debug('[transition] START_CONDENSE', {
+          stageIdx: state.stageIdx, quanta: state.quanta, threshold: _s.threshold,
+          cosmicClockSec: state.cosmicClockSec, required: _s.cosmicTimeSec,
+          pendingCondenseStageIdx: state.pendingCondenseStageIdx, imploding: state.imploding,
+        });
+      }
       if (state.completedRun || state.pendingCondenseStageIdx !== null) {
         return state;
       }
@@ -647,6 +653,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
     case 'ADVANCE_STAGE': {
+      if (import.meta.env.DEV) {
+        const _s = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
+        console.debug('[transition] ADVANCE_STAGE', {
+          stageIdx: state.stageIdx, quanta: state.quanta, threshold: _s.threshold,
+          cosmicClockSec: state.cosmicClockSec, required: _s.cosmicTimeSec,
+          pendingCondenseStageIdx: state.pendingCondenseStageIdx, imploding: state.imploding,
+        });
+      }
       if (state.pendingCondenseStageIdx === null) {
         return state;
       }
@@ -968,7 +982,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const nodeDef = findNode(nodeId);
       if (!nodeDef) return state;
       if (state.skills.ownedCrossNodes.includes(nodeId)) return state;
-      if (getVisibleCrossTier(getCurrentStage(state).id) < nodeDef.tier) return state;
       const meetsRequirements = Object.entries(nodeDef.requires).every(([trackId, requiredLevel]) => {
         const branch = state.skills[trackId as 'click' | 'auto' | 'crit' | 'time'];
         return branch.level >= (requiredLevel ?? 0);
