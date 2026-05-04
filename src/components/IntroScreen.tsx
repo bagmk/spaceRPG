@@ -192,7 +192,7 @@ export function IntroScreen({
   };
 
   return (
-    <section className="intro-screen" style={{ background: introBackground }}>
+    <section className={`intro-screen ${phase}`} style={{ background: introBackground }}>
       <canvas ref={canvasRef} className="intro-canvas" aria-hidden="true" />
       <div className="intro-flash" style={{ opacity: flashOpacity }} />
       <div className="genesis-line" style={{ opacity: genesisOpacity }}>
@@ -255,8 +255,8 @@ export function IntroScreen({
         ) : null}
       </div>
       <div className="intro-preview" style={{ opacity: previewOpacity }}>
-        <div className="intro-preview-stage">STAGE 01 / 12</div>
-        <div className="intro-preview-name">Quark-Gluon Plasma</div>
+        <div className="intro-preview-stage">STAGE 01 / 16</div>
+        <div className="intro-preview-name">Inflation</div>
       </div>
     </section>
   );

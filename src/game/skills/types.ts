@@ -1,5 +1,5 @@
 export type SkillTreeId = 'click' | 'auto' | 'crit' | 'time';
-export type SkillTier = 15 | 20 | 25 | 30;
+export type SkillTier = 5 | 10 | 15 | 20 | 25 | 30;
 
 export interface SkillTrackState {
   level: number;
@@ -27,6 +27,7 @@ export interface CrossNodeDef {
   label: string;
   description: string;
   cost: number;
+  spCost: number;
   costCurrency: 'quanta';
   requires: Partial<Record<SkillTreeId, number>>;
   unlockStageId: number;

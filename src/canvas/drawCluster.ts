@@ -440,81 +440,348 @@ function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress }: DrawClusterAr
   ctx.restore();
 }
 
-function drawPlanetarySystem({ ctx, cluster, stage, cx, cy, progress }: DrawClusterArgs): void {
-  const orbitLimit = Math.max(TUNING.PLANETARY_ORBIT_MIN_RADIUS, cluster.physicalRadius);
-  const sunR = 22 + progress * 14;
-  const sun = ctx.createRadialGradient(cx - sunR * 0.35, cy - sunR * 0.35, 1, cx, cy, sunR * 2.4);
-  sun.addColorStop(0, hexToRgba('#fff7cf', 0.95));
-  sun.addColorStop(0.35, hexToRgba(stage.coreColor, 0.9));
-  sun.addColorStop(1, hexToRgba(stage.accent, 0));
-  ctx.fillStyle = sun;
-  ctx.beginPath();
-  ctx.arc(cx, cy, sunR * 2.4, 0, Math.PI * 2);
-  ctx.fill();
+type SolarPhase =
+  | 'pre_stellar'
+  | 't_tauri'
+  | 'planetesimals'
+  | 'inner_planets'
+  | 'outer_planets'
+  | 'late_bombardment'
+  | 'stable'
+  | 'first_water'
+  | 'civ_preview';
 
-  for (let orbit = 0; orbit < 5; orbit += 1) {
-    const rx = orbitLimit * (0.34 + orbit * 0.165);
-    ctx.strokeStyle = hexToRgba(stage.accent, 0.12 + progress * 0.07);
-    ctx.lineWidth = orbit === 4 ? 1.2 : 0.8;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, rx * 0.45, 0, 0, Math.PI * 2);
-    ctx.stroke();
+function getSolarPhase(progress: number): SolarPhase {
+  if (progress < 0.1) return 'pre_stellar';
+  if (progress < 0.25) return 't_tauri';
+  if (progress < 0.4) return 'planetesimals';
+  if (progress < 0.55) return 'inner_planets';
+  if (progress < 0.7) return 'outer_planets';
+  if (progress < 0.8) return 'late_bombardment';
+  if (progress < 0.9) return 'stable';
+  if (progress < 0.95) return 'first_water';
+  return 'civ_preview';
+}
+
+function drawPlanetarySystem(args: DrawClusterArgs): void {
+  const phase = getSolarPhase(args.progress);
+  switch (phase) {
+    case 'pre_stellar':
+      drawPreStellarNebula(args);
+      break;
+    case 't_tauri':
+      drawTTauriIgnition(args);
+      break;
+    case 'planetesimals':
+      drawPlanetesimalCollisions(args);
+      break;
+    case 'inner_planets':
+      drawInnerPlanets(args);
+      break;
+    case 'outer_planets':
+      drawOuterPlanets(args);
+      break;
+    case 'late_bombardment':
+      drawLateBombardment(args);
+      break;
+    case 'stable':
+      drawStableSystem(args);
+      break;
+    case 'first_water':
+      drawFirstWater(args);
+      break;
+    case 'civ_preview':
+      drawCivPreview(args);
+      break;
   }
+}
 
-  const earthOrbit = Math.min(orbitLimit * 0.86, 200);
-  const earthAngle = progress * Math.PI * 4.5;
-  const earthX = cx + Math.cos(earthAngle) * earthOrbit;
-  const earthY = cy + Math.sin(earthAngle) * earthOrbit * 0.45;
-  ctx.strokeStyle = hexToRgba('#ffffff', 0.08);
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, earthOrbit, earthOrbit * 0.45, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  drawEarthPhase(ctx, earthX, earthY, 18, progress, earthAngle);
-
-  if (progress >= 0.22) {
-    const moonAngle = earthAngle * 5;
-    const moonOrbit = 24;
-    const moonX = earthX + Math.cos(moonAngle) * moonOrbit;
-    const moonY = earthY + Math.sin(moonAngle) * moonOrbit * 0.65;
-    ctx.strokeStyle = hexToRgba('#b7c3da', 0.15);
-    ctx.beginPath();
-    ctx.ellipse(earthX, earthY, moonOrbit, moonOrbit * 0.65, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#d7dbe4';
-    ctx.beginPath();
-    ctx.arc(moonX, moonY, 3.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  cluster.motes.forEach((mote) => {
-    const ageAlpha = Math.min(1, mote.age / 450);
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.92, mote.color, ageAlpha * 0.82, mote.orbitAngle ?? 0);
+function drawSolarDust({ ctx, cluster, stage, now }: DrawClusterArgs, alpha = 0.68): void {
+  const t = now / 1000;
+  cluster.motes.forEach((mote, index) => {
+    const shimmer = 0.54 + Math.sin(t * 2 + index) * 0.18;
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * shimmer, mote.color, alpha * shimmer, mote.orbitAngle ?? 0);
   });
 }
 
-function drawLifeSurface({ ctx, cluster, cx, cy }: DrawClusterArgs): void {
+function drawSolarSun(
+  ctx: CanvasRenderingContext2D,
+  stage: Stage,
+  cx: number,
+  cy: number,
+  radius: number,
+  flare = 1,
+): void {
+  const sun = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, 1, cx, cy, radius * 2.8);
+  sun.addColorStop(0, hexToRgba('#fff7cf', 0.98));
+  sun.addColorStop(0.34, hexToRgba(stage.coreColor, 0.92));
+  sun.addColorStop(1, hexToRgba(stage.accent, 0));
+  ctx.fillStyle = sun;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 2.8 * flare, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffe39b';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+const SOLAR_BODIES = [
+  { name: 'Mercury', orbit: 54, r: 3.2, color: '#b7a28a', showAt: 0.4 },
+  { name: 'Venus', orbit: 76, r: 5.2, color: '#e7bb79', showAt: 0.4 },
+  { name: 'Earth', orbit: 100, r: 5.8, color: '#5aa7ff', showAt: 0.4 },
+  { name: 'Mars', orbit: 124, r: 4.4, color: '#cf7655', showAt: 0.4 },
+  { name: 'Jupiter', orbit: 162, r: 10.2, color: '#d7a77e', showAt: 0.55 },
+  { name: 'Saturn', orbit: 196, r: 8.8, color: '#ead09a', showAt: 0.55, rings: true },
+  { name: 'Uranus', orbit: 226, r: 6.6, color: '#a9efe9', showAt: 0.55 },
+  { name: 'Neptune', orbit: 254, r: 6.3, color: '#5b86ff', showAt: 0.55 },
+  { name: 'Pluto', orbit: 282, r: 2.6, color: '#d8d2c6', showAt: 0.8 },
+];
+
+function drawSolarBodies(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  progress: number,
+  now: number,
+  minShowAt = 0,
+  earthMode: 'plain' | 'bombarded' | 'water' | 'city' = 'plain',
+): void {
+  SOLAR_BODIES.forEach((body, index) => {
+    if (body.name === 'Earth') {
+      return;
+    }
+    if (progress < body.showAt || body.showAt < minShowAt) {
+      return;
+    }
+    const orbit = body.orbit;
+    ctx.strokeStyle = hexToRgba(body.color, 0.08 + progress * 0.08);
+    ctx.lineWidth = body.name === 'Earth' ? 1.2 : 0.8;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, orbit, orbit * 0.42, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const angle = now / (1400 + index * 190) + index * 0.72;
+    const x = cx + Math.cos(angle) * orbit;
+    const y = cy + Math.sin(angle) * orbit * 0.42;
+
+    if (body.name === 'Earth') {
+      drawSolarEarth(ctx, x, y, body.r, earthMode, angle);
+    } else {
+      drawPlanetBase(ctx, x, y, body.r, body.color, '#1d1a21');
+    }
+
+    if (body.rings) {
+      ctx.strokeStyle = hexToRgba('#fff0c4', 0.5);
+      ctx.beginPath();
+      ctx.ellipse(x, y, body.r * 1.7, body.r * 0.62, -0.24, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  });
+}
+
+function drawSolarEarth(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  mode: 'plain' | 'bombarded' | 'water' | 'city',
+  t: number,
+): void {
+  if (mode === 'water' || mode === 'city') {
+    drawWaterPlanet(ctx, x, y, r, 1);
+  } else if (mode === 'bombarded') {
+    drawLavaPlanet(ctx, x, y, r, 0.72);
+  } else {
+    drawPlanetBase(ctx, x, y, r, '#77b7ff', '#153d7d');
+  }
+  if (mode === 'city') {
+    drawCityPlanet(ctx, x, y, r, 1, t);
+  }
+}
+
+function drawDevelopingEarth(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  progress: number,
+  now: number,
+): void {
+  if (progress < 0.1) {
+    return;
+  }
+  const earthIndex = 2;
+  const orbit = 100;
+  const angle = now / (1400 + earthIndex * 190) + earthIndex * 0.72;
+  const x = cx + Math.cos(angle) * orbit;
+  const y = cy + Math.sin(angle) * orbit * 0.42;
+  const growT = Math.min(1, (progress - 0.1) / 0.45);
+  const radius = Math.max(1.2, 5.8 * growT);
+
+  ctx.strokeStyle = hexToRgba('#5aa7ff', 0.08 + progress * 0.08);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, orbit, orbit * 0.42, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (progress < 0.25) {
+    drawPlanetBase(ctx, x, y, radius, '#ff7a45', '#4a1209');
+  } else if (progress < 0.55) {
+    drawLavaPlanet(ctx, x, y, radius, 0.9);
+  } else if (progress < 0.7) {
+    drawPlanetBase(ctx, x, y, radius, '#8f4b33', '#2a120f');
+  } else if (progress < 0.8) {
+    drawSolarEarth(ctx, x, y, radius, 'bombarded', angle);
+  } else if (progress < 0.9) {
+    drawPlanetBase(ctx, x, y, radius, '#5a2f2c', '#151015');
+  } else if (progress < 0.95) {
+    drawWaterPlanet(ctx, x, y, radius, (progress - 0.9) / 0.05);
+  } else {
+    drawSolarEarth(ctx, x, y, radius, 'city', now / 900);
+  }
+}
+
+function drawPreStellarNebula(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawClusterEnvelope(ctx, cx, cy, 150 + progress * 70, stage.accent, 0.12);
+  drawSolarSun(ctx, stage, cx, cy, 8 + progress * 22, 0.75);
+  drawSolarDust(args, 0.62);
+  for (let arm = 0; arm < 6; arm += 1) {
+    ctx.strokeStyle = hexToRgba(stage.accent, 0.08);
+    ctx.beginPath();
+    for (let step = 0; step < 28; step += 1) {
+      const u = step / 27;
+      const angle = arm + u * Math.PI * 1.4 + now / 2200;
+      const r = 28 + u * 170;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r * 0.48;
+      if (step === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawTTauriIgnition(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 24 + progress * 18, 1.08);
+  for (let ray = 0; ray < 24; ray += 1) {
+    const angle = (ray / 24) * Math.PI * 2 + now / 800;
+    ctx.strokeStyle = hexToRgba('#fff1b7', 0.08 + (ray % 3) * 0.04);
+    ctx.lineWidth = 1 + (ray % 4) * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * 34, cy + Math.sin(angle) * 34);
+    ctx.lineTo(cx + Math.cos(angle) * 260, cy + Math.sin(angle) * 130);
+    ctx.stroke();
+  }
+  drawSolarDust(args, 0.46);
+  drawDevelopingEarth(ctx, cx, cy, progress, now);
+}
+
+function drawPlanetesimalCollisions(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 30, 0.95);
+  drawSolarBodies(ctx, cx, cy, 0.35, now, 1);
+  drawSolarDust(args, 0.82);
+  drawDevelopingEarth(ctx, cx, cy, progress, now);
+  for (let i = 0; i < 16; i += 1) {
+    const angle = now / 900 + i * 0.72;
+    const orbit = 78 + (i % 6) * 24;
+    const x = cx + Math.cos(angle) * orbit;
+    const y = cy + Math.sin(angle) * orbit * 0.42;
+    ctx.fillStyle = i % 3 === 0 ? '#f0c18a' : '#8e806d';
+    ctx.beginPath();
+    ctx.arc(x, y, 1.8 + (i % 4), 0, Math.PI * 2);
+    ctx.fill();
+    if (i % 5 === 0) {
+      ctx.strokeStyle = hexToRgba('#ffe0a6', 0.34);
+      ctx.beginPath();
+      ctx.moveTo(x - 16, y - 7);
+      ctx.lineTo(x + 8, y + 3);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawInnerPlanets(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 31, 0.9);
+  drawSolarBodies(ctx, cx, cy, progress, now);
+  drawDevelopingEarth(ctx, cx, cy, progress, now);
+  drawSolarDust(args, 0.34);
+}
+
+function drawOuterPlanets(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
+  drawSolarBodies(ctx, cx, cy, progress, now);
+  drawDevelopingEarth(ctx, cx, cy, progress, now);
+  drawSolarDust(args, 0.22);
+}
+
+function drawMeteorStreaks(ctx: CanvasRenderingContext2D, cx: number, cy: number, now: number): void {
+  for (let i = 0; i < 12; i += 1) {
+    const angle = now / 520 + i * 0.52;
+    const x = cx - 150 + ((now / 8 + i * 53) % 320);
+    const y = cy - 115 + Math.sin(angle) * 38 + i * 8;
+    ctx.strokeStyle = hexToRgba(i % 2 === 0 ? '#ffd6a0' : '#ff6f42', 0.34);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 24, y - 12);
+    ctx.lineTo(x + 8, y + 4);
+    ctx.stroke();
+  }
+}
+
+function drawLateBombardment(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, progress, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
+  drawSolarBodies(ctx, cx, cy, 1, now, 0, 'bombarded');
+  drawDevelopingEarth(ctx, cx, cy, progress, now);
+  drawMeteorStreaks(ctx, cx, cy, now);
+  drawSolarDust(args, 0.18);
+}
+
+function drawStableSystem(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, now } = args;
+  drawSolarSun(ctx, stage, cx, cy, 32, 0.82);
+  drawSolarBodies(ctx, cx, cy, 1, now);
+  drawDevelopingEarth(ctx, cx, cy, 0.86, now);
+  drawSolarDust(args, 0.12);
+}
+
+function drawFirstWater(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, now, width } = args;
+  drawSolarSun(ctx, stage, cx - width * 0.18, cy, 26, 0.62);
+  drawSolarBodies(ctx, cx - width * 0.18, cy, 1, now, 0, 'water');
+  drawSolarEarth(ctx, cx + width * 0.18, cy, 38, 'water', now / 1000);
+}
+
+function drawCivPreview(args: DrawClusterArgs): void {
+  const { ctx, stage, cx, cy, now, width } = args;
+  drawSolarSun(ctx, stage, cx - width * 0.2, cy, 24, 0.55);
+  drawSolarBodies(ctx, cx - width * 0.2, cy, 1, now, 0, 'city');
+  drawSolarEarth(ctx, cx + width * 0.18, cy, 42, 'city', now / 900);
+}
+
+function drawLifeSurface({ ctx, cluster, cx, cy, progress, now }: DrawClusterArgs): void {
   const radius = TUNING.LIFE_SURFACE_R;
   const rotation = cluster.earthRotation ?? 0;
   const plantMass = cluster.motes.reduce(
     (sum, mote) => sum + (mote.surfaceKind === 'plant' ? mote.mass : 0),
     0,
   );
-  const biomass = Math.min(0.62, plantMass / 280);
-  const ocean = ctx.createRadialGradient(
-    cx - radius * 0.35,
-    cy - radius * 0.35,
-    radius * 0.1,
-    cx,
-    cy,
-    radius * 1.15,
-  );
-  ocean.addColorStop(0, '#70d6ff');
-  ocean.addColorStop(0.48, '#246fae');
-  ocean.addColorStop(1, '#08213f');
-  ctx.fillStyle = ocean;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.fill();
+  const biomass = Math.min(0.62, Math.max(progress * 0.5, plantMass / 280));
+  if (progress < 0.2) {
+    drawWaterPlanet(ctx, cx, cy, radius, progress / 0.2);
+  } else if (progress < 0.4) {
+    drawContinentPlanet(ctx, cx, cy, radius, (progress - 0.2) / 0.2);
+  } else if (progress < 0.6) {
+    drawPlantPlanet(ctx, cx, cy, radius, (progress - 0.4) / 0.2);
+  } else if (progress < 0.8) {
+    drawLifePlanet(ctx, cx, cy, radius, (progress - 0.6) / 0.2, now / 1000);
+  } else {
+    drawCityPlanet(ctx, cx, cy, radius, (progress - 0.8) / 0.2, now / 900);
+  }
 
   ctx.save();
   ctx.beginPath();
@@ -569,6 +836,15 @@ function drawLifeSurface({ ctx, cluster, cx, cy }: DrawClusterArgs): void {
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
   });
+
+  if (progress >= 0.99) {
+    const flash = 0.4 + Math.sin(now / 90) * 0.24;
+    ctx.strokeStyle = hexToRgba('#fff7c8', flash);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 8 + Math.sin(now / 70) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 function drawRedGiantBloom({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
@@ -650,11 +926,10 @@ function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterAr
   });
 }
 
-function drawBlackHoleScene({ ctx, cluster, stage, cx, cy }: DrawClusterArgs): void {
-  const progress = arguments[0].progress as number;
+function drawBlackHoleScene({ ctx, cluster, stage, cx, cy, width, height, progress, now }: DrawClusterArgs): void {
   const diskMass = cluster.motes.reduce((sum, mote) => sum + mote.mass, 0);
-  const maxField = Math.min(arguments[0].width, arguments[0].height) * 0.15;
-  const inner = maxField * (1 - progress) + 5 * progress;
+  const initialRadius = Math.min(width, height) * 0.3;
+  const inner = initialRadius * Math.pow(1 - progress, 0.7) + 5 * Math.pow(progress, 1.5);
   const outer = Math.min(
     TUNING.BLACKHOLE_DISK_OUTER_MAX,
     Math.max(
@@ -691,17 +966,19 @@ function drawBlackHoleScene({ ctx, cluster, stage, cx, cy }: DrawClusterArgs): v
   ctx.arc(0, 0, inner * 1.28, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(255,244,218,0.88)';
+  ctx.strokeStyle = `rgba(255,244,218,${0.58 + 0.34 * Math.sin(now / 600)})`;
   ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.arc(0, 0, TUNING.BLACKHOLE_PHOTON_RING_R, 0, Math.PI * 2);
+  ctx.arc(0, 0, inner * 1.5, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.save();
   ctx.scale(1, Math.cos(tilt));
   cluster.motes.forEach((mote) => {
-    const lx = mote.x - cx;
-    const ly = mote.y - cy;
+    const angle = Math.atan2(mote.y - cy, mote.x - cx) + now * 0.00025 * (0.6 + mote.hue);
+    const orbitR = inner * (1.18 + mote.hue * 0.18);
+    const lx = Math.cos(angle) * orbitR;
+    const ly = Math.sin(angle) * orbitR;
     const hotness = Math.max(0.32, Math.min(0.82, 0.28 + mote.mass * 0.06));
     ctx.fillStyle = hexToRgba(mote.color, hotness);
     ctx.beginPath();
@@ -720,6 +997,16 @@ function drawBlackHoleScene({ ctx, cluster, stage, cx, cy }: DrawClusterArgs): v
   ctx.beginPath();
   ctx.arc(cx, cy, outer * 1.06, 0, Math.PI * 2);
   ctx.stroke();
+
+  if (progress > 0.99) {
+    const flashProgress = (progress - 0.99) / 0.01;
+    const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.45);
+    flash.addColorStop(0, hexToRgba('#ffffff', 0.5 * flashProgress));
+    flash.addColorStop(0.35, hexToRgba(stage.coreColor, 0.24 * flashProgress));
+    flash.addColorStop(1, hexToRgba(stage.accent, 0));
+    ctx.fillStyle = flash;
+    ctx.fillRect(0, 0, width, height);
+  }
 }
 
 function getBlackbodyColor(temperature: number): string {

@@ -6,8 +6,10 @@ import type {
   EndingId,
   EndingProgressFlags,
   GameState,
+  LegacyShopBoosts,
   PersistentGameState,
   SaveState,
+  ShopBoost,
   SingularityUnlockId,
   UniverseAtlasEntry,
   UniverseSeed,
@@ -19,6 +21,8 @@ const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
 const SAVE_KEY_V2 = 'cosmic_coalescence_save_v2';
 const SAVE_KEY_V3 = 'cosmic_coalescence_save_v3';
 const SAVE_KEY_V4 = 'cosmic_coalescence_save_v4';
+const SAVE_KEY_V5 = 'cosmic_coalescence_save_v5';
+const SAVE_KEY_V6 = 'cosmic_coalescence_save_v6';
 
 interface SaveStateV1 {
   version: 1;
@@ -69,8 +73,14 @@ interface SaveStateV4 extends Omit<SaveStateV3, 'version'> {
   dailyCheckIns: DailyCheckInState;
 }
 
-interface SaveStateV5Legacy extends Omit<SaveState, 'version'> {
+interface SaveStateV5Legacy extends Omit<SaveState, 'version' | 'shopBoosts'> {
   version: 5;
+  shopBoosts: LegacyShopBoosts;
+}
+
+interface SaveStateV6Legacy extends Omit<SaveState, 'version' | 'shopBoosts'> {
+  version: 6;
+  shopBoosts: LegacyShopBoosts | ShopBoost[];
 }
 
 function createDefaultSkillState(): SkillState {
@@ -79,7 +89,7 @@ function createDefaultSkillState(): SkillState {
     auto: { level: 0 },
     crit: { level: 0 },
     time: { level: 0 },
-    unlockedTracks: [],
+    unlockedTracks: ['click'],
     ownedCrossNodes: [],
   };
 }
@@ -88,33 +98,26 @@ function getUnlockedTracksForProgress(stageIdx: number, universeCount: number): 
   if (universeCount > 1) {
     return ['click', 'crit', 'auto', 'time'];
   }
-  const stageId = stageIdx + 1;
-  const unlocked: SkillState['unlockedTracks'] = [];
-  if (stageId >= 2) unlocked.push('click');
-  if (stageId >= 3) unlocked.push('crit');
-  if (stageId >= 4) unlocked.push('auto');
-  if (stageId >= 5) unlocked.push('time');
+  const unlocked: SkillState['unlockedTracks'] = ['click'];
+  if (stageIdx >= 1) unlocked.push('crit', 'auto', 'time');
   return unlocked;
 }
 
 function mapLegacyNodeId(nodeId: string): string | null {
-  const lookup: Record<string, string> = {
-    click_t2_echoing: 'echoing_click',
-    crit_t2_wave_collapse: 'wave_capture',
-    time_t2_inflaton: 'inflaton_echo',
-    click_t3_pair_production: 'pair_production',
-    crit_t2_heisenberg: 'heisenberg',
-    time_t3_dilation: 'dilation',
-    auto_t3_filament: 'filament',
-    click_t4_big_bang: 'big_bang_click',
-    auto_t4_web_of_all: 'web_of_all',
-    time_t4_eternal_return: 'eternal_return',
-    crit_t4_schrodinger: 'cosmos_primal',
-  };
-  return lookup[nodeId] ?? null;
+  void nodeId;
+  return null;
 }
 
-function normalizeSkillState(value: unknown, stageIdx: number, universeCount: number): SkillState {
+function isV7CrossNodeId(nodeId: string): boolean {
+  return /^(click|auto|crit|time)_lv(5|10|15|20|25|30)$/.test(nodeId);
+}
+
+function normalizeSkillState(
+  value: unknown,
+  stageIdx: number,
+  universeCount: number,
+  forceReconstructedUnlocks = false,
+): SkillState {
   const fallback = createDefaultSkillState();
   fallback.unlockedTracks = getUnlockedTracksForProgress(stageIdx, universeCount);
 
@@ -131,17 +134,21 @@ function normalizeSkillState(value: unknown, stageIdx: number, universeCount: nu
     isStringArray(record.ownedCrossNodes);
 
   if (isNewShape) {
+    const savedUnlockedTracks = (record.unlockedTracks as string[]).filter(
+      (trackId): trackId is 'click' | 'auto' | 'crit' | 'time' =>
+        trackId === 'click' || trackId === 'auto' || trackId === 'crit' || trackId === 'time',
+    );
     return {
       click: { level: (record.click as Record<string, number>).level },
       auto: { level: (record.auto as Record<string, number>).level },
       crit: { level: (record.crit as Record<string, number>).level },
       time: { level: (record.time as Record<string, number>).level },
-      unlockedTracks:
-        (record.unlockedTracks as string[]).filter(
-          (trackId): trackId is 'click' | 'auto' | 'crit' | 'time' =>
-            trackId === 'click' || trackId === 'auto' || trackId === 'crit' || trackId === 'time',
-        ) || fallback.unlockedTracks,
-      ownedCrossNodes: record.ownedCrossNodes as string[],
+      unlockedTracks: forceReconstructedUnlocks
+        ? fallback.unlockedTracks
+        : savedUnlockedTracks.length > 0
+          ? savedUnlockedTracks
+          : fallback.unlockedTracks,
+      ownedCrossNodes: (record.ownedCrossNodes as string[]).filter(isV7CrossNodeId),
     };
   }
 
@@ -292,7 +299,7 @@ function isDailyCheckInState(value: unknown): value is DailyCheckInState {
   );
 }
 
-function isTutorialFlags(value: unknown): value is Record<number, boolean> {
+function isTutorialFlags(value: unknown): value is Record<string, boolean> {
   return (
     !!value &&
     typeof value === 'object' &&
@@ -300,11 +307,59 @@ function isTutorialFlags(value: unknown): value is Record<number, boolean> {
   );
 }
 
+function isShopBoost(value: unknown): value is ShopBoost {
+  if (!value || typeof value !== 'object') return false;
+  const boostRecord = value as Record<string, unknown>;
+  return (
+    typeof boostRecord.id === 'string' &&
+    isFiniteNumber(boostRecord.factor) &&
+    isFiniteNumber(boostRecord.expiresAt)
+  );
+}
+
+function isLegacyShopBoosts(value: unknown): value is LegacyShopBoosts {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return ['timeMult', 'quantaMult'].every((key) => {
+    const boost = record[key];
+    if (boost === undefined) return true;
+    if (!boost || typeof boost !== 'object') return false;
+    const boostRecord = boost as Record<string, unknown>;
+    return isFiniteNumber(boostRecord.factor) && isFiniteNumber(boostRecord.expiresAt);
+  });
+}
+
+function normalizeShopBoosts(value: unknown): ShopBoost[] {
+  if (Array.isArray(value)) {
+    return value.filter(isShopBoost);
+  }
+  if (!isLegacyShopBoosts(value)) {
+    return [];
+  }
+  const boosts: ShopBoost[] = [];
+  if (value.timeMult) {
+    boosts.push({
+      id: `time_legacy_${value.timeMult.expiresAt}`,
+      factor: value.timeMult.factor,
+      expiresAt: value.timeMult.expiresAt,
+    });
+  }
+  if (value.quantaMult) {
+    boosts.push({
+      id: `quanta_legacy_${value.quantaMult.expiresAt}`,
+      factor: value.quantaMult.factor,
+      expiresAt: value.quantaMult.expiresAt,
+    });
+  }
+  return boosts;
+}
+
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 4,
+    version: 7,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
+    timeGauge: state.timeGauge,
     clickLevel: state.clickLevel,
     autoLevel: state.autoLevel,
     critLevel: state.critLevel,
@@ -343,6 +398,8 @@ export function createSaveSnapshot(state: GameState): SaveState {
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: state.stageClicksAtStageStart,
     tutorialFlags: state.tutorialFlags,
+    shopBoosts: state.shopBoosts,
+    totalShopSpentUSD: state.totalShopSpentUSD,
   };
 }
 
@@ -417,24 +474,71 @@ function migrateV3ToV4(v3: SaveStateV3): SaveStateV4 {
   };
 }
 
-function migrateV4ToV5(v4: SaveStateV4 | PersistentGameState): PersistentGameState {
+function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentGameState {
+  const record = v4 as Partial<SaveState>;
   return {
-    ...v4,
-    endingsUnlocked: [...new Set(v4.endingsCompleted)],
-    endingProgressFlags: createDefaultEndingProgressFlags(),
-    clickRateLog: [],
-    condenseProgressHistory: createDefaultCondenseProgressHistory(),
-    universeAtlas: createDefaultUniverseAtlas(),
-    currentUniverseSeed: createDefaultUniverseSeed(),
-    stageClicksAtStageStart: v4.totalClicks,
-    tutorialFlags: {},
+    stageIdx: v4.stageIdx ?? 0,
+    quanta: v4.quanta ?? 0,
+    timeGauge: 0,
+    clickLevel: v4.clickLevel ?? 0,
+    autoLevel: v4.autoLevel ?? 0,
+    critLevel: v4.critLevel ?? 0,
+    entropy: v4.entropy ?? 0,
+    totalClicks: v4.totalClicks ?? 0,
+    collisions: v4.collisions ?? 0,
+    universeCount: v4.universeCount ?? 1,
+    cumulativeBoost: v4.cumulativeBoost ?? 0,
+    runStartTime: v4.runStartTime ?? Date.now(),
+    totalTimePlayed: v4.totalTimePlayed ?? 0,
+    pendingCondenseStageIdx: v4.pendingCondenseStageIdx ?? null,
+    pendingCondenseEntropy: v4.pendingCondenseEntropy ?? 0,
+    completedRun: v4.completedRun ?? false,
+    condensedMass: v4.condensedMass ?? 0,
+    echoes: v4.echoes ?? 0,
+    singularityUnlocks: v4.singularityUnlocks ?? [],
+    endingsCompleted: (v4.endingsCompleted ?? []).filter(isEndingId),
+    lastEndingId: v4.lastEndingId ?? null,
+    selectedEndingId: v4.selectedEndingId ?? null,
+    lastSaveAt: v4.lastSaveAt ?? Date.now(),
+    stageStartedAt: v4.stageStartedAt ?? v4.runStartTime ?? Date.now(),
+    cosmicClockSec: v4.cosmicClockSec ?? getStageStartCosmicTime(v4.stageIdx ?? 0),
+    mechanicCharge: v4.mechanicCharge ?? 0,
+    mechanicStep: v4.mechanicStep ?? 0,
+    mechanicTriggered: v4.mechanicTriggered ?? false,
+    tutorialDone: v4.tutorialDone ?? false,
+    cosmicHoursThisRun: v4.cosmicHoursThisRun ?? 0,
+    dailyCheckIns: v4.dailyCheckIns ?? createDefaultDailyCheckIns(),
+    skillPoints: 0,
+    skills: normalizeSkillState(v4.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
+    endingsUnlocked: ((record.endingsUnlocked ?? v4.endingsCompleted ?? []) as unknown[]).filter(isEndingId),
+    endingProgressFlags: isEndingProgressFlags(record.endingProgressFlags)
+      ? record.endingProgressFlags
+      : createDefaultEndingProgressFlags(),
+    clickRateLog: Array.isArray(record.clickRateLog) ? record.clickRateLog.filter(isFiniteNumber) : [],
+    condenseProgressHistory: Array.isArray(record.condenseProgressHistory)
+      ? record.condenseProgressHistory.filter(isCondenseProgressEntry)
+      : createDefaultCondenseProgressHistory(),
+    universeAtlas: Array.isArray(record.universeAtlas)
+      ? record.universeAtlas.filter(isUniverseAtlasEntry)
+      : createDefaultUniverseAtlas(),
+    currentUniverseSeed: isUniverseSeed(record.currentUniverseSeed)
+      ? record.currentUniverseSeed
+      : createDefaultUniverseSeed(),
+    stageClicksAtStageStart: record.stageClicksAtStageStart ?? v4.totalClicks ?? 0,
+    tutorialFlags: v4.universeCount && v4.universeCount > 1 ? { allDismissed: true } : {},
+    shopBoosts: normalizeShopBoosts(record.shopBoosts),
+    totalShopSpentUSD: 0,
   };
 }
 
-function validateV5(parsed: Partial<SaveState>): PersistentGameState | null {
+function validateV5(
+  parsed: Partial<SaveState>,
+  forceReconstructedUnlocks = false,
+): PersistentGameState | null {
   if (
     !isFiniteNumber(parsed.stageIdx) ||
     !isFiniteNumber(parsed.quanta) ||
+    !isFiniteNumber(parsed.timeGauge) ||
     !isFiniteNumber(parsed.clickLevel) ||
     !isFiniteNumber(parsed.autoLevel) ||
     !isFiniteNumber(parsed.critLevel) ||
@@ -472,7 +576,9 @@ function validateV5(parsed: Partial<SaveState>): PersistentGameState | null {
     !(Array.isArray(parsed.universeAtlas) && parsed.universeAtlas.every(isUniverseAtlasEntry)) ||
     !isUniverseSeed(parsed.currentUniverseSeed) ||
     !isFiniteNumber(parsed.stageClicksAtStageStart) ||
-    !isTutorialFlags(parsed.tutorialFlags)
+    !isTutorialFlags(parsed.tutorialFlags) ||
+    !(Array.isArray(parsed.shopBoosts) || isLegacyShopBoosts(parsed.shopBoosts)) ||
+    !isFiniteNumber(parsed.totalShopSpentUSD)
   ) {
     return null;
   }
@@ -480,6 +586,7 @@ function validateV5(parsed: Partial<SaveState>): PersistentGameState | null {
   return {
     stageIdx: parsed.stageIdx,
     quanta: parsed.quanta,
+    timeGauge: parsed.timeGauge,
     clickLevel: parsed.clickLevel,
     autoLevel: parsed.autoLevel,
     critLevel: parsed.critLevel,
@@ -509,7 +616,12 @@ function validateV5(parsed: Partial<SaveState>): PersistentGameState | null {
     cosmicHoursThisRun: parsed.cosmicHoursThisRun,
     dailyCheckIns: parsed.dailyCheckIns,
     skillPoints: parsed.skillPoints,
-    skills: normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount),
+    skills: normalizeSkillState(
+      parsed.skills,
+      parsed.stageIdx,
+      parsed.universeCount,
+      forceReconstructedUnlocks,
+    ),
     endingsUnlocked: parsed.endingsUnlocked.filter(isEndingId),
     endingProgressFlags: parsed.endingProgressFlags,
     clickRateLog: parsed.clickRateLog,
@@ -518,6 +630,8 @@ function validateV5(parsed: Partial<SaveState>): PersistentGameState | null {
     currentUniverseSeed: parsed.currentUniverseSeed,
     stageClicksAtStageStart: parsed.stageClicksAtStageStart,
     tutorialFlags: parsed.tutorialFlags,
+    shopBoosts: normalizeShopBoosts(parsed.shopBoosts),
+    totalShopSpentUSD: parsed.totalShopSpentUSD,
   };
 }
 
@@ -528,6 +642,8 @@ export function loadGame(): PersistentGameState | null {
   try {
     const raw =
       localStorage.getItem(STORAGE_KEYS.save) ??
+      localStorage.getItem(SAVE_KEY_V6) ??
+      localStorage.getItem(SAVE_KEY_V5) ??
       localStorage.getItem(SAVE_KEY_V4) ??
       localStorage.getItem(SAVE_KEY_V3) ??
       localStorage.getItem(SAVE_KEY_V2) ??
@@ -542,7 +658,8 @@ export function loadGame(): PersistentGameState | null {
       | SaveStateV2
       | SaveStateV3
       | SaveStateV4
-      | SaveStateV5Legacy;
+      | SaveStateV5Legacy
+      | SaveStateV6Legacy;
     if ((parsed as SaveStateV1).version === 1) {
       return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed as SaveStateV1))));
     }
@@ -557,6 +674,15 @@ export function loadGame(): PersistentGameState | null {
       return validateV5(candidate) ?? migrateV4ToV5(parsed as SaveStateV4);
     }
     if ((parsed as { version?: number }).version === 5) {
+      return validateV5(parsed as Partial<SaveState>, true);
+    }
+    if ((parsed as { version?: number }).version === 6) {
+      const migrated = validateV5(parsed as Partial<SaveState>);
+      return migrated
+        ? { ...migrated, skills: { ...migrated.skills, ownedCrossNodes: [] } }
+        : null;
+    }
+    if ((parsed as { version?: number }).version === 7) {
       return validateV5(parsed as Partial<SaveState>);
     }
     return null;
@@ -570,6 +696,8 @@ export function clearSave(): void {
     return;
   }
   localStorage.removeItem(STORAGE_KEYS.save);
+  localStorage.removeItem(SAVE_KEY_V6);
+  localStorage.removeItem(SAVE_KEY_V5);
   localStorage.removeItem(SAVE_KEY_V4);
   localStorage.removeItem(SAVE_KEY_V3);
   localStorage.removeItem(SAVE_KEY_V2);

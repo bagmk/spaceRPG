@@ -22,9 +22,7 @@ export function EndingChooser({ options, onChoose }: EndingChooserProps) {
             >
               <span className="ending-label">{option.label}</span>
               <span className="ending-description">{option.description}</span>
-              <span className="ending-requirement">
-                {option.unlocked ? 'Available now' : option.requirement}
-              </span>
+              <span className="ending-requirement">{option.requirement}</span>
             </button>
           ))}
         </div>

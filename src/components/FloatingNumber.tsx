@@ -9,6 +9,7 @@ interface FloatingNumberProps {
   particleDefinition?: string;
   variant: 'normal' | 'crit' | 'collision';
   stageId?: number;
+  delayMs?: number;
 }
 
 export function FloatingNumber({
@@ -19,6 +20,7 @@ export function FloatingNumber({
   particleDefinition,
   variant,
   stageId,
+  delayMs = 0,
 }: FloatingNumberProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   useEffect(() => {
@@ -33,7 +35,11 @@ export function FloatingNumber({
   }, [stageId]);
 
   return (
-    <div className={`float-text ${variant}`} style={{ left: `${x}px`, top: `${y}px` }} aria-hidden="true">
+    <div
+      className={`float-text ${variant}`}
+      style={{ left: `${x}px`, top: `${y}px`, animationDelay: `${delayMs}ms` }}
+      aria-hidden="true"
+    >
       <canvas ref={canvasRef} width={16} height={16} className="float-glyph" />
       <span className="float-amount">{text}</span>
       {particleName ? (

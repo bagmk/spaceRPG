@@ -15,12 +15,42 @@ export interface Stage {
   accent: string;
   coreColor: string;
   particleColors: string[];
+  background: StageBackground;
   clickUpgradeName: string;
   autoUpgradeName: string;
   quote: string;
   quoteAttr: string;
+  zoomDirection: 'in' | 'out' | 'none';
   silenceBeforeMs?: number;
   endingId?: EndingId;
+}
+
+export type DistantElementType =
+  | 'expansion_burst'
+  | 'pair_streaks'
+  | 'plasma_swirl'
+  | 'binding_orbits'
+  | 'clearing_fog'
+  | 'void'
+  | 'bright_pinpoints'
+  | 'ionization_bubbles'
+  | 'galaxy_field'
+  | 'nearby_stars'
+  | 'earth_orbit'
+  | 'red_shroud'
+  | 'fading_stars'
+  | 'dim_specks'
+  | 'lensed_field'
+  | 'redshifted_void';
+
+export interface StageBackground {
+  gradientTop: string;
+  gradientBottom: string;
+  nebulaIntensity: number;
+  starDensity: number;
+  starColor: string;
+  distantElementColor: string;
+  distantElements: DistantElementType;
 }
 
 export type StageMechanicId =
@@ -81,6 +111,22 @@ export interface CondenseProgressEntry {
   progressAtCondense: number;
 }
 
+export interface TimedShopBoost {
+  factor: number;
+  expiresAt: number;
+}
+
+export interface ShopBoost {
+  id: string;
+  factor: number;
+  expiresAt: number;
+}
+
+export interface LegacyShopBoosts {
+  timeMult?: TimedShopBoost;
+  quantaMult?: TimedShopBoost;
+}
+
 export type SingularityUnlockId =
   | 'quark_foam'
   | 'free_combo'
@@ -126,9 +172,10 @@ export interface DailyCheckInState {
 }
 
 export interface SaveState {
-  version: 4;
+  version: 7;
   stageIdx: number;
   quanta: number;
+  timeGauge: number;
   clickLevel: number;
   autoLevel: number;
   critLevel: number;
@@ -166,7 +213,9 @@ export interface SaveState {
   universeAtlas: UniverseAtlasEntry[];
   currentUniverseSeed: UniverseSeed;
   stageClicksAtStageStart: number;
-  tutorialFlags: Record<number, boolean>;
+  tutorialFlags: Record<string, boolean>;
+  shopBoosts: ShopBoost[];
+  totalShopSpentUSD: number;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
@@ -239,6 +288,13 @@ export interface AmbientParticle {
 export interface Flyer {
   x: number;
   y: number;
+  startX: number;
+  startY: number;
+  controlX: number;
+  controlY: number;
+  targetX: number;
+  targetY: number;
+  t: number;
   life: number;
   auto?: boolean;
   spriteId?: number;
@@ -249,6 +305,7 @@ export interface Burst {
   y: number;
   vx: number;
   vy: number;
+  turn?: number;
   r: number;
   life: number;
   color: string;

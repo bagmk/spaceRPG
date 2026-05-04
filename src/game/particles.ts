@@ -17,6 +17,41 @@ export const STAGE_PARTICLES: Record<number, string[]> = {
   16: ['Vacuum Fluctuation', 'Boltzmann Brain', 'Final Photon'],
 };
 
+type SolarPhase =
+  | 'pre_stellar'
+  | 't_tauri'
+  | 'planetesimals'
+  | 'inner_planets'
+  | 'outer_planets'
+  | 'late_bombardment'
+  | 'stable'
+  | 'first_water'
+  | 'civ_preview';
+
+const STAGE_10_PHASE_POOLS: Record<SolarPhase, string[]> = {
+  pre_stellar: ['Dust', 'Gas', 'Hydrogen'],
+  t_tauri: ['Photon', 'Solar Wind'],
+  planetesimals: ['Planetesimal', 'Asteroid', 'Rock'],
+  inner_planets: ['Mercury', 'Venus', 'Earth', 'Mars'],
+  outer_planets: ['Jupiter', 'Saturn', 'Uranus', 'Neptune'],
+  late_bombardment: ['Meteor', 'Comet', 'Lava'],
+  stable: ['Orbit', 'Asteroid Belt', 'Pluto'],
+  first_water: ['Water', 'Atmosphere', 'Ocean'],
+  civ_preview: ['City Light', 'Civilization', 'Smoke'],
+};
+
+function getSolarPhase(progress01: number): SolarPhase {
+  if (progress01 < 0.1) return 'pre_stellar';
+  if (progress01 < 0.25) return 't_tauri';
+  if (progress01 < 0.4) return 'planetesimals';
+  if (progress01 < 0.55) return 'inner_planets';
+  if (progress01 < 0.7) return 'outer_planets';
+  if (progress01 < 0.8) return 'late_bombardment';
+  if (progress01 < 0.9) return 'stable';
+  if (progress01 < 0.95) return 'first_water';
+  return 'civ_preview';
+}
+
 export const PARTICLE_DEFINITIONS: Record<string, string> = {
   Spacetime: 'The fabric that lets distance and time exist at all.',
   Vacuum: 'Not empty nothingness, but a restless quantum field.',
@@ -87,9 +122,24 @@ export const PARTICLE_DEFINITIONS: Record<string, string> = {
   'Vacuum Fluctuation': 'A fleeting quantum event in seemingly empty space.',
   'Boltzmann Brain': 'A hypothetical mind arising from random fluctuation.',
   'Final Photon': 'A last whisper of light in a dying cosmos.',
+  Gas: 'Diffuse material in the young solar nebula.',
+  'Solar Wind': 'Charged particles streaming from a young star.',
+  Rock: 'Solid material gathering into larger bodies.',
+  Meteor: 'A bright incoming fragment crossing a planet’s sky.',
+  Comet: 'An icy body carrying volatile material through orbit.',
+  Lava: 'Molten rock exposed by heavy impacts.',
+  Orbit: 'A stable path around a central mass.',
+  'Asteroid Belt': 'A ring of leftover rocky bodies between Mars and Jupiter.',
+  Atmosphere: 'A layer of gas held around a world by gravity.',
+  Ocean: 'A broad body of liquid water on a planetary surface.',
+  'City Light': 'A tiny artificial glow on the night side of a world.',
+  Smoke: 'A fragile sign of chemistry, fire, and activity.',
 };
 
-export function pickParticleName(stageId: number): string {
-  const pool = STAGE_PARTICLES[stageId] ?? STAGE_PARTICLES[1];
+export function pickParticleName(stageId: number, progress01 = 0): string {
+  const pool =
+    stageId === 10
+      ? STAGE_10_PHASE_POOLS[getSolarPhase(progress01)]
+      : STAGE_PARTICLES[stageId] ?? STAGE_PARTICLES[1];
   return pool[Math.floor(Math.random() * pool.length)] ?? 'Particle';
 }

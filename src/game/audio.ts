@@ -69,6 +69,10 @@ export class SoundManager {
     if (!this.isUsable() || !ctx || !this.unlocked) {
       return;
     }
+    if (stageIdx >= 15) {
+      this.fadeOutAmbient(2000);
+      return;
+    }
     try {
       const root = 55 * Math.pow(2, stageIdx * 0.18);
       const gain = ctx.createGain();
@@ -155,6 +159,24 @@ export class SoundManager {
         dbToGain(TUNING.CLICK_VOLUME_DB - 2) * limiter,
       );
     }
+  }
+
+  fadeOutAmbient(durationMs: number): void {
+    const ctx = this.context;
+    const ambient = this.ambient;
+    if (!ctx || !ambient) {
+      return;
+    }
+    ambient.gain.gain.cancelScheduledValues(ctx.currentTime);
+    ambient.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
+    window.setTimeout(() => {
+      ambient.oscillators.forEach((oscillator) => oscillator.stop());
+      ambient.gain.disconnect();
+      ambient.filter.disconnect();
+      if (this.ambient === ambient) {
+        this.ambient = null;
+      }
+    }, durationMs + TUNING.CLICK_MIN_GAP_MS);
   }
 
   playAutoTick(stageIdx: number, rate: number): void {

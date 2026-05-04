@@ -4,12 +4,14 @@ interface ResourcePanelProps {
   threshold: string;
   rate: string;
   progressPercent: number;
+  timeGauge: string;
+  timeBudget: string;
+  timeProgressPercent: number;
+  cosmicTimeLabel: string;
   canCondense: boolean;
+  condenseHint: string;
   entropyPreview: number;
   onCondense: () => void;
-  clickPowerLabel: string;
-  autoRateLabel: string;
-  critLabel: string;
 }
 
 export function ResourcePanel({
@@ -18,12 +20,14 @@ export function ResourcePanel({
   threshold,
   rate,
   progressPercent,
+  timeGauge,
+  timeBudget,
+  timeProgressPercent,
+  cosmicTimeLabel,
   canCondense,
+  condenseHint,
   entropyPreview,
   onCondense,
-  clickPowerLabel,
-  autoRateLabel,
-  critLabel,
 }: ResourcePanelProps) {
   return (
     <section className="resource-panel">
@@ -31,12 +35,29 @@ export function ResourcePanel({
         <span className="res-label">{label}</span>
         <span className="res-rate">{`+${rate}`}</span>
       </div>
-      <div className="res-value">
-        <span>{quanta}</span>
-        <span className="total">{` / ${threshold}`}</span>
-      </div>
-      <div className="res-bar">
-        <div className="res-fill" style={{ width: `${progressPercent}%` }} />
+      <div className="res-stack">
+        <div>
+          <div className="res-value">
+            <span>{quanta}</span>
+            <span className="total">{` / ${threshold}`}</span>
+          </div>
+          <div className="res-bar">
+            <div className="res-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+        <div>
+          <div className="res-header small">
+            <span className="res-label">Cosmic Time</span>
+          </div>
+          <div className="res-value time">
+            <span>{timeGauge}</span>
+            <span className="total">{` / ${timeBudget}`}</span>
+          </div>
+          <div className="res-bar time">
+            <div className="res-fill time" style={{ width: `${timeProgressPercent}%` }} />
+          </div>
+          <div className="time-subtitle">{cosmicTimeLabel}</div>
+        </div>
       </div>
       {canCondense ? (
         <>
@@ -46,9 +67,8 @@ export function ResourcePanel({
           </button>
         </>
       ) : (
-        <div className="condense-preview muted">Threshold not yet reached.</div>
+        <div className="condense-preview muted">{condenseHint}</div>
       )}
-      <div className="resource-subhead">{`Click ${clickPowerLabel} · Auto ${autoRateLabel} · Crit ${critLabel}`}</div>
     </section>
   );
 }

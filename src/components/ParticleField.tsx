@@ -9,12 +9,14 @@ import { drawWake } from '../canvas/drawWake';
 import { ROGUE_TYPES, TUNING } from '../game/constants';
 import { getProgress } from '../game/formulas';
 import { getMechanic } from '../game/mechanics';
+import { STAGES } from '../game/stages';
 import { getStageRogueColor, getStageRogueName } from '../canvas/stageSprites';
 import type {
   AnomalyType,
   AmbientParticle,
   Burst,
   CanvasWorld,
+  Flyer,
   FloatingClickEvent,
   Mote,
   MoteCluster,
@@ -46,6 +48,7 @@ interface ParticleFieldProps {
   quanta: number;
   autoRate: number;
   timeMult: number;
+  cosmicClockSec: number;
   effectiveThreshold: number;
   totalClicks: number;
   imploding: boolean;
@@ -199,12 +202,52 @@ function createBurstSet(
       y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
+      turn: (Math.random() < 0.5 ? -1 : 1) * (0.012 + Math.random() * 0.018),
       r: 2 + Math.random() * 2.5,
       life: 1,
       color,
       spriteId: stageId,
     };
   });
+}
+
+function createCurvedFlyer(
+  startX: number,
+  startY: number,
+  targetX: number,
+  targetY: number,
+  isAuto: boolean,
+  spriteId: number,
+): Flyer {
+  const midX = (startX + targetX) / 2;
+  const midY = (startY + targetY) / 2;
+  const offsetMagnitude = Math.hypot(targetX - startX, targetY - startY) * 0.4;
+  const offsetAngle = Math.atan2(targetY - startY, targetX - startX) + Math.PI / 2;
+  const sign = Math.random() < 0.5 ? 1 : -1;
+  return {
+    x: startX,
+    y: startY,
+    startX,
+    startY,
+    controlX: midX + Math.cos(offsetAngle) * offsetMagnitude * sign,
+    controlY: midY + Math.sin(offsetAngle) * offsetMagnitude * sign,
+    targetX,
+    targetY,
+    t: 0,
+    life: 1,
+    auto: isAuto,
+    spriteId,
+  };
+}
+
+function getCosmicStageProgress(stage: Stage, cosmicClockSec: number): number {
+  const stageStart = STAGES[stage.id - 2]?.cosmicTimeSec ?? 1e-34;
+  if (cosmicClockSec <= stageStart) return 0;
+  const startLog = Math.log10(stageStart);
+  const endLog = Math.log10(stage.cosmicTimeSec);
+  const span = endLog - startLog;
+  if (span <= 0) return 1;
+  return Math.max(0, Math.min(1, (Math.log10(cosmicClockSec) - startLog) / span));
 }
 
 function getMoteRadius(mass: number): number {
@@ -520,8 +563,37 @@ function resetForStage(world: CanvasWorld, width: number, height: number, stage:
     ...createWorld(width, height, stage),
     nextId: world.nextId,
   };
-  getMechanic(stage.mechanic).init?.(nextWorld);
   return nextWorld;
+}
+
+function capWorldCollections(world: CanvasWorld): void {
+  world.bursts = world.bursts.slice(-TUNING.BURST_MAX);
+  world.flyers = world.flyers.slice(-TUNING.FLYER_MAX);
+  world.wakeTrails = world.wakeTrails.slice(-TUNING.WAKE_TRAIL_MAX);
+  world.shockwaves = world.shockwaves.slice(-TUNING.SHOCKWAVE_MAX);
+  world.rogues = world.rogues.slice(-TUNING.ROGUE_MAX);
+  if (world.cluster.motes.length > TUNING.MOTE_MAX) {
+    world.cluster.motes.sort((a, b) => a.mass - b.mass);
+    while (world.cluster.motes.length > Math.max(1, TUNING.MOTE_MAX - 10)) {
+      const sacrifice = world.cluster.motes.shift();
+      const target = world.cluster.motes[0];
+      if (!sacrifice || !target) break;
+      target.mass += sacrifice.mass;
+      target.r = getMoteRadius(target.mass);
+    }
+    world.moteNeighborCache.clear();
+  }
+}
+
+function getBlackHoleRadius(width: number, height: number, progress: number): number {
+  const initialRadius = Math.min(width, height) * 0.3;
+  return initialRadius * Math.pow(1 - progress, 0.7) + 5 * Math.pow(progress, 1.5);
+}
+
+function getHawkingPhotonColor(progress: number): string {
+  if (progress > 0.85) return '#fff7db';
+  if (progress > 0.55) return '#ffd8a0';
+  return '#bba3ff';
 }
 
 function stepClusterPhysics(
@@ -855,6 +927,7 @@ export const ParticleField = memo(function ParticleField({
   quanta,
   autoRate,
   timeMult,
+  cosmicClockSec,
   effectiveThreshold,
   totalClicks,
   imploding,
@@ -875,7 +948,6 @@ export const ParticleField = memo(function ParticleField({
   const lastStageId = useRef(stage.id);
   const lastClickId = useRef<number | null>(null);
   const transitionExplosionAt = useRef<number | null>(null);
-  const mountedAt = useRef<number>(performance.now());
   const dragPointerId = useRef<number | null>(null);
 
   const applySteerNudge = (
@@ -959,6 +1031,27 @@ export const ParticleField = memo(function ParticleField({
   }, [stage]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      const world = worldRef.current;
+      if (!world) return;
+      console.debug('[perf]', {
+        stageId: stage.id,
+        bursts: world.bursts.length,
+        flyers: world.flyers.length,
+        rogues: world.rogues.length,
+        wakeTrails: world.wakeTrails.length,
+        shockwaves: world.shockwaves.length,
+        motes: world.cluster.motes.length,
+        mechanicStates: Object.keys(world.mechanicState ?? {}).length,
+      });
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [stage.id]);
+
+  useEffect(() => {
     if (!lastClickEvent || !worldRef.current || lastClickId.current === lastClickEvent.id) {
       return;
     }
@@ -984,12 +1077,16 @@ export const ParticleField = memo(function ParticleField({
     for (let index = 0; index < clickEmissionCount; index += 1) {
       const angle = (index / Math.max(1, clickEmissionCount)) * Math.PI * 2;
       const radius = clickEmissionCount > 1 ? 10 + clickEmissionCount * 2 : 0;
-      worldRef.current.flyers.push({
-        x: lastClickEvent.x + Math.cos(angle) * radius,
-        y: lastClickEvent.y + Math.sin(angle) * radius,
-        life: 1,
-        spriteId: stage.id,
-      });
+      worldRef.current.flyers.push(
+        createCurvedFlyer(
+          lastClickEvent.x + Math.cos(angle) * radius,
+          lastClickEvent.y + Math.sin(angle) * radius,
+          cx,
+          cy,
+          false,
+          stage.id,
+        ),
+      );
     }
     worldRef.current.bursts.push(
       ...createBurstSet(
@@ -1002,6 +1099,21 @@ export const ParticleField = memo(function ParticleField({
         stage.id,
       ),
     );
+    if (stage.clusterMode === 'blackHole') {
+      const angle = Math.atan2(lastClickEvent.y - cy, lastClickEvent.x - cx);
+      const blackHoleRadius = getBlackHoleRadius(width, height, getProgress(quanta, effectiveThreshold));
+      worldRef.current.bursts.push({
+        x: cx + Math.cos(angle) * blackHoleRadius * 1.5,
+        y: cy + Math.sin(angle) * blackHoleRadius * 1.5,
+        vx: Math.cos(angle) * 6,
+        vy: Math.sin(angle) * 6,
+        turn: 0.018,
+        r: 3,
+        life: 1,
+        color: getHawkingPhotonColor(getProgress(quanta, effectiveThreshold)),
+        spriteId: stage.id,
+      });
+    }
     if (clickEmissionCount >= 4) {
       worldRef.current.shockwaves.push(
         createShockwave(
@@ -1034,19 +1146,17 @@ export const ParticleField = memo(function ParticleField({
     const motionScale = anomaly === 'high_energy' ? 1.5 : 1;
     const frameDt = dt * motionScale;
     const progress = getProgress(quanta, effectiveThreshold);
+    const visualProgress = getCosmicStageProgress(stage, cosmicClockSec);
     const cx = width / 2;
     const cy = height / 2;
     const coreRadius = TUNING.CORE_BASE_RADIUS + progress * TUNING.CORE_PROGRESS_RADIUS;
     const transitionElapsed =
       stageTransitionStartedAt === null
         ? null
-        : stageTransitionStartedAt < mountedAt.current
-          ? null
-          : now - stageTransitionStartedAt;
-    const transitionSucking =
-      transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_SUCK_MS;
+        : now - stageTransitionStartedAt;
+    const transitionSucking = false;
     const transitionActive =
-      transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_TOTAL_MS;
+      transitionElapsed !== null && transitionElapsed < TUNING.STAGE_TRANSITION_REVEAL_MS;
     world.driftAngle += frameDt * TUNING.CAMERA_DRIFT_ROTATION;
     world.coreVX += Math.cos(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
     world.coreVY += Math.sin(world.driftAngle) * TUNING.CAMERA_AMBIENT_DRIFT;
@@ -1155,23 +1265,32 @@ export const ParticleField = memo(function ParticleField({
     stepClusterPhysics(world, stage, cx, cy, frameDt, now, progress);
 
     world.flyers = world.flyers.filter((flyer) => {
-      const dx = cx - flyer.x;
-      const dy = cy - flyer.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 12) {
+      const speed = flyer.auto ? 0.0011 : 0.0015;
+      flyer.t = Math.min(1.1, flyer.t + frameDt * speed);
+      if (flyer.t >= 1) {
         return false;
       }
-      const speed =
-        (flyer.auto ? TUNING.FLYER_AUTO_SPEED : TUNING.FLYER_CLICK_SPEED) +
-        (1 / Math.max(distance, 1)) * TUNING.FLYER_GRAVITY_PULL;
-      flyer.x += (dx / distance) * speed;
-      flyer.y += (dy / distance) * speed;
+      const oneMinusT = 1 - flyer.t;
+      flyer.x =
+        oneMinusT * oneMinusT * flyer.startX +
+        2 * oneMinusT * flyer.t * flyer.controlX +
+        flyer.t * flyer.t * flyer.targetX;
+      flyer.y =
+        oneMinusT * oneMinusT * flyer.startY +
+        2 * oneMinusT * flyer.t * flyer.controlY +
+        flyer.t * flyer.t * flyer.targetY;
       flyer.life -=
         (flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY) * motionScale;
       return flyer.life > 0;
     });
 
     world.bursts = world.bursts.filter((burst) => {
+      if (burst.turn) {
+        const vx = burst.vx;
+        const vy = burst.vy;
+        burst.vx = vx * Math.cos(burst.turn) - vy * Math.sin(burst.turn);
+        burst.vy = vx * Math.sin(burst.turn) + vy * Math.cos(burst.turn);
+      }
       burst.x += burst.vx;
       burst.y += burst.vy;
       burst.vx *= TUNING.BURST_VELOCITY_DECAY;
@@ -1182,7 +1301,7 @@ export const ParticleField = memo(function ParticleField({
 
     if (
       transitionElapsed !== null &&
-      transitionElapsed >= TUNING.STAGE_TRANSITION_SUCK_MS &&
+      transitionElapsed >= 0 &&
       transitionExplosionAt.current !== stageTransitionStartedAt
     ) {
       transitionExplosionAt.current = stageTransitionStartedAt;
@@ -1209,7 +1328,7 @@ export const ParticleField = memo(function ParticleField({
 
     if (!interactionLocked) {
       world.rogueCooldown -= frameDt * Math.max(1, timeMult);
-      if (world.rogueCooldown <= 0) {
+      if (world.rogueCooldown <= 0 && world.rogues.length < TUNING.ROGUE_MAX) {
         world.rogues.push(createRogue(world, stage, width, height));
         world.rogueCooldown =
           TUNING.ENCOUNTER_INTERVAL_MIN_MS +
@@ -1265,9 +1384,24 @@ export const ParticleField = memo(function ParticleField({
     world.shockwaves = world.shockwaves.filter(
       (shockwave) => now - shockwave.startedAt <= TUNING.SHOCKWAVE_FADE_MS,
     );
+    capWorldCollections(world);
 
     ctx.clearRect(0, 0, width, height);
-    drawStars(ctx, world.stars, world.coreVX, world.coreVY);
+    ctx.save();
+    if (transitionActive && transitionElapsed !== null) {
+      const zoomT = Math.min(1, transitionElapsed / TUNING.STAGE_TRANSITION_REVEAL_MS);
+      const eased = 1 - Math.pow(1 - zoomT, 3);
+      const scale =
+        stage.zoomDirection === 'out'
+          ? 1 - eased * 0.7
+          : stage.zoomDirection === 'in'
+            ? 1 + eased * 4
+            : 1;
+      ctx.translate(width / 2, height / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-width / 2, -height / 2);
+    }
+    drawStars(ctx, world.stars, world.coreVX, world.coreVY, stage, width, height, now);
     drawWake(ctx, world.wakeTrails as WakeTrail[]);
     drawCore({
       ctx,
@@ -1287,7 +1421,7 @@ export const ParticleField = memo(function ParticleField({
       width,
       height,
       now,
-      progress,
+      progress: visualProgress,
     });
     drawParticles({
       ctx,
@@ -1308,23 +1442,18 @@ export const ParticleField = memo(function ParticleField({
     });
     getMechanic(stage.mechanic).draw?.(
       ctx,
-      { state: null, stage, now, progress01: progress },
+      { state: null, stage, now, progress01: visualProgress },
       world,
       width,
       height,
     );
+    ctx.restore();
 
     if (transitionActive && transitionElapsed !== null) {
-      const washOpacity =
-        transitionElapsed < TUNING.STAGE_TRANSITION_SUCK_MS
-          ? (transitionElapsed / TUNING.STAGE_TRANSITION_SUCK_MS) * 0.12
-          : Math.max(
-              0,
-              0.9 -
-                ((transitionElapsed - TUNING.STAGE_TRANSITION_SUCK_MS) /
-                  (TUNING.STAGE_TRANSITION_TOTAL_MS - TUNING.STAGE_TRANSITION_SUCK_MS)) *
-                  0.9,
-            );
+      const washOpacity = Math.max(
+        0,
+        0.6 - (transitionElapsed / TUNING.STAGE_TRANSITION_REVEAL_MS) * 0.6,
+      );
       const flare = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.42);
       flare.addColorStop(0, `rgba(255,255,255,${Math.min(1, washOpacity * 1.4)})`);
       flare.addColorStop(0.32, `rgba(255,255,255,${washOpacity * 0.9})`);
@@ -1336,13 +1465,8 @@ export const ParticleField = memo(function ParticleField({
   });
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="game-canvas"
-      style={{
-        filter: anomaly === 'dim' ? 'brightness(0.72)' : undefined,
-        imageRendering: anomaly === 'crystalline' ? 'pixelated' : 'auto',
-      }}
+    <div
+      className="game-canvas-hitbox"
       onPointerDown={(event) => {
         if (interactionLocked || !worldRef.current) {
           return;
@@ -1386,6 +1510,16 @@ export const ParticleField = memo(function ParticleField({
       }}
       role="presentation"
       aria-label={totalClicks > 0 ? `${stage.name} field` : `${stage.name} field, click to gather`}
-    />
+    >
+      <canvas
+        ref={canvasRef}
+        className="game-canvas"
+        style={{
+          filter: anomaly === 'dim' ? 'brightness(0.72)' : undefined,
+          imageRendering: anomaly === 'crystalline' ? 'pixelated' : 'auto',
+        }}
+        aria-hidden="true"
+      />
+    </div>
   );
 });

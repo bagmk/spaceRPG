@@ -1,5 +1,6 @@
 import { TUNING } from './constants';
-import type { EndingId, Stage } from './types';
+import { STAGES } from './stages';
+import type { EndingId, GameState, ShopBoost, Stage, TimedShopBoost } from './types';
 import type { Modifiers } from './skills/effects';
 
 const SECONDS_PER_YEAR = 31_557_600;
@@ -27,8 +28,9 @@ export function getAutoRate(mods: Modifiers): number {
   return Math.max(0, (0 + mods.autoRateAdd) * mods.autoRateMult);
 }
 
-export function getCritMultiplier(mods: Modifiers): number {
-  return 3 * mods.critMultMult;
+export function getCritMultiplier(critLevel: number, mods: Modifiers): number {
+  const base = Math.max(1.5, 1.5 + critLevel * 0.5);
+  return base * mods.critMultMult * mods.apexMult;
 }
 
 export function getClickCost(stage: Stage, level: number): number {
@@ -57,14 +59,114 @@ export function getComboMult(combo: number, comboCapBonus = 0): number {
   );
 }
 
-export function getCritChance(combo: number, mods: Modifiers): number {
-  const base = mods.critChanceAdd + combo * 0.005;
-  const cap = 0.5 + mods.critChanceCapAdd;
-  return Math.min(cap, base);
+export function getCritChance(critLevel: number, combo: number, mods: Modifiers): number {
+  const base = critLevel * 0.015 + mods.critChanceAdd;
+  const comboBonus = combo * 0.003;
+  const cap = 0.4 + mods.critChanceCapAdd;
+  return Math.min(cap, base + comboBonus);
 }
 
-export function getTimeMultiplier(mods: Modifiers): number {
-  return mods.timeMultMult;
+export function getTimeMultiplier(timeLevel: number, mods: Modifiers): number {
+  return Math.pow(10, timeLevel) * mods.apexMult * mods.timeMultMult;
+}
+
+export function getTimeBudget(_stage: Stage): number {
+  return 100;
+}
+
+export function getCosmicTimeFillRate(
+  aeonLevel: number,
+  mods: Modifiers,
+  boostMultiplier = 1,
+): number {
+  return Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult * boostMultiplier;
+}
+
+export function getTimeFillRateGauge(
+  stage: Stage,
+  aeonLevel: number,
+  mods: Modifiers,
+  boostMultiplier = 1,
+): number {
+  void stage;
+  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier);
+}
+
+export function getTimeFillRate(
+  _stage: Stage,
+  aeonLevel: number,
+  mods: Modifiers,
+  boostMultiplier = 1,
+): number {
+  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier);
+}
+
+export function getTimeFillSeconds(stage: Stage, aeonLevel: number, mods: Modifiers): number {
+  void stage;
+  const rate = getCosmicTimeFillRate(aeonLevel, mods);
+  return rate <= 0 ? Number.POSITIVE_INFINITY : 100 / rate;
+}
+
+export function getCosmicClockForGauge(stageIdx: number, timeGauge: number): number {
+  const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
+  const previous = stageIdx === 0 ? null : STAGES[stageIdx - 1];
+  const stageStart = previous?.cosmicTimeSec ?? 1e-34;
+  const fraction = clamp(timeGauge / 100, 0, 1);
+  const startLog = Math.log10(stageStart);
+  const endLog = Math.log10(stage.cosmicTimeSec);
+  return Math.pow(10, startLog + fraction * (endLog - startLog));
+}
+
+export function getTimeGaugeForCosmicClock(stageIdx: number, cosmicClockSec: number): number {
+  const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
+  const previous = stageIdx === 0 ? null : STAGES[stageIdx - 1];
+  const stageStart = previous?.cosmicTimeSec ?? 1e-34;
+  if (cosmicClockSec <= stageStart) {
+    return 0;
+  }
+  const startLog = Math.log10(stageStart);
+  const endLog = Math.log10(stage.cosmicTimeSec);
+  const span = endLog - startLog;
+  if (span <= 0) {
+    return 100;
+  }
+  return clamp(((Math.log10(cosmicClockSec) - startLog) / span) * 100, 0, 125);
+}
+
+export function getCappedTimeGaugeForDisplay(timeGauge: number): number {
+  return clamp(timeGauge, 0, 100);
+}
+
+export function getActiveBoostMultiplier(
+  boost: TimedShopBoost | undefined,
+  now: number,
+): number {
+  if (!boost || now >= boost.expiresAt) {
+    return 1;
+  }
+  return boost.factor;
+}
+
+export function getCompositeBoostMultiplier(
+  boosts: ShopBoost[] | undefined,
+  idPrefix: string,
+  now: number,
+): number {
+  return (boosts ?? [])
+    .filter((boost) => boost.id.startsWith(idPrefix) && boost.expiresAt > now)
+    .reduce((acc, boost) => acc * boost.factor, 1);
+}
+
+export function canCondense(state: GameState): boolean {
+  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding) {
+    return false;
+  }
+  const stage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
+  if (stage.id === STAGES.length) {
+    return false;
+  }
+  const threshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+  return state.quanta >= threshold && state.cosmicClockSec >= stage.cosmicTimeSec;
 }
 
 export function getEntropyOnCondense(quanta: number, threshold: number): number {
@@ -143,9 +245,17 @@ export function formatWhole(value: number): string {
   return `${mantissa}e${exp}`;
 }
 
+function formatScientific(value: number): string {
+  const [mantissa, exponent] = value.toExponential(0).split('e');
+  return `${mantissa}e${Number(exponent)}`;
+}
+
 export function formatCosmicTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     return '0ms';
+  }
+  if (seconds < 1e-3) {
+    return `${formatScientific(seconds)}s`;
   }
   if (seconds < 1) {
     return `${Math.floor(seconds * 1e3)}ms`;
@@ -173,9 +283,7 @@ export function formatCosmicTime(seconds: number): string {
   if (years < 1e12) {
     return `${Math.floor(years / 1e9)}Gyr`;
   }
-  const exp = Math.floor(Math.log10(years));
-  const mantissa = Math.floor(years / Math.pow(10, exp));
-  return `${mantissa}e${exp}yr`;
+  return `${formatScientific(years)}yr`;
 }
 
 export function formatRate(value: number): string {

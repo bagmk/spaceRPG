@@ -33,6 +33,8 @@ export interface Modifiers {
   heisenberg: boolean;
   waveCollapse: boolean;
   manyWorldsCapMult: number;
+  encounterBonusMult: number;
+  apexMult: number;
   inflatonEchoSec: number;
   dilation: boolean;
   eternalReturnUnlocked: boolean;
@@ -63,34 +65,40 @@ export function defaultModifiers(): Modifiers {
     heisenberg: false,
     waveCollapse: false,
     manyWorldsCapMult: 1,
+    encounterBonusMult: 1,
+    apexMult: 1,
     inflatonEchoSec: 0,
     dilation: false,
     eternalReturnUnlocked: false,
   };
 }
 
-function getTrackLevelAutoRate(level: number): number {
-  if (level <= 0) {
-    return 0;
-  }
-  let rate = Math.pow(1.6, level - 1);
-  if (level >= 5) rate *= 1.3;
-  if (level >= 10) rate *= 1.3;
-  if (level >= 20) rate *= 1.5;
-  if (level >= 30) rate *= 2;
-  return rate;
-}
-
-function getTrackLevelTimeMultiplier(level: number): number {
-  if (level <= 0) return 1;
-  if (level >= 30) return 12;
-  if (level >= 25) return 7;
-  if (level >= 20) return 4;
-  if (level >= 15) return 2.5;
-  if (level >= 10) return 1.8;
-  if (level >= 5) return 1.3;
-  return 1.05;
-}
+const CROSS_NODE_MULTS: Record<string, number> = {
+  click_lv5: 2,
+  click_lv10: 5,
+  click_lv15: 10,
+  click_lv20: 25,
+  click_lv25: 100,
+  click_lv30: 1000,
+  auto_lv5: 2,
+  auto_lv10: 5,
+  auto_lv15: 10,
+  auto_lv20: 25,
+  auto_lv25: 100,
+  auto_lv30: 1000,
+  crit_lv5: 1.5,
+  crit_lv10: 2,
+  crit_lv15: 3,
+  crit_lv20: 5,
+  crit_lv25: 8,
+  crit_lv30: 12,
+  time_lv5: 2,
+  time_lv10: 5,
+  time_lv15: 10,
+  time_lv20: 25,
+  time_lv25: 100,
+  time_lv30: 1000,
+};
 
 export function getActiveModifiers(
   skills: SkillState | undefined,
@@ -103,93 +111,24 @@ export function getActiveModifiers(
 
   const clickLevel = skills.click.level;
   const autoLevel = skills.auto.level;
-  const critLevel = skills.crit.level;
-  const timeLevel = skills.time.level;
 
-  mods.clickPowerMult = Math.pow(1.6, clickLevel);
-  if (clickLevel >= 10) mods.clickPowerMult *= 1.2;
-  mods.clickEmissionCount =
-    1 +
-    (clickLevel >= 5 ? 1 : 0) +
-    (clickLevel >= 10 ? 1 : 0) +
-    (clickLevel >= 20 ? 1 : 0) +
-    (clickLevel >= 25 ? 1 : 0) +
-    (clickLevel >= 30 ? 1 : 0);
-  if (clickLevel >= 15) {
-    mods.comboTimeoutMs += 200;
-  }
-  if (clickLevel >= 25) {
-    mods.pairProductionPeriod = 7;
-  }
-  if (clickLevel >= 30) {
-    mods.clickVfxScale = 2;
-  }
+  mods.clickPowerMult = Math.pow(10, clickLevel);
 
-  mods.autoRateAdd = getTrackLevelAutoRate(autoLevel);
-  mods.darkEnergyAuto = autoLevel >= 15;
-  mods.eternalEngine = autoLevel >= 25;
-
-  if (critLevel >= 1) {
-    mods.critChanceAdd += 0.05;
-    mods.critMultMult = 1;
-  }
-  mods.critChanceAdd += critLevel * 0.01;
-  if (critLevel >= 5) mods.critChanceAdd += 0.05;
-  if (critLevel >= 15) mods.critChanceAdd += 0.1;
-  let critMultiplier = 3 + critLevel * 0.2;
-  if (critLevel >= 20) critMultiplier = Math.max(critMultiplier, 5);
-  if (critLevel >= 30) {
-    critMultiplier = 8;
-    mods.critChanceCapAdd = 0.3;
-  }
-  mods.critMultMult = critMultiplier / 3;
-  mods.heisenberg = critLevel >= 10;
-  mods.waveCollapse = critLevel >= 5;
-  mods.manyWorldsCapMult = critLevel >= 25 ? 2 : 1;
-
-  mods.timeMultMult = getTrackLevelTimeMultiplier(timeLevel);
+  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(10, autoLevel);
 
   for (const nodeId of skills.ownedCrossNodes) {
-    switch (nodeId) {
-      case 'echoing_click':
-        mods.echoClickChance = 0.18;
-        break;
-      case 'wave_capture':
-        mods.waveCollapse = true;
-        break;
-      case 'inflaton_echo':
-        mods.inflatonEchoSec = 5;
-        break;
-      case 'pair_production':
-        mods.pairProductionPeriod = 7;
-        break;
-      case 'heisenberg':
-        mods.heisenberg = true;
-        break;
-      case 'dilation':
-        mods.dilation = true;
-        break;
-      case 'filament':
-        mods.filamentExp = 1.2;
-        break;
-      case 'big_bang_click':
-        mods.bigBangUnlocked = true;
-        break;
-      case 'web_of_all':
-        mods.webOfAll = true;
-        break;
-      case 'eternal_return':
-        mods.eternalReturnUnlocked = true;
-        break;
-      case 'cosmos_primal':
-        mods.clickPowerMult *= 10;
-        mods.autoRateAdd *= 10;
-        mods.critMultMult *= 10;
-        mods.timeMultMult *= 10;
-        mods.clickVfxScale *= 2;
-        break;
-      default:
-        break;
+    const mult = CROSS_NODE_MULTS[nodeId];
+    if (!mult) {
+      continue;
+    }
+    if (nodeId.startsWith('click_')) {
+      mods.clickPowerMult *= mult;
+    } else if (nodeId.startsWith('auto_')) {
+      mods.autoRateMult *= mult;
+    } else if (nodeId.startsWith('crit_')) {
+      mods.critMultMult *= mult;
+    } else if (nodeId.startsWith('time_')) {
+      mods.timeMultMult *= mult;
     }
   }
 

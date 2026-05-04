@@ -6,28 +6,32 @@ import {
   formatGameNumber,
   formatRate,
   formatWhole,
+  canCondense as canCondenseNow,
   getAutoRate,
   getClickPower,
-  getComboMult,
   getCritMultiplier,
   getEffectiveThreshold,
   getEntropyOnCondense,
-  getLifeStepLabel,
+  getTimeFillRate,
+  getTimeGaugeForCosmicClock,
   getProgress,
+  getTimeMultiplier,
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
 import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
-import { getCosmicTimePerRealSec, getStageStartCosmicTime } from '../game/timeFlow';
+import { getStageStartCosmicTime } from '../game/timeFlow';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
 import { EncounterAlert } from './EncounterAlert';
 import { FloatingNumber } from './FloatingNumber';
 import { ParticleField } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
-import { ResourcePanel } from './ResourcePanel';
-import { Timeline } from './Timeline';
+import { ScaleIndicator } from './ScaleIndicator';
+import { SpeechBubble } from './SpeechBubble';
+import { ShopButton, ShopPanel } from './ShopPanel';
+import { ActiveBoostHud } from './ActiveBoostHud';
 import { SkillsButton, SkillsPanel } from './skills/SkillsPanel';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { OfflineProgressModal } from './OfflineProgressModal';
@@ -39,7 +43,7 @@ import { HeatDeathEnding } from './endings/HeatDeathEnding';
 import { VacuumDecayEnding } from './endings/VacuumDecayEnding';
 import { CROSS_NODES, SKILL_TREES, getVisibleCrossTier } from '../game/skills/definitions';
 import { ALMANAC } from '../game/almanac';
-import { applyUniverseToStage, getAnomalyLabel, getEndingOptions } from '../game/multiverse';
+import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 
 interface FloatingEntry {
   id: number;
@@ -49,6 +53,7 @@ interface FloatingEntry {
   particleName?: string;
   particleDefinition?: string;
   variant: 'normal' | 'crit' | 'collision';
+  delayMs?: number;
 }
 
 interface EncounterEntry {
@@ -57,19 +62,21 @@ interface EncounterEntry {
   color: string;
 }
 
-interface TutorialStagePopup {
-  stageId: number;
-  title: string;
-  body: string;
-  openSkills: boolean;
-}
-
 interface AlmanacToast {
   stageId: number;
   text: string;
 }
 
+interface TutorialBubble {
+  flagId: string;
+  anchor: 'skills' | 'shop' | 'resource';
+  message: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+}
+
 type TransitionPhase = 'idle' | 'bursting' | 'quote' | 'revealing';
+type StatPopupTrack = 'click' | 'auto' | 'crit' | 'time';
 
 interface GameScreenProps {
   state: GameState;
@@ -114,16 +121,18 @@ export function GameScreen({
   onRequestReset,
 }: GameScreenProps) {
   const [skillsOpen, setSkillsOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState<1 | 2 | 3>(1);
-  const [tutorialPopup, setTutorialPopup] = useState<TutorialStagePopup | null>(null);
   const [almanacToast, setAlmanacToast] = useState<AlmanacToast | null>(null);
+  const [statPopup, setStatPopup] = useState<{ trackId: StatPopupTrack; x: number; y: number } | null>(null);
+  const skillsAnchorRef = useRef<HTMLDivElement | null>(null);
+  const shopAnchorRef = useRef<HTMLDivElement | null>(null);
+  const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const rawStage = STAGES[state.stageIdx];
   const stage = useMemo(
     () => applyUniverseToStage(rawStage, state.currentUniverseSeed),
     [rawStage, state.currentUniverseSeed],
   );
-  const previousStage = state.stageIdx > 0 ? STAGES[state.stageIdx - 1] : null;
   const mechanic = getMechanic(stage.mechanic);
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   const progress01 = getProgress(state.quanta, effectiveThreshold);
@@ -135,9 +144,12 @@ export function GameScreen({
     progress01,
     clickLevel: state.skills.click.level,
   });
-  const autoRate = getAutoRate(modifiers) * modifiers.timeMultMult;
+  const autoRate = getAutoRate(modifiers);
   const clickPower = getClickPower(modifiers);
-  const critMultiplier = getCritMultiplier(modifiers);
+  const critMultiplier = getCritMultiplier(state.skills.crit.level, modifiers);
+  const timeMult = getTimeMultiplier(state.skills.time.level, modifiers);
+  const timeGauge = getTimeGaugeForCosmicClock(state.stageIdx, state.cosmicClockSec);
+  const timeProgress01 = Math.min(1, timeGauge / 100);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
@@ -146,14 +158,17 @@ export function GameScreen({
     stage.id === STAGES.length &&
     state.pendingCondenseStageIdx === null &&
     state.selectedEndingId === null &&
-    state.quanta >= effectiveThreshold;
-  const canCondense =
-    stage.id !== STAGES.length &&
-    state.pendingCondenseStageIdx === null &&
-    !state.completedRun &&
-    state.quanta >= effectiveThreshold;
+    state.quanta >= effectiveThreshold &&
+    state.cosmicClockSec >= stage.cosmicTimeSec;
+  const canCondense = canCondenseNow(state);
+  const condenseHint =
+    progress01 >= 1 && timeProgress01 < 1
+      ? 'Wait for cosmic time.'
+      : timeProgress01 >= 1 && progress01 < 1
+        ? 'Gather more quanta.'
+        : 'Fill both quanta and cosmic time.';
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
-  const [postCondenseBurstStartedAt, setPostCondenseBurstStartedAt] = useState<number | null>(null);
+  const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
     state.pendingCondenseStageIdx !== null ||
     state.imploding ||
@@ -166,113 +181,104 @@ export function GameScreen({
   const lastWhooshAt = useRef(0);
   const civPlayed = useRef(false);
   const lastToastStageId = useRef(stage.id);
-  const stagePositions = useMemo(
-    () => STAGES.map((entry) => ({ id: entry.id, left: entry.timelinePos, label: entry.name })),
-    [],
-  );
-  const timeMult = modifiers.timeMultMult;
-  const timeFlowRate =
-    getCosmicTimePerRealSec(stage, previousStage, timeMult) * state.currentUniverseSeed.timeMod;
+  const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers);
+  const cosmicClockFromGauge = state.cosmicClockSec;
   const displayedCosmicClock =
     state.currentUniverseSeed.anomaly === 'inverted_time'
       ? Math.max(
           getStageStartCosmicTime(state.stageIdx),
-          stage.cosmicTimeSec - (state.cosmicClockSec - getStageStartCosmicTime(state.stageIdx)),
+          stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
         )
-      : state.cosmicClockSec;
-  const canShowSkills = state.universeCount > 1 || state.stageIdx > 0;
+      : cosmicClockFromGauge;
+  const canShowSkills = true;
+  const canShowShop = state.universeCount > 1 || stage.id >= 5;
+  const statPopupTree = statPopup ? SKILL_TREES.find((tree) => tree.id === statPopup.trackId) : null;
+  const statPopupLevel = statPopup ? state.skills[statPopup.trackId].level : 0;
+  const statPopupNextLevel = statPopupLevel + 1;
+  const statPopupUnlocked = statPopup ? state.skills.unlockedTracks.includes(statPopup.trackId) : false;
+  const statPopupCost = statPopupTree ? Math.ceil(statPopupTree.rootCostCurve(statPopupNextLevel)) : 0;
+  const statPopupCanBuy = Boolean(statPopup && statPopupUnlocked && state.quanta >= statPopupCost);
   const hasAffordableSkill = useMemo(
     () => {
-      const visibleTier = getVisibleCrossTier(stage.id);
-      const canBuyTrack = state.skills.unlockedTracks.some((trackId) => {
-        const tree = SKILL_TREES.find((entry) => entry.id === trackId);
-        if (!tree) return false;
+      const canBuyTrack = SKILL_TREES.some((tree) => {
+        const trackId = tree.id;
+        if (!state.skills.unlockedTracks.includes(trackId)) return false;
         const level = state.skills[trackId].level;
-        if (level >= tree.rootMaxLevel) return false;
         return state.quanta >= Math.ceil(tree.rootCostCurve(level + 1));
       });
       if (canBuyTrack) return true;
+      const visibleTier = getVisibleCrossTier(stage.id);
       return CROSS_NODES.some((node) => {
         if (node.tier > visibleTier) return false;
         if (state.skills.ownedCrossNodes.includes(node.id)) return false;
         const meetsRequirements = Object.entries(node.requires).every(([trackId, requiredLevel]) => {
           return state.skills[trackId as 'click' | 'auto' | 'crit' | 'time'].level >= (requiredLevel ?? 0);
         });
-        return meetsRequirements && state.quanta >= node.cost;
+        return meetsRequirements && state.quanta >= node.cost && state.skillPoints >= node.spCost;
       });
     },
-    [stage.id, state.quanta, state.skills],
+    [stage.id, state.quanta, state.skillPoints, state.skills],
   );
+  const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
+    if (state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
+      return null;
+    }
+    const stageBubbles: Record<number, string> = {
+      2: 'New branches unlocked: Quantum Lens, Cosmic Web, and Aeon Drive.',
+    };
+    const stageFlag = `stage-${stage.id}-skills`;
+    if (stageBubbles[stage.id] && !state.tutorialFlags[stageFlag] && canShowSkills) {
+      return {
+        flagId: stageFlag,
+        anchor: 'skills',
+        message: stageBubbles[stage.id],
+        ctaLabel: 'Open Skills',
+        onCta: () => setSkillsOpen(true),
+      };
+    }
+    if (stage.id >= 5 && !state.tutorialFlags['time-gauge-visible']) {
+      return {
+        flagId: 'time-gauge-visible',
+        anchor: 'resource',
+        message: 'Cosmic time accumulates. Aeon Drive levels speed it up.',
+      };
+    }
+    if (canShowShop && !state.tutorialFlags['shop-visible']) {
+      return {
+        flagId: 'shop-visible',
+        anchor: 'shop',
+        message: 'Cosmic Shop has temporary boosts. Free in test mode.',
+        ctaLabel: 'Open Shop',
+        onCta: () => setShopOpen(true),
+      };
+    }
+    if (canCondense && !state.tutorialFlags['condense-ready']) {
+      return {
+        flagId: 'condense-ready',
+        anchor: 'resource',
+        message: 'Both gauges are full. Press Condense to advance.',
+      };
+    }
+    return null;
+  }, [
+    canCondense,
+    canShowShop,
+    canShowSkills,
+    stage.id,
+    state.tutorialFlags,
+    state.universeCount,
+  ]);
 
   useEffect(() => {
-    const popupByStage: Record<number, TutorialStagePopup> = {
-      2: {
-        stageId: 2,
-        title: 'Stellar Forge unlocked',
-        body: 'Buy levels of click power.',
-        openSkills: true,
-      },
-      3: {
-        stageId: 3,
-        title: 'Quantum Lens unlocked',
-        body: 'Critical hits multiply rewards.',
-        openSkills: true,
-      },
-      4: {
-        stageId: 4,
-        title: 'Cosmic Web unlocked',
-        body: 'The universe gathers itself.',
-        openSkills: true,
-      },
-      5: {
-        stageId: 5,
-        title: 'Aeon Drive unlocked',
-        body: 'Time itself can be sped up.',
-        openSkills: true,
-      },
-      7: {
-        stageId: 7,
-        title: 'Cross-skill nodes are now visible',
-        body: 'Some require two skills together.',
-        openSkills: true,
-      },
-      11: {
-        stageId: 11,
-        title: 'Higher-tier cross-skills unlocked',
-        body: 'Level 20 in two tracks now reveals stronger pairings.',
-        openSkills: true,
-      },
-      14: {
-        stageId: 14,
-        title: 'Late-game cross-skills unlocked',
-        body: 'These nodes are extremely powerful.',
-        openSkills: true,
-      },
-      15: {
-        stageId: 15,
-        title: 'The Apex node is now in view',
-        body: 'It requires all four tracks at level 30.',
-        openSkills: true,
-      },
-    };
-
     if (stage.id !== lastToastStageId.current) {
+      const entry = ALMANAC[stage.id];
       lastToastStageId.current = stage.id;
       setAlmanacToast({
         stageId: stage.id,
-        text: ALMANAC[stage.id]?.short ?? stage.quote,
+        text: entry ? `${entry.short} · ${entry.cosmicEra.timeRange}` : stage.quote,
       });
     }
-
-    if (state.universeCount !== 1 || state.tutorialFlags[stage.id]) {
-      return;
-    }
-    const nextPopup = popupByStage[stage.id];
-    if (!nextPopup) {
-      return;
-    }
-    setTutorialPopup(nextPopup);
-  }, [stage.id, stage.quote, state.tutorialFlags, state.universeCount]);
+  }, [stage.id, stage.quote]);
 
   useEffect(() => {
     if (!almanacToast) {
@@ -283,32 +289,6 @@ export function GameScreen({
     }, 3000);
     return () => window.clearTimeout(timeoutId);
   }, [almanacToast]);
-
-  useEffect(() => {
-    if (!tutorialPopup) {
-      return;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        dispatch({ type: 'MARK_TUTORIAL_STAGE_SEEN', stageId: tutorialPopup.stageId });
-        setTutorialPopup(null);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dispatch, tutorialPopup]);
-
-  useEffect(() => {
-    if (state.tutorialDone) {
-      return;
-    }
-    if (state.totalClicks >= 5 && tutorialStep === 1) {
-      setTutorialStep(2);
-    }
-    if (skillsOpen && tutorialStep === 2) {
-      setTutorialStep(3);
-    }
-  }, [skillsOpen, state.totalClicks, state.tutorialDone, tutorialStep]);
 
   useGameLoop((now, dt) => {
     logicAccumulator.current += dt;
@@ -351,19 +331,20 @@ export function GameScreen({
         ? `+${formatWhole(event.gained)} ×${formatWhole(event.comboMult)}`
         : `+${formatWhole(event.gained)}`;
     setFloatingEntries((current) => [
-      ...current,
+      ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + emissionCount),
       ...Array.from({ length: emissionCount }, (_, index) => {
-        const angle = (index / emissionCount) * Math.PI * 2;
-        const radius = emissionCount > 1 ? 10 + emissionCount * 2 : 0;
+        const angle = (index / emissionCount) * Math.PI * 2 + Math.random() * 0.3;
+        const radius = emissionCount > 1 ? 12 + index * 4 : 0;
         const variant: FloatingEntry['variant'] = event.isCrit ? 'crit' : 'normal';
         return {
           id: event.id * 100 + index,
           x: event.x + Math.cos(angle) * radius,
-          y: event.y + Math.sin(angle) * radius * 0.7,
+          y: event.y + Math.sin(angle) * radius - index * 6,
           text,
           particleName: event.particleName,
           particleDefinition: event.particleDefinition,
           variant,
+          delayMs: index * 60,
         };
       }),
     ]);
@@ -420,7 +401,6 @@ export function GameScreen({
 
   useEffect(() => {
     if (state.pendingCondenseStageIdx === null) {
-      setPostCondenseBurstStartedAt(null);
       if (transitionPhase !== 'revealing') {
         setTransitionPhase('idle');
       }
@@ -435,8 +415,6 @@ export function GameScreen({
     ) {
       return;
     }
-    const startedAt = performance.now();
-    setPostCondenseBurstStartedAt(startedAt);
     setTransitionPhase('bursting');
     setShakeClass('shake-big');
     soundManager?.playCondenseExplosion();
@@ -450,12 +428,8 @@ export function GameScreen({
       setTransitionPhase('quote');
       setShakeClass('');
     }, TUNING.STAGE_TRANSITION_QUOTE_DELAY_MS);
-    const washTimeoutId = window.setTimeout(() => {
-      setPostCondenseBurstStartedAt(null);
-    }, TUNING.STAGE_TRANSITION_TOTAL_MS);
     return () => {
       window.clearTimeout(quoteTimeoutId);
-      window.clearTimeout(washTimeoutId);
     };
   }, [transitionPhase]);
 
@@ -465,6 +439,7 @@ export function GameScreen({
     }
     const revealTimeoutId = window.setTimeout(() => {
       setTransitionPhase('idle');
+      setRevealStartedAt(null);
     }, TUNING.STAGE_TRANSITION_REVEAL_MS);
     return () => {
       window.clearTimeout(revealTimeoutId);
@@ -476,24 +451,6 @@ export function GameScreen({
       className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''}`}
       style={{ '--accent': stage.accent, '--core': stage.coreColor } as CSSProperties}
     >
-      <Timeline
-        timelinePos={stage.timelinePos}
-        cosmicClockLabel={formatCosmicTime(displayedCosmicClock)}
-        stageTimeLabel={stage.time}
-        stagePositions={stagePositions}
-        currentStageId={stage.id}
-        entropy={formatWhole(state.entropy)}
-        comboVisible={state.combo > 1}
-        comboMult={formatWhole(
-          getComboMult(state.combo, state.singularityUnlocks.includes('free_combo') ? 2 : 0),
-        )}
-        universeLabel={state.universeCount > 1 ? `Universe #${state.universeCount}` : null}
-        muted={muted}
-        onToggleMute={onToggleMute}
-        onOpenInfo={() => setAlmanacOpen(true)}
-        onRequestReset={onRequestReset}
-      />
-
       <main className="field">
         {import.meta.env.DEV ? (
           <div className="admin-panel">
@@ -514,17 +471,17 @@ export function GameScreen({
           </div>
         ) : null}
         <ParticleField
-          key={stage.id}
           stage={stage}
           quanta={state.quanta}
           autoRate={autoRate}
           timeMult={timeMult}
+          cosmicClockSec={state.cosmicClockSec}
           effectiveThreshold={effectiveThreshold}
           totalClicks={state.totalClicks}
           imploding={state.imploding}
           interactionLocked={interactionLocked}
           lastClickEvent={state.lastClickEvent}
-          stageTransitionStartedAt={postCondenseBurstStartedAt}
+          stageTransitionStartedAt={transitionPhase === 'revealing' ? revealStartedAt : null}
           clickEmissionCount={clickEmissionCount}
           clickVfxScale={modifiers.clickVfxScale}
           gravityMod={state.currentUniverseSeed.gravityMod}
@@ -569,31 +526,107 @@ export function GameScreen({
             })
           }
         />
-        {canShowSkills ? (
-          <div className="skills-toggle">
-            <SkillsButton
-              highlighted={hasAffordableSkill}
-              onClick={() => setSkillsOpen(true)}
-            />
-          </div>
+        {shopOpen && canShowShop ? (
+          <ShopPanel state={state} dispatch={dispatch} onClose={() => setShopOpen(false)} />
         ) : null}
         {skillsOpen && canShowSkills ? (
           <SkillsPanel state={state} dispatch={dispatch} onClose={() => setSkillsOpen(false)} />
         ) : null}
-        <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
-        <div className="stage-info">
-          <div className="stage-num">{`STAGE ${String(stage.id).padStart(2, '0')} / ${String(STAGES.length).padStart(2, '0')}`}</div>
-          <div className="stage-name">{stage.name}</div>
-          <div className="stage-mechanic">{mechanic.tutorial}</div>
-          {stage.mechanic === 'life_evolution' ? (
-            <div className="stage-subbeat">{getLifeStepLabel(state.mechanicStep)}</div>
-          ) : null}
-          <div className="stage-subbeat">{`Time ×${formatWhole(Math.max(1, timeMult))}`}</div>
-          <div className="stage-subbeat">{`${state.currentUniverseSeed.atlasName} · ${getAnomalyLabel(state.currentUniverseSeed.anomaly)}`}</div>
+        <div className="hud-info" ref={resourceAnchorRef}>
+          <div className="hud-cosmic-time">{formatCosmicTime(displayedCosmicClock)}</div>
+          <div className="hud-stage-title">{`Stage ${stage.id}: ${stage.name}`}</div>
+          <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumber(effectiveThreshold)}`}</div>
+          <div className="hud-gauge" aria-label="Cosmic time gauge">
+            <div className="hud-gauge-fill" style={{ width: `${Math.min(100, timeProgress01 * 100)}%` }} />
+          </div>
+          <button
+            type="button"
+            className="hud-condense"
+            disabled={!canCondense}
+            title={canCondense ? `Condense for ${formatWhole(entropyPreview)} entropy` : condenseHint}
+            onClick={() => dispatch({ type: 'START_CONDENSE', now: performance.now() })}
+          >
+            Condense
+          </button>
         </div>
-        {state.totalClicks === 0 ? (
-          <div className="stage-hint">click to gather · click direction steers your universe</div>
+        <div className="stat-header" aria-label="Core stats">
+          {([
+            ['click', `Quanta x${formatWhole(clickPower)}`],
+            ['auto', `Auto ${formatRate(autoRate)}`],
+            ['crit', `Crit x${formatWhole(critMultiplier)}`],
+            ['time', `Time x${formatWhole(timeMult)}`],
+          ] as Array<[StatPopupTrack, string]>).map(([trackId, label]) => (
+            <button
+              key={trackId}
+              type="button"
+              onClick={(event) => setStatPopup({ trackId, x: event.clientX, y: event.clientY })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {statPopup && statPopupTree ? (
+          <div
+            className="stat-upgrade-popup"
+            style={{
+              left: Math.max(12, Math.min(window.innerWidth - 224, statPopup.x - 100)),
+              top: Math.max(48, statPopup.y + 14),
+            }}
+          >
+            <button
+              type="button"
+              className="popup-close"
+              aria-label="Close stat upgrade"
+              onClick={() => setStatPopup(null)}
+            >
+              x
+            </button>
+            <strong>{`${statPopupTree.label} Lv ${statPopupLevel} -> ${statPopupNextLevel}`}</strong>
+            <span>{`Cost: ${formatGameNumber(statPopupCost)} quanta`}</span>
+            {!statPopupUnlocked ? <span>{`Unlocks at Stage ${statPopupTree.unlockStageId}`}</span> : null}
+            <button
+              type="button"
+              className="q-continue stat-buy"
+              disabled={!statPopupCanBuy}
+              onClick={() => {
+                dispatch({ type: 'BUY_TRACK_LEVEL', trackId: statPopup.trackId });
+                setStatPopup(null);
+              }}
+            >
+              BUY +1
+            </button>
+          </div>
         ) : null}
+        <div className="hud-controls">
+          <button type="button" className="mini-button" onClick={() => setAlmanacOpen(true)}>
+            INFO
+          </button>
+          <button type="button" className="mini-button" onClick={onToggleMute}>
+            {muted ? 'SOUND' : 'MUTE'}
+          </button>
+          <button type="button" className="mini-button" onClick={onRequestReset}>
+            RESET
+          </button>
+        </div>
+        <div className="bottom-buttons">
+          {canShowSkills ? (
+            <div ref={skillsAnchorRef}>
+              <SkillsButton highlighted={hasAffordableSkill} onClick={() => setSkillsOpen(true)} />
+            </div>
+          ) : null}
+          {canShowShop ? (
+            <div ref={shopAnchorRef}>
+              <ShopButton
+                highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}
+                onClick={() => setShopOpen(true)}
+              />
+            </div>
+          ) : null}
+        </div>
+        <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
+        <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
+        <ScaleIndicator stageId={stage.id} />
+        <ActiveBoostHud boosts={state.shopBoosts} />
         {floatingEntries.map((entry) => (
           <FloatingNumber
             key={entry.id}
@@ -604,6 +637,7 @@ export function GameScreen({
             particleDefinition={entry.particleDefinition}
             variant={entry.variant}
             stageId={stage.id}
+            delayMs={entry.delayMs}
           />
         ))}
         {encounterEntries.map((entry) => (
@@ -611,27 +645,12 @@ export function GameScreen({
         ))}
       </main>
 
-      <footer className="panel">
-        <ResourcePanel
-          label={stage.resource}
-          quanta={formatGameNumber(state.quanta)}
-          threshold={formatGameNumber(effectiveThreshold)}
-          rate={formatRate(autoRate)}
-          progressPercent={progress01 * 100}
-          canCondense={canCondense}
-          entropyPreview={entropyPreview}
-          onCondense={() => dispatch({ type: 'START_CONDENSE', now: performance.now() })}
-          clickPowerLabel={formatGameNumber(clickPower)}
-          autoRateLabel={formatRate(autoRate)}
-          critLabel={`x${Math.floor(critMultiplier)}`}
-        />
-      </footer>
-
       {state.pendingCondenseStageIdx !== null && !state.imploding && transitionPhase === 'quote' ? (
         <QuoteOverlay
           stage={STAGES[state.pendingCondenseStageIdx]}
           visible
           onContinue={() => {
+            setRevealStartedAt(performance.now());
             setTransitionPhase('revealing');
             dispatch({ type: 'ADVANCE_STAGE', now: performance.now() });
           }}
@@ -651,7 +670,21 @@ export function GameScreen({
           <div className="overlay-card">
             <div className="q-stage">Cosmic Almanac</div>
             <h2>{ALMANAC[stage.id]?.title ?? stage.name}</h2>
+            <p className="resource-subhead">{ALMANAC[stage.id]?.short}</p>
             <p>{ALMANAC[stage.id]?.body ?? stage.quote}</p>
+            {ALMANAC[stage.id]?.uncertaintyNote ? (
+              <p className="almanac-note">{`Note: ${ALMANAC[stage.id]?.uncertaintyNote}`}</p>
+            ) : null}
+            {ALMANAC[stage.id]?.cosmicEra ? (
+              <div className="almanac-era">
+                <div className="q-stage">Era Info</div>
+                <div>{`Time: ${ALMANAC[stage.id].cosmicEra.timeRange}`}</div>
+                <div>{`Temp: ${ALMANAC[stage.id].cosmicEra.temperature}`}</div>
+                <div>{`Key: ${ALMANAC[stage.id].cosmicEra.keyParticles.join(', ')}`}</div>
+                <div>{`Events: ${ALMANAC[stage.id].cosmicEra.keyEvents.join(', ')}`}</div>
+                <p>{ALMANAC[stage.id].cosmicEra.realWorldScale}</p>
+              </div>
+            ) : null}
             <p className="resource-subhead">{ALMANAC[stage.id]?.funFact}</p>
             <p className="resource-subhead">{`Click ${formatGameNumber(clickPower)} · Auto ${formatRate(autoRate)} · Time x${Math.max(1, Math.floor(timeMult))}`}</p>
             <button className="q-continue" type="button" onClick={() => setAlmanacOpen(false)}>
@@ -668,80 +701,28 @@ export function GameScreen({
         </div>
       ) : null}
 
-      {tutorialPopup ? (
-        <div className="overlay-backdrop" role="dialog" aria-modal="true">
-          <div className="overlay-card stage-unlock-card">
-            <div className="q-stage">{`Stage ${tutorialPopup.stageId} — ${stage.name}`}</div>
-            <h2>{tutorialPopup.title}</h2>
-            <p>{tutorialPopup.body}</p>
-            <div className="reset-actions">
-              <button className="q-continue" type="button" onClick={() => {
-                dispatch({ type: 'MARK_TUTORIAL_STAGE_SEEN', stageId: tutorialPopup.stageId });
-                if (tutorialPopup.openSkills) {
-                  setSkillsOpen(true);
+      {activeTutorialBubble ? (
+        <SpeechBubble
+          anchorRef={
+            activeTutorialBubble.anchor === 'skills'
+              ? skillsAnchorRef
+              : activeTutorialBubble.anchor === 'shop'
+                ? shopAnchorRef
+                : resourceAnchorRef
+          }
+          position={activeTutorialBubble.anchor === 'resource' ? 'top' : 'left'}
+          message={activeTutorialBubble.message}
+          ctaLabel={activeTutorialBubble.ctaLabel}
+          onCta={
+            activeTutorialBubble.onCta
+              ? () => {
+                  dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+                  activeTutorialBubble.onCta?.();
                 }
-                setTutorialPopup(null);
-              }}>
-                Open Skills
-              </button>
-              <button className="q-continue intro-secondary" type="button" onClick={() => {
-                dispatch({ type: 'MARK_TUTORIAL_STAGE_SEEN', stageId: tutorialPopup.stageId });
-                setTutorialPopup(null);
-              }}>
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {!state.tutorialDone ? (
-        <div className="overlay-backdrop tutorial-overlay" role="dialog" aria-modal="true">
-          <div className="overlay-card">
-            <div className="q-stage">Tutorial</div>
-            {tutorialStep === 1 ? (
-              <>
-                <h2>Click the cosmos to gather quanta.</h2>
-                <p>Make at least 5 clicks to wake the first skill path.</p>
-              </>
-            ) : null}
-            {tutorialStep === 2 ? (
-              <>
-                <h2>Open Skills to grow your power.</h2>
-                <p>The floating skills button in the lower-right opens the new tree panel.</p>
-              </>
-            ) : null}
-            {tutorialStep === 3 ? (
-              <>
-                <h2>Buy your first root level.</h2>
-                <p>Start with Stellar Forge or Cosmic Web, then close this when you are ready.</p>
-              </>
-            ) : null}
-            <div className="reset-actions">
-              <button
-                className="mini-button"
-                type="button"
-                onClick={() => dispatch({ type: 'SET_TUTORIAL_DONE' })}
-              >
-                SKIP
-              </button>
-              {tutorialStep === 2 ? (
-                <button className="q-continue" type="button" onClick={() => setSkillsOpen(true)}>
-                  OPEN SKILLS
-                </button>
-              ) : null}
-              {tutorialStep === 3 ? (
-                <button
-                  className="q-continue"
-                  type="button"
-                  onClick={() => dispatch({ type: 'SET_TUTORIAL_DONE' })}
-                >
-                  FINISH
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </div>
+              : undefined
+          }
+          onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId })}
+        />
       ) : null}
 
       {canChooseEnding ? (

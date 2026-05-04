@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { IntroScreen } from './components/IntroScreen';
 import { FinalScreen } from './components/FinalScreen';
+import { BigBangCinematic } from './components/BigBangCinematic';
 import { MultiverseAtlas } from './components/MultiverseAtlas';
 import { SoundManager } from './game/audio';
 import { clearAllStoredState, clearSave, loadMutedPreference, saveMutedPreference } from './game/storage';
@@ -18,6 +19,8 @@ export default function App() {
   const [resumeAvailable, setResumeAvailable] = useState(hadSavedGame);
   const [muted, setMuted] = useState(loadMutedPreference());
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [bigBangRestarting, setBigBangRestarting] = useState(false);
+  const [openingCinematic, setOpeningCinematic] = useState(false);
   const soundManagerRef = useRef<SoundManager | null>(null);
 
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function App() {
           }}
           onComplete={() => {
             setResumeAvailable(false);
-            setRoute('game');
+            setOpeningCinematic(true);
           }}
           onUnlockAudio={() => {
             soundManagerRef.current?.unlock();
@@ -120,8 +123,28 @@ export default function App() {
           onOpenAtlas={() => setRoute('atlas')}
           onPrestige={() => {
             soundManagerRef.current?.unlock();
+            soundManagerRef.current?.playBigBang();
+            setBigBangRestarting(true);
+          }}
+        />
+      ) : null}
+
+      {bigBangRestarting ? (
+        <BigBangCinematic
+          onComplete={() => {
             dispatch({ type: 'PRESTIGE', now: Date.now() });
             setResumeAvailable(false);
+            setBigBangRestarting(false);
+            setRoute('game');
+          }}
+        />
+      ) : null}
+
+      {openingCinematic ? (
+        <BigBangCinematic
+          onComplete={() => {
+            soundManagerRef.current?.unlock();
+            setOpeningCinematic(false);
             setRoute('game');
           }}
         />

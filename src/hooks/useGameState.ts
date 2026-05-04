@@ -2,10 +2,15 @@ import { useEffect, useReducer, useRef } from 'react';
 import { gameReducer, createInitialGameState } from '../game/reducer';
 import { clearSave, loadGame, saveGame } from '../game/storage';
 import { TUNING } from '../game/constants';
-import { getAutoRate, safeAdd } from '../game/formulas';
+import {
+  getCompositeBoostMultiplier,
+  getAutoRate,
+  getCosmicClockForGauge,
+  getTimeFillRate,
+  safeAdd,
+} from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
-import { getCosmicTimePerRealSec } from '../game/timeFlow';
 import type { Dispatch } from 'react';
 import type { GameAction } from '../game/reducer';
 import type { GameState } from '../game/types';
@@ -67,19 +72,24 @@ export function useGameState(): UseGameStateResult {
       const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')
         ? 1
         : TUNING.OFFLINE_BASE_RATE;
-      const gained = autoRate * awaySec * offlineMultiplier;
-      const previousStage = payload.stageIdx > 0 ? STAGES[payload.stageIdx - 1] : null;
-      const timeMult = modifiers.timeMultMult;
-      const cosmicRate =
-        getCosmicTimePerRealSec(stage, previousStage, timeMult) *
-        payload.currentUniverseSeed.timeMod *
-        offlineMultiplier;
+      const quantaBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'quanta_', now);
+      const gained = autoRate * awaySec * offlineMultiplier * quantaBoost;
+      const timeBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'time_', now);
+      const timeGauge = Math.min(
+        125,
+        baseState.timeGauge +
+          getTimeFillRate(stage, payload.skills.time.level, modifiers, timeBoost) *
+            awaySec *
+            offlineMultiplier,
+      );
+      const cosmicClockSec = getCosmicClockForGauge(payload.stageIdx, timeGauge);
       const todayKey = getDayKey(new Date(now));
       const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
       return {
         ...baseState,
         quanta: safeAdd(baseState.quanta, gained),
-        cosmicClockSec: Math.min(stage.cosmicTimeSec, baseState.cosmicClockSec + awaySec * cosmicRate),
+        timeGauge,
+        cosmicClockSec,
         lastSaveAt: now,
         offlineElapsedMs: awaySec * 1000,
         offlineGained: gained,
@@ -125,12 +135,16 @@ export function useGameState(): UseGameStateResult {
     saveGame(state);
   }, [
     state.stageIdx,
+    state.timeGauge,
     state.pendingCondenseStageIdx,
     state.completedRun,
     state.universeCount,
     state.cumulativeBoost,
     state.condensedMass,
     state.echoes,
+    state.skillPoints,
+    state.shopBoosts,
+    state.totalShopSpentUSD,
   ]);
 
   return {

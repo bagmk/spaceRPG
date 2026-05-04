@@ -6,7 +6,7 @@ import type {
 } from './types';
 
 export const STORAGE_KEYS = {
-  save: 'cosmic_coalescence_save_v4',
+  save: 'cosmic_coalescence_save_v7',
   muted: 'cosmic_coalescence_muted',
 } as const;
 
@@ -46,12 +46,17 @@ export const TUNING = {
     { count: 70, depth: 0.4, rMin: 0.6, rMax: 1.4, alphaMin: 0.25, alphaMax: 0.6 },
     { count: 35, depth: 0.8, rMin: 0.8, rMax: 1.8, alphaMin: 0.35, alphaMax: 0.85 },
   ],
-  WAKE_TRAIL_MAX: 60,
+  WAKE_TRAIL_MAX: 40,
+  BURST_MAX: 200,
+  FLYER_MAX: 80,
+  SHOCKWAVE_MAX: 8,
+  MAX_FLOATING_NUMBERS: 60,
+  ROGUE_MAX: 5,
   STAR_WRAP_MARGIN: 5,
   STAR_STREAK_THRESHOLD: 0.4,
   STAR_STREAK_MULTIPLIER: 3,
 
-  MOTE_MAX: 360,
+  MOTE_MAX: 60,
   MOTE_PER_CLICK: 3,
   MOTE_PER_AUTO_TICK: 1,
   MOTE_AUTO_SPAWN_INTERVAL_MS: 250,
@@ -121,7 +126,7 @@ export const TUNING = {
   STAGE_TRANSITION_BLAST_MS: 640,
   STAGE_TRANSITION_QUOTE_DELAY_MS: 620,
   STAGE_TRANSITION_TOTAL_MS: 1300,
-  STAGE_TRANSITION_REVEAL_MS: 520,
+  STAGE_TRANSITION_REVEAL_MS: 1000,
   STAGE_TRANSITION_BURST_COUNT: 120,
   INTRO_TOTAL_MS: 2200,
   INTRO_DOT_SIZE: 8,
@@ -139,7 +144,7 @@ export const TUNING = {
   DRONE_VOLUME_DB: -28,
   COLLISION_VOLUME_DB: -8,
   BIG_BANG_VOLUME_DB: -10,
-  CLICK_MIN_GAP_MS: 30,
+  CLICK_MIN_GAP_MS: 10,
   CLICK_RATE_LIMIT_THRESHOLD: 5,
   AUTO_TICK_VOLUME_MULTIPLIER: 0.1,
   AMBIENT_CROSSFADE_MS: 2000,

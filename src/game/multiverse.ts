@@ -4,10 +4,10 @@ const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
 
 const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, string> = {
-  big_crunch: 'The universe collapses for those who push too hard.',
-  big_rip: 'Speed unmakes structure.',
-  vacuum_decay: 'A precision so absolute it punctures reality.',
-  bounce: 'The cosmos remembers.',
+  big_crunch: 'Crit > 1/sec across stages 13-16.',
+  big_rip: 'Aeon Drive Lv 30 plus the Lv 30 Time SP node.',
+  vacuum_decay: 'Condense near 25%, 50%, 75%, or 100% in the proton decay era.',
+  bounce: 'Universe count >= 5, with Heat Death, Big Crunch, Big Rip, and Vacuum Decay completed.',
 };
 
 const ENDING_COPY: Record<EndingId, Pick<EndingOption, 'label' | 'description'>> = {
@@ -185,6 +185,13 @@ export function applyUniverseToStage(stage: Stage, seed: UniverseSeed): Stage {
     accent: shiftHexHue(stage.accent, seed.paletteShift, brightness),
     coreColor: shiftHexHue(stage.coreColor, seed.paletteShift, brightness),
     particleColors: stage.particleColors.map((color) => shiftHexHue(color, seed.paletteShift, brightness)),
+    background: {
+      ...stage.background,
+      gradientTop: shiftHexHue(stage.background.gradientTop, seed.paletteShift, brightness),
+      gradientBottom: shiftHexHue(stage.background.gradientBottom, seed.paletteShift, brightness),
+      starColor: shiftHexHue(stage.background.starColor, seed.paletteShift, brightness),
+      distantElementColor: shiftHexHue(stage.background.distantElementColor, seed.paletteShift, brightness),
+    },
   };
 }
 
@@ -192,7 +199,7 @@ export function isBigRipEligible(state: Pick<GameState, 'skills' | 'endingsUnloc
   return (
     state.endingsUnlocked.includes('big_rip') ||
     state.endingsCompleted.includes('big_rip') ||
-    (state.skills.time.level >= 30 && state.skills.ownedCrossNodes.includes('inflaton_echo'))
+    (state.skills.time.level >= 30 && state.skills.ownedCrossNodes.includes('time_lv30'))
   );
 }
 
@@ -258,14 +265,10 @@ export function getEndingOptions(state: GameState, now: number): EndingOption[] 
 
   const requirementMap: Record<EndingId, string> = {
     heat_death: 'Always available',
-    big_crunch: state.endingsCompleted.includes('big_crunch')
-      ? ENDING_HINTS.big_crunch
-      : 'Hidden condition',
-    big_rip: state.endingsCompleted.includes('big_rip') ? ENDING_HINTS.big_rip : 'Hidden condition',
-    vacuum_decay: state.endingsCompleted.includes('vacuum_decay')
-      ? ENDING_HINTS.vacuum_decay
-      : 'Hidden condition',
-    bounce: state.endingsCompleted.includes('bounce') ? ENDING_HINTS.bounce : 'Hidden condition',
+    big_crunch: ENDING_HINTS.big_crunch,
+    big_rip: ENDING_HINTS.big_rip,
+    vacuum_decay: ENDING_HINTS.vacuum_decay,
+    bounce: ENDING_HINTS.bounce,
   };
 
   return ALL_ENDINGS.map((endingId) => ({
@@ -273,7 +276,7 @@ export function getEndingOptions(state: GameState, now: number): EndingOption[] 
     label: ENDING_COPY[endingId].label,
     description: ENDING_COPY[endingId].description,
     unlocked: unlockedMap[endingId],
-    requirement: unlockedMap[endingId] ? 'Available now' : requirementMap[endingId],
+    requirement: requirementMap[endingId],
   }));
 }
 

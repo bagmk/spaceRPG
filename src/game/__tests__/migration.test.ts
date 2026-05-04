@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadGame } from '../storage';
+import { createInitialGameState } from '../reducer';
 
 const storage = new Map<string, string>();
 
@@ -56,5 +57,52 @@ describe('save migration', () => {
     expect(migrated?.condensedMass).toBe(0);
     expect(migrated?.echoes).toBe(0);
     expect(migrated?.endingsCompleted).toEqual([]);
+    expect(migrated?.timeGauge).toBe(0);
+    expect(migrated?.shopBoosts).toEqual([]);
+    expect(migrated?.totalShopSpentUSD).toBe(0);
+  });
+
+  it('migrates a v5 save into v7 with stage-gated tracks reconstructed', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v5',
+      JSON.stringify({
+        version: 5,
+        ...createInitialGameState(100),
+        stageIdx: 6,
+        skills: {
+          ...createInitialGameState(100).skills,
+          unlockedTracks: ['click'],
+        },
+      }),
+    );
+
+    const migrated = loadGame();
+    expect(migrated?.stageIdx).toBe(6);
+    expect(migrated?.skills.unlockedTracks).toEqual(['click', 'crit', 'auto', 'time']);
+  });
+
+  it('discards legacy cross-node IDs when loading a v6 save', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v6',
+      JSON.stringify({
+        version: 6,
+        ...createInitialGameState(100),
+        skills: {
+          ...createInitialGameState(100).skills,
+          ownedCrossNodes: ['echoing_click', 'inflaton_echo'],
+        },
+      }),
+    );
+
+    const migrated = loadGame();
+    expect(migrated?.skills.ownedCrossNodes).toEqual([]);
   });
 });

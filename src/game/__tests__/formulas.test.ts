@@ -5,13 +5,15 @@ import {
   formatWhole,
   getAutoRate,
   getClickPower,
+  getCosmicTimeFillRate,
   getCondensedMassReward,
   getEchoReward,
+  getTimeMultiplier,
   getUniverseBoost,
 } from '../formulas';
 import { getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
-import { defaultModifiers } from '../skills/effects';
+import { defaultModifiers, getActiveModifiers } from '../skills/effects';
 
 describe('formatWhole', () => {
   it('formats small whole numbers without suffixes', () => {
@@ -37,6 +39,11 @@ describe('formatCosmicTime', () => {
 
   it('formats extremely large cosmic times in scientific notation', () => {
     expect(formatCosmicTime(1e100 * 31557600)).toBe('1e100yr');
+    expect(formatCosmicTime(STAGES[14].cosmicTimeSec)).toBe('1e100yr');
+  });
+
+  it('formats the V7 initial cosmic time without a one-second baseline', () => {
+    expect(formatCosmicTime(1e-34)).toBe('1e-34s');
   });
 });
 
@@ -51,6 +58,27 @@ describe('scaling formulas', () => {
     const scaled = { ...defaultModifiers(), autoRateAdd: 10, autoRateMult: 3 };
     expect(getAutoRate(none)).toBe(0);
     expect(getAutoRate(scaled)).toBeGreaterThan(getAutoRate(none));
+  });
+
+  it('uses V6 logarithmic 10x scaling for roots and time', () => {
+    const skills = {
+      click: { level: 5 },
+      auto: { level: 5 },
+      crit: { level: 0 },
+      time: { level: 5 },
+      unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
+      ownedCrossNodes: [],
+    };
+    const modifiers = getActiveModifiers(skills, {
+      stageId: 5,
+      stagesCleared: 4,
+      progress01: 0,
+      clickLevel: 5,
+    });
+    expect(getClickPower(modifiers)).toBe(1e5);
+    expect(getAutoRate(modifiers)).toBe(1e5);
+    expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);
+    expect(getCosmicTimeFillRate(skills.time.level, modifiers)).toBe(1e5);
   });
 
   it('scales prestige rewards without a hard cap', () => {
