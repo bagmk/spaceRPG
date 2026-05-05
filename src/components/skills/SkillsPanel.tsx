@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, MouseEvent as ReactMouseEvent } from 'react';
-import { CROSS_NODES, SKILL_TREES, findNode, findTree, getVisibleCrossTier } from '../../game/skills/definitions';
+import {
+  CROSS_NODES,
+  SKILL_TREES,
+  findNode,
+  findTree,
+  getVisibleCrossTier,
+} from '../../game/skills/definitions';
 import type { CrossNodeDef, SkillTreeId } from '../../game/skills/types';
 import type { GameAction } from '../../game/reducer';
 import type { GameState } from '../../game/types';
@@ -44,6 +50,9 @@ function getTrackLockedReason(state: GameState, trackId: SkillTreeId, targetLeve
   const level = state.skills[trackId].level;
   if (targetLevel <= level) {
     return 'Already owned';
+  }
+  if (targetLevel > tree.rootMaxLevel) {
+    return `Max Lv ${tree.rootMaxLevel}`;
   }
   if (targetLevel > level + 1) {
     return `Buy Lv ${level + 1} first`;

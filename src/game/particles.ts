@@ -143,3 +143,125 @@ export function pickParticleName(stageId: number, progress01 = 0): string {
       : STAGE_PARTICLES[stageId] ?? STAGE_PARTICLES[1];
   return pool[Math.floor(Math.random() * pool.length)] ?? 'Particle';
 }
+
+const ENTROPY_WEIGHT_GROUPS: Array<{ names: string[]; weight: number }> = [
+  {
+    weight: 1,
+    names: [
+      'Vacuum',
+      'Photon',
+      'Gluon',
+      'Lepton',
+      'Neutrino',
+      'Dust',
+      'Gas',
+      'Rock',
+      'Orbit',
+    ],
+  },
+  {
+    weight: 2,
+    names: [
+      'Spacetime',
+      'Quantum Foam',
+      'Inflaton',
+      'Quark',
+      'Antiquark',
+      'Up Quark',
+      'Down Quark',
+      'Strange Quark',
+      'Electron',
+      'UV Photon',
+      'Photon (CMB)',
+      'Hawking Quantum',
+      'Photon Pair',
+      'Final Photon',
+      'Vacuum Fluctuation',
+    ],
+  },
+  {
+    weight: 3,
+    names: [
+      'Proton',
+      'Neutron',
+      'Hydrogen-1',
+      'Helium-4',
+      'Lithium-7',
+      'Deuterium',
+      'Hydrogen',
+      'Helium',
+      'H₂',
+      'Ionized H',
+      'Carbon',
+      'Oxygen',
+      'Iron',
+      'Iron Atom',
+      'Decaying Proton',
+      'Quantum Tunnel',
+    ],
+  },
+  {
+    weight: 5,
+    names: [
+      'Dark Matter',
+      'Cold Dust',
+      'Stellar Wind',
+      'Quasar Beam',
+      'Halo',
+      'Filament',
+      'Solar Wind',
+      'Meteor',
+      'Comet',
+      'Lava',
+      'Atmosphere',
+      'Ocean',
+    ],
+  },
+  {
+    weight: 8,
+    names: [
+      'Pop III Star',
+      'Galaxy',
+      'Quasar',
+      'Asteroid',
+      'Planetesimal',
+      'Moon',
+      'Mercury',
+      'Venus',
+      'Earth',
+      'Mars',
+      'Jupiter',
+      'Saturn',
+      'Uranus',
+      'Neptune',
+      'Pluto',
+      'Asteroid Belt',
+      'White Dwarf',
+      'Neutron Star',
+      'Iron Star',
+      'Information',
+    ],
+  },
+  {
+    weight: 13,
+    names: [
+      'Water',
+      'RNA',
+      'Cell',
+      'Multicellular',
+      'Mammal',
+      'Civilization',
+      'City Light',
+      'Smoke',
+      'Boltzmann Brain',
+    ],
+  },
+];
+
+export function getParticleEntropyBonus(stageId: number, particleName: string, isCrit = false): number {
+  const group = ENTROPY_WEIGHT_GROUPS.find((entry) => entry.names.includes(particleName));
+  const particleWeight = group?.weight ?? 1;
+  const stageWeight = Math.max(1, Math.ceil(stageId / 5));
+  const critWeight = isCrit ? 2 : 1;
+  return Math.ceil(particleWeight * stageWeight * critWeight);
+}

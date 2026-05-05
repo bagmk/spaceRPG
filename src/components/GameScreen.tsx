@@ -648,7 +648,12 @@ export function GameScreen({
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={stage.id} />
         <ActiveBoostHud boosts={state.shopBoosts} />
-        <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => setShowInfoHint(true)} />
+        {state.totalClicks > 0 || import.meta.env.DEV ? (
+          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => setShowInfoHint(true)} />
+        ) : null}
+        {stage.id === 1 && state.totalClicks === 0 && !interactionLocked ? (
+          <div className="click-tutorial-hint">CLICK TO GATHER QUANTA</div>
+        ) : null}
         {floatingEntries.map((entry) => (
           <FloatingNumber
             key={entry.id}
@@ -705,7 +710,7 @@ export function GameScreen({
                 ? shopAnchorRef
                 : resourceAnchorRef
           }
-          position={activeTutorialBubble.anchor === 'resource' ? 'top' : 'left'}
+          position={activeTutorialBubble.anchor === 'resource' ? 'bottom' : 'top'}
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
           onCta={

@@ -74,31 +74,33 @@ export function defaultModifiers(): Modifiers {
 }
 
 const CROSS_NODE_MULTS: Record<string, number> = {
-  click_lv5: 2,
-  click_lv10: 5,
-  click_lv15: 10,
-  click_lv20: 25,
-  click_lv25: 100,
-  click_lv30: 1000,
-  auto_lv5: 2,
-  auto_lv10: 5,
-  auto_lv15: 10,
-  auto_lv20: 25,
-  auto_lv25: 100,
-  auto_lv30: 1000,
-  crit_lv5: 1.5,
-  crit_lv10: 2,
-  crit_lv15: 3,
-  crit_lv20: 5,
-  crit_lv25: 8,
-  crit_lv30: 12,
-  time_lv5: 2,
-  time_lv10: 5,
-  time_lv15: 10,
-  time_lv20: 25,
-  time_lv25: 100,
-  time_lv30: 1000,
+  click_lv5: 1.4,
+  click_lv10: 1.8,
+  click_lv15: 2.4,
+  click_lv20: 3.2,
+  click_lv25: 4.4,
+  click_lv30: 6,
+  auto_lv5: 1.4,
+  auto_lv10: 1.8,
+  auto_lv15: 2.4,
+  auto_lv20: 3.2,
+  auto_lv25: 4.4,
+  auto_lv30: 6,
+  crit_lv5: 1.15,
+  crit_lv10: 1.3,
+  crit_lv15: 1.5,
+  crit_lv20: 1.75,
+  crit_lv25: 2.05,
+  crit_lv30: 2.5,
+  time_lv5: 1.25,
+  time_lv10: 1.6,
+  time_lv15: 2.1,
+  time_lv20: 2.8,
+  time_lv25: 3.6,
+  time_lv30: 5,
 };
+
+const TOTAL_CROSS_NODE_COUNT = 24;
 
 export function getActiveModifiers(
   skills: SkillState | undefined,
@@ -146,6 +148,13 @@ export function getActiveModifiers(
     mods.timeMultMult *= 0.5;
     mods.clickPowerMult *= 4;
     mods.autoRateMult *= 4;
+  }
+  if (skills.ownedCrossNodes.length >= TOTAL_CROSS_NODE_COUNT) {
+    mods.clickPowerMult *= 2;
+    mods.autoRateMult *= 2;
+    mods.apexMult = 2;
+    mods.bigBangUnlocked = true;
+    mods.eternalReturnUnlocked = true;
   }
 
   return mods;

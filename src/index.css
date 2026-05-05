@@ -2454,6 +2454,9 @@ button.stat-header-item {
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
 }
+.stage-log-dismiss {
+  pointer-events: auto;
+}
 .stage-log-toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
@@ -2624,6 +2627,7 @@ button.stat-header-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  pointer-events: auto;
 }
 
 .stage-log-dismiss {
@@ -2638,9 +2642,29 @@ button.stat-header-item {
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+  pointer-events: auto;
   transition: color 0.15s;
 }
 
 .stage-log-dismiss:hover {
   color: var(--fg);
+}
+
+/* ── Click tutorial hint ─────────────────────────────────────── */
+.click-tutorial-hint {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  z-index: 10;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  pointer-events: none;
+  animation: click-hint-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes click-hint-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }

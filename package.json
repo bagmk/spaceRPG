@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sim": "tsx scripts/balance-sim.ts"
+    "sim": "tsx scripts/balance-design.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cosmic Coalescence — Balance Simulator</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#0c0e16; --panel:#161924; --border:#2a2f44; --text:#e6e8f0; --sub:#9aa0b8; --accent:#ff8c4d; --accent2:#6d8fff; --good:#68d8a4; --warn:#ffb84d; --bad:#ff6a6a; --code:#1e2233; }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{padding:20px 28px;border-bottom:1px solid var(--border)} h1{margin:0 0 4px;font-size:20px} .sub{color:var(--sub);font-size:13px}
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:0;min-height:calc(100vh - 64px)}
+  .controls{padding:18px 22px;border-right:1px solid var(--border);background:var(--panel);overflow-y:auto;max-height:calc(100vh - 64px)}
+  .results{padding:18px 28px;overflow-y:auto;max-height:calc(100vh - 64px)}
+  .ctrl-section{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;background:#11141d}
+  .ctrl-section h3{margin:0 0 10px;font-size:13px;color:var(--accent);letter-spacing:.5px;text-transform:uppercase}
+  .ctrl-row{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:center;margin-bottom:6px}
+  .ctrl-row label{color:var(--sub);font-size:12px}
+  input[type=number],select{background:var(--code);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;font-size:12px;width:100%}
+  input[type=checkbox]{transform:scale(1.1)}
+  button.primary{width:100%;padding:10px;background:var(--accent);color:#1a1010;font-weight:700;border:none;border-radius:6px;cursor:pointer;margin-top:8px}
+  button.primary:hover{filter:brightness(1.1)}
+  button.secondary{width:100%;padding:8px;background:var(--code);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px} th,td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
+  th{color:var(--sub);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px} td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+  .b-ok{background:rgba(104,216,164,.15);color:var(--good)} .b-warn{background:rgba(255,184,77,.15);color:var(--warn)} .b-bad{background:rgba(255,106,106,.15);color:var(--bad)}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--border);padding:12px;border-radius:6px}
+  .stat .label{color:var(--sub);font-size:11px;text-transform:uppercase;letter-spacing:.5px} .stat .value{font-size:20px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px} .chart-wrap canvas{max-height:280px!important}
+  details{background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:12px} details summary{padding:10px 14px;cursor:pointer;font-weight:600;font-size:13px;user-select:none}
+  details[open] summary{border-bottom:1px solid var(--border)} details>div{padding:12px 14px}
+  .mini{font-size:11px;color:var(--sub);margin-top:4px}
+  .stage-table-input{width:100%;min-width:90px;padding:2px 4px} .stage-grid{font-size:11px} .stage-grid td{padding:3px 6px}
+  .preset-row{display:flex;gap:6px;margin-bottom:8px} .preset-row button{flex:1;padding:6px;font-size:12px;background:var(--code);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer}
+  .preset-row button:hover{background:var(--border)} .legend-bottleneck{font-size:10px;color:var(--sub);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cosmic Coalescence — Balance Simulator</h1>
+  <div class="sub">스킬 비용 / 스테이지 임계값 / 캐쉬샵 / 클릭률을 조정하면 스테이지별 예상 시간을 즉시 계산합니다.</div>
+</header>
+<div class="layout">
+  <aside class="controls">
+    <div class="ctrl-section"><h3>프리셋</h3>
+      <div class="preset-row">
+        <button data-preset="default">기본</button>
+        <button data-preset="active10">10 CPS</button>
+        <button data-preset="idle">완전 idle</button>
+      </div>
+      <div class="preset-row">
+        <button data-preset="balanced100">100h 목표</button>
+        <button data-preset="shopHeavy">샵 풀스펙</button>
+      </div>
+    </div>
+    <div class="ctrl-section"><h3>플레이 패턴</h3>
+      <div class="ctrl-row"><label>Clicks per second</label><input type="number" id="cps" value="10" step="0.1" min="0"/></div>
+      <div class="ctrl-row"><label>Active fraction (0–1)</label><input type="number" id="activeFraction" value="1" step="0.05" min="0" max="1"/></div>
+      <div class="ctrl-row"><label>Sustained combo</label><input type="number" id="sustainedCombo" value="100" min="0"/></div>
+      <div class="ctrl-row"><label>Skill 구매 전략</label>
+        <select id="skillStrategy">
+          <option value="balanced_targets" selected>balanced_targets</option>
+          <option value="round_robin">round_robin</option>
+          <option value="cheapest">cheapest</option>
+          <option value="time_priority">time_priority</option>
+          <option value="quanta_priority">quanta_priority</option>
+        </select>
+      </div>
+      <div class="ctrl-row"><label>Cross-node 전략</label>
+        <select id="crossNodeStrategy">
+          <option value="greedy" selected>greedy</option>
+          <option value="never">never</option>
+        </select>
+      </div>
+      <div class="ctrl-row"><label>Time gate 모델</label>
+        <select id="timeMode">
+          <option value="log_cosmic" selected>log_cosmic (실제 게임)</option>
+          <option value="no_time_gate">no_time_gate (quanta만)</option>
+        </select>
+      </div>
+      <div class="ctrl-row"><label>Purchases / sec</label><input type="number" id="purchasesPerSecond" value="10" step="0.1" min="0.01"/></div>
+      <div class="ctrl-row"><label>Budget fraction</label><input type="number" id="purchaseBudgetFraction" value="1" step="0.05" min="0.01" max="1"/></div>
+      <div class="ctrl-row"><label>Tree max level</label><input type="number" id="maxSkillLevel" value="30" min="1" max="200"/></div>
+      <div class="ctrl-row"><label>Stage sim timeout (hr)</label><input type="number" id="maxHoursPerStage" value="1000" min="1"/></div>
+      <div class="mini">개별 stage가 이 시간 초과시 INFEASIBLE 표시 (UI 응답 보호)</div>
+      <div class="mini">budget fraction = 한번 살 때 현재 quanta 중 사용할 최대 비율</div>
+    </div>
+    <div class="ctrl-section"><h3>스킬 비용 / 효과</h3>
+      <div class="ctrl-row"><label>Click cost base (^L-1)</label><input type="number" id="cost_click" value="2" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Auto cost base (^L-1)</label><input type="number" id="cost_auto" value="2" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Crit cost base (^L-1)</label><input type="number" id="cost_crit" value="2" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Time cost base (^L-1)</label><input type="number" id="cost_time" value="3" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Click power per L (×)</label><input type="number" id="clickPowerPerLevel" value="2" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Auto rate per L (×)</label><input type="number" id="autoRatePerLevel" value="2" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Crit chance per L</label><input type="number" id="critChancePerLevel" value="0.015" step="0.001" min="0"/></div>
+      <div class="ctrl-row"><label>Crit mult base</label><input type="number" id="critMultBase" value="1.5" step="0.1" min="1"/></div>
+      <div class="ctrl-row"><label>Crit mult per L</label><input type="number" id="critMultPerLevel" value="0.5" step="0.05" min="0"/></div>
+      <div class="ctrl-row"><label>Time fill base (^L)</label><input type="number" id="timeFillBase" value="10" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Combo mult cap</label><input type="number" id="comboMultMax" value="8" step="0.5" min="1"/></div>
+    </div>
+    <div class="ctrl-section"><h3>Cross-node multipliers</h3>
+      <div id="crossNodeGrid"></div>
+      <div class="mini">tier별 stack됨 (5+10+15+...). SP cost 1/1/2/2/3/3.</div>
+    </div>
+    <div class="ctrl-section"><h3>캐쉬샵</h3>
+      <div class="ctrl-row"><label>샵 사용</label><input type="checkbox" id="useShop"/></div>
+      <div class="ctrl-row"><label>Time boost factor</label><input type="number" id="shopAeonSurgeFactor" value="100" min="1"/></div>
+      <div class="ctrl-row"><label>Time boost duration (분)</label><input type="number" id="shopAeonSurgeDurationMin" value="30" min="1"/></div>
+      <div class="ctrl-row"><label>Quanta boost factor</label><input type="number" id="shopQuantaBoostFactor" value="3" min="1" step="0.1"/></div>
+      <div class="ctrl-row"><label>Quanta boost duration (분)</label><input type="number" id="shopQuantaBoostDurationMin" value="30" min="1"/></div>
+      <div class="ctrl-row"><label>샵 구매 주기 (분)</label><input type="number" id="shopFrequencyMin" value="60" min="1"/></div>
+      <div class="ctrl-row"><label>막힐때만 구매</label><input type="checkbox" id="shopBuyAtStuckOnly" checked/></div>
+    </div>
+    <div class="ctrl-section"><h3>스테이지 임계값</h3>
+      <div class="mini">quanta threshold + cosmic time(sec) + 목표 real time(sec)</div>
+      <div id="stageTable"></div>
+    </div>
+    <button class="primary" id="run">▶ 시뮬레이션 실행</button>
+    <button class="secondary" id="reset">기본값 복원</button>
+  </aside>
+  <main class="results">
+    <div class="summary">
+      <div class="stat"><div class="label">총 플레이 시간</div><div class="value" id="totalTime">—</div></div>
+      <div class="stat"><div class="label">100h 대비</div><div class="value" id="vs100">—</div></div>
+      <div class="stat"><div class="label">최종 스킬 (C/A/R/T)</div><div class="value" id="finalSkills" style="font-size:14px">—</div></div>
+      <div class="stat"><div class="label">남은 SP / Cross-node</div><div class="value" id="finalSP" style="font-size:14px">—</div></div>
+    </div>
+    <div class="chart-wrap"><canvas id="stageTimeChart"></canvas></div>
+    <div class="chart-wrap"><canvas id="skillChart"></canvas></div>
+    <div class="chart-wrap"><canvas id="bottleneckChart"></canvas></div>
+    <details open><summary>스테이지별 상세 결과</summary><div>
+      <table id="stageResults">
+        <thead><tr><th>#</th><th>Stage</th><th class="num">예상 (real)</th><th class="num">목표</th><th class="num">deviation</th><th>Q</th><th>T</th><th>C/A/R/T</th><th>cross-nodes</th><th>bottleneck</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="legend-bottleneck">bottleneck: <b>quanta</b> = quanta가 부족, <b>cosmicTime</b> = cosmic time gate 대기, <b>none</b> = 동시 만족.</div>
+    </div></details>
+  </main>
+</div>
+<script>
+const DEFAULT_STAGES = [
+  { id:1,name:'Inflation',threshold:1725,cosmicTimeSec:1e-32,realPlayTargetSec:30,mechanic:'click_basic' },
+  { id:2,name:'Baryogenesis',threshold:4.693e7,cosmicTimeSec:1e-12,realPlayTargetSec:120,mechanic:'matter_asymmetry' },
+  { id:3,name:'Quark-Gluon Plasma',threshold:1.427e9,cosmicTimeSec:1e-6,realPlayTargetSec:300,mechanic:'click_basic' },
+  { id:4,name:'Nucleosynthesis',threshold:1.211e10,cosmicTimeSec:180,realPlayTargetSec:360,mechanic:'fusion_window' },
+  { id:5,name:'Recombination',threshold:1.285e11,cosmicTimeSec:6.8e12,realPlayTargetSec:540,mechanic:'recombination' },
+  { id:6,name:'Cosmic Dark Age',threshold:1.91e12,cosmicTimeSec:3.15e15,realPlayTargetSec:1800,mechanic:'dark_age' },
+  { id:7,name:'First Stars',threshold:3.88e13,cosmicTimeSec:6.3e15,realPlayTargetSec:3600,mechanic:'first_stars' },
+  { id:8,name:'Reionization',threshold:5.267e14,cosmicTimeSec:1.6e16,realPlayTargetSec:5400,mechanic:'reionization' },
+  { id:9,name:'Galaxy Formation',threshold:3.113e15,cosmicTimeSec:3.15e16,realPlayTargetSec:7200,mechanic:'galaxy_weaving' },
+  { id:10,name:'Solar System',threshold:5.198e16,cosmicTimeSec:2.9e17,realPlayTargetSec:10800,mechanic:'planet_formation' },
+  { id:11,name:'Life on Earth',threshold:3.407e17,cosmicTimeSec:4.35e17,realPlayTargetSec:14400,mechanic:'life_evolution' },
+  { id:12,name:'Death of Star',threshold:2.246e18,cosmicTimeSec:5.83e17,realPlayTargetSec:21600,mechanic:'red_giant' },
+  { id:13,name:'Stelliferous End',threshold:4.363e18,cosmicTimeSec:3.15e21,realPlayTargetSec:36000,mechanic:'remnant_cooling' },
+  { id:14,name:'Degenerate Era',threshold:1.98e19,cosmicTimeSec:2.29e34,realPlayTargetSec:54000,mechanic:'proton_decay' },
+  { id:15,name:'Black Hole Era',threshold:5.581e19,cosmicTimeSec:3.89e35,realPlayTargetSec:86400,mechanic:'hawking_radiation' },
+  { id:16,name:'The End',threshold:9.131e20,cosmicTimeSec:5.01e37,realPlayTargetSec:117450,mechanic:'ending_choice' },
+];
+const DEFAULT_CROSS_MULTS = {
+  5:{click:1.4,auto:1.4,crit:1.15,time:1.25}, 10:{click:1.8,auto:1.8,crit:1.3,time:1.6}, 15:{click:2.4,auto:2.4,crit:1.5,time:2.1},
+  20:{click:3.2,auto:3.2,crit:1.75,time:2.8}, 25:{click:4.4,auto:4.4,crit:2.05,time:3.6}, 30:{click:6,auto:6,crit:2.5,time:5},
+};
+const DEFAULT_CROSS_SP = {5:1,10:1,15:2,20:2,25:3,30:3};
+const DEFAULT_STAGE_LEVEL_TARGETS = [10,12,14,16,18,20,22,24,26,28,29,29,29,29,29,30];
+const DEFAULT_SP_ON_ADVANCE = [1,1,2,2,2,3,3,3,3,4,4,4,5,5,6];
+
+function defaultConfig() {
+  return {
+    cps:10, activeFraction:1, sustainedCombo:100,
+    skillStrategy:'balanced_targets', crossNodeStrategy:'greedy', timeMode:'log_cosmic',
+    skillCostBase:{click:2,auto:2,crit:2,time:3},
+    clickPowerPerLevel:2, autoRatePerLevel:2,
+    critChancePerLevel:0.015, critMultBase:1.5, critMultPerLevel:0.5,
+    critChanceCap:0.4, timeFillBase:10, comboMultMax:8.0, comboMultPer10:0.4,
+    crossMults:JSON.parse(JSON.stringify(DEFAULT_CROSS_MULTS)),
+    crossSPCost:{...DEFAULT_CROSS_SP},
+    useShop:false, shopAeonSurgeFactor:100, shopAeonSurgeDurationMin:30,
+    shopQuantaBoostFactor:3, shopQuantaBoostDurationMin:30,
+    shopFrequencyMin:60, shopBuyAtStuckOnly:true,
+    spPerHourFromEncounters:0,
+    stageLevelTargets:[...DEFAULT_STAGE_LEVEL_TARGETS],
+    spOnAdvance:[...DEFAULT_SP_ON_ADVANCE],
+    apexNodeCount:24,
+    apexMult:2,
+    mechanicClickBoost:{
+      'matter_asymmetry':1.2,'fusion_window':1.3,'recombination':1.2,'reionization':1.4,
+      'galaxy_weaving':1.3,'planet_formation':1.2,'life_evolution':1.5,'red_giant':1.5,
+      'remnant_cooling':1.0,'proton_decay':2.4,'hawking_radiation':3.5,'ending_choice':1.0,
+      'click_basic':1.0,'dark_age':1.0,'first_stars':1.0,
+    },
+    stages:DEFAULT_STAGES.map(s=>({...s})),
+    stageStartCosmicTime:(idx)=>idx===0?1e-34:DEFAULT_STAGES[idx-1].cosmicTimeSec,
+    purchaseBudgetFraction:1, purchasesPerSecond:10, maxSkillLevel:30, maxHoursPerStage:1000,
+    stageWallClockCapSec:3600*24*365*50,
+  };
+}
+function createSkillState(){return{click:0,auto:0,crit:0,time:0,crossNodes:new Set(),sp:0,rotationIndex:0};}
+function computeMods(skills,cfg){
+  let clickMult=Math.pow(cfg.clickPowerPerLevel,skills.click);
+  let autoAdd=skills.auto>0?Math.pow(cfg.autoRatePerLevel,skills.auto):0;
+  let autoMult=1,critMultMult=1,timeMultMult=1;
+  for(const node of skills.crossNodes){
+    const tier=parseInt(node.split('lv')[1]); const track=node.split('_')[0]; const m=cfg.crossMults[tier][track];
+    if(track==='click')clickMult*=m; else if(track==='auto')autoMult*=m; else if(track==='crit')critMultMult*=m; else if(track==='time')timeMultMult*=m;
+  }
+  if(skills.crossNodes.size >= (cfg.apexNodeCount||24)){
+    const apex=cfg.apexMult||2;
+    clickMult*=apex; autoMult*=apex; critMultMult*=apex; timeMultMult*=apex;
+  }
+  return{clickMult,autoAdd,autoMult,critMultMult,timeMultMult};
+}
+function clickPower(m){return Math.max(1,m.clickMult);}
+function autoRate(m){return Math.max(0,m.autoAdd*m.autoMult);}
+function critChance(L,combo,cfg){const b=L*cfg.critChancePerLevel; return Math.min(cfg.critChanceCap,b+combo*0.003);}
+function critMultiplier(L,m,cfg){const b=Math.max(cfg.critMultBase,cfg.critMultBase+L*cfg.critMultPerLevel); return b*m.critMultMult;}
+function comboMult(combo,cfg){return 1+Math.min(cfg.comboMultMax-1,Math.floor(combo/10)*cfg.comboMultPer10);}
+function timeFillRate(L,m,cfg,boost=1){return Math.pow(cfg.timeFillBase,L)*m.timeMultMult*boost;}
+function trackCost(t,L,cfg){return Math.floor(Math.pow(cfg.skillCostBase[t],Math.max(0,L-1)));}
+
+function trackUnlocked(track, stageIdx){
+  const stageId = stageIdx + 1;
+  if(track==='click') return true;
+  if(track==='auto'||track==='time') return stageId>=2;
+  if(track==='crit') return stageId>=3;
+  return false;
+}
+function stageLevelTarget(cfg, stageIdx){
+  return Math.min(cfg.maxSkillLevel, cfg.stageLevelTargets?.[stageIdx] ?? cfg.maxSkillLevel);
+}
+function tryOnePurchase(skills,quantaIn,cfg,stageIdx){
+  let quanta=quantaIn; const tracks=['click','auto','crit','time'];
+  if(cfg.crossNodeStrategy==='greedy'){
+    for(const tier of [5,10,15,20,25,30]){
+      for(const track of tracks){
+        const id=`${track}_lv${tier}`;
+        if(skills.crossNodes.has(id)) continue;
+        if(skills[track]<tier||!trackUnlocked(track,stageIdx)) continue;
+        if(skills.sp<cfg.crossSPCost[tier]) continue;
+        skills.sp-=cfg.crossSPCost[tier]; skills.crossNodes.add(id);
+        return{bought:true,newQuanta:quanta};
+      }
+    }
+  }
+  const order=(()=>{
+    if(cfg.skillStrategy==='balanced_targets') {
+      const target=stageLevelTarget(cfg,stageIdx);
+      return tracks.filter(t=>trackUnlocked(t,stageIdx)).sort((a,b)=>{
+        const targetBias=(skills[a]>=target?1:0)-(skills[b]>=target?1:0);
+        return targetBias||(skills[a]-skills[b])||(trackCost(a,skills[a]+1,cfg)-trackCost(b,skills[b]+1,cfg));
+      });
+    }
+    if(cfg.skillStrategy==='round_robin') return [0,1,2,3].map(i=>tracks[(skills.rotationIndex+i)%4]).filter(t=>trackUnlocked(t,stageIdx));
+    if(cfg.skillStrategy==='cheapest') return tracks.slice().sort((a,b)=>trackCost(a,skills[a]+1,cfg)-trackCost(b,skills[b]+1,cfg));
+    if(cfg.skillStrategy==='time_priority') return ['time','click','auto','crit'];
+    if(cfg.skillStrategy==='quanta_priority') return ['click','auto','crit','time'];
+    return tracks;
+  })();
+  const budget=quanta*cfg.purchaseBudgetFraction;
+  const plannedTarget=stageLevelTarget(cfg,stageIdx);
+  for(const track of order){
+    if(!trackUnlocked(track,stageIdx)||skills[track]>=cfg.maxSkillLevel) continue;
+    if(cfg.skillStrategy==='balanced_targets'&&skills[track]>=plannedTarget) continue;
+    const cost=trackCost(track,skills[track]+1,cfg);
+    if(cost>budget||cost>quanta) continue;
+    skills[track]+=1;
+    if(cfg.skillStrategy==='round_robin') skills.rotationIndex=(tracks.indexOf(track)+1)%4;
+    return{bought:true,newQuanta:quanta-cost};
+  }
+  return{bought:false,newQuanta:quanta};
+}
+function activeBoostMult(boosts,prefix,t){return(boosts||[]).filter(b=>b.id.startsWith(prefix)&&b.expiresAt>t).reduce((a,b)=>a*b.factor,1);}
+function maybeBuyShopBoost(boosts,cfg,t,stuck){
+  if(!cfg.useShop) return;
+  if(boosts.some(b=>b.expiresAt>t)) return;
+  if(stuck||!cfg.shopBuyAtStuckOnly) boosts.push({id:`time_aeon_${t}`,factor:cfg.shopAeonSurgeFactor,expiresAt:t+cfg.shopAeonSurgeDurationMin*60});
+  else boosts.push({id:`quanta_surge_${t}`,factor:cfg.shopQuantaBoostFactor,expiresAt:t+cfg.shopQuantaBoostDurationMin*60});
+}
+function simulateStage(stageIdx,skills,carryQuanta,boosts,cfg){
+  const stage=cfg.stages[stageIdx];
+  let quanta=carryQuanta;
+  let cosmicClock=cfg.stageStartCosmicTime(stageIdx);
+  let elapsed=0, lastPurchaseAt=-Infinity, lastShopAt=-Infinity;
+  const purchaseInterval=1/cfg.purchasesPerSecond;
+  const shopInterval=(cfg.shopFrequencyMin||60)*60;
+  const mechBoost=cfg.mechanicClickBoost[stage.mechanic]??1;
+  let dt=0.5, safety=0, firstQOK=null, firstTOK=null;
+  const stageMaxSec = (cfg.maxHoursPerStage||1000)*3600;
+  while(elapsed<stageMaxSec && safety<10000){
+    safety++;
+    const mods=computeMods(skills,cfg);
+    const cp=clickPower(mods)*mechBoost;
+    const cc=critChance(skills.crit,cfg.sustainedCombo,cfg);
+    const cm=critMultiplier(skills.crit,mods,cfg);
+    const eCrit=1+cc*(cm-1);
+    const cmu=comboMult(cfg.sustainedCombo,cfg);
+    const ar=autoRate(mods);
+    const qB=activeBoostMult(boosts,'quanta_',elapsed);
+    const tB=activeBoostMult(boosts,'time_',elapsed);
+    const clickG=cfg.cps*cp*eCrit*cmu*cfg.activeFraction;
+    const totalG=(clickG+ar)*qB;
+    const tRate=timeFillRate(skills.time,mods,cfg,tB);
+    // Adaptive dt: when both pending, jump toward whichever bottleneck is closer (in fractions)
+    let stepDt = dt;
+    if (totalG > 0 && tRate > 0) {
+      const remQ = stage.threshold - quanta;
+      const remT = (cfg.timeMode==='no_time_gate'?0:Math.max(0, stage.cosmicTimeSec - cosmicClock));
+      const tQ = remQ > 0 ? remQ / totalG : Infinity;
+      const tT = remT > 0 ? remT / tRate : Infinity;
+      const minT = Math.min(tQ, tT);
+      // use 1/8 of nearest completion time, but never less than 0.5 sec or more than purchaseInterval
+      if (Number.isFinite(minT) && minT > 0) {
+        stepDt = Math.max(0.5, Math.min(minT / 8, purchaseInterval * 4, 3600));
+      }
+    }
+    quanta+=totalG*stepDt; cosmicClock+=tRate*stepDt; elapsed+=stepDt;
+    if(cfg.useShop&&elapsed-lastShopAt>=shopInterval){
+      const stuck=cfg.timeMode==='log_cosmic'&&cosmicClock<stage.cosmicTimeSec*0.5;
+      maybeBuyShopBoost(boosts,cfg,elapsed,stuck); lastShopAt=elapsed;
+    }
+    const qOK=quanta>=stage.threshold;
+    const tOK=cfg.timeMode==='no_time_gate'||cosmicClock>=stage.cosmicTimeSec;
+    if(qOK&&!firstQOK) firstQOK=elapsed;
+    if(tOK&&!firstTOK) firstTOK=elapsed;
+    if(qOK&&tOK) break;
+    // Early infeasibility check (every 200 iters)
+    if (safety > 0 && safety % 200 === 0) {
+      const remQ = qOK ? 0 : (stage.threshold - quanta);
+      const remT = tOK ? 0 : (stage.cosmicTimeSec - cosmicClock);
+      const projQ = totalG > 0 ? remQ/totalG : Infinity;
+      const projT = tRate > 0 ? remT/tRate : Infinity;
+      const projTotal = elapsed + Math.max(projQ, projT);
+      if (projTotal > stageMaxSec * 5) { elapsed = stageMaxSec; break; }
+    }
+    if(elapsed-lastPurchaseAt>=purchaseInterval){
+      let bought=true;
+      while(bought){
+        const r=tryOnePurchase(skills,quanta,cfg,stageIdx);
+        bought=r.bought; quanta=r.newQuanta;
+      }
+      lastPurchaseAt=elapsed;
+    }
+    if(qOK&&!tOK){
+      if(tRate>0){
+        const remaining=stage.cosmicTimeSec-cosmicClock; const jump=remaining/tRate;
+        if(Number.isFinite(jump)&&jump>0){ const maxChunk=cfg.useShop?Math.max(1,shopInterval):Math.max(1,stageMaxSec*0.05); const ch=Math.min(jump,maxChunk); cosmicClock+=tRate*ch; elapsed+=ch; continue; }
+      } else { elapsed=cfg.stageWallClockCapSec; break; }
+    } else if(tOK&&!qOK){
+      if(totalG>0){
+        const remaining=stage.threshold-quanta; const jump=remaining/totalG;
+        if(Number.isFinite(jump)&&jump>0){ const ch=Math.min(jump,60); quanta+=totalG*ch; elapsed+=ch; continue; }
+      } else { elapsed=cfg.stageWallClockCapSec; break; }
+    }
+    dt=0.5;
+  }
+  if(stageIdx<cfg.stages.length-1) skills.sp+=cfg.spOnAdvance?.[stageIdx]??1;
+  skills.sp+=Math.floor((elapsed/3600)*(cfg.spPerHourFromEncounters||0));
+  const _qOK = quanta>=stage.threshold;
+  const _tOK = cfg.timeMode==='no_time_gate'||cosmicClock>=stage.cosmicTimeSec;
+  const _infeasible = !(_qOK && _tOK);
+  if (_infeasible) elapsed = stageMaxSec; // show as max for chart purposes
+  return{
+    stageIdx, name:stage.name, realTimeSec:elapsed, targetSec:stage.realPlayTargetSec,
+    deviation:(elapsed-stage.realPlayTargetSec)/stage.realPlayTargetSec,
+    finalQuanta:quanta, finalCosmicClock:cosmicClock,
+    quantaOK:_qOK,
+    timeOK:_tOK,
+    bottleneck:(function(){if(quanta<stage.threshold) return 'quanta'; if(cfg.timeMode==='no_time_gate') return 'none'; if(cosmicClock<stage.cosmicTimeSec) return 'cosmicTime'; if(firstQOK!==null&&firstTOK!==null) return firstQOK<firstTOK?'cosmicTime':'quanta'; return 'none';})(),
+    skills:{click:skills.click,auto:skills.auto,crit:skills.crit,time:skills.time,sp:skills.sp,crossNodes:[...skills.crossNodes]},
+    carry:quanta,
+    capped:elapsed>=stageMaxSec, infeasible:_infeasible,
+  };
+}
+function runFullSimulation(cfg){
+  const skills=createSkillState(); const boosts=[]; const results=[]; let carry=0;
+  let chainInfeasible=false;
+  for(let i=0;i<cfg.stages.length;i++){
+    if (chainInfeasible) {
+      // Skip simulation; mark as infeasible with same skill state
+      const stage=cfg.stages[i];
+      results.push({
+        stageIdx:i, name:stage.name, realTimeSec:(cfg.maxHoursPerStage||1000)*3600,
+        targetSec:stage.realPlayTargetSec, deviation:Infinity,
+        finalQuanta:0, finalCosmicClock:0, quantaOK:false, timeOK:false,
+        bottleneck:'infeasible',
+        skills:{click:skills.click,auto:skills.auto,crit:skills.crit,time:skills.time,sp:skills.sp,crossNodes:[...skills.crossNodes]},
+        carry:0, capped:true, infeasible:true,
+      });
+      continue;
+    }
+    const r=simulateStage(i,skills,carry,boosts,cfg); results.push(r); carry=r.carry;
+    if (r.infeasible) chainInfeasible = true;
+  }
+  return{
+    perStage:results,
+    totalSec:results.reduce((s,r)=>s+r.realTimeSec,0),
+    totalSP:skills.sp,
+    finalSkills:{click:skills.click,auto:skills.auto,crit:skills.crit,time:skills.time,crossNodes:[...skills.crossNodes]},
+  };
+}
+function fmtSec(s){
+  if(!Number.isFinite(s)) return '∞';
+  if(s<60) return `${s.toFixed(1)}s`;
+  if(s<3600) return `${(s/60).toFixed(1)}m`;
+  if(s<86400) return `${(s/3600).toFixed(2)}h`;
+  if(s<86400*365) return `${(s/86400).toFixed(2)}d`;
+  return `${(s/86400/365).toExponential(2)}yr`;
+}
+function buildStageTable(){
+  const r=document.getElementById('stageTable');
+  let h='<table class="stage-grid"><thead><tr><th>#</th><th>name</th><th>quanta</th><th>cosmicSec</th><th>target s</th></tr></thead><tbody>';
+  DEFAULT_STAGES.forEach((s,i)=>{
+    h+=`<tr><td>${s.id}</td><td>${s.name}</td>
+      <td><input class="stage-table-input" type="number" data-field="threshold" data-idx="${i}" value="${s.threshold}"/></td>
+      <td><input class="stage-table-input" type="number" data-field="cosmicTimeSec" data-idx="${i}" value="${s.cosmicTimeSec}"/></td>
+      <td><input class="stage-table-input" type="number" data-field="realPlayTargetSec" data-idx="${i}" value="${s.realPlayTargetSec}"/></td></tr>`;
+  });
+  h+='</tbody></table>'; r.innerHTML=h;
+}
+function buildCrossNodeGrid(){
+  const r=document.getElementById('crossNodeGrid');
+  let h='<table class="stage-grid"><thead><tr><th>tier</th><th>click×</th><th>auto×</th><th>crit×</th><th>time×</th><th>SP</th></tr></thead><tbody>';
+  for(const tier of [5,10,15,20,25,30]){
+    h+=`<tr><td>${tier}</td>
+      <td><input class="stage-table-input" type="number" data-cross-mult-tier="${tier}" data-cross-mult-track="click" value="${DEFAULT_CROSS_MULTS[tier].click}"/></td>
+      <td><input class="stage-table-input" type="number" data-cross-mult-tier="${tier}" data-cross-mult-track="auto" value="${DEFAULT_CROSS_MULTS[tier].auto}"/></td>
+      <td><input class="stage-table-input" type="number" data-cross-mult-tier="${tier}" data-cross-mult-track="crit" value="${DEFAULT_CROSS_MULTS[tier].crit}"/></td>
+      <td><input class="stage-table-input" type="number" data-cross-mult-tier="${tier}" data-cross-mult-track="time" value="${DEFAULT_CROSS_MULTS[tier].time}"/></td>
+      <td><input class="stage-table-input" type="number" data-cross-sp-tier="${tier}" value="${DEFAULT_CROSS_SP[tier]}"/></td></tr>`;
+  }
+  h+='</tbody></table>'; r.innerHTML=h;
+}
+function readConfig(){
+  const cfg=defaultConfig(); const num=id=>parseFloat(document.getElementById(id).value);
+  const checked=id=>document.getElementById(id).checked;
+  cfg.cps=num('cps'); cfg.activeFraction=num('activeFraction'); cfg.sustainedCombo=num('sustainedCombo');
+  cfg.skillStrategy=document.getElementById('skillStrategy').value;
+  cfg.crossNodeStrategy=document.getElementById('crossNodeStrategy').value;
+  cfg.timeMode=document.getElementById('timeMode').value;
+  cfg.purchasesPerSecond=num('purchasesPerSecond'); cfg.purchaseBudgetFraction=num('purchaseBudgetFraction'); cfg.maxSkillLevel=num('maxSkillLevel'); cfg.maxHoursPerStage=num('maxHoursPerStage');
+  cfg.skillCostBase={click:num('cost_click'),auto:num('cost_auto'),crit:num('cost_crit'),time:num('cost_time')};
+  cfg.clickPowerPerLevel=num('clickPowerPerLevel'); cfg.autoRatePerLevel=num('autoRatePerLevel');
+  cfg.critChancePerLevel=num('critChancePerLevel'); cfg.critMultBase=num('critMultBase'); cfg.critMultPerLevel=num('critMultPerLevel');
+  cfg.timeFillBase=num('timeFillBase'); cfg.comboMultMax=num('comboMultMax');
+  cfg.useShop=checked('useShop');
+  cfg.shopAeonSurgeFactor=num('shopAeonSurgeFactor'); cfg.shopAeonSurgeDurationMin=num('shopAeonSurgeDurationMin');
+  cfg.shopQuantaBoostFactor=num('shopQuantaBoostFactor'); cfg.shopQuantaBoostDurationMin=num('shopQuantaBoostDurationMin');
+  cfg.shopFrequencyMin=num('shopFrequencyMin'); cfg.shopBuyAtStuckOnly=checked('shopBuyAtStuckOnly');
+  document.querySelectorAll('#stageTable input[data-idx]').forEach(inp=>{
+    const idx=parseInt(inp.dataset.idx); const f=inp.dataset.field; cfg.stages[idx][f]=parseFloat(inp.value);
+  });
+  cfg.stageStartCosmicTime=(idx)=>idx===0?1e-34:cfg.stages[idx-1].cosmicTimeSec;
+  document.querySelectorAll('#crossNodeGrid input[data-cross-mult-tier]').forEach(inp=>{
+    const tier=parseInt(inp.dataset.crossMultTier); const tr=inp.dataset.crossMultTrack; cfg.crossMults[tier][tr]=parseFloat(inp.value);
+  });
+  document.querySelectorAll('#crossNodeGrid input[data-cross-sp-tier]').forEach(inp=>{
+    const tier=parseInt(inp.dataset.crossSpTier); cfg.crossSPCost[tier]=parseFloat(inp.value);
+  });
+  return cfg;
+}
+let charts={stageTime:null,skill:null,bottleneck:null};
+function bottleneckColor(b){return b==='quanta'?'#ff6a6a':b==='cosmicTime'?'#6d8fff':'#68d8a4';}
+function renderResults(res){
+  const totalH=res.totalSec/3600;
+  document.getElementById('totalTime').textContent=fmtSec(res.totalSec)+` (${totalH.toFixed(1)} hr)`;
+  const ratio=totalH/100;
+  let badge=ratio<0.5?'<span class="badge b-bad">매우 짧음</span>':ratio<0.8?'<span class="badge b-warn">짧음</span>':ratio<1.25?'<span class="badge b-ok">목표 근접</span>':ratio<2?'<span class="badge b-warn">길음</span>':'<span class="badge b-bad">매우 길음</span>';
+  document.getElementById('vs100').innerHTML=`${(ratio*100).toFixed(0)}% ${badge}`;
+  const f=res.finalSkills;
+  document.getElementById('finalSkills').textContent=`${f.click}/${f.auto}/${f.crit}/${f.time}`;
+  document.getElementById('finalSP').textContent=`${res.totalSP} SP / ${res.finalSkills.crossNodes.length} nodes`;
+  const tb=document.querySelector('#stageResults tbody');
+  tb.innerHTML=res.perStage.map(r=>{
+    const dev=(r.deviation*100).toFixed(0);
+    const dC=Math.abs(r.deviation)<0.3?'b-ok':Math.abs(r.deviation)<1?'b-warn':'b-bad';
+    const bC=r.bottleneck==='quanta'?'b-bad':r.bottleneck==='cosmicTime'?'b-warn':'b-ok';
+    const infMark=r.infeasible?'<span class="badge b-bad">INFEASIBLE</span> ':'';
+    return `<tr><td>${r.stageIdx+1}</td><td>${r.name}</td><td class="num">${infMark}${fmtSec(r.realTimeSec)}</td><td class="num">${fmtSec(r.targetSec)}</td><td class="num"><span class="badge ${dC}">${dev}%</span></td><td>${r.quantaOK?'✓':'✗'}</td><td>${r.timeOK?'✓':'✗'}</td><td>${r.skills.click}/${r.skills.auto}/${r.skills.crit}/${r.skills.time}</td><td>${r.skills.crossNodes.length}</td><td><span class="badge ${bC}">${r.bottleneck}</span></td></tr>`;
+  }).join('');
+  const labels=res.perStage.map(r=>r.name);
+  const realTimes=res.perStage.map(r=>Math.max(r.realTimeSec/3600,1e-6));
+  const targetTimes=res.perStage.map(r=>r.targetSec/3600);
+  if(charts.stageTime) charts.stageTime.destroy();
+  charts.stageTime=new Chart(document.getElementById('stageTimeChart'),{
+    type:'bar', data:{labels,datasets:[
+      {label:'예상 (hr, log)',data:realTimes,backgroundColor:'#ff8c4d'},
+      {label:'목표 (hr, log)',data:targetTimes,backgroundColor:'rgba(109,143,255,0.5)'},
+    ]},
+    options:{plugins:{title:{display:true,text:'스테이지별 real time vs target (hours, log scale)',color:'#e6e8f0'},legend:{labels:{color:'#e6e8f0'}}},
+      scales:{y:{type:'logarithmic',ticks:{color:'#9aa0b8'}},x:{ticks:{color:'#9aa0b8',maxRotation:45}}}}
+  });
+  if(charts.skill) charts.skill.destroy();
+  charts.skill=new Chart(document.getElementById('skillChart'),{
+    type:'line', data:{labels,datasets:[
+      {label:'click',data:res.perStage.map(r=>r.skills.click),borderColor:'#ff6a45',tension:0.2},
+      {label:'auto',data:res.perStage.map(r=>r.skills.auto),borderColor:'#6d8fff',tension:0.2},
+      {label:'crit',data:res.perStage.map(r=>r.skills.crit),borderColor:'#9966cc',tension:0.2},
+      {label:'time',data:res.perStage.map(r=>r.skills.time),borderColor:'#ffb84d',tension:0.2},
+    ]},
+    options:{plugins:{title:{display:true,text:'스테이지 종료 시점 스킬 레벨',color:'#e6e8f0'},legend:{labels:{color:'#e6e8f0'}}},
+      scales:{y:{ticks:{color:'#9aa0b8'}},x:{ticks:{color:'#9aa0b8',maxRotation:45}}}}
+  });
+  if(charts.bottleneck) charts.bottleneck.destroy();
+  charts.bottleneck=new Chart(document.getElementById('bottleneckChart'),{
+    type:'bar', data:{labels,datasets:[{label:'시간 (hours, linear)',data:realTimes,backgroundColor:res.perStage.map(r=>bottleneckColor(r.bottleneck))}]},
+    options:{plugins:{title:{display:true,text:'스테이지별 시간 — 빨강=quanta, 파랑=cosmicTime, 초록=동시',color:'#e6e8f0'},legend:{display:false}},
+      scales:{y:{ticks:{color:'#9aa0b8'}},x:{ticks:{color:'#9aa0b8',maxRotation:45}}}}
+  });
+}
+function applyPreset(name){
+  const set=(id,v)=>document.getElementById(id).value=v; const check=(id,v)=>document.getElementById(id).checked=v;
+  if(name==='default'||name==='active10'){
+    set('cps',10);set('activeFraction',1);set('sustainedCombo',100);
+    document.getElementById('skillStrategy').value='balanced_targets';
+    document.getElementById('crossNodeStrategy').value='greedy';
+    document.getElementById('timeMode').value='log_cosmic';
+    set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);set('maxSkillLevel',30);set('maxHoursPerStage',1000);
+    set('cost_click',2);set('cost_auto',2);set('cost_crit',2);set('cost_time',3);
+    set('clickPowerPerLevel',2);set('autoRatePerLevel',2);
+    set('critChancePerLevel',0.015);set('critMultBase',1.5);set('critMultPerLevel',0.5);
+    set('timeFillBase',10);set('comboMultMax',8); check('useShop',false);
+    buildStageTable();buildCrossNodeGrid();
+  } else if(name==='idle'){ set('cps',0);set('activeFraction',0);set('sustainedCombo',0);
+  } else if(name==='balanced100'){
+    set('cps',10);set('activeFraction',1);set('sustainedCombo',100);
+    document.getElementById('skillStrategy').value='balanced_targets';
+    set('cost_click',2);set('cost_auto',2);set('cost_crit',2);set('cost_time',3);
+    set('timeFillBase',10);set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);
+  } else if(name==='shopHeavy'){
+    check('useShop',true);set('shopAeonSurgeFactor',100);set('shopAeonSurgeDurationMin',30);
+    set('shopFrequencyMin',30);check('shopBuyAtStuckOnly',false);
+  }
+  run();
+}
+function run(){
+  const tt=document.getElementById('totalTime');
+  tt.textContent='실행중…'; tt.style.opacity='0.6';
+  // yield to browser so UI updates before blocking sim
+  setTimeout(()=>{
+    const t0=performance.now(); const cfg=readConfig(); const res=runFullSimulation(cfg); renderResults(res);
+    tt.style.opacity='1'; const ms=(performance.now()-t0)|0;
+    console.log(`sim: ${ms}ms`);
+    if(ms>500) console.log('⚠ slow sim - consider lowering maxHoursPerStage');
+  }, 10);
+}
+buildStageTable(); buildCrossNodeGrid();
+document.getElementById('run').addEventListener('click',run);
+document.getElementById('reset').addEventListener('click',()=>applyPreset('default'));
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.preset)));
+// Auto-run disabled to keep UI responsive on slow scenarios; click ▶ to run.
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('change',()=>{
+  document.getElementById('totalTime').textContent='⚠ 변경됨 — ▶ 시뮬레이션 실행을 클릭하세요';
+}));
+run();
+</script>
+</body>
+</html>

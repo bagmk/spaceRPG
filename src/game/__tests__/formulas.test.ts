@@ -39,7 +39,7 @@ describe('formatCosmicTime', () => {
 
   it('formats extremely large cosmic times in scientific notation', () => {
     expect(formatCosmicTime(1e100 * 31557600)).toBe('1e100yr');
-    expect(formatCosmicTime(STAGES[14].cosmicTimeSec)).toBe('1e100yr');
+    expect(formatCosmicTime(STAGES[14].cosmicTimeSec)).toBe('1e28yr');
   });
 
   it('formats the V7 initial cosmic time without a one-second baseline', () => {

@@ -149,6 +149,7 @@ export interface FloatingClickEvent {
   comboMult: number;
   particleName: string;
   particleDefinition?: string;
+  entropyGained: number;
 }
 
 export interface FloatingCollisionEvent {
@@ -156,6 +157,7 @@ export interface FloatingCollisionEvent {
   x: number;
   y: number;
   bonus: number;
+  entropyGained: number;
   name: string;
   tier: RogueTypeKey;
 }

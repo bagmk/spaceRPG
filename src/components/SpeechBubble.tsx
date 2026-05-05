@@ -17,7 +17,7 @@ interface BubblePosition {
 }
 
 const BUBBLE_WIDTH = 260;
-const BUBBLE_HEIGHT = 118;
+const BUBBLE_HEIGHT = 170;
 const GAP = 14;
 
 function resolvePosition(

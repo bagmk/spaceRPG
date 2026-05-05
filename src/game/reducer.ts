@@ -388,8 +388,9 @@ function getAdjustedClickPower(state: GameState): number {
 
 function getTrackUnlocksForStage(stageId: number): GameState['skills']['unlockedTracks'] {
   const unlocked: GameState['skills']['unlockedTracks'] = ['click'];
-  if (stageId >= 2) unlocked.push('auto', 'time');
-  if (stageId >= 3) unlocked.push('crit');
+  if (stageId >= 3) unlocked.push('auto');
+  if (stageId >= 4) unlocked.push('crit');
+  if (stageId >= 5) unlocked.push('time');
   return unlocked;
 }
 

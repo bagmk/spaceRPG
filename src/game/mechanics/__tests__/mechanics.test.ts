@@ -23,4 +23,19 @@ describe('mechanics registry', () => {
       expect(typeof result.consumed).toBe('boolean');
     });
   });
+
+  it('keeps baryogenesis rare-click bonuses modest', () => {
+    const stage = STAGES[1];
+    const result = MECHANICS.matter_asymmetry.onClick?.({
+      state: { ...createInitialGameState(0), stageIdx: 1, totalClicks: 8, combo: 8 },
+      stage,
+      now: 1000,
+      progress01: 0.5,
+      x: 100,
+      y: 100,
+    });
+
+    expect(result?.gainMultiplier).toBe(2.8);
+    expect(result?.gainFlat ?? 0).toBe(0);
+  });
 });

@@ -5,7 +5,7 @@ import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 
 describe('gameReducer', () => {
-  it('carries excess quanta into the next stage without resetting skill-backed levels', () => {
+  it('carries all quanta into the next stage without resetting skill-backed levels', () => {
     const state = {
       ...createInitialGameState(0),
       pendingCondenseStageIdx: 0,
@@ -19,7 +19,7 @@ describe('gameReducer', () => {
     };
     const next = gameReducer(state, { type: 'ADVANCE_STAGE', now: 1000 });
     expect(next.stageIdx).toBe(1);
-    expect(next.quanta).toBeCloseTo(STAGES[0].threshold * 0.2, 5);
+    expect(next.quanta).toBeCloseTo(STAGES[0].threshold * 1.2, 5);
     expect(next.timeGauge).toBe(getTimeGaugeForCosmicClock(1, STAGES[0].cosmicTimeSec));
     expect(next.clickLevel).toBe(12);
     expect(next.autoLevel).toBe(14);
@@ -27,7 +27,7 @@ describe('gameReducer', () => {
     expect(next.skillPoints).toBe(5);
   });
 
-  it('caps encounter rewards at 2% of the current stage threshold and awards SP', () => {
+  it('keeps encounter rewards above the click-scaled floor without changing the SP budget', () => {
     const state = {
       ...createInitialGameState(0),
       quanta: 0,
@@ -41,8 +41,9 @@ describe('gameReducer', () => {
       tier: 'major',
       name: 'test',
     });
-    expect(next.quanta).toBe(0.1);   // 2% of stage-1 threshold (5)
-    expect(next.skillPoints).toBe(1);
+    expect(next.quanta).toBe(40);
+    expect(next.skillPoints).toBe(0);
+    expect(next.entropy).toBe(50);
   });
 
   it('requires both quanta and time gauge before condensing', () => {
@@ -118,6 +119,76 @@ describe('gameReducer', () => {
       });
     }
     expect(state.totalClicks).toBe(100);
+  });
+
+  it('turns clicked particle types into entropy', () => {
+    const next = gameReducer(createInitialGameState(0), {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 1,
+      x: 100,
+      y: 100,
+    });
+
+    expect(next.entropy).toBeGreaterThan(0);
+    expect(next.lastClickEvent?.entropyGained).toBeGreaterThan(0);
+    expect(next.lastClickEvent?.particleName).toBeTruthy();
+  });
+
+  it('suppresses critical hits during the first two stages', () => {
+    const skilled = {
+      ...createInitialGameState(0),
+      skills: {
+        ...createInitialGameState(0).skills,
+        crit: { level: 30 },
+        unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
+      },
+    };
+
+    const stageOne = gameReducer(skilled, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 0,
+      x: 100,
+      y: 100,
+      forceCrit: true,
+    });
+    expect(stageOne.lastClickEvent?.isCrit).toBe(false);
+
+    const stageTwo = gameReducer({ ...skilled, stageIdx: 1 }, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 0,
+      x: 100,
+      y: 100,
+      forceCrit: true,
+    });
+    expect(stageTwo.lastClickEvent?.isCrit).toBe(false);
+
+    const stageThree = gameReducer({ ...skilled, stageIdx: 2 }, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 1,
+      x: 100,
+      y: 100,
+      forceCrit: true,
+    });
+    expect(stageThree.lastClickEvent?.isCrit).toBe(true);
+  });
+
+  it('floors encounter rewards at a tiered multiple of current click power', () => {
+    const state = createInitialGameState(0);
+    const massive = gameReducer(state, {
+      type: 'REPORT_COLLISION',
+      x: 0,
+      y: 0,
+      bonus: 1,
+      entropyBonus: 0,
+      tier: 'massive',
+      name: 'test',
+    });
+    expect(massive.quanta).toBe(100);
+    expect(massive.entropy).toBe(200);
   });
 
   it('condense never decreases entropy', () => {
