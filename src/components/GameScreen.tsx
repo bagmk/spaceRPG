@@ -120,10 +120,12 @@ export function GameScreen({
   const [skillsOpen, setSkillsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
+  const [showInfoHint, setShowInfoHint] = useState(false);
   const [statPopup, setStatPopup] = useState<{ trackId: StatPopupTrack; x: number; y: number } | null>(null);
   const skillsAnchorRef = useRef<HTMLDivElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
+  const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
   const rawStage = STAGES[state.stageIdx];
   const stage = useMemo(
     () => applyUniverseToStage(rawStage, state.currentUniverseSeed),
@@ -441,15 +443,32 @@ export function GameScreen({
               type="button"
               onClick={() => dispatch({ type: 'ADMIN_RESTART_RUN', now: Date.now() })}
             >
-              RESTART RUN
+              RESTART
+            </button>
+            <button
+              className="mini-button admin-button"
+              type="button"
+              onClick={() => dispatch({ type: 'ADMIN_PREV_STAGE', now: Date.now() })}
+            >
+              ◀ PREV
             </button>
             <button
               className="mini-button admin-button"
               type="button"
               onClick={() => dispatch({ type: 'ADMIN_NEXT_STAGE', now: Date.now() })}
             >
-              NEXT STAGE
+              NEXT ▶
             </button>
+            {([0.25, 0.5, 0.75, 0.9] as const).map((pct) => (
+              <button
+                key={pct}
+                className="mini-button admin-button"
+                type="button"
+                onClick={() => dispatch({ type: 'ADMIN_SET_PROGRESS', fraction: pct, now: Date.now() })}
+              >
+                {`${pct * 100}%`}
+              </button>
+            ))}
           </div>
         ) : null}
         <ParticleField
@@ -600,7 +619,7 @@ export function GameScreen({
           </div>
         ) : null}
         <div className="hud-controls">
-          <button type="button" className="mini-button" onClick={() => setAlmanacOpen(true)}>
+          <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); setShowInfoHint(false); }}>
             INFO
           </button>
           <button type="button" className="mini-button" onClick={onToggleMute}>
@@ -629,7 +648,7 @@ export function GameScreen({
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={stage.id} />
         <ActiveBoostHud boosts={state.shopBoosts} />
-        <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} />
+        <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => setShowInfoHint(true)} />
         {floatingEntries.map((entry) => (
           <FloatingNumber
             key={entry.id}
@@ -698,6 +717,17 @@ export function GameScreen({
               : undefined
           }
           onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId })}
+        />
+      ) : null}
+
+      {showInfoHint && !almanacOpen ? (
+        <SpeechBubble
+          anchorRef={infoAnchorRef}
+          position="top"
+          message="Stage events are recorded here. Open INFO to explore discovered milestones."
+          ctaLabel="Open INFO"
+          onCta={() => { setAlmanacOpen(true); setShowInfoHint(false); }}
+          onDismiss={() => setShowInfoHint(false)}
         />
       ) : null}
 

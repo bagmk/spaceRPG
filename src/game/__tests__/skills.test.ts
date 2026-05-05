@@ -6,12 +6,12 @@ import { getActiveModifiers } from '../skills/effects';
 import type { GameState } from '../types';
 
 describe('skills reducer basics', () => {
-  it('uses V7 skill costs with a 1-quanta first purchase', () => {
+  it('uses base-3/3.5 skill costs with a 1-quanta first purchase', () => {
     expect(trackLevelCost('click', 1)).toBe(1);
-    expect(trackLevelCost('auto', 5)).toBe(16);
-    expect(trackLevelCost('crit', 10)).toBe(512);
+    expect(trackLevelCost('auto', 5)).toBe(81);   // 3^4
+    expect(trackLevelCost('crit', 10)).toBe(19683); // 3^9
     expect(trackLevelCost('time', 1)).toBe(1);
-    expect(trackLevelCost('time', 5)).toBe(10_000);
+    expect(trackLevelCost('time', 5)).toBe(150);  // floor(3.5^4)
   });
 
   it('defines one SP-purchasable cross node for every track milestone', () => {
@@ -20,7 +20,7 @@ describe('skills reducer basics', () => {
     expect(CROSS_NODES.map((node) => node.id)).toContain('time_lv30');
     expect(CROSS_NODES.find((node) => node.id === 'click_lv5')?.cost).toBe(0);
     expect(CROSS_NODES.find((node) => node.id === 'click_lv5')?.spCost).toBe(1);
-    expect(CROSS_NODES.find((node) => node.id === 'click_lv30')?.spCost).toBe(32);
+    expect(CROSS_NODES.find((node) => node.id === 'click_lv30')?.spCost).toBe(3);
   });
 
   it('buys track levels and SP-only cross nodes', () => {
@@ -49,7 +49,24 @@ describe('skills reducer basics', () => {
     state = gameReducer(state, { type: 'BUY_CROSS_NODE', nodeId: 'click_lv15' });
     expect(state.skills.ownedCrossNodes).toContain('click_lv15');
     expect(state.quanta).toBe(100_000 - Math.ceil(clickTree.rootCostCurve(1)));
-    expect(state.skillPoints).toBe(0);
+    expect(state.skillPoints).toBe(2);
+  });
+
+  it('does not stage-cap root purchases before The End', () => {
+    const now = Date.now();
+    const state: GameState = {
+      ...createInitialGameState(now),
+      stageIdx: 8,
+      quanta: Number.MAX_SAFE_INTEGER,
+      skills: {
+        ...createInitialGameState(now).skills,
+        click: { level: 26 },
+        unlockedTracks: ['click', 'crit', 'auto', 'time'],
+      },
+    };
+
+    const next = gameReducer(state, { type: 'BUY_TRACK_LEVEL', trackId: 'click' });
+    expect(next.skills.click.level).toBe(27);
   });
 
   it('enforces node prerequisites and SP costs', () => {
@@ -111,18 +128,33 @@ describe('skills reducer basics', () => {
       { ...skills, ownedCrossNodes: ['click_lv5'] },
       { clickLevel: 5 },
     );
-    expect(getClickPower(withNode)).toBe(64);   // 32 * x2 cross node
+    expect(getClickPower(withNode)).toBeCloseTo(44.8, 5);   // 32 * x1.4 cross node
   });
 
   it('does not auto-unlock cross nodes when root prerequisites are reached', () => {
     let state = {
       ...createInitialGameState(0),
       quanta: 1e20,
+      stageIdx: 10,
     };
     for (let index = 0; index < 15; index += 1) {
       state = gameReducer(state, { type: 'BUY_TRACK_LEVEL', trackId: 'click' });
     }
     expect(state.skills.click.level).toBe(15);
     expect(state.skills.ownedCrossNodes).not.toContain('click_lv15');
+  });
+
+  it('unlocks the final apex boost only after every cross node is owned', () => {
+    const skills = {
+      click: { level: 30 },
+      auto: { level: 30 },
+      crit: { level: 30 },
+      time: { level: 30 },
+      unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
+      ownedCrossNodes: CROSS_NODES.map((node) => node.id),
+    };
+    const modifiers = getActiveModifiers(skills, { clickLevel: 30 });
+    expect(modifiers.apexMult).toBe(2);
+    expect(modifiers.bigBangUnlocked).toBe(true);
   });
 });

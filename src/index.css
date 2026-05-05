@@ -2618,3 +2618,29 @@ button.stat-header-item {
   .almanac-log { border-left: none; border-top: 1px solid rgba(255,255,255,0.07); padding-left: 0; padding-top: 16px; overflow-y: visible; }
   .almanac-info { overflow-y: visible; }
 }
+
+/* Stage log toast layout with dismiss button */
+.stage-log-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stage-log-dismiss {
+  flex-shrink: 0;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.stage-log-dismiss:hover {
+  color: var(--fg);
+}

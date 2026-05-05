@@ -3,10 +3,10 @@ import type { CrossNodeDef, SkillTreeDef, SkillTreeId } from './types';
 export const SKILL_MAX_LEVEL = 30;
 
 const TRACK_COST_BASE: Record<SkillTreeId, number> = {
-  click: 2,
-  auto: 2,
-  crit: 2,
-  time: 3,
+  click: 3,
+  auto: 3,
+  crit: 3,
+  time: 3.5,
 };
 
 const SP_REWARD_BY_CLEARED_STAGE = [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6] as const;

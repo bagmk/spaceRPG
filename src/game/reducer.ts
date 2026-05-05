@@ -22,7 +22,7 @@ import {
   safeAdd,
 } from './formulas';
 import { getActiveModifiers } from './skills/effects';
-import { PARTICLE_DEFINITIONS, pickParticleName } from './particles';
+import { PARTICLE_DEFINITIONS, getParticleEntropyBonus, pickParticleName } from './particles';
 import { getMechanic } from './mechanics';
 import { STAGES } from './stages';
 import { getStageStartCosmicTime } from './timeFlow';
@@ -41,7 +41,12 @@ import {
   UniverseAtlasEntry,
   UniverseSeed,
 } from './types';
-import { findNode, findTree, getVisibleCrossTier } from './skills/definitions';
+import {
+  findNode,
+  findTree,
+  getSkillPointsForStageAdvance,
+  getVisibleCrossTier,
+} from './skills/definitions';
 import { findShopItem } from './shop/items';
 import {
   ALL_ENDINGS,
@@ -112,6 +117,8 @@ export type GameAction =
   | { type: 'START_CONDENSE'; now: number }
   | { type: 'ADVANCE_STAGE'; now: number }
   | { type: 'ADMIN_NEXT_STAGE'; now: number }
+  | { type: 'ADMIN_PREV_STAGE'; now: number }
+  | { type: 'ADMIN_SET_PROGRESS'; fraction: number; now: number }
   | { type: 'ADMIN_RESTART_RUN'; now: number }
   | { type: 'SELECT_ENDING'; endingId: EndingId; now: number }
   | { type: 'COMPLETE_ENDING'; now: number }
@@ -301,6 +308,7 @@ function createClickEvent(
   combo: number,
   comboMult: number,
   particleName: string,
+  entropyGained: number,
 ): FloatingClickEvent {
   return {
     id,
@@ -312,6 +320,7 @@ function createClickEvent(
     comboMult,
     particleName,
     particleDefinition: PARTICLE_DEFINITIONS[particleName],
+    entropyGained,
   };
 }
 
@@ -320,10 +329,11 @@ function createCollisionEvent(
   x: number,
   y: number,
   bonus: number,
+  entropyGained: number,
   name: string,
   tier: RogueTypeKey,
 ): FloatingCollisionEvent {
-  return { id, x, y, bonus, name, tier };
+  return { id, x, y, bonus, entropyGained, name, tier };
 }
 
 function createEncounterEvent(id: number, name: string, color: string): EncounterEvent {
@@ -352,6 +362,12 @@ function getEncounterRewardMultiplier(state: GameState): number {
   return hasUnlock(state, 'cosmic_web') ? 2 : 1;
 }
 
+function getEncounterClickMultiplier(tier: RogueTypeKey): number {
+  if (tier === 'massive') return 100;
+  if (tier === 'major') return 40;
+  return 10;
+}
+
 function getCurrentModifiers(state: GameState) {
   return getActiveModifiers(state.skills, {
     currentQuanta: state.quanta,
@@ -372,7 +388,8 @@ function getAdjustedClickPower(state: GameState): number {
 
 function getTrackUnlocksForStage(stageId: number): GameState['skills']['unlockedTracks'] {
   const unlocked: GameState['skills']['unlockedTracks'] = ['click'];
-  if (stageId >= 2) unlocked.push('crit', 'auto', 'time');
+  if (stageId >= 2) unlocked.push('auto', 'time');
+  if (stageId >= 3) unlocked.push('crit');
   return unlocked;
 }
 
@@ -509,9 +526,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
       const clickPower = getAdjustedClickPower(state);
       const comboMult = getComboMult(combo, getComboCapBonus(state));
+      const critEnabled = stage.id > 2;
       const isCrit =
-        action.forceCrit === true ||
-        action.randomValue < getCritChance(state.skills.crit.level, combo, modifiers);
+        critEnabled &&
+        (action.forceCrit === true ||
+          action.randomValue < getCritChance(state.skills.crit.level, combo, modifiers));
       const critMult = isCrit ? getCritMultiplier(state.skills.crit.level, modifiers) : 1;
       const gainMultiplier = action.gainMultiplier ?? 1;
       const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
@@ -522,10 +541,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const nextQuanta = safeAdd(state.quanta, gained + (action.quantaDelta ?? 0));
       const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
       const particleName = pickParticleName(stage.id, nextProgress);
+      const entropyGained = getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0);
       return {
         ...state,
         quanta: nextQuanta,
-        entropy: safeAdd(state.entropy, action.entropyDelta ?? 0),
+        entropy: safeAdd(state.entropy, entropyGained),
         totalClicks: state.totalClicks + 1,
         combo,
         lastClick: action.now,
@@ -539,6 +559,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           combo,
           comboMult,
           particleName,
+          entropyGained,
         ),
         mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
         mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
@@ -676,14 +697,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
       const stage = getCurrentStage(state);
       const nextClickRateLog = recordLateStageClickRate(state, action.now);
-      const excess = Math.max(0, state.quanta - getEffectiveThreshold(stage, state.cumulativeBoost));
       const nextStageIdx = state.stageIdx + 1;
       const nextStageId = nextStageIdx + 1;
       const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, state.cosmicClockSec);
       const nextState = {
         ...state,
         stageIdx: nextStageIdx,
-        quanta: excess,
         timeGauge: nextTimeGauge,
         combo: 0,
         lastClick: 0,
@@ -693,7 +712,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         condenseStartedAt: null,
         stageStartedAt: action.now,
         skills: unlockTrackForStage(state.skills, nextStageId),
-        skillPoints: state.skillPoints + 1,
+        skillPoints: state.skillPoints + getSkillPointsForStageAdvance(stage.id),
         clickRateLog: nextClickRateLog,
         stageClicksAtStageStart: state.totalClicks,
       };
@@ -742,6 +761,42 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...nextState,
         ...resetMechanicState(nextState),
+      };
+    }
+    case 'ADMIN_PREV_STAGE': {
+      if (state.stageIdx <= 0) return state;
+      const prevStageIdx = state.stageIdx - 1;
+      const prevStageState: GameState = {
+        ...state,
+        stageIdx: prevStageIdx,
+        quanta: 0,
+        timeGauge: 0,
+        combo: 0,
+        lastClick: 0,
+        pendingCondenseStageIdx: null,
+        pendingCondenseEntropy: 0,
+        imploding: false,
+        condenseStartedAt: null,
+        selectedEndingId: null,
+        endingStartedAt: null,
+        completedRun: false,
+        stageStartedAt: action.now,
+        cosmicClockSec: getStageStartCosmicTime(prevStageIdx),
+        skills: unlockTrackForStage(state.skills, prevStageIdx + 1),
+        stageClicksAtStageStart: state.totalClicks,
+      };
+      return { ...prevStageState, ...resetMechanicState(prevStageState) };
+    }
+    case 'ADMIN_SET_PROGRESS': {
+      const _adminStage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
+      const targetQuanta = Math.floor(_adminStage.threshold * action.fraction);
+      const targetCosmicSec =
+        getStageStartCosmicTime(state.stageIdx) +
+        (_adminStage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
+      return {
+        ...state,
+        quanta: targetQuanta,
+        cosmicClockSec: targetCosmicSec,
       };
     }
     case 'ADMIN_RESTART_RUN': {
@@ -882,16 +937,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const stage = getCurrentStage(state);
       const modifiers = getCurrentModifiers(state);
       const mult = getEncounterRewardMultiplier(state);
-      const cap = stage.threshold * (modifiers.manyWorldsCapMult > 1 ? 0.05 : 0.02);
-      const cappedBonus = Math.min(action.bonus * mult * modifiers.encounterBonusMult, cap);
-      const awardedSkillPoints =
-        action.tier === 'massive' ? 3 : action.tier === 'major' ? 1 : 0;
+      const clickScaledBonus = getAdjustedClickPower(state) * getEncounterClickMultiplier(action.tier);
+      const rawBonus = Math.max(action.bonus, clickScaledBonus);
+      const scaledClickBonus = clickScaledBonus * mult * modifiers.encounterBonusMult;
+      const cap = Math.max(
+        stage.threshold * (modifiers.manyWorldsCapMult > 1 ? 0.05 : 0.02),
+        scaledClickBonus,
+      );
+      const cappedBonus = Math.min(rawBonus * mult * modifiers.encounterBonusMult, cap);
+      const tierEntropyFloor =
+        action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
+      const entropyGained = Math.max(action.entropyBonus, tierEntropyFloor) * mult * stage.id;
       const eventId = nextEventId(state);
       return {
         ...state,
         quanta: safeAdd(state.quanta, cappedBonus),
-        entropy: safeAdd(state.entropy, action.entropyBonus * mult),
-        skillPoints: state.skillPoints + awardedSkillPoints,
+        entropy: safeAdd(state.entropy, entropyGained),
         collisions: state.collisions + 1,
         eventCounter: eventId,
         lastCollisionEvent: createCollisionEvent(
@@ -899,6 +960,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           action.x,
           action.y,
           cappedBonus,
+          entropyGained,
           action.name,
           action.tier,
         ),
@@ -948,6 +1010,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!state.skills.unlockedTracks.includes(treeId)) return state;
       const branch = state.skills[treeId];
       const nextLevel = branch.level + 1;
+      if (nextLevel > treeDef.rootMaxLevel) return state;
       const cost = Math.ceil(treeDef.rootCostCurve(nextLevel));
       if (state.quanta < cost) return state;
       const nextSkills = {
