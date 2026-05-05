@@ -3,6 +3,149 @@ import { hexToRgba } from '../game/formulas';
 import type { Mote, MoteCluster, Stage } from '../game/types';
 import { drawSoftNode, drawStageSprite, drawThread, strokeLocalEllipse } from './stageSprites';
 
+// ── V9 animation helpers ────────────────────────────────────────────────────
+function rangeT(progress: number, start: number, end: number): number {
+  return Math.max(0, Math.min(1, (progress - start) / (end - start)));
+}
+function easeIO(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+function drawMilestoneFlash(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  progress: number,
+  color: string,
+  milestones = [0.1, 0.25, 0.5, 0.75, 0.9],
+): void {
+  for (const m of milestones) {
+    const delta = progress - m;
+    if (delta >= 0 && delta < 0.04) {
+      const t = 1 - delta / 0.04;
+      ctx.strokeStyle = hexToRgba(color, t * 0.45);
+      ctx.lineWidth = 2 * t;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 20 + (1 - t) * 90, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawEarthSatellites(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  t: number,
+  now: number,
+): void {
+  const orbits = [radius + 20, radius + 34, radius + 52];
+  for (let i = 0; i < 3; i += 1) {
+    ctx.strokeStyle = hexToRgba('#aaccff', 0.06 * t);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbits[i], 0, Math.PI * 2);
+    ctx.stroke();
+    const angle = now / (700 + i * 280) + i * 2.1;
+    const sx = cx + Math.cos(angle) * orbits[i];
+    const sy = cy + Math.sin(angle) * orbits[i];
+    ctx.fillStyle = hexToRgba('#ffffff', 0.75 * t * (0.6 + 0.4 * Math.sin(now / 380 + i * 2.3)));
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawEarthMegastructures(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  t: number,
+  now: number,
+): void {
+  const ringR = radius + 28;
+  for (let i = 0; i < 7; i += 1) {
+    const start = (i / 7) * Math.PI * 2 + now / 4000;
+    ctx.strokeStyle = hexToRgba('#ffcc66', 0.35 * t);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringR, start, start + (Math.PI * 2 / 7) * 0.55);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 4; i += 1) {
+    const angle = now / 2200 + i * Math.PI * 0.5;
+    const sx = cx + Math.cos(angle) * (radius + 46);
+    const sy = cy + Math.sin(angle) * (radius + 46);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.fillStyle = hexToRgba('#3366dd', 0.45 * t);
+    ctx.fillRect(-4, -1.2, 8, 2.4);
+    ctx.restore();
+  }
+}
+
+// V9 planet formation: each planet appears individually from dust → proto → sphere → final
+function drawFormingPlanet(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  bodyIdx: number,
+  localT: number,
+  now: number,
+): void {
+  const body = SOLAR_BODIES[bodyIdx];
+  const angle = now / (1400 + bodyIdx * 190) + bodyIdx * 0.72;
+  const px = cx + Math.cos(angle) * body.orbit;
+  const py = cy + Math.sin(angle) * body.orbit * 0.42;
+
+  ctx.strokeStyle = hexToRgba(body.color, easeIO(Math.min(1, localT * 3)) * 0.1);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (localT < 0.25) {
+    const a = easeIO(localT / 0.25) * 0.6;
+    for (let i = 0; i < 7; i += 1) {
+      const da = (i / 7) * Math.PI * 2 + now / (600 + bodyIdx * 80);
+      const dr = body.r * (0.55 + Math.sin(now / 280 + i + bodyIdx) * 0.35);
+      ctx.fillStyle = hexToRgba(body.color, a);
+      ctx.beginPath();
+      ctx.arc(px + Math.cos(da) * dr, py + Math.sin(da) * dr * 0.42, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (localT < 0.5) {
+    const t2 = easeIO((localT - 0.25) / 0.25);
+    const r = Math.max(1.2, body.r * (0.3 + t2 * 0.5));
+    if (bodyIdx === 2) drawLavaPlanet(ctx, px, py, r, 0.8);
+    else drawPlanetBase(ctx, px, py, r, body.color, '#1d1a21');
+    if (Math.sin(now / 210 + bodyIdx * 7) > 0.55) {
+      const sa = now / (420 + bodyIdx * 50);
+      ctx.fillStyle = hexToRgba('#ffcc88', 0.65);
+      ctx.beginPath();
+      ctx.arc(px + Math.cos(sa) * r * 0.9, py + Math.sin(sa) * r * 0.5, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (localT < 0.75) {
+    const t3 = easeIO((localT - 0.5) / 0.25);
+    const r = Math.max(1.2, body.r * (0.8 + t3 * 0.2));
+    if (bodyIdx === 2) drawLavaPlanet(ctx, px, py, r, 0.5 - t3 * 0.3);
+    else drawPlanetBase(ctx, px, py, r, body.color, '#1d1a21');
+  } else {
+    if (bodyIdx === 2) drawPlanetBase(ctx, px, py, body.r, '#8f4b33', '#2a120f');
+    else drawPlanetBase(ctx, px, py, body.r, body.color, '#1d1a21');
+    if ('rings' in body && body.rings) {
+      ctx.strokeStyle = hexToRgba('#fff0c4', 0.5 * ((localT - 0.75) / 0.25));
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(px, py, body.r * 1.7, body.r * 0.62, -0.24, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
 interface DrawClusterArgs {
   ctx: CanvasRenderingContext2D;
   cluster: MoteCluster;
@@ -440,60 +583,130 @@ function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress }: DrawClusterAr
   ctx.restore();
 }
 
-type SolarPhase =
-  | 'pre_stellar'
-  | 't_tauri'
-  | 'planetesimals'
-  | 'inner_planets'
-  | 'outer_planets'
-  | 'late_bombardment'
-  | 'stable'
-  | 'first_water'
-  | 'civ_preview';
+// V9: planet formation windows — each planet forms within its own progress window
+const V9_PLANET_WINDOWS = [
+  { start: 0.32, end: 0.40 }, // Mercury
+  { start: 0.40, end: 0.48 }, // Venus
+  { start: 0.48, end: 0.58 }, // Earth (molten proto-planet)
+  { start: 0.58, end: 0.66 }, // Mars
+  { start: 0.66, end: 0.74 }, // Jupiter
+  { start: 0.74, end: 0.80 }, // Saturn
+  { start: 0.80, end: 0.86 }, // Uranus
+  { start: 0.86, end: 0.91 }, // Neptune
+  { start: 0.91, end: 0.95 }, // Pluto
+] as const;
 
-function getSolarPhase(progress: number): SolarPhase {
-  if (progress < 0.1) return 'pre_stellar';
-  if (progress < 0.25) return 't_tauri';
-  if (progress < 0.4) return 'planetesimals';
-  if (progress < 0.55) return 'inner_planets';
-  if (progress < 0.7) return 'outer_planets';
-  if (progress < 0.8) return 'late_bombardment';
-  if (progress < 0.9) return 'stable';
-  if (progress < 0.95) return 'first_water';
-  return 'civ_preview';
-}
+function drawPlanetarySystem({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
+  const sunT = rangeT(progress, 0.08, 0.24);
 
-function drawPlanetarySystem(args: DrawClusterArgs): void {
-  const phase = getSolarPhase(args.progress);
-  switch (phase) {
-    case 'pre_stellar':
-      drawPreStellarNebula(args);
-      break;
-    case 't_tauri':
-      drawTTauriIgnition(args);
-      break;
-    case 'planetesimals':
-      drawPlanetesimalCollisions(args);
-      break;
-    case 'inner_planets':
-      drawInnerPlanets(args);
-      break;
-    case 'outer_planets':
-      drawOuterPlanets(args);
-      break;
-    case 'late_bombardment':
-      drawLateBombardment(args);
-      break;
-    case 'stable':
-      drawStableSystem(args);
-      break;
-    case 'first_water':
-      drawFirstWater(args);
-      break;
-    case 'civ_preview':
-      drawCivPreview(args);
-      break;
+  // Layer 1: molecular cloud / nebula haze (0–16%)
+  const hazeAlpha = easeIO(rangeT(progress, 0, 0.08)) * (1 - easeIO(rangeT(progress, 0.10, 0.22)));
+  if (hazeAlpha > 0.005) {
+    drawClusterEnvelope(ctx, cx, cy, 160, stage.accent, 0.14 * hazeAlpha);
+    for (let arm = 0; arm < 6; arm += 1) {
+      ctx.strokeStyle = hexToRgba(stage.accent, 0.07 * hazeAlpha);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let step = 0; step < 24; step += 1) {
+        const u = step / 23;
+        const angle = arm + u * Math.PI * 1.3 + now / 2400;
+        const r = 28 + u * 150;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r * 0.48;
+        if (step === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
   }
+
+  // Layer 2: dust / mote sprites (fade out as planets form)
+  const dustAlpha = 0.65 * (1 - rangeT(progress, 0.16, 0.68));
+  if (dustAlpha > 0.005) {
+    cluster.motes.forEach((mote, idx) => {
+      const shimmer = 0.54 + Math.sin(now / 1000 * 2 + idx) * 0.18;
+      drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * shimmer, mote.color, dustAlpha * shimmer, mote.orbitAngle ?? 0);
+    });
+  }
+
+  // Layer 3: accretion disk rings (16–32%)
+  const diskT = easeIO(rangeT(progress, 0.16, 0.32));
+  if (diskT > 0.005) {
+    for (let ring = 0; ring < 5; ring += 1) {
+      const rr = 56 + ring * 38;
+      ctx.strokeStyle = hexToRgba(stage.accent, 0.06 * diskT * (1 - ring / 5));
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rr, rr * 0.42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // Layer 4: planetesimal swarm (24–40%)
+  const planT = easeIO(rangeT(progress, 0.24, 0.32)) * (1 - easeIO(rangeT(progress, 0.36, 0.50)));
+  if (planT > 0.005) {
+    for (let i = 0; i < 16; i += 1) {
+      const angle = now / 900 + i * 0.72;
+      const orbit = 64 + (i % 6) * 22;
+      const x = cx + Math.cos(angle) * orbit;
+      const y = cy + Math.sin(angle) * orbit * 0.42;
+      ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#f0c18a' : '#8e806d', 0.55 * planT);
+      ctx.beginPath();
+      ctx.arc(x, y, 1.6 + (i % 4) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      if (i % 5 === 0) {
+        ctx.strokeStyle = hexToRgba('#ffe0a6', 0.3 * planT);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 14, y - 6);
+        ctx.lineTo(x + 6, y + 3);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Layer 5: proto-sun and stable sun
+  if (sunT > 0) {
+    const sunR = 8 + easeIO(sunT) * 24;
+    const fullSunR = Math.max(sunR, progress >= 0.24 ? 32 : sunR);
+    drawSolarSun(ctx, stage, cx, cy, fullSunR, 0.75 + easeIO(sunT) * 0.2 - progress * 0.15);
+  }
+
+  // Layer 6: individual planet formation and stable orbits
+  SOLAR_BODIES.forEach((body, idx) => {
+    const win = V9_PLANET_WINDOWS[idx];
+    if (progress < win.start) return;
+    const localT = Math.min(1, (progress - win.start) / (win.end - win.start));
+    if (localT < 1.0) {
+      drawFormingPlanet(ctx, cx, cy, idx, localT, now);
+    } else {
+      // Stable: draw orbit ring + final planet
+      ctx.strokeStyle = hexToRgba(body.color, 0.08);
+      ctx.lineWidth = idx === 2 ? 1.2 : 0.8;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      const angle = now / (1400 + idx * 190) + idx * 0.72;
+      const px = cx + Math.cos(angle) * body.orbit;
+      const py = cy + Math.sin(angle) * body.orbit * 0.42;
+      if (idx === 2) {
+        // Earth in solar system: water by 95%, city by 98%
+        if (progress >= 0.98) drawSolarEarth(ctx, px, py, body.r, 'city', now / 900);
+        else if (progress >= 0.95) drawSolarEarth(ctx, px, py, body.r, 'water', now / 900);
+        else drawPlanetBase(ctx, px, py, body.r, '#8f4b33', '#2a120f');
+      } else {
+        drawPlanetBase(ctx, px, py, body.r, body.color, '#1d1a21');
+      }
+      if ('rings' in body && body.rings) {
+        ctx.strokeStyle = hexToRgba('#fff0c4', 0.5);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(px, py, body.r * 1.7, body.r * 0.62, -0.24, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  });
+
+  drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
 }
 
 function drawSolarDust({ ctx, cluster, stage, now }: DrawClusterArgs, alpha = 0.68): void {
@@ -527,58 +740,17 @@ function drawSolarSun(
 }
 
 const SOLAR_BODIES = [
-  { name: 'Mercury', orbit: 54, r: 3.2, color: '#b7a28a', showAt: 0.4 },
-  { name: 'Venus', orbit: 76, r: 5.2, color: '#e7bb79', showAt: 0.4 },
-  { name: 'Earth', orbit: 100, r: 5.8, color: '#5aa7ff', showAt: 0.4 },
-  { name: 'Mars', orbit: 124, r: 4.4, color: '#cf7655', showAt: 0.4 },
-  { name: 'Jupiter', orbit: 162, r: 10.2, color: '#d7a77e', showAt: 0.55 },
-  { name: 'Saturn', orbit: 196, r: 8.8, color: '#ead09a', showAt: 0.55, rings: true },
-  { name: 'Uranus', orbit: 226, r: 6.6, color: '#a9efe9', showAt: 0.55 },
-  { name: 'Neptune', orbit: 254, r: 6.3, color: '#5b86ff', showAt: 0.55 },
-  { name: 'Pluto', orbit: 282, r: 2.6, color: '#d8d2c6', showAt: 0.8 },
+  { name: 'Mercury', orbit: 54, r: 3.2, color: '#b7a28a', showAt: 0.28 },
+  { name: 'Venus', orbit: 76, r: 5.2, color: '#e7bb79', showAt: 0.36 },
+  { name: 'Earth', orbit: 100, r: 5.8, color: '#5aa7ff', showAt: 0.44 },
+  { name: 'Mars', orbit: 124, r: 4.4, color: '#cf7655', showAt: 0.52 },
+  { name: 'Jupiter', orbit: 162, r: 10.2, color: '#d7a77e', showAt: 0.6 },
+  { name: 'Saturn', orbit: 196, r: 8.8, color: '#ead09a', showAt: 0.68, rings: true },
+  { name: 'Uranus', orbit: 226, r: 6.6, color: '#a9efe9', showAt: 0.76 },
+  { name: 'Neptune', orbit: 254, r: 6.3, color: '#5b86ff', showAt: 0.84 },
+  { name: 'Pluto', orbit: 282, r: 2.6, color: '#d8d2c6', showAt: 0.92 },
 ];
 
-function drawSolarBodies(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  progress: number,
-  now: number,
-  minShowAt = 0,
-  earthMode: 'plain' | 'bombarded' | 'water' | 'city' = 'plain',
-): void {
-  SOLAR_BODIES.forEach((body, index) => {
-    if (body.name === 'Earth') {
-      return;
-    }
-    if (progress < body.showAt || body.showAt < minShowAt) {
-      return;
-    }
-    const orbit = body.orbit;
-    ctx.strokeStyle = hexToRgba(body.color, 0.08 + progress * 0.08);
-    ctx.lineWidth = body.name === 'Earth' ? 1.2 : 0.8;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, orbit, orbit * 0.42, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const angle = now / (1400 + index * 190) + index * 0.72;
-    const x = cx + Math.cos(angle) * orbit;
-    const y = cy + Math.sin(angle) * orbit * 0.42;
-
-    if (body.name === 'Earth') {
-      drawSolarEarth(ctx, x, y, body.r, earthMode, angle);
-    } else {
-      drawPlanetBase(ctx, x, y, body.r, body.color, '#1d1a21');
-    }
-
-    if (body.rings) {
-      ctx.strokeStyle = hexToRgba('#fff0c4', 0.5);
-      ctx.beginPath();
-      ctx.ellipse(x, y, body.r * 1.7, body.r * 0.62, -0.24, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  });
-}
 
 function drawSolarEarth(
   ctx: CanvasRenderingContext2D,
@@ -600,203 +772,72 @@ function drawSolarEarth(
   }
 }
 
-function drawDevelopingEarth(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  progress: number,
-  now: number,
-): void {
-  if (progress < 0.1) {
-    return;
-  }
-  const earthIndex = 2;
-  const orbit = 100;
-  const angle = now / (1400 + earthIndex * 190) + earthIndex * 0.72;
-  const x = cx + Math.cos(angle) * orbit;
-  const y = cy + Math.sin(angle) * orbit * 0.42;
-  const growT = Math.min(1, (progress - 0.1) / 0.45);
-  const radius = Math.max(1.2, 5.8 * growT);
 
-  ctx.strokeStyle = hexToRgba('#5aa7ff', 0.08 + progress * 0.08);
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, orbit, orbit * 0.42, 0, 0, Math.PI * 2);
-  ctx.stroke();
 
-  if (progress < 0.25) {
-    drawPlanetBase(ctx, x, y, radius, '#ff7a45', '#4a1209');
-  } else if (progress < 0.55) {
-    drawLavaPlanet(ctx, x, y, radius, 0.9);
-  } else if (progress < 0.7) {
-    drawPlanetBase(ctx, x, y, radius, '#8f4b33', '#2a120f');
-  } else if (progress < 0.8) {
-    drawSolarEarth(ctx, x, y, radius, 'bombarded', angle);
-  } else if (progress < 0.9) {
-    drawPlanetBase(ctx, x, y, radius, '#5a2f2c', '#151015');
-  } else if (progress < 0.95) {
-    drawWaterPlanet(ctx, x, y, radius, (progress - 0.9) / 0.05);
-  } else {
-    drawSolarEarth(ctx, x, y, radius, 'city', now / 900);
-  }
-}
-
-function drawPreStellarNebula(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
-  drawClusterEnvelope(ctx, cx, cy, 150 + progress * 70, stage.accent, 0.12);
-  drawSolarSun(ctx, stage, cx, cy, 8 + progress * 22, 0.75);
-  drawSolarDust(args, 0.62);
-  for (let arm = 0; arm < 6; arm += 1) {
-    ctx.strokeStyle = hexToRgba(stage.accent, 0.08);
-    ctx.beginPath();
-    for (let step = 0; step < 28; step += 1) {
-      const u = step / 27;
-      const angle = arm + u * Math.PI * 1.4 + now / 2200;
-      const r = 28 + u * 170;
-      const x = cx + Math.cos(angle) * r;
-      const y = cy + Math.sin(angle) * r * 0.48;
-      if (step === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-}
-
-function drawTTauriIgnition(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 24 + progress * 18, 1.08);
-  for (let ray = 0; ray < 24; ray += 1) {
-    const angle = (ray / 24) * Math.PI * 2 + now / 800;
-    ctx.strokeStyle = hexToRgba('#fff1b7', 0.08 + (ray % 3) * 0.04);
-    ctx.lineWidth = 1 + (ray % 4) * 0.25;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(angle) * 34, cy + Math.sin(angle) * 34);
-    ctx.lineTo(cx + Math.cos(angle) * 260, cy + Math.sin(angle) * 130);
-    ctx.stroke();
-  }
-  drawSolarDust(args, 0.46);
-}
-
-function drawPlanetesimalCollisions(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 30, 0.95);
-  drawSolarBodies(ctx, cx, cy, 0.35, now, 1);
-  drawSolarDust(args, 0.82);
-  for (let i = 0; i < 16; i += 1) {
-    const angle = now / 900 + i * 0.72;
-    const orbit = 78 + (i % 6) * 24;
-    const x = cx + Math.cos(angle) * orbit;
-    const y = cy + Math.sin(angle) * orbit * 0.42;
-    ctx.fillStyle = i % 3 === 0 ? '#f0c18a' : '#8e806d';
-    ctx.beginPath();
-    ctx.arc(x, y, 1.8 + (i % 4), 0, Math.PI * 2);
-    ctx.fill();
-    if (i % 5 === 0) {
-      ctx.strokeStyle = hexToRgba('#ffe0a6', 0.34);
-      ctx.beginPath();
-      ctx.moveTo(x - 16, y - 7);
-      ctx.lineTo(x + 8, y + 3);
-      ctx.stroke();
-    }
-  }
-}
-
-function drawInnerPlanets(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 31, 0.9);
-  drawSolarBodies(ctx, cx, cy, progress, now);
-  drawSolarDust(args, 0.34);
-}
-
-function drawOuterPlanets(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, progress, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
-  drawSolarBodies(ctx, cx, cy, progress, now);
-  drawSolarDust(args, 0.22);
-}
-
-function drawMeteorStreaks(ctx: CanvasRenderingContext2D, cx: number, cy: number, now: number): void {
-  for (let i = 0; i < 12; i += 1) {
-    const angle = now / 520 + i * 0.52;
-    const x = cx - 150 + ((now / 8 + i * 53) % 320);
-    const y = cy - 115 + Math.sin(angle) * 38 + i * 8;
-    ctx.strokeStyle = hexToRgba(i % 2 === 0 ? '#ffd6a0' : '#ff6f42', 0.34);
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x - 24, y - 12);
-    ctx.lineTo(x + 8, y + 4);
-    ctx.stroke();
-  }
-}
-
-function drawLateBombardment(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 32, 0.86);
-  drawSolarBodies(ctx, cx, cy, 1, now, 0, 'bombarded');
-  drawMeteorStreaks(ctx, cx, cy, now);
-  drawSolarDust(args, 0.18);
-}
-
-function drawStableSystem(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, now } = args;
-  drawSolarSun(ctx, stage, cx, cy, 32, 0.82);
-  drawSolarBodies(ctx, cx, cy, 1, now);
-  drawSolarDust(args, 0.12);
-}
-
-function drawFirstWater(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, now, width } = args;
-  drawSolarSun(ctx, stage, cx - width * 0.18, cy, 26, 0.62);
-  drawSolarBodies(ctx, cx - width * 0.18, cy, 1, now, 0, 'water');
-  drawSolarEarth(ctx, cx + width * 0.18, cy, 38, 'water', now / 1000);
-}
-
-function drawCivPreview(args: DrawClusterArgs): void {
-  const { ctx, stage, cx, cy, now, width } = args;
-  drawSolarSun(ctx, stage, cx - width * 0.2, cy, 24, 0.55);
-  drawSolarBodies(ctx, cx - width * 0.2, cy, 1, now, 0, 'city');
-  drawSolarEarth(ctx, cx + width * 0.18, cy, 42, 'city', now / 900);
-}
-
-function drawLifeSurface({ ctx, cluster, cx, cy, progress, now }: DrawClusterArgs): void {
+function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
   const radius = TUNING.LIFE_SURFACE_R;
   const rotation = cluster.earthRotation ?? 0;
-  const plantMass = cluster.motes.reduce(
-    (sum, mote) => sum + (mote.surfaceKind === 'plant' ? mote.mass : 0),
-    0,
-  );
-  const biomass = Math.min(0.62, Math.max(progress * 0.5, plantMass / 280));
-  if (progress < 0.2) {
-    drawWaterPlanet(ctx, cx, cy, radius, progress / 0.2);
-  } else if (progress < 0.4) {
-    drawContinentPlanet(ctx, cx, cy, radius, (progress - 0.2) / 0.2);
-  } else if (progress < 0.6) {
-    drawPlantPlanet(ctx, cx, cy, radius, (progress - 0.4) / 0.2);
-  } else if (progress < 0.8) {
-    drawLifePlanet(ctx, cx, cy, radius, (progress - 0.6) / 0.2, now / 1000);
+  const t = now / 1000;
+
+  // V9: layered Earth evolution
+  if (progress < 0.10) {
+    // Molten: black rock + lava cracks + occasional meteor sparks
+    drawLavaPlanet(ctx, cx, cy, radius, 0.7 + rangeT(progress, 0, 0.10) * 0.3);
+    for (let i = 0; i < 5; i += 1) {
+      const a = t * 0.8 + i * 1.26;
+      ctx.fillStyle = hexToRgba('#ffcc44', 0.5);
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (radius + 10 + i * 4), cy + Math.sin(a) * (radius + 6 + i * 3), 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (progress < 0.20) {
+    // Steam: lava fades, gray cloud layer rises
+    const steamT = rangeT(progress, 0.10, 0.20);
+    drawLavaPlanet(ctx, cx, cy, radius, 0.7 - steamT * 0.5);
+    ctx.fillStyle = hexToRgba('#c8d4df', 0.38 * steamT);
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.88, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (progress < 0.32) {
+    drawWaterPlanet(ctx, cx, cy, radius, rangeT(progress, 0.20, 0.32));
+  } else if (progress < 0.45) {
+    drawContinentPlanet(ctx, cx, cy, radius, rangeT(progress, 0.32, 0.45));
+  } else if (progress < 0.58) {
+    drawPlantPlanet(ctx, cx, cy, radius, rangeT(progress, 0.45, 0.58));
+  } else if (progress < 0.72) {
+    drawLifePlanet(ctx, cx, cy, radius, rangeT(progress, 0.58, 0.72), t);
+  } else if (progress < 0.82) {
+    drawCityPlanet(ctx, cx, cy, radius, rangeT(progress, 0.72, 0.82), now / 900);
   } else {
-    drawCityPlanet(ctx, cx, cy, radius, (progress - 0.8) / 0.2, now / 900);
+    drawCityPlanet(ctx, cx, cy, radius, 1, now / 900);
   }
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.translate(cx, cy);
-  ctx.rotate(rotation * 0.35);
-  ctx.fillStyle = hexToRgba('#46d878', biomass);
-  ctx.beginPath();
-  ctx.ellipse(-radius * 0.24, -radius * 0.1, radius * 0.48, radius * 0.18, -0.45, 0, Math.PI * 2);
-  ctx.ellipse(radius * 0.28, radius * 0.16, radius * 0.36, radius * 0.16, 0.35, 0, Math.PI * 2);
-  ctx.ellipse(radius * 0.04, -radius * 0.38, radius * 0.24, radius * 0.1, 0.12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // Vegetation overlay (appears at 32%)
+  if (progress >= 0.32) {
+    const biomass = Math.min(0.62, easeIO(rangeT(progress, 0.32, 0.72)) * 0.62);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation * 0.35);
+    ctx.fillStyle = hexToRgba('#46d878', biomass);
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.24, -radius * 0.1, radius * 0.48, radius * 0.18, -0.45, 0, Math.PI * 2);
+    ctx.ellipse(radius * 0.28, radius * 0.16, radius * 0.36, radius * 0.16, 0.35, 0, Math.PI * 2);
+    ctx.ellipse(radius * 0.04, -radius * 0.38, radius * 0.24, radius * 0.1, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
+  // Atmosphere rim
   ctx.strokeStyle = 'rgba(255,255,255,0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(cx, cy, radius + 3, -0.45, Math.PI * 1.25);
   ctx.stroke();
 
+  // Surface motes
   const visible: Array<{ mote: Mote; x: number; y: number; z: number }> = [];
   cluster.motes.forEach((mote) => {
     const lat = mote.surfaceLat ?? 0;
@@ -804,81 +845,126 @@ function drawLifeSurface({ ctx, cluster, cx, cy, progress, now }: DrawClusterArg
     const sx = Math.cos(lat) * Math.sin(lon);
     const sz = Math.cos(lat) * Math.cos(lon);
     const sy = Math.sin(lat);
-    if (sz < -0.04) {
-      return;
-    }
-    visible.push({
-      mote,
-      x: cx + sx * radius,
-      y: cy + sy * radius,
-      z: sz,
-    });
+    if (sz < -0.04) return;
+    visible.push({ mote, x: cx + sx * radius, y: cy + sy * radius, z: sz });
   });
-
   visible.sort((a, b) => a.z - b.z);
   visible.forEach(({ mote, x, y, z }) => {
     const ageProgress = Math.min(1, mote.age / TUNING.LIFE_FEATURE_GROW_MS);
     const size = (mote.r * 0.52 + 0.9) * ageProgress * (0.65 + z * 0.35);
-    const color =
-      mote.surfaceKind === 'city'
-        ? '#ffeeaa'
-        : mote.surfaceKind === 'water'
-          ? '#9de8ff'
-          : '#65e88f';
+    const color = mote.surfaceKind === 'city' ? '#ffeeaa' : mote.surfaceKind === 'water' ? '#9de8ff' : '#65e88f';
     ctx.fillStyle = hexToRgba(color, 0.86 * ageProgress * (0.55 + z * 0.45));
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  if (progress >= 0.99) {
-    const flash = 0.4 + Math.sin(now / 90) * 0.24;
-    ctx.strokeStyle = hexToRgba('#fff7c8', flash);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 8 + Math.sin(now / 70) * 3, 0, Math.PI * 2);
-    ctx.stroke();
+  // Space Age: satellites (82–90%)
+  if (progress >= 0.82) {
+    drawEarthSatellites(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.82, 0.90)), now);
   }
+
+  // Megastructures (90–97%)
+  if (progress >= 0.90) {
+    drawEarthMegastructures(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.90, 0.97)), now);
+  }
+
+  drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
 }
 
 function drawRedGiantBloom({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
-  const giantR = Math.max(48 + progress * 48, cluster.physicalRadius * 0.74);
+  // V9: gradual red giant expansion with per-planet consumption
+  const giantPhase = easeIO(rangeT(progress, 0.10, 0.88));
+  const giantR = 30 + giantPhase * 130;
   const pulse = Math.sin(now / 420) * 3;
-  const star = ctx.createRadialGradient(cx - giantR * 0.28, cy - giantR * 0.28, 2, cx, cy, giantR + pulse);
-  star.addColorStop(0, hexToRgba('#fff0c7', 0.94));
-  star.addColorStop(0.4, hexToRgba(stage.coreColor, 0.9));
-  star.addColorStop(1, hexToRgba('#4d0c04', 0.78));
-  ctx.fillStyle = star;
-  ctx.beginPath();
-  ctx.arc(cx, cy, giantR + pulse, 0, Math.PI * 2);
-  ctx.fill();
 
+  // Envelope ejection shell (88–96%)
+  const ejectT = rangeT(progress, 0.88, 0.96);
+  if (ejectT > 0) {
+    const shellR = 30 + ejectT * 200;
+    ctx.strokeStyle = hexToRgba('#ff9966', 0.38 * (1 - ejectT));
+    ctx.lineWidth = 4 + ejectT * 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shellR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = hexToRgba('#ffddaa', 0.18 * (1 - ejectT));
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shellR * 1.18, 0, Math.PI * 2);
+    ctx.stroke();
+    // Planetary nebula glow
+    const nebulaGlow = ctx.createRadialGradient(cx, cy, shellR * 0.6, cx, cy, shellR * 1.3);
+    nebulaGlow.addColorStop(0, hexToRgba('#ff7733', 0.08 * (1 - ejectT)));
+    nebulaGlow.addColorStop(1, hexToRgba('#aa2200', 0));
+    ctx.fillStyle = nebulaGlow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shellR * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // White dwarf remnant (96–100%)
+  const wdT = rangeT(progress, 0.96, 1.0);
+  if (wdT > 0) {
+    const wdR = Math.max(6, giantR * (1 - wdT));
+    const wd = ctx.createRadialGradient(cx, cy, 0, cx, cy, wdR * 3.5);
+    wd.addColorStop(0, hexToRgba('#ffffff', 0.95));
+    wd.addColorStop(0.25, hexToRgba('#aaccff', 0.5 * wdT));
+    wd.addColorStop(1, hexToRgba('#2244aa', 0));
+    ctx.fillStyle = wd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, wdR * 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(3, wdR * 0.6), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Main star body (fades out after envelope ejection)
+  if (progress < 0.96) {
+    const starAlpha = 1 - ejectT;
+    const outerColor = progress < 0.20 ? '#aa5500' : '#4d0c04';
+    const star = ctx.createRadialGradient(cx - giantR * 0.28, cy - giantR * 0.28, 2, cx, cy, giantR + pulse);
+    star.addColorStop(0, hexToRgba('#fff0c7', 0.94 * starAlpha));
+    star.addColorStop(0.4, hexToRgba(stage.coreColor, 0.90 * starAlpha));
+    star.addColorStop(1, hexToRgba(outerColor, 0.78 * starAlpha));
+    ctx.fillStyle = star;
+    ctx.beginPath();
+    ctx.arc(cx, cy, giantR + pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Planets survive until consumed
   const planets = [
-    { name: 'Mercury', orbit: 56, consumeAt: 0.05, color: '#b29a7d' },
-    { name: 'Venus', orbit: 78, consumeAt: 0.12, color: '#e0b882' },
-    { name: 'Earth', orbit: 102, consumeAt: 0.25, color: '#5ea4ff' },
-    { name: 'Mars', orbit: 126, consumeAt: 0.38, color: '#c96f4c' },
-    { name: 'Jupiter', orbit: 168, consumeAt: 0.55, color: '#d9b08b' },
-    { name: 'Saturn', orbit: 212, consumeAt: 0.68, color: '#ecd8a4' },
-    { name: 'Uranus', orbit: 248, consumeAt: 0.78, color: '#b8f1ea' },
-    { name: 'Neptune', orbit: 286, consumeAt: 0.87, color: '#5f8eff' },
-    { name: 'Pluto', orbit: 322, consumeAt: 0.95, color: '#d2d0c8' },
+    { orbit: 56, consumeAt: 0.20, color: '#b29a7d', r: 3.5 },
+    { orbit: 78, consumeAt: 0.32, color: '#e0b882', r: 4.8 },
+    { orbit: 102, consumeAt: 0.44, color: '#5ea4ff', r: 5.8 },
+    { orbit: 126, consumeAt: 0.56, color: '#c96f4c', r: 4.4 },
+    { orbit: 168, consumeAt: 0.66, color: '#d9b08b', r: 9.0 },
+    { orbit: 212, consumeAt: 0.78, color: '#ecd8a4', r: 7.8 },
+    { orbit: 248, consumeAt: 0.87, color: '#b8f1ea', r: 5.8 },
+    { orbit: 286, consumeAt: 0.95, color: '#5f8eff', r: 5.5 },
+    { orbit: 322, consumeAt: 0.98, color: '#d2d0c8', r: 2.4 },
   ];
 
   planets.forEach((planet, index) => {
-    if (progress >= planet.consumeAt) {
-      return;
-    }
+    if (progress >= planet.consumeAt) return;
     const angle = now / 2400 + index * 0.72;
     const x = cx + Math.cos(angle) * planet.orbit;
     const y = cy + Math.sin(angle) * planet.orbit * 0.35;
-    ctx.strokeStyle = hexToRgba(planet.color, 0.08);
+    // Orbit line fades as giant grows
+    const orbitAlpha = Math.max(0, 0.10 - giantPhase * 0.09);
+    ctx.strokeStyle = hexToRgba(planet.color, orbitAlpha);
+    ctx.lineWidth = 0.7;
     ctx.beginPath();
     ctx.ellipse(cx, cy, planet.orbit, planet.orbit * 0.35, 0, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = planet.color;
+    // Planet heats as giant nears (redden near consumeAt)
+    const heatT = rangeT(progress, planet.consumeAt - 0.08, planet.consumeAt);
+    const drawColor = heatT > 0 ? '#ff6633' : planet.color;
+    ctx.fillStyle = hexToRgba(drawColor, 1 - heatT * 0.6);
     ctx.beginPath();
-    ctx.arc(x, y, index < 4 ? 4 + index * 0.5 : 6 + index * 0.8, 0, Math.PI * 2);
+    ctx.arc(x, y, planet.r, 0, Math.PI * 2);
     ctx.fill();
   });
 
@@ -886,6 +972,8 @@ function drawRedGiantBloom({ ctx, cluster, stage, cx, cy, progress, now }: DrawC
     const alpha = mote.hue < 0.5 ? 0.45 : 0.28;
     drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.75, mote.color, alpha, mote.age / 1000);
   });
+
+  drawMilestoneFlash(ctx, cx, cy, progress, '#ff7744');
 }
 
 function drawRemnantCloud({ ctx, cluster, stage, cx, cy, progress }: DrawClusterArgs): void {
@@ -1176,13 +1264,54 @@ function drawMarsLike(ctx: CanvasRenderingContext2D, x: number, y: number, r: nu
   ctx.fill();
 }
 
-function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, now }: DrawClusterArgs): void {
+function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
   ctx.strokeStyle = hexToRgba(stage.coreColor, 0.06);
   ctx.lineWidth = 0.8;
   for (let ring = 1; ring <= 4; ring += 1) {
     ctx.beginPath();
     ctx.arc(cx, cy, cluster.physicalRadius * (ring / 4) + Math.sin(now / 900 + ring) * 3, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  // V9: memory echo silhouettes (72–88%) — poetic, not physical
+  const echoT = rangeT(progress, 0.72, 0.88);
+  if (echoT > 0 && echoT < 1) {
+    const echoAlpha = Math.sin(echoT * Math.PI) * 0.10;
+    // Galaxy echo
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, 0.42);
+    ctx.strokeStyle = hexToRgba('#aaaacc', echoAlpha);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 65, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 38, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    // Earth silhouette drifting slowly
+    const ex = cx + Math.sin(now / 3200) * 22;
+    const ey = cy + Math.cos(now / 3200) * 14;
+    ctx.strokeStyle = hexToRgba('#5588bb', echoAlpha * 1.4);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    // Orbital ring echo
+    ctx.strokeStyle = hexToRgba('#886633', echoAlpha * 0.9);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, 14, 5, 0.2, 0, Math.PI * 2);
+    ctx.stroke();
+    // City lights hint
+    for (let i = 0; i < 5; i += 1) {
+      const la = i * 1.26 + now / 6000;
+      ctx.fillStyle = hexToRgba('#ffeeaa', echoAlpha * 0.6);
+      ctx.beginPath();
+      ctx.arc(ex + Math.cos(la) * 5, ey + Math.sin(la) * 3, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   cluster.motes.forEach((mote) => {
