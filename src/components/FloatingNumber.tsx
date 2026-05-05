@@ -7,6 +7,7 @@ interface FloatingNumberProps {
   text: string;
   particleName?: string;
   particleDefinition?: string;
+  entropyGained?: number;
   variant: 'normal' | 'crit' | 'collision';
   stageId?: number;
   delayMs?: number;
@@ -18,6 +19,7 @@ export function FloatingNumber({
   text,
   particleName,
   particleDefinition,
+  entropyGained,
   variant,
   stageId,
   delayMs = 0,

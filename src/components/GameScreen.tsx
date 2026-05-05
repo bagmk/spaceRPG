@@ -52,6 +52,7 @@ interface FloatingEntry {
   text: string;
   particleName?: string;
   particleDefinition?: string;
+  entropyGained?: number;
   variant: 'normal' | 'crit' | 'collision';
   delayMs?: number;
 }
@@ -185,8 +186,8 @@ export function GameScreen({
           stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
         )
       : cosmicClockFromGauge;
-  const canShowSkills = true;
-  const canShowShop = state.universeCount > 1 || stage.id >= 5;
+  const canShowSkills = stage.id >= 2;
+  const canShowShop = state.universeCount > 1 || stage.id >= 6;
   const statPopupTree = statPopup ? SKILL_TREES.find((tree) => tree.id === statPopup.trackId) : null;
   const statPopupLevel = statPopup ? state.skills[statPopup.trackId].level : 0;
   const statPopupNextLevel = statPopupLevel + 1;
@@ -219,7 +220,10 @@ export function GameScreen({
       return null;
     }
     const stageBubbles: Record<number, string> = {
-      2: 'New branches unlocked: Quantum Lens, Cosmic Web, and Aeon Drive.',
+      2: 'Stellar Forge unlocked. Your clicks grow stronger.',
+      3: 'Cosmic Web unlocked. Quanta begin gathering on their own.',
+      4: 'Quantum Lens unlocked. Critical hits begin from this stage.',
+      5: 'Aeon Drive unlocked. Bend the flow of cosmic time.',
     };
     const stageFlag = `stage-${stage.id}-skills`;
     if (stageBubbles[stage.id] && !state.tutorialFlags[stageFlag] && canShowSkills) {
@@ -318,6 +322,7 @@ export function GameScreen({
           text,
           particleName: event.particleName,
           particleDefinition: event.particleDefinition,
+          entropyGained: event.entropyGained,
           variant,
           delayMs: index * 60,
         };
@@ -343,6 +348,7 @@ export function GameScreen({
         x: event.x,
         y: event.y,
         text: `+${formatWhole(event.bonus)} · ${event.name.toUpperCase()}`,
+        entropyGained: event.entropyGained,
         variant: 'collision',
       },
     ]);
@@ -528,20 +534,37 @@ export function GameScreen({
           </button>
         </div>
         <div className="stat-header" aria-label="Core stats">
-          {([
-            ['click', `Quanta x${formatWhole(clickPower)}`],
-            ['auto', `Auto ${formatRate(autoRate)}`],
-            ['crit', `Crit x${formatWhole(critMultiplier)}`],
-            ['time', `Time x${formatWhole(timeMult)}`],
-          ] as Array<[StatPopupTrack, string]>).map(([trackId, label]) => (
+          <button
+            className="stat-header-item"
+            type="button"
+            onClick={(event) => setStatPopup({ trackId: 'click', x: event.clientX, y: event.clientY })}
+          >
+            {`Quanta x${formatWhole(clickPower)}`}
+          </button>
+          <button
+            className="stat-header-item"
+            type="button"
+            onClick={(event) => setStatPopup({ trackId: 'auto', x: event.clientX, y: event.clientY })}
+          >
+            {`Auto ${formatRate(autoRate)}`}
+          </button>
+          {stage.id > 2 ? (
             <button
-              key={trackId}
+              className="stat-header-item"
               type="button"
-              onClick={(event) => setStatPopup({ trackId, x: event.clientX, y: event.clientY })}
+              onClick={(event) => setStatPopup({ trackId: 'crit', x: event.clientX, y: event.clientY })}
             >
-              {label}
+              {`Crit x${formatWhole(critMultiplier)}`}
             </button>
-          ))}
+          ) : null}
+          <button
+            className="stat-header-item"
+            type="button"
+            onClick={(event) => setStatPopup({ trackId: 'time', x: event.clientX, y: event.clientY })}
+          >
+            {`Time x${formatWhole(timeMult)}`}
+          </button>
+          <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
         </div>
         {statPopup && statPopupTree ? (
           <div
@@ -613,6 +636,7 @@ export function GameScreen({
             text={entry.text}
             particleName={entry.particleName}
             particleDefinition={entry.particleDefinition}
+            entropyGained={entry.entropyGained}
             variant={entry.variant}
             stageId={stage.id}
             delayMs={entry.delayMs}

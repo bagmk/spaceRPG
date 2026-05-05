@@ -1,9 +1,27 @@
 import type { CrossNodeDef, SkillTreeDef, SkillTreeId } from './types';
 
+export const SKILL_MAX_LEVEL = 30;
+
+const TRACK_COST_BASE: Record<SkillTreeId, number> = {
+  click: 2,
+  auto: 2,
+  crit: 2,
+  time: 3,
+};
+
+const SP_REWARD_BY_CLEARED_STAGE = [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6] as const;
+
 export function trackLevelCost(trackId: SkillTreeId, level: number): number {
   const targetLevel = Math.max(1, Math.floor(level));
-  const growthBase = trackId === 'time' ? 10 : 2;
+  const growthBase = TRACK_COST_BASE[trackId];
   return Math.floor(Math.pow(growthBase, targetLevel - 1));
+}
+
+export function getSkillPointsForStageAdvance(clearedStageId: number): number {
+  if (clearedStageId < 1 || clearedStageId > SP_REWARD_BY_CLEARED_STAGE.length) {
+    return 0;
+  }
+  return SP_REWARD_BY_CLEARED_STAGE[clearedStageId - 1];
 }
 
 export const SKILL_TREES: SkillTreeDef[] = [
@@ -12,8 +30,8 @@ export const SKILL_TREES: SkillTreeDef[] = [
     label: 'Stellar Forge',
     description: 'Each click strikes harder.',
     color: '#ff6a45',
-    unlockStageId: 1,
-    rootMaxLevel: Number.MAX_SAFE_INTEGER,
+    unlockStageId: 2,
+    rootMaxLevel: SKILL_MAX_LEVEL,
     rootCostCurve: (level) => trackLevelCost('click', level),
     milestones: {
       1: { name: 'Spark', desc: 'Click yields 10.' },
@@ -30,8 +48,8 @@ export const SKILL_TREES: SkillTreeDef[] = [
     label: 'Cosmic Web',
     description: 'The universe gathers itself.',
     color: '#6d8fff',
-    unlockStageId: 2,
-    rootMaxLevel: Number.MAX_SAFE_INTEGER,
+    unlockStageId: 3,
+    rootMaxLevel: SKILL_MAX_LEVEL,
     rootCostCurve: (level) => trackLevelCost('auto', level),
     milestones: {
       1: { name: 'Filament Spin', desc: 'Auto rate 10/s.' },
@@ -48,8 +66,8 @@ export const SKILL_TREES: SkillTreeDef[] = [
     label: 'Quantum Lens',
     description: 'Probability bends to your stare.',
     color: '#9966cc',
-    unlockStageId: 2,
-    rootMaxLevel: Number.MAX_SAFE_INTEGER,
+    unlockStageId: 4,
+    rootMaxLevel: SKILL_MAX_LEVEL,
     rootCostCurve: (level) => trackLevelCost('crit', level),
     milestones: {
       1: { name: "Observer's Eye", desc: 'Crit chance starts growing at 1.5 % per level.' },
@@ -66,8 +84,8 @@ export const SKILL_TREES: SkillTreeDef[] = [
     label: 'Aeon Drive',
     description: 'Bend the rate of cosmic time.',
     color: '#ffb84d',
-    unlockStageId: 2,
-    rootMaxLevel: Number.MAX_SAFE_INTEGER,
+    unlockStageId: 5,
+    rootMaxLevel: SKILL_MAX_LEVEL,
     rootCostCurve: (level) => trackLevelCost('time', level),
     milestones: {
       1: { name: 'Tick Tock', desc: 'Cosmic time compresses by 10× per level.' },
@@ -85,45 +103,45 @@ const CROSS_TIERS = [5, 10, 15, 20, 25, 30] as const;
 
 const CROSS_SP_COST: Record<(typeof CROSS_TIERS)[number], number> = {
   5: 1,
-  10: 2,
-  15: 4,
-  20: 8,
-  25: 16,
-  30: 32,
+  10: 1,
+  15: 2,
+  20: 2,
+  25: 3,
+  30: 3,
 };
 
 const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number], string>> = {
   click: {
-    5: 'Click power x2.',
-    10: 'Click power x5.',
-    15: 'Click power x10.',
-    20: 'Click power x25.',
-    25: 'Click power x100.',
-    30: 'Click power x1000.',
+    5: 'Click power x1.4.',
+    10: 'Click power x1.8.',
+    15: 'Click power x2.4.',
+    20: 'Click power x3.2.',
+    25: 'Click power x4.4.',
+    30: 'Click power x6.',
   },
   auto: {
-    5: 'Auto rate x2.',
-    10: 'Auto rate x5.',
-    15: 'Auto rate x10.',
-    20: 'Auto rate x25.',
-    25: 'Auto rate x100.',
-    30: 'Auto rate x1000.',
+    5: 'Auto rate x1.4.',
+    10: 'Auto rate x1.8.',
+    15: 'Auto rate x2.4.',
+    20: 'Auto rate x3.2.',
+    25: 'Auto rate x4.4.',
+    30: 'Auto rate x6.',
   },
   crit: {
-    5: 'Crit multiplier x1.5.',
-    10: 'Crit multiplier x2.',
-    15: 'Crit multiplier x3.',
-    20: 'Crit multiplier x5.',
-    25: 'Crit multiplier x8.',
-    30: 'Crit multiplier x12.',
+    5: 'Crit multiplier x1.15.',
+    10: 'Crit multiplier x1.3.',
+    15: 'Crit multiplier x1.5.',
+    20: 'Crit multiplier x1.75.',
+    25: 'Crit multiplier x2.05.',
+    30: 'Crit multiplier x2.5.',
   },
   time: {
-    5: 'Time flow x2.',
-    10: 'Time flow x5.',
-    15: 'Time flow x10.',
-    20: 'Time flow x25.',
-    25: 'Time flow x100.',
-    30: 'Time flow x1000.',
+    5: 'Time flow x1.25.',
+    10: 'Time flow x1.6.',
+    15: 'Time flow x2.1.',
+    20: 'Time flow x2.8.',
+    25: 'Time flow x3.6.',
+    30: 'Time flow x5.',
   },
 };
 

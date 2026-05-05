@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { TUNING } from '../game/constants';
 import { clamp, hexToRgba } from '../game/formulas';
 
-type IntroPhase = 'idle' | 'expanding' | 'done';
+type IntroPhase = 'idle' | 'collapsing' | 'expanding' | 'done';
+
+const COLLAPSE_MS = 700; // particles converge before the bang
 
 interface IntroParticle {
   x: number;
@@ -40,6 +42,26 @@ function mixHex(a: string, b: string, amount: number): string {
   const bg = parseInt(b.slice(3, 5), 16);
   const bb = parseInt(b.slice(5, 7), 16);
   return `rgb(${mixChannel(ar, br, amount)}, ${mixChannel(ag, bg, amount)}, ${mixChannel(ab, bb, amount)})`;
+}
+
+function createCollapseParticles(width: number, height: number): IntroParticle[] {
+  const cx = width / 2;
+  const cy = height / 2;
+  const colors = ['#ffffff', '#ffaa66', '#ff6644', '#ffeebb'];
+  return Array.from({ length: TUNING.INTRO_BURST_COUNT }, (_, index) => {
+    const angle = (index / TUNING.INTRO_BURST_COUNT) * Math.PI * 2 + Math.random() * 0.3;
+    const dist = Math.min(width, height) * (0.22 + Math.random() * 0.28);
+    const speed = 5 + Math.random() * 10;
+    return {
+      x: cx + Math.cos(angle) * dist,
+      y: cy + Math.sin(angle) * dist,
+      vx: -Math.cos(angle) * speed, // inward
+      vy: -Math.sin(angle) * speed,
+      size: 1.2 + Math.random() * 2.4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+    };
+  });
 }
 
 function createBurstParticles(width: number, height: number): IntroParticle[] {
@@ -82,18 +104,14 @@ export function IntroScreen({
   );
 
   useEffect(() => {
-    if (phase !== 'expanding') {
+    if (phase !== 'collapsing' && phase !== 'expanding') {
       return undefined;
     }
 
     const canvas = canvasRef.current;
-    if (!canvas) {
-      return undefined;
-    }
+    if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return undefined;
-    }
+    if (!ctx) return undefined;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -105,11 +123,13 @@ export function IntroScreen({
     };
 
     resize();
-    particlesRef.current = createBurstParticles(window.innerWidth, window.innerHeight);
+    // Start with collapse particles converging inward
+    particlesRef.current = createCollapseParticles(window.innerWidth, window.innerHeight);
 
     let frameId = 0;
-    let startTime = performance.now();
+    const startTime = performance.now();
     let previous = startTime;
+    let burstCreated = false;
 
     const draw = (now: number) => {
       const dt = now - previous;
@@ -118,19 +138,45 @@ export function IntroScreen({
       setElapsed(nextElapsed);
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // At collapse → burst transition: fire big bang sound + swap particles
+      if (nextElapsed >= COLLAPSE_MS && !burstCreated) {
+        burstCreated = true;
+        setPhase('expanding');
+        onPlayBigBang();
+        particlesRef.current = createBurstParticles(w, h);
+      }
+
       particlesRef.current.forEach((particle) => {
         particle.x += particle.vx * (dt / 16.67);
         particle.y += particle.vy * (dt / 16.67);
-        particle.life -= 0.01 * (dt / 16.67);
+
+        if (!burstCreated) {
+          // Collapse phase: alpha fades in as particles converge toward center
+          const dx = particle.x - w / 2;
+          const dy = particle.y - h / 2;
+          const dist = Math.hypot(dx, dy);
+          const maxDist = Math.min(w, h) * 0.55;
+          particle.life = 0.35 + 0.65 * Math.min(1, dist / maxDist);
+        } else {
+          // Burst phase: normal life decay
+          particle.life -= 0.01 * (dt / 16.67);
+        }
+
         ctx.fillStyle = hexToRgba(particle.color, Math.max(0, particle.life));
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      particlesRef.current = particlesRef.current.filter((particle) => particle.life > 0);
+      if (burstCreated) {
+        particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
+      }
 
-      if (nextElapsed >= TUNING.INTRO_TOTAL_MS) {
+      // Total duration counts from burst start (COLLAPSE_MS offset)
+      if (burstCreated && nextElapsed >= COLLAPSE_MS + TUNING.INTRO_TOTAL_MS) {
         setPhase('done');
         setElapsed(TUNING.INTRO_TOTAL_MS);
         onComplete();
@@ -146,49 +192,51 @@ export function IntroScreen({
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', resize);
     };
-  }, [onComplete, phase]);
+  }, [onComplete, onPlayBigBang, phase]);
 
+  // elapsed during collapsing counts from 0; during expanding it resets to 0 at burst
+  // We offset by COLLAPSE_MS so background timing stays consistent
+  const bgElapsed = phase === 'collapsing' ? 0 : elapsed;
   const introBackground = useMemo(() => {
-    if (phase === 'idle') {
+    if (phase === 'idle' || phase === 'collapsing') {
       return '#000000';
     }
-    if (elapsed < 1400) {
+    if (bgElapsed < 1400) {
       return INTRO_COLORS[0];
     }
-    if (elapsed < 1800) {
-      return mixHex(INTRO_COLORS[0], INTRO_COLORS[1], (elapsed - 1400) / 400);
+    if (bgElapsed < 1800) {
+      return mixHex(INTRO_COLORS[0], INTRO_COLORS[1], (bgElapsed - 1400) / 400);
     }
-    return mixHex(INTRO_COLORS[1], INTRO_COLORS[2], clamp((elapsed - 1800) / 400, 0, 1));
-  }, [elapsed, phase]);
+    return mixHex(INTRO_COLORS[1], INTRO_COLORS[2], clamp((bgElapsed - 1800) / 400, 0, 1));
+  }, [bgElapsed, phase]);
 
   const flashOpacity =
-    elapsed < 400
+    bgElapsed < 400
       ? 0
-      : elapsed < 600
-        ? (elapsed - 400) / 200
-        : elapsed < 800
-          ? 1 - ((elapsed - 600) / 200) * 0.4
+      : bgElapsed < 600
+        ? (bgElapsed - 400) / 200
+        : bgElapsed < 800
+          ? 1 - ((bgElapsed - 600) / 200) * 0.4
           : 0;
   const dotScale =
-    phase === 'expanding' ? 1 + clamp(elapsed / 400, 0, 1) * 6.5 : 1;
+    phase === 'expanding' ? 1 + clamp(bgElapsed / 400, 0, 1) * 6.5 : 1;
   const dotBrightness =
     phase === 'idle'
       ? 0.75 + Math.sin((elapsed / TUNING.INTRO_PULSE_MS) * Math.PI * 2) * 0.25
       : 1;
 
-  const previewOpacity = clamp((elapsed - 1800) / 400, 0, 1);
+  const previewOpacity = clamp((bgElapsed - 1800) / 400, 0, 1);
   const genesisOpacity =
-    phase === 'expanding' && elapsed > 520 && elapsed < 1550
-      ? elapsed < 760
-        ? clamp((elapsed - 520) / 240, 0, 1)
-        : clamp(1 - (elapsed - 1260) / 290, 0, 1)
+    phase === 'expanding' && bgElapsed > 520 && bgElapsed < 1550
+      ? bgElapsed < 760
+        ? clamp((bgElapsed - 520) / 240, 0, 1)
+        : clamp(1 - (bgElapsed - 1260) / 290, 0, 1)
       : 0;
 
   const beginBigBang = () => {
     onUnlockAudio();
-    onPlayBigBang();
     setElapsed(0);
-    setPhase('expanding');
+    setPhase('collapsing');
   };
 
   return (
