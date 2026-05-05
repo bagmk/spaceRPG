@@ -5,6 +5,8 @@ import type { GameAction } from '../game/reducer';
 import { SHOP_ITEMS } from '../game/shop/items';
 import type { GameState, ShopBoost } from '../game/types';
 
+const SP_ITEM_IDS = new Set(['sp_pack_small', 'sp_pack_large']);
+
 interface ShopPanelProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -81,7 +83,7 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
 
         <div className="shop-items">
           {SHOP_ITEMS.map((item) => (
-            <article className="shop-card" key={item.id}>
+            <article className={`shop-card ${SP_ITEM_IDS.has(item.id) ? 'shop-card-sp' : ''}`} key={item.id}>
               <div>
                 <strong>{item.label}</strong>
                 <p>{item.description}</p>
@@ -102,8 +104,9 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
 
         <div className="shop-summary">
           <strong>Active boosts</strong>
-          <span>{timeRemaining ? `Time x${formatWhole(timeMult)} - ${timeRemaining}` : 'Time boost inactive'}</span>
-          <span>{quantaRemaining ? `Quanta x${formatWhole(quantaMult)} - ${quantaRemaining}` : 'Quanta boost inactive'}</span>
+          <span>{timeRemaining ? `Time x${formatWhole(timeMult)} — ${timeRemaining}` : 'Time boost inactive'}</span>
+          <span>{quantaRemaining ? `Quanta x${formatWhole(quantaMult)} — ${quantaRemaining}` : 'Quanta boost inactive'}</span>
+          <span className="shop-sp-balance">{`SP balance: ${formatWhole(state.skillPoints)}`}</span>
         </div>
 
         <div className="shop-total">{`Total spent: ${formatPrice(state.totalShopSpentUSD)} (test mode)`}</div>

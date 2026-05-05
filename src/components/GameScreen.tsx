@@ -3,7 +3,9 @@ import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
   formatCosmicTime,
+  formatCosmicTimeSigFigs,
   formatGameNumber,
+  formatGameNumberShort,
   formatRate,
   formatWhole,
   canCondense as canCondenseNow,
@@ -535,11 +537,14 @@ export function GameScreen({
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
           <div className="hud-stage-title">{`Stage ${stage.id}: ${stage.name}`}</div>
-          <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumber(effectiveThreshold)}`}</div>
+          <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumberShort(effectiveThreshold)}`}</div>
           <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
             <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, progress01 * 100)}%` }} />
           </div>
-          <div className="hud-cosmic-time">{formatCosmicTime(displayedCosmicClock)}</div>
+          <div className="hud-cosmic-time">
+            {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
+            <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(stage.cosmicTimeSec, 2)}`}</span>
+          </div>
           <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
             <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, timeProgress01 * 100)}%` }} />
           </div>
@@ -635,14 +640,14 @@ export function GameScreen({
               <SkillsButton highlighted={hasAffordableSkill} onClick={() => setSkillsOpen(true)} />
             </div>
           ) : null}
-          {canShowShop ? (
-            <div ref={shopAnchorRef}>
+          <div ref={shopAnchorRef} style={!canShowShop ? { width: 56, height: 56, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
+            {canShowShop ? (
               <ShopButton
                 highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}
                 onClick={() => setShopOpen(true)}
               />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
@@ -710,7 +715,13 @@ export function GameScreen({
                 ? shopAnchorRef
                 : resourceAnchorRef
           }
-          position={activeTutorialBubble.anchor === 'resource' ? 'bottom' : 'top'}
+          position={
+            activeTutorialBubble.anchor === 'resource'
+              ? 'bottom'
+              : activeTutorialBubble.anchor === 'skills' || activeTutorialBubble.anchor === 'shop'
+                ? 'left'
+                : 'top'
+          }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
           onCta={

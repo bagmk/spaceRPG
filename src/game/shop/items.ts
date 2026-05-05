@@ -48,6 +48,26 @@ export const SHOP_ITEMS: ShopItem[] = [
       ],
     }),
   },
+  {
+    id: 'sp_pack_small',
+    label: 'SP Pack',
+    description: '+5 Skill Points. Use in the skill tree cross-nodes.',
+    priceUSD: 0.99,
+    applyEffect: (state) => ({
+      ...state,
+      skillPoints: state.skillPoints + 5,
+    }),
+  },
+  {
+    id: 'sp_pack_large',
+    label: 'SP Mega Pack',
+    description: '+20 Skill Points. Supercharge your entire skill tree.',
+    priceUSD: 2.99,
+    applyEffect: (state) => ({
+      ...state,
+      skillPoints: state.skillPoints + 20,
+    }),
+  },
 ];
 
 export function findShopItem(itemId: string): ShopItem | undefined {

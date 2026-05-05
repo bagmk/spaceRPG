@@ -21,7 +21,46 @@ export function getClickPower(mods: Modifiers): number {
 }
 
 export function formatGameNumber(value: number): string {
-  return formatWhole(value);
+  if (!Number.isFinite(value) || value < 0) return '0';
+  const whole = Math.floor(value);
+  if (whole < 1_000_000) return whole.toLocaleString('en-US');
+  if (whole < 1e9) return `${(whole / 1e6).toFixed(2)}M`;
+  if (whole < 1e12) return `${(whole / 1e9).toFixed(2)}B`;
+  if (whole < 1e15) return `${(whole / 1e12).toFixed(2)}T`;
+  // 6 significant figures in scientific notation
+  const exp = Math.floor(Math.log10(whole));
+  const mantissa = whole / Math.pow(10, exp);
+  return `${mantissa.toFixed(5)}e${exp}`;
+}
+
+/** Short form: 2 significant figures — for thresholds / totals where space is tight. */
+export function formatGameNumberShort(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '0';
+  const whole = Math.floor(value);
+  if (whole < 1_000_000) return whole.toLocaleString('en-US');
+  if (whole < 1e9) return `${(whole / 1e6).toFixed(1)}M`;
+  if (whole < 1e12) return `${(whole / 1e9).toFixed(1)}B`;
+  if (whole < 1e15) return `${(whole / 1e12).toFixed(1)}T`;
+  const exp = Math.floor(Math.log10(whole));
+  const mantissa = whole / Math.pow(10, exp);
+  return `${mantissa.toFixed(1)}e${exp}`;
+}
+
+/**
+ * Cosmic time with N significant figures, keeping the unit (yr/Myr/Gyr/Tyr).
+ * Default: 6 sig figs. Use sigFigs=2 for the threshold display.
+ */
+export function formatCosmicTimeSigFigs(seconds: number, sigFigs = 6): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0s';
+  if (seconds < SECONDS_PER_YEAR) {
+    // Short timescales — just use the original formatCosmicTime
+    return formatCosmicTime(seconds);
+  }
+  const years = seconds / SECONDS_PER_YEAR;
+  if (years < 1e6) return `${years.toPrecision(sigFigs)}yr`;
+  if (years < 1e9) return `${(years / 1e6).toPrecision(sigFigs)}Myr`;
+  if (years < 1e12) return `${(years / 1e9).toPrecision(sigFigs)}Gyr`;
+  return `${(years / 1e12).toPrecision(sigFigs)}Tyr`;
 }
 
 export function getAutoRate(mods: Modifiers): number {

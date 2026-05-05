@@ -1,5 +1,5 @@
 export type SkillTreeId = 'click' | 'auto' | 'crit' | 'time';
-export type SkillTier = 5 | 10 | 15 | 20 | 25 | 30;
+export type SkillTier = 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45;
 
 export interface SkillTrackState {
   level: number;

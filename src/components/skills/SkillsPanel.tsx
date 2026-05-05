@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Dispatch, MouseEvent as ReactMouseEvent } from 'react';
+import type { Dispatch, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import {
   CROSS_NODES,
   SKILL_TREES,
@@ -18,7 +18,7 @@ interface SkillsPanelProps {
   onClose: () => void;
 }
 
-type MilestoneLevel = 5 | 10 | 15 | 20 | 25 | 30;
+type MilestoneLevel = 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45;
 
 type Selection =
   | { kind: 'track'; trackId: SkillTreeId; level: number }
@@ -31,8 +31,20 @@ interface PopupState {
   y: number;
 }
 
-const MILESTONES: MilestoneLevel[] = [5, 10, 15, 20, 25, 30];
-const DISPLAY_MAX_LEVEL = 30;
+const MILESTONES: MilestoneLevel[] = [5, 10, 15, 20, 25, 30, 35, 40, 45];
+const DISPLAY_MAX_LEVEL = 45;
+const WINDOW_SIZE = 9;
+
+function getWindowLevels(currentLevel: number): number[] {
+  const center = Math.max(1, Math.min(DISPLAY_MAX_LEVEL, currentLevel));
+  const half = Math.floor(WINDOW_SIZE / 2);
+  let lo = center - half;
+  let hi = lo + WINDOW_SIZE - 1;
+  if (lo < 1) { lo = 1; hi = Math.min(DISPLAY_MAX_LEVEL, WINDOW_SIZE); }
+  if (hi > DISPLAY_MAX_LEVEL) { hi = DISPLAY_MAX_LEVEL; lo = Math.max(1, hi - WINDOW_SIZE + 1); }
+  // return ascending order (lo at top index 0)
+  return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+}
 
 const TRACK_SYMBOLS: Record<SkillTreeId, string> = {
   click: 'F',
@@ -40,6 +52,32 @@ const TRACK_SYMBOLS: Record<SkillTreeId, string> = {
   auto: 'W',
   time: 'T',
 };
+
+function getStatPreview(treeId: SkillTreeId, currentLevel: number): string {
+  const next = currentLevel + 1;
+  switch (treeId) {
+    case 'click': {
+      const cur = formatGameNumber(Math.pow(2, currentLevel));
+      const nxt = formatGameNumber(Math.pow(2, next));
+      return `Click: ×${cur} → ×${nxt}`;
+    }
+    case 'auto': {
+      const cur = currentLevel <= 0 ? '0' : formatGameNumber(Math.pow(2, currentLevel));
+      const nxt = formatGameNumber(Math.pow(2, next));
+      return `Auto: ${cur}/s → ${nxt}/s`;
+    }
+    case 'crit': {
+      const curC = (currentLevel * 1.5).toFixed(1);
+      const nxtC = (next * 1.5).toFixed(1);
+      const curM = (1.5 + currentLevel * 0.5).toFixed(1);
+      const nxtM = (1.5 + next * 0.5).toFixed(1);
+      return `Crit: ${curC}% → ${nxtC}%  ×${curM} → ×${nxtM}`;
+    }
+    case 'time': {
+      return `Time: 10^${currentLevel} → 10^${next} (/s)`;
+    }
+  }
+}
 
 function getTrackLockedReason(state: GameState, trackId: SkillTreeId, targetLevel: number): string | null {
   const tree = findTree(trackId);
@@ -95,6 +133,9 @@ function getCrossNodeForSlot(trackId: SkillTreeId, tier: MilestoneLevel): CrossN
 }
 
 function getSlotUnlockStage(tier: MilestoneLevel): number {
+  if (tier === 45) return 16;
+  if (tier === 40) return 16;
+  if (tier === 35) return 16;
   if (tier === 30) return 16;
   if (tier === 25) return 15;
   if (tier === 20) return 14;
@@ -103,52 +144,22 @@ function getSlotUnlockStage(tier: MilestoneLevel): number {
   return 5;
 }
 
-function CrossNodeConnections({ state, visibleTier }: { state: GameState; visibleTier: number }) {
-  const trackOrder = SKILL_TREES.map((tree) => tree.id);
-  const paths = CROSS_NODES.flatMap((node) => {
-    if (node.tier > visibleTier) return [];
-    const reqs = Object.entries(node.requires) as Array<[SkillTreeId, number]>;
-    if (reqs.length < 2) return [];
-    const metCount = reqs.filter(([trackId, level]) => state.skills[trackId].level >= level).length;
-    const owned = state.skills.ownedCrossNodes.includes(node.id);
-    const className = owned || metCount === reqs.length ? 'met' : metCount > 0 ? 'partial' : 'locked';
-    const points = reqs.map(([trackId, level]) => {
-      const col = trackOrder.indexOf(trackId);
-      const x = ((col + 0.5) / trackOrder.length) * 100;
-      const y = 54 + (DISPLAY_MAX_LEVEL - Math.min(DISPLAY_MAX_LEVEL, level)) * 39 + 16;
-      return { x, y };
-    });
-    const source = points[0];
-    return points.slice(1).map((target, index) => {
-      const midY = Math.min(source.y, target.y) - 22 - index * 6;
-      return {
-        id: `${node.id}-${index}`,
-        className,
-        d: `M ${source.x} ${source.y} C ${source.x} ${midY}, ${target.x} ${midY}, ${target.x} ${target.y}`,
-      };
-    });
-  });
-
-  return (
-    <svg className="cross-connections" viewBox="0 0 100 1240" preserveAspectRatio="none" aria-hidden="true">
-      {paths.map((path) => (
-        <path key={path.id} className={path.className} d={path.d} />
-      ))}
-    </svg>
-  );
-}
 
 function TrackColumn({
   treeId,
   state,
+  dispatch,
   visibleTier,
   selection,
+  scrollOffset,
   onSelect,
 }: {
   treeId: SkillTreeId;
   state: GameState;
+  dispatch: Dispatch<GameAction>;
   visibleTier: number;
   selection: Selection;
+  scrollOffset: number;
   onSelect: (selection: Selection, event: ReactMouseEvent<HTMLElement>) => void;
 }) {
   const tree = findTree(treeId)!;
@@ -161,19 +172,24 @@ function TrackColumn({
       title={unlocked ? tree.label : `Unlocks at Stage ${tree.unlockStageId}`}
     >
       <div className="skill-track-head">
-        <span className="skill-track-symbol" style={{ color: tree.color }}>
-          {TRACK_SYMBOLS[treeId]}
-        </span>
-        <span>{`Lv ${level}`}</span>
+        <div className="skill-track-name" style={{ color: unlocked ? tree.color : undefined }}>
+          {tree.label}
+        </div>
+        <div className="skill-track-subhead">
+          <span className="skill-track-badge" style={{ color: unlocked ? tree.color : undefined }}>
+            ({TRACK_SYMBOLS[treeId]})
+          </span>
+          <span>{`Lv ${level}`}</span>
+        </div>
       </div>
       <div className="skill-track-grid" aria-label={`${tree.label} levels`}>
-        {Array.from({ length: DISPLAY_MAX_LEVEL }, (_, index) => {
-          const slot = DISPLAY_MAX_LEVEL - index;
+        {getWindowLevels(Math.max(1, level + scrollOffset)).map((slot) => {
           const milestone = MILESTONES.includes(slot as MilestoneLevel)
             ? (slot as MilestoneLevel)
             : null;
           const crossNode = milestone ? getCrossNodeForSlot(treeId, milestone) : null;
-          const isFilled = unlocked && slot <= level;
+          const isCurrent = unlocked && slot === level;
+          const isFilled = unlocked && slot < level;
           const isNext = unlocked && slot === level + 1;
           const selected =
             selection.kind === 'track' &&
@@ -192,7 +208,7 @@ function TrackColumn({
             <div key={slot} className={`skill-row ${milestone ? 'milestone-row' : ''}`}>
               <button
                 type="button"
-                className={`skill-cell ${isFilled ? 'filled' : isNext ? 'next' : 'future'} ${
+                className={`skill-cell ${isCurrent ? 'current' : isFilled ? 'filled' : isNext ? 'next' : 'future'} ${
                   selected ? 'selected' : ''
                 }`}
                 disabled={!unlocked}
@@ -222,6 +238,16 @@ function TrackColumn({
           );
         })}
       </div>
+      {unlocked && level < tree.rootMaxLevel ? (
+        <button
+          type="button"
+          className={`track-upgrade-btn ${getTrackLockedReason(state, treeId, level + 1) === null ? 'affordable' : ''}`}
+          disabled={getTrackLockedReason(state, treeId, level + 1) !== null}
+          onClick={() => dispatch({ type: 'BUY_TRACK_LEVEL', trackId: treeId })}
+        >
+          ↑ Lv {level + 1}
+        </button>
+      ) : null}
       {!unlocked ? <div className="skill-track-lock">Unlocks Stage {tree.unlockStageId}</div> : null}
     </div>
   );
@@ -251,8 +277,27 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ startY: number; startOffset: number } | null>(null);
   const visibleTier = getVisibleCrossTier(state.stageIdx + 1);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const dy = e.clientY - dragRef.current.startY;
+      // drag up (dy < 0) → see higher levels; drag down → lower levels
+      const delta = Math.round(-dy / 30);
+      setScrollOffset(Math.max(-80, Math.min(80, dragRef.current.startOffset + delta)));
+    };
+    const onMouseUp = () => { dragRef.current = null; };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -285,9 +330,8 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
   }, [state.tutorialFlags.skill_tree_intro, state.universeCount]);
 
   const summary = useMemo(
-    () =>
-      `Quanta ${formatGameNumber(state.quanta)}   SP ${formatWhole(state.skillPoints)}   Mass ${formatGameNumber(state.condensedMass)}`,
-    [state.condensedMass, state.quanta, state.skillPoints],
+    () => `Quanta ${formatGameNumber(state.quanta)}   SP ${formatWhole(state.skillPoints)}`,
+    [state.quanta, state.skillPoints],
   );
 
   const selectedTree = selection.kind === 'track' ? findTree(selection.trackId)! : null;
@@ -317,8 +361,8 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
   };
 
   let heading = 'Select a node';
-  let previewText = '';
   let costLine = '';
+  let statPreview = '';
 
   if (selection.kind === 'track' && selectedTree) {
     const currentLevel = state.skills[selection.trackId].level;
@@ -326,27 +370,24 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     const targetLevel = selection.level;
     heading =
       targetLevel <= currentLevel
-        ? `${selectedTree.label} — Lv ${targetLevel}`
-        : `${selectedTree.label} — Lv ${currentLevel} -> ${nextLevel}`;
+        ? `Lv ${targetLevel} — owned`
+        : `→ Lv ${nextLevel}`;
     costLine =
       targetLevel === nextLevel
         ? `Cost: ${formatGameNumber(Math.ceil(selectedTree.rootCostCurve(nextLevel)))} quanta`
         : targetLevel <= currentLevel
           ? 'Already owned'
           : `Requires Lv ${currentLevel + 1} first`;
-    previewText =
-      selectedTree.milestones[targetLevel]?.desc ??
-      `${selectedTree.label} grows stronger at Lv ${targetLevel}.`;
+    if (targetLevel === nextLevel) {
+      statPreview = getStatPreview(selection.trackId, currentLevel);
+    }
   } else if (selection.kind === 'cross' && selectedCross) {
     heading = selectedCross.label;
     costLine = `Cost: ${formatWhole(selectedCross.spCost)} SP`;
-    previewText = selectedCross.description;
+    statPreview = selectedCross.description;
   } else if (selection.kind === 'crossSlot' && selectedSlotTree) {
-    heading = `${selectedSlotTree.label} — Lv ${selection.tier} cross slot`;
+    heading = `Lv ${selection.tier} milestone slot`;
     costLine = `Unlocks at Stage ${getSlotUnlockStage(selection.tier)}`;
-    previewText =
-      selectedSlotTree.milestones[selection.tier]?.desc ??
-      'This milestone slot is reserved for a future cross-node.';
   }
 
   const tutorialSteps = [
@@ -356,7 +397,7 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     },
     {
       label: 'Track levels',
-      body: '각 트랙은 1부터 30까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
+      body: '각 트랙은 1부터 45까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
     },
     {
       label: 'Milestones',
@@ -384,13 +425,9 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     });
   };
 
-  const popupBelow = popup ? popup.y < window.innerHeight * 0.45 : false;
-  const popupLeft = popup ? Math.max(8, Math.min(window.innerWidth - 230, popup.x - 110)) : 0;
-  const popupTop = popup
-    ? popupBelow
-      ? Math.min(window.innerHeight - 160, popup.y + 10)
-      : Math.max(8, popup.y - 148)
-    : 0;
+  // Popup should appear to the left of the click (drawer is on the right)
+  const popupLeft = popup ? Math.max(8, Math.min(window.innerWidth - 230, popup.x - 240)) : 0;
+  const popupTop = popup ? Math.max(8, Math.min(window.innerHeight - 180, popup.y - 60)) : 0;
 
   return (
     <div className="skills-overlay" onClick={onClose} role="presentation">
@@ -422,36 +459,41 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
         <div className="skills-meta">{summary}</div>
 
         <div className="skills-graph unified">
-          <CrossNodeConnections state={state} visibleTier={visibleTier} />
-          <div className="skills-track-row">
+          <div
+          className="skills-track-row"
+          style={{ cursor: 'grab' }}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('button')) return;
+            dragRef.current = { startY: e.clientY, startOffset: scrollOffset };
+            e.preventDefault();
+          }}
+          onTouchStart={(e: ReactTouchEvent<HTMLDivElement>) => {
+            if ((e.target as HTMLElement).closest('button')) return;
+            dragRef.current = { startY: e.touches[0].clientY, startOffset: scrollOffset };
+          }}
+          onTouchMove={(e: ReactTouchEvent<HTMLDivElement>) => {
+            if (!dragRef.current) return;
+            const dy = e.touches[0].clientY - dragRef.current.startY;
+            const delta = Math.round(-dy / 30);
+            setScrollOffset(Math.max(-80, Math.min(80, dragRef.current.startOffset + delta)));
+            e.preventDefault();
+          }}
+          onTouchEnd={() => { dragRef.current = null; }}
+        >
             {SKILL_TREES.map((tree) => (
               <TrackColumn
                 key={tree.id}
                 treeId={tree.id}
                 state={state}
+                dispatch={dispatch}
                 visibleTier={visibleTier}
                 selection={selection}
+                scrollOffset={scrollOffset}
                 onSelect={selectWithPopup}
               />
             ))}
           </div>
         </div>
-
-        {popup ? (
-        <div
-          ref={popupRef}
-          className={`skills-detail skill-popup ${popupBelow ? 'below' : 'above'}`}
-          style={{ left: popupLeft, top: popupTop }}
-        >
-          <strong>{heading}</strong>
-          <div className="skills-detail-line">{costLine}</div>
-          {previewText ? <div className="skill-popup-after">{`After: ${previewText}`}</div> : null}
-          {lockedReason ? <div className="skills-locked-reason">{lockedReason}</div> : null}
-          <button type="button" className="q-continue skills-buy" disabled={!canBuy} onClick={buy}>
-            Buy
-          </button>
-        </div>
-        ) : null}
 
         {tutorialActive ? (
           <div className="skills-walkthrough" role="dialog" aria-live="polite">
@@ -480,6 +522,23 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
           </div>
         ) : null}
       </aside>
+
+      {popup ? (
+        <div
+          ref={popupRef}
+          className="skills-detail skill-popup above"
+          style={{ left: popupLeft, top: popupTop }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <strong>{heading}</strong>
+          <div className="skills-detail-line">{costLine}</div>
+          {statPreview ? <div className="skill-stat-preview">{statPreview}</div> : null}
+          {lockedReason ? <div className="skills-locked-reason">{lockedReason}</div> : null}
+          <button type="button" className="q-continue skills-buy" disabled={!canBuy} onClick={buy}>
+            UPGRADE
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
