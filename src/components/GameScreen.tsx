@@ -42,8 +42,9 @@ import { BounceEnding } from './endings/BounceEnding';
 import { HeatDeathEnding } from './endings/HeatDeathEnding';
 import { VacuumDecayEnding } from './endings/VacuumDecayEnding';
 import { CROSS_NODES, SKILL_TREES, getVisibleCrossTier } from '../game/skills/definitions';
-import { ALMANAC } from '../game/almanac';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
+import { StageLogToast } from './StageLogToast';
+import { AlmanacOverlay } from './AlmanacOverlay';
 
 interface FloatingEntry {
   id: number;
@@ -628,6 +629,7 @@ export function GameScreen({
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={stage.id} />
         <ActiveBoostHud boosts={state.shopBoosts} />
+        <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} />
         {floatingEntries.map((entry) => (
           <FloatingNumber
             key={entry.id}
@@ -668,32 +670,11 @@ export function GameScreen({
       ) : null}
 
       {almanacOpen ? (
-        <div className="overlay-backdrop" role="dialog" aria-modal="true">
-          <div className="overlay-card">
-            <div className="q-stage">Cosmic Almanac</div>
-            <h2>{ALMANAC[stage.id]?.title ?? stage.name}</h2>
-            <p className="resource-subhead">{ALMANAC[stage.id]?.short}</p>
-            <p>{ALMANAC[stage.id]?.body ?? stage.quote}</p>
-            {ALMANAC[stage.id]?.uncertaintyNote ? (
-              <p className="almanac-note">{`Note: ${ALMANAC[stage.id]?.uncertaintyNote}`}</p>
-            ) : null}
-            {ALMANAC[stage.id]?.cosmicEra ? (
-              <div className="almanac-era">
-                <div className="q-stage">Era Info</div>
-                <div>{`Time: ${ALMANAC[stage.id].cosmicEra.timeRange}`}</div>
-                <div>{`Temp: ${ALMANAC[stage.id].cosmicEra.temperature}`}</div>
-                <div>{`Key: ${ALMANAC[stage.id].cosmicEra.keyParticles.join(', ')}`}</div>
-                <div>{`Events: ${ALMANAC[stage.id].cosmicEra.keyEvents.join(', ')}`}</div>
-                <p>{ALMANAC[stage.id].cosmicEra.realWorldScale}</p>
-              </div>
-            ) : null}
-            <p className="resource-subhead">{ALMANAC[stage.id]?.funFact}</p>
-            <p className="resource-subhead">{`Click ${formatGameNumber(clickPower)} · Auto ${formatRate(autoRate)} · Time x${Math.max(1, Math.floor(timeMult))}`}</p>
-            <button className="q-continue" type="button" onClick={() => setAlmanacOpen(false)}>
-              CLOSE
-            </button>
-          </div>
-        </div>
+        <AlmanacOverlay
+          currentStageId={stage.id}
+          progressPercent={Math.floor(progress01 * 100)}
+          onClose={() => setAlmanacOpen(false)}
+        />
       ) : null}
 
       {activeTutorialBubble ? (
