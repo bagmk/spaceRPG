@@ -1146,7 +1146,10 @@ export const ParticleField = memo(function ParticleField({
     const motionScale = anomaly === 'high_energy' ? 1.5 : 1;
     const frameDt = dt * motionScale;
     const progress = getProgress(quanta, effectiveThreshold);
-    const visualProgress = getCosmicStageProgress(stage, cosmicClockSec);
+    // V9: visual progress requires BOTH quanta and cosmic time to advance
+    const quantaProgress = progress;
+    const timeProgress = getCosmicStageProgress(stage, cosmicClockSec);
+    const visualProgress = Math.min(quantaProgress, timeProgress);
     const cx = width / 2;
     const cy = height / 2;
     const coreRadius = TUNING.CORE_BASE_RADIUS + progress * TUNING.CORE_PROGRESS_RADIUS;
@@ -1388,19 +1391,6 @@ export const ParticleField = memo(function ParticleField({
 
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    if (transitionActive && transitionElapsed !== null) {
-      const zoomT = Math.min(1, transitionElapsed / TUNING.STAGE_TRANSITION_REVEAL_MS);
-      const eased = 1 - Math.pow(1 - zoomT, 3);
-      const scale =
-        stage.zoomDirection === 'out'
-          ? 1 - eased * 0.7
-          : stage.zoomDirection === 'in'
-            ? 1 + eased * 4
-            : 1;
-      ctx.translate(width / 2, height / 2);
-      ctx.scale(scale, scale);
-      ctx.translate(-width / 2, -height / 2);
-    }
     drawStars(ctx, world.stars, world.coreVX, world.coreVY, stage, width, height, now);
     drawWake(ctx, world.wakeTrails as WakeTrail[]);
     drawCore({

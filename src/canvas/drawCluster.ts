@@ -774,70 +774,206 @@ function drawSolarEarth(
 
 
 
+// V9 Realistic Earth: Pangaea → continental drift → modern Earth
+// Continent specs: [pangaea dx, pangaea dy, modern dx, modern dy, w, h, rotation]
+// All in fraction of sphere radius
+const CONTINENTS = [
+  { p: [0.05, -0.04], m: [0.28, -0.20], w: 0.50, h: 0.25, a: 0.15 }, // Eurasia
+  { p: [0.07, 0.15], m: [0.24, 0.24], w: 0.18, h: 0.35, a: 0.06 },   // Africa
+  { p: [-0.04, -0.06], m: [-0.38, -0.14], w: 0.30, h: 0.27, a: -0.18 }, // N.America
+  { p: [0.02, 0.17], m: [-0.26, 0.30], w: 0.16, h: 0.32, a: 0.08 },  // S.America
+  { p: [0.06, 0.28], m: [0.46, 0.36], w: 0.18, h: 0.12, a: -0.08 },  // Australia
+  { p: [0.00, 0.52], m: [0.00, 0.57], w: 0.44, h: 0.11, a: 0.00 },   // Antarctica
+] as const;
+
 function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
   const radius = TUNING.LIFE_SURFACE_R;
-  const rotation = cluster.earthRotation ?? 0;
   const t = now / 1000;
 
-  // V9: layered Earth evolution
+  // ── Phase 1: Molten (0–10%) ─────────────────────────────────────────────
   if (progress < 0.10) {
-    // Molten: black rock + lava cracks + occasional meteor sparks
     drawLavaPlanet(ctx, cx, cy, radius, 0.7 + rangeT(progress, 0, 0.10) * 0.3);
     for (let i = 0; i < 5; i += 1) {
       const a = t * 0.8 + i * 1.26;
       ctx.fillStyle = hexToRgba('#ffcc44', 0.5);
       ctx.beginPath();
-      ctx.arc(cx + Math.cos(a) * (radius + 10 + i * 4), cy + Math.sin(a) * (radius + 6 + i * 3), 1.5, 0, Math.PI * 2);
+      ctx.arc(cx + Math.cos(a) * (radius + 8 + i * 4), cy + Math.sin(a) * (radius + 5 + i * 3), 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
-  } else if (progress < 0.20) {
-    // Steam: lava fades, gray cloud layer rises
+    drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
+    return;
+  }
+
+  // ── Phase 2: Steam/Cooling (10–20%) ────────────────────────────────────
+  if (progress < 0.20) {
     const steamT = rangeT(progress, 0.10, 0.20);
-    drawLavaPlanet(ctx, cx, cy, radius, 0.7 - steamT * 0.5);
-    ctx.fillStyle = hexToRgba('#c8d4df', 0.38 * steamT);
+    drawLavaPlanet(ctx, cx, cy, radius, 0.7 - steamT * 0.55);
+    ctx.fillStyle = hexToRgba('#b8c8d8', 0.42 * steamT);
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.88, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius * 0.9, 0, Math.PI * 2);
     ctx.fill();
-  } else if (progress < 0.32) {
-    drawWaterPlanet(ctx, cx, cy, radius, rangeT(progress, 0.20, 0.32));
-  } else if (progress < 0.45) {
-    drawContinentPlanet(ctx, cx, cy, radius, rangeT(progress, 0.32, 0.45));
-  } else if (progress < 0.58) {
-    drawPlantPlanet(ctx, cx, cy, radius, rangeT(progress, 0.45, 0.58));
-  } else if (progress < 0.72) {
-    drawLifePlanet(ctx, cx, cy, radius, rangeT(progress, 0.58, 0.72), t);
-  } else if (progress < 0.82) {
-    drawCityPlanet(ctx, cx, cy, radius, rangeT(progress, 0.72, 0.82), now / 900);
-  } else {
-    drawCityPlanet(ctx, cx, cy, radius, 1, now / 900);
+    drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
+    return;
   }
 
-  // Vegetation overlay (appears at 32%)
-  if (progress >= 0.32) {
-    const biomass = Math.min(0.62, easeIO(rangeT(progress, 0.32, 0.72)) * 0.62);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotation * 0.35);
-    ctx.fillStyle = hexToRgba('#46d878', biomass);
-    ctx.beginPath();
-    ctx.ellipse(-radius * 0.24, -radius * 0.1, radius * 0.48, radius * 0.18, -0.45, 0, Math.PI * 2);
-    ctx.ellipse(radius * 0.28, radius * 0.16, radius * 0.36, radius * 0.16, 0.35, 0, Math.PI * 2);
-    ctx.ellipse(radius * 0.04, -radius * 0.38, radius * 0.24, radius * 0.1, 0.12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  // ── Phase 3–8: Realistic Earth (20–100%) ───────────────────────────────
+  // Sub-progress values
+  const driftT = easeIO(rangeT(progress, 0.20, 0.75));   // Pangaea → modern continents
+  const vegT   = easeIO(rangeT(progress, 0.45, 0.72));   // vegetation spread
+  const civT   = easeIO(rangeT(progress, 0.72, 0.82));   // civilisation / city lights
+  const iceT   = easeIO(rangeT(progress, 0.22, 0.45));   // ice caps appear
 
-  // Atmosphere rim
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
-  ctx.lineWidth = 1;
+  // ── Sphere clip ──────────────────────────────────────────────────────────
+  ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, radius + 3, -0.45, Math.PI * 1.25);
-  ctx.stroke();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.clip();
 
-  // Surface motes
+  // Ocean base ─────────────────────────────────────────────────────────────
+  const oceanGrad = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, 1, cx, cy, radius * 1.08);
+  oceanGrad.addColorStop(0, '#2086c2');
+  oceanGrad.addColorStop(0.5, '#0d5a8a');
+  oceanGrad.addColorStop(1, '#072c4a');
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+
+  // Continents with Pangaea → drift ─────────────────────────────────────────
+  CONTINENTS.forEach((c, i) => {
+    const dx = c.p[0] + (c.m[0] - c.p[0]) * driftT;
+    const dy = c.p[1] + (c.m[1] - c.p[1]) * driftT;
+    const x = cx + dx * radius;
+    const y = cy + dy * radius;
+    const w = c.w * radius;
+    const h = c.h * radius;
+
+    // Base rock — warm brown for Pangaea, cooler as they drift
+    const baseHeat = 1 - driftT * 0.55;
+    ctx.fillStyle = `rgb(${Math.round(125 + baseHeat * 30)},${Math.round(80 + baseHeat * 12)},${Math.round(48 + baseHeat * 4)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, c.a, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Interior shadow variation
+    ctx.fillStyle = hexToRgba('#4a2e14', 0.28);
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.12, y + h * 0.08, w * 0.52, h * 0.55, c.a + 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Desert/arid band (after drift stabilises)
+    if (driftT > 0.45 && i < 2) {
+      ctx.fillStyle = hexToRgba('#c4975a', 0.38);
+      ctx.beginPath();
+      ctx.ellipse(x - w * 0.04, y + h * 0.06, w * 0.3, h * 0.22, c.a + 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Vegetation — does not appear on Antarctica (i=5)
+    if (vegT > 0 && i < 5) {
+      const vegBias = [0.62, 0.42, 0.72, 0.82, 0.22][i] ?? 0.5;
+      ctx.fillStyle = hexToRgba('#2d7030', vegT * vegBias * 0.68);
+      ctx.beginPath();
+      ctx.ellipse(x, y, w * 0.74, h * 0.68, c.a, 0, Math.PI * 2);
+      ctx.fill();
+      // Tropical forest pocket (denser green near equator)
+      if (vegT > 0.45 && i < 4) {
+        ctx.fillStyle = hexToRgba('#1d5522', vegT * 0.38);
+        ctx.beginPath();
+        ctx.ellipse(x - w * 0.14, y + h * 0.14, w * 0.24, h * 0.18, c.a - 0.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  // Ice caps ────────────────────────────────────────────────────────────────
+  if (iceT > 0.05) {
+    ctx.fillStyle = hexToRgba('#d8eeff', 0.9 * iceT);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - radius * 0.82, radius * 0.30 * iceT, radius * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hexToRgba('#eaf5ff', 0.92 * iceT);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + radius * 0.84, radius * 0.36 * iceT, radius * 0.13, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cloud layer (slowly counter-rotating, always present from 20%+) ─────────
+  const cloudRot = now / 15000;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(cloudRot);
+  ctx.fillStyle = hexToRgba('#ffffff', 0.24);
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.04, -radius * 0.30, radius * 0.50, radius * 0.082, 0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(radius * 0.26, radius * 0.09, radius * 0.36, radius * 0.068, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = hexToRgba('#ffffff', 0.17);
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.22, radius * 0.24, radius * 0.28, radius * 0.062, 0.52, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(radius * 0.05, -radius * 0.64, radius * 0.40, radius * 0.095, 0.0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Civilisation — night-side terminator + city lights ──────────────────────
+  if (civT > 0) {
+    const nightGrad = ctx.createLinearGradient(cx - radius, cy, cx + radius * 0.18, cy);
+    nightGrad.addColorStop(0, hexToRgba('#000000', 0.62));
+    nightGrad.addColorStop(0.58, hexToRgba('#000000', 0.26));
+    nightGrad.addColorStop(1, hexToRgba('#000000', 0));
+    ctx.fillStyle = nightGrad;
+    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+
+    const cities = [
+      { x: -0.38, y: -0.18 }, { x: -0.46, y: 0.08 }, { x: -0.26, y: 0.28 },
+      { x: -0.14, y: -0.29 }, { x: -0.52, y: -0.05 }, { x: -0.22, y: 0.11 },
+      { x: -0.34, y: 0.01 }, { x: -0.42, y: 0.24 },
+    ];
+    cities.forEach(({ x, y }) => {
+      const pulse = 0.82 + Math.sin(now / 1500 + x * 9) * 0.18;
+      ctx.fillStyle = hexToRgba('#ffeaa0', 0.70 * civT * pulse);
+      ctx.beginPath();
+      ctx.arc(cx + x * radius, cy + y * radius, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexToRgba('#ffd060', 0.18 * civT);
+      ctx.beginPath();
+      ctx.arc(cx + x * radius, cy + y * radius, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  ctx.restore(); // end sphere clip ────────────────────────────────────────────
+
+  // Limb darkening (3-D sphere depth)
+  const limb = ctx.createRadialGradient(cx, cy, radius * 0.54, cx, cy, radius);
+  limb.addColorStop(0, hexToRgba('#000000', 0));
+  limb.addColorStop(0.70, hexToRgba('#000000', 0));
+  limb.addColorStop(1, hexToRgba('#000000', 0.65));
+  ctx.fillStyle = limb;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Atmosphere glow (blue rim)
+  const atm = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius * 1.20);
+  atm.addColorStop(0, hexToRgba('#4dc8ff', 0));
+  atm.addColorStop(0.42, hexToRgba('#3aaff0', 0.16));
+  atm.addColorStop(1, hexToRgba('#2288cc', 0));
+  ctx.fillStyle = atm;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 1.20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Specular highlight (top-left)
+  ctx.fillStyle = hexToRgba('#ffffff', 0.08);
+  ctx.beginPath();
+  ctx.ellipse(cx - radius * 0.30, cy - radius * 0.32, radius * 0.30, radius * 0.17, -0.55, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Surface motes (small — gameplay feedback only)
+  const rotation = cluster.earthRotation ?? 0;
   const visible: Array<{ mote: Mote; x: number; y: number; z: number }> = [];
   cluster.motes.forEach((mote) => {
     const lat = mote.surfaceLat ?? 0;
@@ -851,9 +987,9 @@ function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClu
   visible.sort((a, b) => a.z - b.z);
   visible.forEach(({ mote, x, y, z }) => {
     const ageProgress = Math.min(1, mote.age / TUNING.LIFE_FEATURE_GROW_MS);
-    const size = (mote.r * 0.52 + 0.9) * ageProgress * (0.65 + z * 0.35);
+    const size = (mote.r * 0.38 + 0.7) * ageProgress * (0.6 + z * 0.4);
     const color = mote.surfaceKind === 'city' ? '#ffeeaa' : mote.surfaceKind === 'water' ? '#9de8ff' : '#65e88f';
-    ctx.fillStyle = hexToRgba(color, 0.86 * ageProgress * (0.55 + z * 0.45));
+    ctx.fillStyle = hexToRgba(color, 0.55 * ageProgress * (0.5 + z * 0.5));
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
@@ -863,7 +999,6 @@ function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClu
   if (progress >= 0.82) {
     drawEarthSatellites(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.82, 0.90)), now);
   }
-
   // Megastructures (90–97%)
   if (progress >= 0.90) {
     drawEarthMegastructures(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.90, 0.97)), now);
