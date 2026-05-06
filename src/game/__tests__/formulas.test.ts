@@ -7,6 +7,7 @@ import {
   getClickPower,
   getCosmicTimeFillRate,
   getCondensedMassReward,
+  getCritChance,
   getEchoReward,
   getTimeMultiplier,
   getUniverseBoost,
@@ -79,6 +80,10 @@ describe('scaling formulas', () => {
     expect(getAutoRate(modifiers)).toBe(32);      // 2^5
     expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);   // 10^5 unchanged
     expect(getCosmicTimeFillRate(skills.time.level, modifiers)).toBe(1e5); // 10^5 unchanged
+  });
+
+  it('caps expected crit chance at 50 percent', () => {
+    expect(getCritChance(50, 200, defaultModifiers())).toBe(0.5);
   });
 
   it('scales prestige rewards without a hard cap', () => {

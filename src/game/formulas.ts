@@ -101,7 +101,7 @@ export function getComboMult(combo: number, comboCapBonus = 0): number {
 export function getCritChance(critLevel: number, combo: number, mods: Modifiers): number {
   const base = critLevel * 0.015 + mods.critChanceAdd;
   const comboBonus = combo * 0.003;
-  const cap = 0.4 + mods.critChanceCapAdd;
+  const cap = TUNING.CRIT_MAX + mods.critChanceCapAdd;
   return Math.min(cap, base + comboBonus);
 }
 

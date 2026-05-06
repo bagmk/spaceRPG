@@ -6,12 +6,14 @@ import { getActiveModifiers } from '../skills/effects';
 import type { GameState } from '../types';
 
 describe('skills reducer basics', () => {
-  it('uses base-3 and base-3.5 time costs with a 1-quanta first purchase', () => {
+  it('uses manual late costs with a 1-quanta first purchase', () => {
     expect(trackLevelCost('click', 1)).toBe(1);
     expect(trackLevelCost('auto', 5)).toBe(81);   // 3^4
     expect(trackLevelCost('crit', 10)).toBe(19683); // 3^9
+    expect(trackLevelCost('click', 31)).toBe(1e15);
     expect(trackLevelCost('time', 1)).toBe(1);
-    expect(trackLevelCost('time', 5)).toBe(150);  // floor(3.5^4)
+    expect(trackLevelCost('time', 5)).toBe(750);
+    expect(trackLevelCost('time', 13)).toBe(1e20);
   });
 
   it('defines one SP-purchasable cross node for every track milestone', () => {

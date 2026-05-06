@@ -13,8 +13,8 @@
 이번 코드 반영값:
 
 ```ts
-click/auto/crit cost(L) = floor(3 ^ (L - 1))
-time cost(L)            = floor(3.5 ^ (L - 1))
+click/auto/crit cost(L) = 1-30은 floor(3 ^ (L - 1)), 31-50은 수동 고가 테이블
+time cost(L)            = Lv 1-40 수동 테이블
 time rate(L)            = 10 ^ L * timeCrossNodes * apex
 click/auto/crit max     = 50
 time max                = 40
@@ -25,19 +25,25 @@ total SP node budget    = 24 nodes, 48 SP
 핵심 결론:
 - Stage advance에서 `cosmicClockSec` 초과분을 다음 stage로 넘기던 것이 stage 6-9 즉시 time-full 현상의 직접 원인이었다.
 - 그래서 `ADVANCE_STAGE`에서 cosmic clock을 방금 클리어한 stage의 required time으로 clamp한다. 다음 stage는 항상 이전 stage 경계 시간에서 시작한다.
-- `time cost base = 5.25`는 stage 15 부근에서 time level 구매가 막히기 쉬웠다. `3.5`로 되돌려 time Lv 40까지 현실적으로 열었다.
-- `click/auto/crit`은 Lv 50까지, `time`은 Lv 40까지 올릴 수 있다. SP cross-node는 현재 SP budget과 맞게 Lv 30까지 유지한다.
+- `time cost base` 같은 단일 함수는 중반/후반을 동시에 못 맞춘다. Lv 10/12/14/19/30/31+이 열리는 시점을 직접 지정하는 수동 가격표로 교체했다.
+- `click/auto/crit`도 Lv 31 이후는 수동 고가 테이블로 전환했다. cap은 50이지만 40대 후반이 너무 일찍 열려 quanta가 후반 time gate를 다시 뚫지 못하게 막는다.
+- Stage 6-16 threshold는 carry quanta를 전제로 다시 올렸다. stage 시작 즉시 quanta 조건이 이미 완료되는 문제를 줄이고, 시간/콴타가 같이 움직이는 구간을 늘린다.
+- Crit 기대값은 사용자가 지정한 50% 기준과 맞게 cap을 `0.5`로 통일했다.
 
-현재 threshold table을 그대로 둔 빠른 기대값 시뮬레이션 결과:
+`npm run sim:economy` 결과:
 
-| Stage band | Main bottleneck | Notes |
-|---|---|---|
-| 1-3 | quanta | 현재 threshold가 10 CPS 기준으로는 낮아 빠르게 지나감 |
-| 4-6 | time | stage boundary clamp 후 다음 stage 선충전이 사라짐 |
-| 7-13 | mixed | time은 빨라질 수 있지만 다음 stage로 초과분이 carry되지 않음 |
-| 14-16 | time | time Lv 40까지 구매 가능해 stage 15 hard-block을 피함 |
+| Stage | Sim | Q ready | T ready | End levels |
+|---|---:|---:|---:|---|
+| 5 Recombination | 680s | 0s | 680s | C31/A30/R30/T10 |
+| 6 Dark Age | 3,954s | 0s | 3,954s | C32/A32/R32/T12 |
+| 7 First Stars | 1,575s | 1,207s | 1,575s | C33/A33/R33/T12 |
+| 8 Reionization | 5,335s | 2,519s | 4,850s | C35/A35/R35/T12 |
+| 9 Galaxy Formation | 7,750s | 1,980s | 7,750s | C37/A37/R37/T12 |
+| 14 Degenerate Era | 13,936s | 9,744s | 13,915s | C46/A45/R45/T30 |
+| 15 Black Hole Era | 8,648s | 2,924s | 8,648s | C47/A47/R46/T30 |
+| 16 The End | 4,480s | 240s | 4,442s | C49/A49/R49/T33 |
 
-남은 튜닝 포인트: strict `1.7x` stage-time curve로 완전히 맞추려면 threshold table과 late `cosmicTimeSec`를 같이 재생성해야 한다. 이번 패스는 먼저 플레이 중 체감되는 두 문제, 즉 `stage 6-9 time pre-fill`과 `stage 15 time hard-block`을 제거하는 쪽에 집중했다.
+이 패스의 목적은 strict 100h 목표가 아니라 사용자가 직접 지적한 체감 문제 제거다. Stage 6-9는 더 이상 다음 stage 진입 즉시 time-full이 되지 않고, stage 15는 time level 구매가 막혀 수학적으로 불가능해지는 벽을 제거했다. 초반 1-3은 10 CPS + 즉시구매 기준으로 여전히 빠르므로, 초반 연출 시간을 강제하려면 별도 stage minimum pacing이나 stage 1-3 threshold 재생성이 필요하다.
 
 ## 2026-05-04 100시간 리밸런스 초안
 
