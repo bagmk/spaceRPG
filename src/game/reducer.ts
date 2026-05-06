@@ -700,11 +700,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const nextClickRateLog = recordLateStageClickRate(state, action.now);
       const nextStageIdx = state.stageIdx + 1;
       const nextStageId = nextStageIdx + 1;
-      const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, state.cosmicClockSec);
+      const nextCosmicClockSec = stage.cosmicTimeSec;
+      const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, nextCosmicClockSec);
       const nextState = {
         ...state,
         stageIdx: nextStageIdx,
         timeGauge: nextTimeGauge,
+        cosmicClockSec: nextCosmicClockSec,
         combo: 0,
         lastClick: 0,
         pendingCondenseStageIdx: null,

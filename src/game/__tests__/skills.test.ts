@@ -6,12 +6,12 @@ import { getActiveModifiers } from '../skills/effects';
 import type { GameState } from '../types';
 
 describe('skills reducer basics', () => {
-  it('uses base-3 and pricier base-5.25 time costs with a 1-quanta first purchase', () => {
+  it('uses base-3 and base-3.5 time costs with a 1-quanta first purchase', () => {
     expect(trackLevelCost('click', 1)).toBe(1);
     expect(trackLevelCost('auto', 5)).toBe(81);   // 3^4
     expect(trackLevelCost('crit', 10)).toBe(19683); // 3^9
     expect(trackLevelCost('time', 1)).toBe(1);
-    expect(trackLevelCost('time', 5)).toBe(759);  // floor(5.25^4)
+    expect(trackLevelCost('time', 5)).toBe(150);  // floor(3.5^4)
   });
 
   it('defines one SP-purchasable cross node for every track milestone', () => {
@@ -52,21 +52,28 @@ describe('skills reducer basics', () => {
     expect(state.skillPoints).toBe(2);
   });
 
-  it('does not stage-cap root purchases before The End', () => {
+  it('allows deep root purchases before The End without exceeding track max levels', () => {
     const now = Date.now();
     const state: GameState = {
       ...createInitialGameState(now),
       stageIdx: 8,
-      quanta: Number.MAX_SAFE_INTEGER,
+      quanta: 1e30,
       skills: {
         ...createInitialGameState(now).skills,
-        click: { level: 26 },
+        click: { level: 49 },
+        time: { level: 40 },
         unlockedTracks: ['click', 'crit', 'auto', 'time'],
       },
     };
 
     const next = gameReducer(state, { type: 'BUY_TRACK_LEVEL', trackId: 'click' });
-    expect(next.skills.click.level).toBe(27);
+    expect(next.skills.click.level).toBe(50);
+
+    const blockedClick = gameReducer(next, { type: 'BUY_TRACK_LEVEL', trackId: 'click' });
+    expect(blockedClick.skills.click.level).toBe(50);
+
+    const blockedTime = gameReducer(state, { type: 'BUY_TRACK_LEVEL', trackId: 'time' });
+    expect(blockedTime.skills.time.level).toBe(40);
   });
 
   it('enforces node prerequisites and SP costs', () => {

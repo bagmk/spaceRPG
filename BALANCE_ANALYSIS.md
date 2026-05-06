@@ -14,28 +14,30 @@
 
 ```ts
 click/auto/crit cost(L) = floor(3 ^ (L - 1))
-time cost(L)            = floor(5.25 ^ (L - 1))
+time cost(L)            = floor(3.5 ^ (L - 1))
 time rate(L)            = 10 ^ L * timeCrossNodes * apex
-max root level          = 30
+click/auto/crit max     = 50
+time max                = 40
 cross-node tiers        = 5, 10, 15, 20, 25, 30
 total SP node budget    = 24 nodes, 48 SP
 ```
 
 핵심 결론:
-- 기존 `time cost base = 4`는 10 CPS 가정에서 time level이 너무 빨리 올라가 중반 이후 time gauge가 먼저 차는 구간이 많았다.
-- `time cost base = 5.25`는 한 단계 올릴 때 가격 부담을 약 `31%` 더 크게 만들어, time을 완전히 죽이지 않으면서 후반 stage 14-16에서 다시 실질 gate가 되게 한다.
-- `35/40/45` cross-node는 SP 총량과 time max level이 맞지 않아 apex 조건이 흐려졌다. 그래서 root/cross-node 최종 구조를 30으로 닫았다.
+- Stage advance에서 `cosmicClockSec` 초과분을 다음 stage로 넘기던 것이 stage 6-9 즉시 time-full 현상의 직접 원인이었다.
+- 그래서 `ADVANCE_STAGE`에서 cosmic clock을 방금 클리어한 stage의 required time으로 clamp한다. 다음 stage는 항상 이전 stage 경계 시간에서 시작한다.
+- `time cost base = 5.25`는 stage 15 부근에서 time level 구매가 막히기 쉬웠다. `3.5`로 되돌려 time Lv 40까지 현실적으로 열었다.
+- `click/auto/crit`은 Lv 50까지, `time`은 Lv 40까지 올릴 수 있다. SP cross-node는 현재 SP budget과 맞게 Lv 30까지 유지한다.
 
 현재 threshold table을 그대로 둔 빠른 기대값 시뮬레이션 결과:
 
 | Stage band | Main bottleneck | Notes |
 |---|---|---|
 | 1-3 | quanta | 현재 threshold가 10 CPS 기준으로는 낮아 빠르게 지나감 |
-| 4-6 | mixed/time | time base 5.25 적용 후 cosmic gate가 다시 보임 |
-| 7-13 | mostly quanta | time이 선행하지만 이전보다 과잉 폭이 줄어듦 |
-| 14-16 | time | 후반 cosmic gate가 최종 페이싱을 잡음 |
+| 4-6 | time | stage boundary clamp 후 다음 stage 선충전이 사라짐 |
+| 7-13 | mixed | time은 빨라질 수 있지만 다음 stage로 초과분이 carry되지 않음 |
+| 14-16 | time | time Lv 40까지 구매 가능해 stage 15 hard-block을 피함 |
 
-예상 총 진행 시간은 현재 threshold 기준 약 `88h`이며, 최종 예상은 `C30/A30/R30/T30`, cross-node `24/24`다. Strict `1.7x` stage-time curve로 완전히 맞추려면 threshold table과 late `cosmicTimeSec`를 같이 재생성해야 한다. 특히 stage 14-16은 가격만으로 맞추기보다 cosmic gate를 약 `0.4x-0.7x` 범위로 압축하는 쪽이 안정적이다.
+남은 튜닝 포인트: strict `1.7x` stage-time curve로 완전히 맞추려면 threshold table과 late `cosmicTimeSec`를 같이 재생성해야 한다. 이번 패스는 먼저 플레이 중 체감되는 두 문제, 즉 `stage 6-9 time pre-fill`과 `stage 15 time hard-block`을 제거하는 쪽에 집중했다.
 
 ## 2026-05-04 100시간 리밸런스 초안
 

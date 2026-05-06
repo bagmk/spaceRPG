@@ -1941,8 +1941,24 @@ button.stat-header-item {
 
 .skill-track-grid {
   display: flex;
-  flex-direction: column-reverse; /* show level 1 at bottom, current in middle, higher at top */
+  flex-direction: column;
   gap: 3px;
+  max-height: min(54vh, 430px);
+  min-height: 292px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.skill-track-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.skill-track-grid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .skill-row {

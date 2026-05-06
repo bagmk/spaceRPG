@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Dispatch, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
+import type { Dispatch, MouseEvent as ReactMouseEvent } from 'react';
 import {
   CROSS_NODES,
   SKILL_TREES,
@@ -32,18 +32,8 @@ interface PopupState {
 }
 
 const MILESTONES: MilestoneLevel[] = [5, 10, 15, 20, 25, 30];
-const DISPLAY_MAX_LEVEL = 30;
-const WINDOW_SIZE = 9;
-
-function getWindowLevels(currentLevel: number): number[] {
-  const center = Math.max(1, Math.min(DISPLAY_MAX_LEVEL, currentLevel));
-  const half = Math.floor(WINDOW_SIZE / 2);
-  let lo = center - half;
-  let hi = lo + WINDOW_SIZE - 1;
-  if (lo < 1) { lo = 1; hi = Math.min(DISPLAY_MAX_LEVEL, WINDOW_SIZE); }
-  if (hi > DISPLAY_MAX_LEVEL) { hi = DISPLAY_MAX_LEVEL; lo = Math.max(1, hi - WINDOW_SIZE + 1); }
-  // return ascending order (lo at top index 0)
-  return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+function getTrackLevels(maxLevel: number): number[] {
+  return Array.from({ length: maxLevel }, (_, index) => maxLevel - index);
 }
 
 const TRACK_SYMBOLS: Record<SkillTreeId, string> = {
@@ -148,7 +138,6 @@ function TrackColumn({
   dispatch,
   visibleTier,
   selection,
-  scrollOffset,
   onSelect,
 }: {
   treeId: SkillTreeId;
@@ -156,12 +145,18 @@ function TrackColumn({
   dispatch: Dispatch<GameAction>;
   visibleTier: number;
   selection: Selection;
-  scrollOffset: number;
   onSelect: (selection: Selection, event: ReactMouseEvent<HTMLElement>) => void;
 }) {
   const tree = findTree(treeId)!;
   const level = state.skills[treeId].level;
   const unlocked = state.skills.unlockedTracks.includes(treeId);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const targetLevel = Math.max(1, Math.min(tree.rootMaxLevel, level + 1));
+    const target = gridRef.current?.querySelector<HTMLElement>(`[data-level="${targetLevel}"]`);
+    target?.scrollIntoView({ block: 'center' });
+  }, [level, tree.rootMaxLevel]);
 
   return (
     <div
@@ -179,8 +174,8 @@ function TrackColumn({
           <span>{`Lv ${level}`}</span>
         </div>
       </div>
-      <div className="skill-track-grid" aria-label={`${tree.label} levels`}>
-        {getWindowLevels(Math.max(1, level + scrollOffset)).map((slot) => {
+      <div ref={gridRef} className="skill-track-grid" aria-label={`${tree.label} levels`}>
+        {getTrackLevels(tree.rootMaxLevel).map((slot) => {
           const milestone = MILESTONES.includes(slot as MilestoneLevel)
             ? (slot as MilestoneLevel)
             : null;
@@ -202,7 +197,7 @@ function TrackColumn({
           const crossAvailable =
             crossNode && getCrossLockedReason(state, crossNode.id, visibleTier) === null;
           return (
-            <div key={slot} className={`skill-row ${milestone ? 'milestone-row' : ''}`}>
+            <div key={slot} className={`skill-row ${milestone ? 'milestone-row' : ''}`} data-level={slot}>
               <button
                 type="button"
                 className={`skill-cell ${isCurrent ? 'current' : isFilled ? 'filled' : isNext ? 'next' : 'future'} ${
@@ -274,27 +269,8 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
-  const [scrollOffset, setScrollOffset] = useState(0);
   const popupRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ startY: number; startOffset: number } | null>(null);
   const visibleTier = getVisibleCrossTier(state.stageIdx + 1);
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      if (!dragRef.current) return;
-      const dy = e.clientY - dragRef.current.startY;
-      // drag up (dy < 0) → see higher levels; drag down → lower levels
-      const delta = Math.round(-dy / 30);
-      setScrollOffset(Math.max(-80, Math.min(80, dragRef.current.startOffset + delta)));
-    };
-    const onMouseUp = () => { dragRef.current = null; };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -394,7 +370,7 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     },
     {
       label: 'Track levels',
-      body: '각 트랙은 1부터 30까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
+      body: 'Click, Idle, Crit은 50까지, Time은 40까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
     },
     {
       label: 'Milestones',
@@ -456,27 +432,7 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
         <div className="skills-meta">{summary}</div>
 
         <div className="skills-graph unified">
-          <div
-          className="skills-track-row"
-          style={{ cursor: 'grab' }}
-          onMouseDown={(e) => {
-            if ((e.target as HTMLElement).closest('button')) return;
-            dragRef.current = { startY: e.clientY, startOffset: scrollOffset };
-            e.preventDefault();
-          }}
-          onTouchStart={(e: ReactTouchEvent<HTMLDivElement>) => {
-            if ((e.target as HTMLElement).closest('button')) return;
-            dragRef.current = { startY: e.touches[0].clientY, startOffset: scrollOffset };
-          }}
-          onTouchMove={(e: ReactTouchEvent<HTMLDivElement>) => {
-            if (!dragRef.current) return;
-            const dy = e.touches[0].clientY - dragRef.current.startY;
-            const delta = Math.round(-dy / 30);
-            setScrollOffset(Math.max(-80, Math.min(80, dragRef.current.startOffset + delta)));
-            e.preventDefault();
-          }}
-          onTouchEnd={() => { dragRef.current = null; }}
-        >
+          <div className="skills-track-row">
             {SKILL_TREES.map((tree) => (
               <TrackColumn
                 key={tree.id}
@@ -485,7 +441,6 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
                 dispatch={dispatch}
                 visibleTier={visibleTier}
                 selection={selection}
-                scrollOffset={scrollOffset}
                 onSelect={selectWithPopup}
               />
             ))}

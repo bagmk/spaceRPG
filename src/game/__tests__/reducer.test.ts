@@ -27,6 +27,23 @@ describe('gameReducer', () => {
     expect(next.skillPoints).toBe(5);
   });
 
+  it('drops excess cosmic time when advancing so the next stage does not start pre-filled', () => {
+    const state = {
+      ...createInitialGameState(0),
+      pendingCondenseStageIdx: 4,
+      stageIdx: 4,
+      quanta: STAGES[4].threshold,
+      timeGauge: 125,
+      cosmicClockSec: STAGES[6].cosmicTimeSec,
+    };
+
+    const next = gameReducer(state, { type: 'ADVANCE_STAGE', now: 1000 });
+
+    expect(next.stageIdx).toBe(5);
+    expect(next.cosmicClockSec).toBe(STAGES[4].cosmicTimeSec);
+    expect(next.timeGauge).toBe(getTimeGaugeForCosmicClock(5, STAGES[4].cosmicTimeSec));
+  });
+
   it('keeps encounter rewards above the click-scaled floor without changing the SP budget', () => {
     const state = {
       ...createInitialGameState(0),

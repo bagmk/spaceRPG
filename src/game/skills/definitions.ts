@@ -1,12 +1,12 @@
 import type { CrossNodeDef, SkillTreeDef, SkillTreeId } from './types';
 
-export const SKILL_MAX_LEVEL = 30;
+export const SKILL_MAX_LEVEL = 50;
 
 const TRACK_COST_BASE: Record<SkillTreeId, number> = {
   click: 3,
   auto: 3,
   crit: 3,
-  time: 5.25,
+  time: 3.5,
 };
 
 const SP_REWARD_BY_CLEARED_STAGE = [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6] as const;
@@ -85,7 +85,7 @@ export const SKILL_TREES: SkillTreeDef[] = [
     description: 'Bend the rate of cosmic time.',
     color: '#ffb84d',
     unlockStageId: 5,
-    rootMaxLevel: 30,
+    rootMaxLevel: 40,
     rootCostCurve: (level) => trackLevelCost('time', level),
     milestones: {
       1: { name: 'Tick Tock', desc: 'Cosmic time compresses by 10× per level.' },

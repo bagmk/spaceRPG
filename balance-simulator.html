@@ -82,7 +82,8 @@
       </div>
       <div class="ctrl-row"><label>Purchases / sec</label><input type="number" id="purchasesPerSecond" value="10" step="0.1" min="0.01"/></div>
       <div class="ctrl-row"><label>Budget fraction</label><input type="number" id="purchaseBudgetFraction" value="1" step="0.05" min="0.01" max="1"/></div>
-      <div class="ctrl-row"><label>Tree max level</label><input type="number" id="maxSkillLevel" value="30" min="1" max="200"/></div>
+      <div class="ctrl-row"><label>Tree max level</label><input type="number" id="maxSkillLevel" value="50" min="1" max="200"/></div>
+      <div class="ctrl-row"><label>Time max level</label><input type="number" id="maxTimeSkillLevel" value="40" min="1" max="200"/></div>
       <div class="ctrl-row"><label>Stage sim timeout (hr)</label><input type="number" id="maxHoursPerStage" value="1000" min="1"/></div>
       <div class="mini">개별 stage가 이 시간 초과시 INFEASIBLE 표시 (UI 응답 보호)</div>
       <div class="mini">budget fraction = 한번 살 때 현재 quanta 중 사용할 최대 비율</div>
@@ -91,7 +92,7 @@
       <div class="ctrl-row"><label>Click cost base (^L-1)</label><input type="number" id="cost_click" value="3" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Auto cost base (^L-1)</label><input type="number" id="cost_auto" value="3" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Crit cost base (^L-1)</label><input type="number" id="cost_crit" value="3" step="0.1" min="1.01"/></div>
-      <div class="ctrl-row"><label>Time cost base (^L-1)</label><input type="number" id="cost_time" value="5.25" step="0.05" min="1.01"/></div>
+      <div class="ctrl-row"><label>Time cost base (^L-1)</label><input type="number" id="cost_time" value="3.5" step="0.05" min="1.01"/></div>
       <div class="ctrl-row"><label>Click power per L (×)</label><input type="number" id="clickPowerPerLevel" value="2" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Auto rate per L (×)</label><input type="number" id="autoRatePerLevel" value="2" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Crit chance per L</label><input type="number" id="critChancePerLevel" value="0.015" step="0.001" min="0"/></div>
@@ -170,7 +171,7 @@ function defaultConfig() {
   return {
     cps:10, activeFraction:1, sustainedCombo:100,
     skillStrategy:'balanced_targets', crossNodeStrategy:'greedy', timeMode:'log_cosmic',
-    skillCostBase:{click:3,auto:3,crit:3,time:5.25},
+    skillCostBase:{click:3,auto:3,crit:3,time:3.5},
     clickPowerPerLevel:2, autoRatePerLevel:2,
     critChancePerLevel:0.015, critMultBase:1.5, critMultPerLevel:0.5,
     critChanceCap:0.4, timeFillBase:10, comboMultMax:8.0, comboMultPer10:0.4,
@@ -192,7 +193,7 @@ function defaultConfig() {
     },
     stages:DEFAULT_STAGES.map(s=>({...s})),
     stageStartCosmicTime:(idx)=>idx===0?1e-34:DEFAULT_STAGES[idx-1].cosmicTimeSec,
-    purchaseBudgetFraction:1, purchasesPerSecond:10, maxSkillLevel:30, maxHoursPerStage:1000,
+    purchaseBudgetFraction:1, purchasesPerSecond:10, maxSkillLevel:50, maxTimeSkillLevel:40, maxHoursPerStage:1000,
     stageWallClockCapSec:3600*24*365*50,
   };
 }
@@ -218,6 +219,7 @@ function critMultiplier(L,m,cfg){const b=Math.max(cfg.critMultBase,cfg.critMultB
 function comboMult(combo,cfg){return 1+Math.min(cfg.comboMultMax-1,Math.floor(combo/10)*cfg.comboMultPer10);}
 function timeFillRate(L,m,cfg,boost=1){return Math.pow(cfg.timeFillBase,L)*m.timeMultMult*boost;}
 function trackCost(t,L,cfg){return Math.floor(Math.pow(cfg.skillCostBase[t],Math.max(0,L-1)));}
+function maxTrackLevel(track,cfg){return track==='time' ? (cfg.maxTimeSkillLevel ?? cfg.maxSkillLevel) : cfg.maxSkillLevel;}
 
 function trackUnlocked(track, stageIdx){
   const stageId = stageIdx + 1;
@@ -260,7 +262,7 @@ function tryOnePurchase(skills,quantaIn,cfg,stageIdx){
   const budget=quanta*cfg.purchaseBudgetFraction;
   const plannedTarget=stageLevelTarget(cfg,stageIdx);
   for(const track of order){
-    if(!trackUnlocked(track,stageIdx)||skills[track]>=cfg.maxSkillLevel) continue;
+    if(!trackUnlocked(track,stageIdx)||skills[track]>=maxTrackLevel(track,cfg)) continue;
     if(cfg.skillStrategy==='balanced_targets'&&skills[track]>=plannedTarget) continue;
     const cost=trackCost(track,skills[track]+1,cfg);
     if(cost>budget||cost>quanta) continue;
@@ -438,7 +440,7 @@ function readConfig(){
   cfg.skillStrategy=document.getElementById('skillStrategy').value;
   cfg.crossNodeStrategy=document.getElementById('crossNodeStrategy').value;
   cfg.timeMode=document.getElementById('timeMode').value;
-  cfg.purchasesPerSecond=num('purchasesPerSecond'); cfg.purchaseBudgetFraction=num('purchaseBudgetFraction'); cfg.maxSkillLevel=num('maxSkillLevel'); cfg.maxHoursPerStage=num('maxHoursPerStage');
+  cfg.purchasesPerSecond=num('purchasesPerSecond'); cfg.purchaseBudgetFraction=num('purchaseBudgetFraction'); cfg.maxSkillLevel=num('maxSkillLevel'); cfg.maxTimeSkillLevel=num('maxTimeSkillLevel'); cfg.maxHoursPerStage=num('maxHoursPerStage');
   cfg.skillCostBase={click:num('cost_click'),auto:num('cost_auto'),crit:num('cost_crit'),time:num('cost_time')};
   cfg.clickPowerPerLevel=num('clickPowerPerLevel'); cfg.autoRatePerLevel=num('autoRatePerLevel');
   cfg.critChancePerLevel=num('critChancePerLevel'); cfg.critMultBase=num('critMultBase'); cfg.critMultPerLevel=num('critMultPerLevel');
@@ -515,8 +517,8 @@ function applyPreset(name){
     document.getElementById('skillStrategy').value='balanced_targets';
     document.getElementById('crossNodeStrategy').value='greedy';
     document.getElementById('timeMode').value='log_cosmic';
-    set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);set('maxSkillLevel',30);set('maxHoursPerStage',1000);
-    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',5.25);
+    set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);set('maxSkillLevel',50);set('maxTimeSkillLevel',40);set('maxHoursPerStage',1000);
+    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',3.5);
     set('clickPowerPerLevel',2);set('autoRatePerLevel',2);
     set('critChancePerLevel',0.015);set('critMultBase',1.5);set('critMultPerLevel',0.5);
     set('timeFillBase',10);set('comboMultMax',8); check('useShop',false);
@@ -525,8 +527,9 @@ function applyPreset(name){
   } else if(name==='balanced100'){
     set('cps',10);set('activeFraction',1);set('sustainedCombo',100);
     document.getElementById('skillStrategy').value='balanced_targets';
-    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',5.25);
+    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',3.5);
     set('timeFillBase',10);set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);
+    set('maxSkillLevel',50);set('maxTimeSkillLevel',40);
   } else if(name==='shopHeavy'){
     check('useShop',true);set('shopAeonSurgeFactor',100);set('shopAeonSurgeDurationMin',30);
     set('shopFrequencyMin',30);check('shopBuyAtStuckOnly',false);
