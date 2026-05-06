@@ -1,12 +1,12 @@
 import type { CrossNodeDef, SkillTreeDef, SkillTreeId } from './types';
 
-export const SKILL_MAX_LEVEL = 45;
+export const SKILL_MAX_LEVEL = 30;
 
 const TRACK_COST_BASE: Record<SkillTreeId, number> = {
   click: 3,
   auto: 3,
   crit: 3,
-  time: 4,
+  time: 5.25,
 };
 
 const SP_REWARD_BY_CLEARED_STAGE = [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6] as const;
@@ -41,9 +41,6 @@ export const SKILL_TREES: SkillTreeDef[] = [
       20: { name: 'Stellar Forge', desc: 'Unlocks an SP node slot.' },
       25: { name: 'Supernova Hammer', desc: 'Unlocks an SP node slot.' },
       30: { name: 'Quasar Cannon', desc: 'Unlocks an SP node slot.' },
-      35: { name: 'Neutron Fist', desc: 'Unlocks an SP node slot.' },
-      40: { name: 'Singularity Strike', desc: 'Unlocks an SP node slot.' },
-      45: { name: 'Big Crunch', desc: 'Unlocks an SP node slot.' },
     },
   },
   {
@@ -62,9 +59,6 @@ export const SKILL_TREES: SkillTreeDef[] = [
       20: { name: 'Cosmic Web', desc: 'Unlocks an SP node slot.' },
       25: { name: 'Universal Pulse', desc: 'Unlocks an SP node slot.' },
       30: { name: 'Eternal Drift', desc: 'Unlocks an SP node slot.' },
-      35: { name: 'Void Weave', desc: 'Unlocks an SP node slot.' },
-      40: { name: 'Gravity Lattice', desc: 'Unlocks an SP node slot.' },
-      45: { name: 'Omega Web', desc: 'Unlocks an SP node slot.' },
     },
   },
   {
@@ -83,9 +77,6 @@ export const SKILL_TREES: SkillTreeDef[] = [
       20: { name: 'Quantum Lens', desc: 'Unlocks an SP node slot.' },
       25: { name: 'Many Worlds', desc: 'Unlocks an SP node slot.' },
       30: { name: 'Eigenvalue Strike', desc: 'Unlocks an SP node slot.' },
-      35: { name: 'Waveform Collapse', desc: 'Unlocks an SP node slot.' },
-      40: { name: 'Dark Matter Lens', desc: 'Unlocks an SP node slot.' },
-      45: { name: 'Omega Lens', desc: 'Unlocks an SP node slot.' },
     },
   },
   {
@@ -94,7 +85,7 @@ export const SKILL_TREES: SkillTreeDef[] = [
     description: 'Bend the rate of cosmic time.',
     color: '#ffb84d',
     unlockStageId: 5,
-    rootMaxLevel: 35,
+    rootMaxLevel: 30,
     rootCostCurve: (level) => trackLevelCost('time', level),
     milestones: {
       1: { name: 'Tick Tock', desc: 'Cosmic time compresses by 10× per level.' },
@@ -104,14 +95,11 @@ export const SKILL_TREES: SkillTreeDef[] = [
       20: { name: 'Aeon Drive', desc: 'Unlocks an SP node slot.' },
       25: { name: 'Eternity Engine', desc: 'Unlocks an SP node slot.' },
       30: { name: 'Cosmic Clock', desc: 'Unlocks an SP node slot.' },
-      35: { name: 'Chronon Surge', desc: 'Unlocks an SP node slot.' },
-      40: { name: 'Temporal Apex', desc: 'Unlocks an SP node slot.' },
-      45: { name: 'Omega Drive', desc: 'Unlocks an SP node slot.' },
     },
   },
 ];
 
-const CROSS_TIERS = [5, 10, 15, 20, 25, 30, 35, 40, 45] as const;
+const CROSS_TIERS = [5, 10, 15, 20, 25, 30] as const;
 
 const CROSS_SP_COST: Record<(typeof CROSS_TIERS)[number], number> = {
   5: 1,
@@ -120,9 +108,6 @@ const CROSS_SP_COST: Record<(typeof CROSS_TIERS)[number], number> = {
   20: 2,
   25: 3,
   30: 3,
-  35: 4,
-  40: 4,
-  45: 5,
 };
 
 const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number], string>> = {
@@ -133,9 +118,6 @@ const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number]
     20: 'Click power ×3.2.',
     25: 'Click power ×4.4.',
     30: 'Click power ×6.',
-    35: 'Click power ×8.',
-    40: 'Click power ×11.',
-    45: 'Click power ×15.',
   },
   auto: {
     5: 'Auto rate ×1.4.',
@@ -144,9 +126,6 @@ const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number]
     20: 'Auto rate ×3.2.',
     25: 'Auto rate ×4.4.',
     30: 'Auto rate ×6.',
-    35: 'Auto rate ×8.',
-    40: 'Auto rate ×11.',
-    45: 'Auto rate ×15.',
   },
   crit: {
     5: 'Crit multiplier ×1.15.',
@@ -155,9 +134,6 @@ const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number]
     20: 'Crit multiplier ×1.75.',
     25: 'Crit multiplier ×2.05.',
     30: 'Crit multiplier ×2.5.',
-    35: 'Crit multiplier ×3.0.',
-    40: 'Crit multiplier ×3.75.',
-    45: 'Crit multiplier ×4.5.',
   },
   time: {
     5: 'Time flow ×1.25.',
@@ -166,9 +142,6 @@ const CROSS_MULT_LABELS: Record<SkillTreeId, Record<(typeof CROSS_TIERS)[number]
     20: 'Time flow ×2.8.',
     25: 'Time flow ×3.6.',
     30: 'Time flow ×5.',
-    35: 'Time flow ×6.5.',
-    40: 'Time flow ×8.5.',
-    45: 'Time flow ×11.',
   },
 };
 
@@ -195,6 +168,6 @@ export function findNode(nodeId: string): CrossNodeDef | undefined {
 }
 
 // All cross-node tiers are visible regardless of stage; unlock is level-based only.
-export function getVisibleCrossTier(_stageId: number): 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 {
-  return 45;
+export function getVisibleCrossTier(_stageId: number): 0 | 5 | 10 | 15 | 20 | 25 | 30 {
+  return 30;
 }

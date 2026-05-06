@@ -18,7 +18,7 @@ interface SkillsPanelProps {
   onClose: () => void;
 }
 
-type MilestoneLevel = 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45;
+type MilestoneLevel = 5 | 10 | 15 | 20 | 25 | 30;
 
 type Selection =
   | { kind: 'track'; trackId: SkillTreeId; level: number }
@@ -31,8 +31,8 @@ interface PopupState {
   y: number;
 }
 
-const MILESTONES: MilestoneLevel[] = [5, 10, 15, 20, 25, 30, 35, 40, 45];
-const DISPLAY_MAX_LEVEL = 45;
+const MILESTONES: MilestoneLevel[] = [5, 10, 15, 20, 25, 30];
+const DISPLAY_MAX_LEVEL = 30;
 const WINDOW_SIZE = 9;
 
 function getWindowLevels(currentLevel: number): number[] {
@@ -133,9 +133,6 @@ function getCrossNodeForSlot(trackId: SkillTreeId, tier: MilestoneLevel): CrossN
 }
 
 function getSlotUnlockStage(tier: MilestoneLevel): number {
-  if (tier === 45) return 16;
-  if (tier === 40) return 16;
-  if (tier === 35) return 16;
   if (tier === 30) return 16;
   if (tier === 25) return 15;
   if (tier === 20) return 14;
@@ -397,7 +394,7 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
     },
     {
       label: 'Track levels',
-      body: '각 트랙은 1부터 45까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
+      body: '각 트랙은 1부터 30까지 올릴 수 있어. 클릭해서 quanta로 사봐.',
     },
     {
       label: 'Milestones',

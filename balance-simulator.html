@@ -88,10 +88,10 @@
       <div class="mini">budget fraction = 한번 살 때 현재 quanta 중 사용할 최대 비율</div>
     </div>
     <div class="ctrl-section"><h3>스킬 비용 / 효과</h3>
-      <div class="ctrl-row"><label>Click cost base (^L-1)</label><input type="number" id="cost_click" value="2" step="0.1" min="1.01"/></div>
-      <div class="ctrl-row"><label>Auto cost base (^L-1)</label><input type="number" id="cost_auto" value="2" step="0.1" min="1.01"/></div>
-      <div class="ctrl-row"><label>Crit cost base (^L-1)</label><input type="number" id="cost_crit" value="2" step="0.1" min="1.01"/></div>
-      <div class="ctrl-row"><label>Time cost base (^L-1)</label><input type="number" id="cost_time" value="3" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Click cost base (^L-1)</label><input type="number" id="cost_click" value="3" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Auto cost base (^L-1)</label><input type="number" id="cost_auto" value="3" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Crit cost base (^L-1)</label><input type="number" id="cost_crit" value="3" step="0.1" min="1.01"/></div>
+      <div class="ctrl-row"><label>Time cost base (^L-1)</label><input type="number" id="cost_time" value="5.25" step="0.05" min="1.01"/></div>
       <div class="ctrl-row"><label>Click power per L (×)</label><input type="number" id="clickPowerPerLevel" value="2" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Auto rate per L (×)</label><input type="number" id="autoRatePerLevel" value="2" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Crit chance per L</label><input type="number" id="critChancePerLevel" value="0.015" step="0.001" min="0"/></div>
@@ -170,7 +170,7 @@ function defaultConfig() {
   return {
     cps:10, activeFraction:1, sustainedCombo:100,
     skillStrategy:'balanced_targets', crossNodeStrategy:'greedy', timeMode:'log_cosmic',
-    skillCostBase:{click:2,auto:2,crit:2,time:3},
+    skillCostBase:{click:3,auto:3,crit:3,time:5.25},
     clickPowerPerLevel:2, autoRatePerLevel:2,
     critChancePerLevel:0.015, critMultBase:1.5, critMultPerLevel:0.5,
     critChanceCap:0.4, timeFillBase:10, comboMultMax:8.0, comboMultPer10:0.4,
@@ -516,7 +516,7 @@ function applyPreset(name){
     document.getElementById('crossNodeStrategy').value='greedy';
     document.getElementById('timeMode').value='log_cosmic';
     set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);set('maxSkillLevel',30);set('maxHoursPerStage',1000);
-    set('cost_click',2);set('cost_auto',2);set('cost_crit',2);set('cost_time',3);
+    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',5.25);
     set('clickPowerPerLevel',2);set('autoRatePerLevel',2);
     set('critChancePerLevel',0.015);set('critMultBase',1.5);set('critMultPerLevel',0.5);
     set('timeFillBase',10);set('comboMultMax',8); check('useShop',false);
@@ -525,7 +525,7 @@ function applyPreset(name){
   } else if(name==='balanced100'){
     set('cps',10);set('activeFraction',1);set('sustainedCombo',100);
     document.getElementById('skillStrategy').value='balanced_targets';
-    set('cost_click',2);set('cost_auto',2);set('cost_crit',2);set('cost_time',3);
+    set('cost_click',3);set('cost_auto',3);set('cost_crit',3);set('cost_time',5.25);
     set('timeFillBase',10);set('purchasesPerSecond',10);set('purchaseBudgetFraction',1);
   } else if(name==='shopHeavy'){
     check('useShop',true);set('shopAeonSurgeFactor',100);set('shopAeonSurgeDurationMin',30);

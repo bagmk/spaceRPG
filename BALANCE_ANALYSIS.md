@@ -2,6 +2,41 @@
 
 > 시뮬레이터: `balance-simulator.html` (브라우저에서 열어 인터랙티브하게 조정 가능)
 
+## 2026-05-05 Quanta / Time 스킬 경제 패스
+
+가정:
+- Active play: `10 clicks/sec`
+- Crit: 기대값 계산에서 `50%` 발생으로 고정
+- 구매 전략: quanta가 생기면 `click -> auto -> crit -> time` 순서로 root level을 즉시 구매하고, SP node도 낮은 tier부터 즉시 구매
+- 시간 목표 곡선: 사용자가 말한 strict `1.7x`면 총 `57.9h`; 예시 `30s -> 54s -> 97.2s`는 `1.8x`에 가까워 총 `126.5h`
+
+이번 코드 반영값:
+
+```ts
+click/auto/crit cost(L) = floor(3 ^ (L - 1))
+time cost(L)            = floor(5.25 ^ (L - 1))
+time rate(L)            = 10 ^ L * timeCrossNodes * apex
+max root level          = 30
+cross-node tiers        = 5, 10, 15, 20, 25, 30
+total SP node budget    = 24 nodes, 48 SP
+```
+
+핵심 결론:
+- 기존 `time cost base = 4`는 10 CPS 가정에서 time level이 너무 빨리 올라가 중반 이후 time gauge가 먼저 차는 구간이 많았다.
+- `time cost base = 5.25`는 한 단계 올릴 때 가격 부담을 약 `31%` 더 크게 만들어, time을 완전히 죽이지 않으면서 후반 stage 14-16에서 다시 실질 gate가 되게 한다.
+- `35/40/45` cross-node는 SP 총량과 time max level이 맞지 않아 apex 조건이 흐려졌다. 그래서 root/cross-node 최종 구조를 30으로 닫았다.
+
+현재 threshold table을 그대로 둔 빠른 기대값 시뮬레이션 결과:
+
+| Stage band | Main bottleneck | Notes |
+|---|---|---|
+| 1-3 | quanta | 현재 threshold가 10 CPS 기준으로는 낮아 빠르게 지나감 |
+| 4-6 | mixed/time | time base 5.25 적용 후 cosmic gate가 다시 보임 |
+| 7-13 | mostly quanta | time이 선행하지만 이전보다 과잉 폭이 줄어듦 |
+| 14-16 | time | 후반 cosmic gate가 최종 페이싱을 잡음 |
+
+예상 총 진행 시간은 현재 threshold 기준 약 `88h`이며, 최종 예상은 `C30/A30/R30/T30`, cross-node `24/24`다. Strict `1.7x` stage-time curve로 완전히 맞추려면 threshold table과 late `cosmicTimeSec`를 같이 재생성해야 한다. 특히 stage 14-16은 가격만으로 맞추기보다 cosmic gate를 약 `0.4x-0.7x` 범위로 압축하는 쪽이 안정적이다.
+
 ## 2026-05-04 100시간 리밸런스 초안
 
 이번 패스에서는 총 목표 시간을 정확히 **100h**로 재분배하고, 첫 3개 stage를 **30s / 120s / 300s**로 맞췄다. 검증 스크립트는 `npm run sim`이며, soft expected 구매 경로 기준 총 **100.001h**, stage별 최대 deviation **0.21%**가 나왔다.
