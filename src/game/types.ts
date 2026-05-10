@@ -1,4 +1,22 @@
+/**
+ * Core game types. Import from here for anything game-engine related.
+ *
+ * Canvas-only types: import from './types/canvas' (or here — they're re-exported).
+ * UI event types:    import from './types/events' (or here — they're re-exported).
+ */
+
+// Re-export sub-domain types so all existing imports stay unchanged.
+export type * from './types/canvas';
+export type * from './types/events';
+
+// These imports let us USE the sub-domain types in interface definitions below.
+import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
+import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from './types/events';
 import type { SkillState, SkillTreeId } from './skills/types';
+
+// ---------------------------------------------------------------------------
+// Stage
+// ---------------------------------------------------------------------------
 
 export interface Stage {
   id: number;
@@ -25,34 +43,6 @@ export interface Stage {
   endingId?: EndingId;
 }
 
-export type DistantElementType =
-  | 'expansion_burst'
-  | 'pair_streaks'
-  | 'plasma_swirl'
-  | 'binding_orbits'
-  | 'clearing_fog'
-  | 'void'
-  | 'bright_pinpoints'
-  | 'ionization_bubbles'
-  | 'galaxy_field'
-  | 'nearby_stars'
-  | 'earth_orbit'
-  | 'red_shroud'
-  | 'fading_stars'
-  | 'dim_specks'
-  | 'lensed_field'
-  | 'redshifted_void';
-
-export interface StageBackground {
-  gradientTop: string;
-  gradientBottom: string;
-  nebulaIntensity: number;
-  starDensity: number;
-  starColor: string;
-  distantElementColor: string;
-  distantElements: DistantElementType;
-}
-
 export type StageMechanicId =
   | 'click_basic'
   | 'matter_asymmetry'
@@ -71,6 +61,10 @@ export type StageMechanicId =
   | 'hawking_radiation'
   | 'ending_choice';
 
+// ---------------------------------------------------------------------------
+// Core value types
+// ---------------------------------------------------------------------------
+
 export type EndingId = 'heat_death' | 'big_rip' | 'big_crunch' | 'vacuum_decay' | 'bounce';
 
 export type AnomalyType =
@@ -79,6 +73,10 @@ export type AnomalyType =
   | 'high_energy'
   | 'dim'
   | 'echoing';
+
+// ---------------------------------------------------------------------------
+// Universe / multiverse
+// ---------------------------------------------------------------------------
 
 export interface UniverseSeed {
   index: number;
@@ -100,6 +98,10 @@ export interface UniverseAtlasEntry {
   seed: UniverseSeed;
 }
 
+// ---------------------------------------------------------------------------
+// Progress / progression flags
+// ---------------------------------------------------------------------------
+
 export interface EndingProgressFlags {
   bigRipEverEligible: boolean;
   bigCrunchEligible: boolean;
@@ -110,6 +112,10 @@ export interface CondenseProgressEntry {
   stageId: number;
   progressAtCondense: number;
 }
+
+// ---------------------------------------------------------------------------
+// Shop boosts
+// ---------------------------------------------------------------------------
 
 export interface TimedShopBoost {
   factor: number;
@@ -127,6 +133,10 @@ export interface LegacyShopBoosts {
   quantaMult?: TimedShopBoost;
 }
 
+// ---------------------------------------------------------------------------
+// Singularity
+// ---------------------------------------------------------------------------
+
 export type SingularityUnlockId =
   | 'quark_foam'
   | 'free_combo'
@@ -139,39 +149,42 @@ export type SingularityUnlockId =
   | 'vacuum_stability'
   | 'boltzmann_brain';
 
-export interface FloatingClickEvent {
-  id: number;
-  x: number;
-  y: number;
-  gained: number;
-  isCrit: boolean;
-  combo: number;
-  comboMult: number;
-  particleName: string;
-  particleDefinition?: string;
-  entropyGained: number;
-}
-
-export interface FloatingCollisionEvent {
-  id: number;
-  x: number;
-  y: number;
-  bonus: number;
-  entropyGained: number;
-  name: string;
-  tier: RogueTypeKey;
-}
-
-export interface EncounterEvent {
-  id: number;
-  name: string;
-  color: string;
-}
+// ---------------------------------------------------------------------------
+// Misc game objects
+// ---------------------------------------------------------------------------
 
 export interface DailyCheckInState {
   lastDayKey: string;
   streakDays: number;
 }
+
+// ---------------------------------------------------------------------------
+// Canvas world (stays here because it references StageMechanicId)
+// ---------------------------------------------------------------------------
+
+export interface CanvasWorld {
+  coreVX: number;
+  coreVY: number;
+  driftAngle: number;
+  stars: Star[];
+  particles: AmbientParticle[];
+  flyers: Flyer[];
+  bursts: Burst[];
+  wakeTrails: WakeTrail[];
+  rogues: Rogue[];
+  shockwaves: Shockwave[];
+  rogueCooldown: number;
+  nextId: number;
+  cluster: MoteCluster;
+  moteNeighborCache: Map<number, number[]>;
+  moteLastNeighborRefresh: number;
+  moteLastAutoSpawnAt: number;
+  mechanicState: Partial<Record<StageMechanicId, unknown>>;
+}
+
+// ---------------------------------------------------------------------------
+// Save / persistent state
+// ---------------------------------------------------------------------------
 
 export interface SaveState {
   version: 7;
@@ -222,6 +235,7 @@ export interface SaveState {
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
 
+/** Full runtime state — PersistentGameState + transient UI fields (never saved). */
 export interface GameState extends PersistentGameState {
   combo: number;
   lastClick: number;
@@ -236,171 +250,9 @@ export interface GameState extends PersistentGameState {
   endingStartedAt: number | null;
 }
 
-export type RogueTypeKey = 'minor' | 'major' | 'massive';
-
-export interface RogueTypeDefinition {
-  weight: number;
-  r: number;
-  bonusMultiplier: number;
-  entropyBonus: number;
-  color: string;
-  glowColor: string;
-  name: string;
-}
-
-export interface Rogue {
-  id: number;
-  stageId: number;
-  typeKey: RogueTypeKey;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  color: string;
-  glowColor: string;
-  name: string;
-  bonus: number;
-  entropyBonus: number;
-  age: number;
-  spotted: boolean;
-  rotation: number;
-}
-
-export interface Star {
-  x: number;
-  y: number;
-  r: number;
-  a: number;
-  depth: number;
-  twinkle: number;
-}
-
-export interface AmbientParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  color: string;
-  phase: number;
-  alpha: number;
-}
-
-export interface Flyer {
-  x: number;
-  y: number;
-  startX: number;
-  startY: number;
-  controlX: number;
-  controlY: number;
-  targetX: number;
-  targetY: number;
-  t: number;
-  life: number;
-  auto?: boolean;
-  spriteId?: number;
-}
-
-export interface Burst {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  turn?: number;
-  r: number;
-  life: number;
-  color: string;
-  spriteId?: number;
-}
-
-export interface WakeTrail {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  life: number;
-  color: string;
-}
-
-export interface Shockwave {
-  startedAt: number;
-  color: string;
-  x?: number;
-  y?: number;
-  maxRadius?: number;
-  lifeMs?: number;
-  lineWidth?: number;
-}
-
-export type ClusterMode =
-  | 'inflation'
-  | 'baryogenesis'
-  | 'qgPlasma'
-  | 'nucleosynthesis'
-  | 'recombination'
-  | 'darkAge'
-  | 'firstStars'
-  | 'reionization'
-  | 'galaxy'
-  | 'planetary'
-  | 'lifeSurface'
-  | 'redGiant'
-  | 'remnant'
-  | 'degenerate'
-  | 'blackHole'
-  | 'heatDeath';
-
-export interface Mote {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  mass: number;
-  r: number;
-  color: string;
-  hue: number;
-  age: number;
-  bornAt: number;
-  temperature?: number;
-  surfaceLat?: number;
-  surfaceLon?: number;
-  surfaceKind?: 'plant' | 'city' | 'water';
-  orbitAngle?: number;
-  orbitRadius?: number;
-  spiralPhase?: number;
-}
-
-export interface MoteCluster {
-  motes: Mote[];
-  nextMoteId: number;
-  physicalRadius: number;
-  diskTilt?: number;
-  diskRotation?: number;
-  earthRotation?: number;
-}
-
-export interface CanvasWorld {
-  coreVX: number;
-  coreVY: number;
-  driftAngle: number;
-  stars: Star[];
-  particles: AmbientParticle[];
-  flyers: Flyer[];
-  bursts: Burst[];
-  wakeTrails: WakeTrail[];
-  rogues: Rogue[];
-  shockwaves: Shockwave[];
-  rogueCooldown: number;
-  nextId: number;
-  cluster: MoteCluster;
-  moteNeighborCache: Map<number, number[]>;
-  moteLastNeighborRefresh: number;
-  moteLastAutoSpawnAt: number;
-  mechanicState: Partial<Record<StageMechanicId, unknown>>;
-}
+// ---------------------------------------------------------------------------
+// UI helpers
+// ---------------------------------------------------------------------------
 
 export interface UpgradeDefinition {
   label: string;

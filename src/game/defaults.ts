@@ -1,0 +1,110 @@
+/**
+ * Default value creators for GameState fields.
+ * Shared between reducer.ts and storage.ts to avoid duplication.
+ */
+
+import { createInitialUniverseSeed } from './multiverse';
+import { getStageStartCosmicTime } from './timeFlow';
+import type {
+  CondenseProgressEntry,
+  DailyCheckInState,
+  EndingProgressFlags,
+  GameState,
+  UniverseAtlasEntry,
+  UniverseSeed,
+} from './types';
+import type { SkillState } from './skills/types';
+
+export function createDefaultDailyCheckIns(): DailyCheckInState {
+  return { lastDayKey: '', streakDays: 0 };
+}
+
+export function createDefaultEndingProgressFlags(): EndingProgressFlags {
+  return {
+    bigRipEverEligible: false,
+    bigCrunchEligible: false,
+    vacuumDecayEligible: false,
+  };
+}
+
+export function createDefaultUniverseAtlas(): UniverseAtlasEntry[] {
+  return [];
+}
+
+export function createDefaultCondenseProgressHistory(): CondenseProgressEntry[] {
+  return [];
+}
+
+export function createDefaultUniverseSeed(): UniverseSeed {
+  return createInitialUniverseSeed();
+}
+
+export function createDefaultSkills(): SkillState {
+  return {
+    click: { level: 0 },
+    auto: { level: 0 },
+    crit: { level: 0 },
+    time: { level: 0 },
+    unlockedTracks: ['click'],
+    ownedCrossNodes: [],
+  };
+}
+
+export function createInitialGameState(now: number): GameState {
+  return {
+    stageIdx: 0,
+    quanta: 0,
+    timeGauge: 0,
+    clickLevel: 0,
+    autoLevel: 0,
+    critLevel: 0,
+    entropy: 0,
+    totalClicks: 0,
+    collisions: 0,
+    universeCount: 1,
+    cumulativeBoost: 0,
+    runStartTime: now,
+    totalTimePlayed: 0,
+    pendingCondenseStageIdx: null,
+    pendingCondenseEntropy: 0,
+    completedRun: false,
+    condensedMass: 0,
+    echoes: 0,
+    singularityUnlocks: [],
+    endingsCompleted: [],
+    lastEndingId: null,
+    selectedEndingId: null,
+    lastSaveAt: now,
+    stageStartedAt: now,
+    cosmicClockSec: getStageStartCosmicTime(0),
+    mechanicCharge: 0,
+    mechanicStep: 0,
+    mechanicTriggered: false,
+    tutorialDone: false,
+    cosmicHoursThisRun: 0,
+    dailyCheckIns: createDefaultDailyCheckIns(),
+    combo: 0,
+    lastClick: 0,
+    imploding: false,
+    condenseStartedAt: null,
+    eventCounter: 0,
+    lastClickEvent: null,
+    lastCollisionEvent: null,
+    lastEncounterEvent: null,
+    offlineElapsedMs: 0,
+    offlineGained: 0,
+    endingStartedAt: null,
+    skillPoints: 0,
+    skills: createDefaultSkills(),
+    endingsUnlocked: [],
+    endingProgressFlags: createDefaultEndingProgressFlags(),
+    clickRateLog: [],
+    condenseProgressHistory: createDefaultCondenseProgressHistory(),
+    universeAtlas: createDefaultUniverseAtlas(),
+    currentUniverseSeed: createDefaultUniverseSeed(),
+    stageClicksAtStageStart: 0,
+    tutorialFlags: {},
+    shopBoosts: [],
+    totalShopSpentUSD: 0,
+  };
+}

@@ -1,97 +1,63 @@
-import { SINGULARITY_UNLOCK_LOOKUP, TUNING } from './constants';
-import {
-  getAutoCost,
-  getAutoRate,
-  canCondense,
-  getCompositeBoostMultiplier,
-  getClickCost,
-  getClickPower,
-  getComboMult,
-  getCondensedMassReward,
-  getCosmicTimeFillRate,
-  getCritChance,
-  getCritCost,
-  getCritMultiplier,
-  getEchoReward,
-  getEffectiveThreshold,
-  getEntropyOnCondense,
-  getLifeStep,
-  getProgress,
-  getTimeGaugeForCosmicClock,
+/**
+ * Game reducer — action type definitions + thin routing switch.
+ *
+ * Logic lives in src/game/reducers/*.ts slice files.
+ * Add a new action: (1) add to GameAction union, (2) add case below, (3) create handler in a slice.
+ */
 
-  safeAdd,
-} from './formulas';
-import { getActiveModifiers } from './skills/effects';
-import { PARTICLE_DEFINITIONS, getParticleEntropyBonus, pickParticleName } from './particles';
-import { getMechanic } from './mechanics';
-import { STAGES } from './stages';
-import { getStageStartCosmicTime } from './timeFlow';
-import {
-  CondenseProgressEntry,
-  DailyCheckInState,
-  EncounterEvent,
+import type {
   EndingId,
-  EndingProgressFlags,
-  FloatingClickEvent,
-  FloatingCollisionEvent,
   GameState,
   PersistentGameState,
   RogueTypeKey,
   SingularityUnlockId,
-  UniverseAtlasEntry,
-  UniverseSeed,
 } from './types';
+
+// Re-export so callers get everything they need from one import.
+export { createInitialGameState, createDefaultSkills } from './defaults';
+
+// Slice handlers
 import {
-  findNode,
-  findTree,
-  getSkillPointsForStageAdvance,
-  getVisibleCrossTier,
-} from './skills/definitions';
-import { findShopItem } from './shop/items';
+  handleTick,
+  handleClick,
+  handleBuyClick,
+  handleBuyAuto,
+  handleBuyCrit,
+  handleReportCollision,
+  handleReportEncounter,
+} from './reducers/gameplay';
 import {
-  ALL_ENDINGS,
-  createInitialUniverseSeed,
-  generateUniverseSeed,
-  getEndingOptions,
-  isBigCrunchEligible,
-  isBigRipEligible,
-  isVacuumDecayProgress,
-} from './multiverse';
+  handleStartCondense,
+  handleAdvanceStage,
+  handleSelectEnding,
+  handleCompleteEnding,
+  handlePrestige,
+} from './reducers/stage';
+import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
+import { handleBuyShopItem } from './reducers/shop';
+import {
+  handleAdminNextStage,
+  handleAdminPrevStage,
+  handleAdminSetProgress,
+  handleAdminRestartRun,
+  handleBuySingularityUnlock,
+} from './reducers/admin';
+import {
+  handleHydrate,
+  handleDismissOfflineModal,
+  handleSetTutorialDone,
+  handleAwardSkillPoints,
+  handleUnlockTrack,
+  handleMarkTutorialFlag,
+  handleMarkTutorialStageSeen,
+  handleClearClickEvent,
+  handleClearCollisionEvent,
+  handleClearEncounterEvent,
+} from './reducers/meta';
 
-function createDefaultDailyCheckIns(): DailyCheckInState {
-  return { lastDayKey: '', streakDays: 0 };
-}
-
-function createDefaultEndingProgressFlags(): EndingProgressFlags {
-  return {
-    bigRipEverEligible: false,
-    bigCrunchEligible: false,
-    vacuumDecayEligible: false,
-  };
-}
-
-function createDefaultUniverseAtlas(): UniverseAtlasEntry[] {
-  return [];
-}
-
-function createDefaultCondenseProgressHistory(): CondenseProgressEntry[] {
-  return [];
-}
-
-function createDefaultUniverseSeed(): UniverseSeed {
-  return createInitialUniverseSeed();
-}
-
-function createDefaultSkills() {
-  return {
-    click: { level: 0 },
-    auto: { level: 0 },
-    crit: { level: 0 },
-    time: { level: 0 },
-    unlockedTracks: ['click'] as Array<'click' | 'crit' | 'auto' | 'time'>,
-    ownedCrossNodes: [],
-  };
-}
+// ---------------------------------------------------------------------------
+// Action union — exhaustive type for the switch below
+// ---------------------------------------------------------------------------
 
 export type GameAction =
   | { type: 'HYDRATE'; payload: PersistentGameState; now: number }
@@ -147,64 +113,9 @@ export type GameAction =
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string };
 
-export function createInitialGameState(now: number): GameState {
-  return {
-    stageIdx: 0,
-    quanta: 0,
-    timeGauge: 0,
-    clickLevel: 0,
-    autoLevel: 0,
-    critLevel: 0,
-    entropy: 0,
-    totalClicks: 0,
-    collisions: 0,
-    universeCount: 1,
-    cumulativeBoost: 0,
-    runStartTime: now,
-    totalTimePlayed: 0,
-    pendingCondenseStageIdx: null,
-    pendingCondenseEntropy: 0,
-    completedRun: false,
-    condensedMass: 0,
-    echoes: 0,
-    singularityUnlocks: [],
-    endingsCompleted: [],
-    lastEndingId: null,
-    selectedEndingId: null,
-    lastSaveAt: now,
-    stageStartedAt: now,
-    cosmicClockSec: getStageStartCosmicTime(0),
-    mechanicCharge: 0,
-    mechanicStep: 0,
-    mechanicTriggered: false,
-    tutorialDone: false,
-    cosmicHoursThisRun: 0,
-    dailyCheckIns: createDefaultDailyCheckIns(),
-    combo: 0,
-    lastClick: 0,
-    imploding: false,
-    condenseStartedAt: null,
-    eventCounter: 0,
-    lastClickEvent: null,
-    lastCollisionEvent: null,
-    lastEncounterEvent: null,
-    offlineElapsedMs: 0,
-    offlineGained: 0,
-    endingStartedAt: null,
-    skillPoints: 0,
-    skills: createDefaultSkills(),
-    endingsUnlocked: [],
-    endingProgressFlags: createDefaultEndingProgressFlags(),
-    clickRateLog: [],
-    condenseProgressHistory: createDefaultCondenseProgressHistory(),
-    universeAtlas: createDefaultUniverseAtlas(),
-    currentUniverseSeed: createDefaultUniverseSeed(),
-    stageClicksAtStageStart: 0,
-    tutorialFlags: {},
-    shopBoosts: [],
-    totalShopSpentUSD: 0,
-  };
-}
+// ---------------------------------------------------------------------------
+// Serialization helpers
+// ---------------------------------------------------------------------------
 
 export function toPersistentState(state: GameState): PersistentGameState {
   return {
@@ -254,862 +165,42 @@ export function toPersistentState(state: GameState): PersistentGameState {
   };
 }
 
-function withHydratedTransient(payload: PersistentGameState): GameState {
-  return {
-    ...payload,
-    combo: 0,
-    lastClick: 0,
-    imploding: false,
-    condenseStartedAt: null,
-    eventCounter: 0,
-    lastClickEvent: null,
-    lastCollisionEvent: null,
-    lastEncounterEvent: null,
-    offlineElapsedMs: 0,
-    offlineGained: 0,
-    endingStartedAt: null,
-    tutorialDone: payload.tutorialDone ?? false,
-    cosmicHoursThisRun: payload.cosmicHoursThisRun ?? 0,
-    dailyCheckIns: payload.dailyCheckIns ?? createDefaultDailyCheckIns(),
-    skillPoints: payload.skillPoints ?? 0,
-    skills: payload.skills ?? createDefaultSkills(),
-    endingsUnlocked: payload.endingsUnlocked ?? [],
-    endingProgressFlags: payload.endingProgressFlags ?? createDefaultEndingProgressFlags(),
-    clickRateLog: payload.clickRateLog ?? [],
-    condenseProgressHistory: payload.condenseProgressHistory ?? createDefaultCondenseProgressHistory(),
-    universeAtlas: payload.universeAtlas ?? createDefaultUniverseAtlas(),
-    currentUniverseSeed: payload.currentUniverseSeed ?? createDefaultUniverseSeed(),
-    stageClicksAtStageStart: payload.stageClicksAtStageStart ?? payload.totalClicks ?? 0,
-    tutorialFlags: payload.tutorialFlags ?? {},
-    timeGauge: payload.timeGauge ?? 0,
-    shopBoosts: payload.shopBoosts ?? [],
-    totalShopSpentUSD: payload.totalShopSpentUSD ?? 0,
-  };
-}
-
-function getCurrentStage(state: GameState) {
-  return STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-}
-
-function getPreviousStage(state: GameState) {
-  return state.stageIdx > 0 ? STAGES[state.stageIdx - 1] : null;
-}
-
-function nextEventId(state: GameState): number {
-  return state.eventCounter + 1;
-}
-
-function createClickEvent(
-  id: number,
-  x: number,
-  y: number,
-  gained: number,
-  isCrit: boolean,
-  combo: number,
-  comboMult: number,
-  particleName: string,
-  entropyGained: number,
-): FloatingClickEvent {
-  return {
-    id,
-    x,
-    y,
-    gained,
-    isCrit,
-    combo,
-    comboMult,
-    particleName,
-    particleDefinition: PARTICLE_DEFINITIONS[particleName],
-    entropyGained,
-  };
-}
-
-function createCollisionEvent(
-  id: number,
-  x: number,
-  y: number,
-  bonus: number,
-  entropyGained: number,
-  name: string,
-  tier: RogueTypeKey,
-): FloatingCollisionEvent {
-  return { id, x, y, bonus, entropyGained, name, tier };
-}
-
-function createEncounterEvent(id: number, name: string, color: string): EncounterEvent {
-  return { id, name, color };
-}
-
-function debugDroppedClick(reason: string): void {
-  if (import.meta.env.DEV) {
-    console.debug(`[click dropped] ${reason}`);
-  }
-}
-
-function hasUnlock(state: GameState, unlockId: SingularityUnlockId): boolean {
-  return state.singularityUnlocks.includes(unlockId);
-}
-
-function getComboCapBonus(state: GameState): number {
-  return hasUnlock(state, 'free_combo') ? 2 : 0;
-}
-
-function getLateStageCompression(state: GameState): number {
-  return hasUnlock(state, 'red_shift') && state.stageIdx >= 10 && state.stageIdx <= 14 ? 1.5 : 1;
-}
-
-function getEncounterRewardMultiplier(state: GameState): number {
-  return hasUnlock(state, 'cosmic_web') ? 2 : 1;
-}
-
-function getEncounterClickMultiplier(tier: RogueTypeKey): number {
-  if (tier === 'massive') return 100;
-  if (tier === 'major') return 40;
-  return 10;
-}
-
-function getCurrentModifiers(state: GameState) {
-  return getActiveModifiers(state.skills, {
-    currentQuanta: state.quanta,
-    stagesCleared: state.stageIdx,
-    secondsInStage: Math.max(0, (state.totalTimePlayed - Math.max(0, state.stageStartedAt - state.runStartTime)) / 1000),
-    stageId: getCurrentStage(state).id,
-    progress01: getProgress(state.quanta, getCurrentStage(state).threshold),
-    clickLevel: state.skills.click.level,
-  });
-}
-
-function getAdjustedClickPower(state: GameState): number {
-  const modifiers = getCurrentModifiers(state);
-  const adjusted = getClickPower(modifiers);
-  const unlocked = hasUnlock(state, 'quark_foam') ? adjusted + state.skills.click.level + 1 : adjusted;
-  return unlocked;
-}
-
-function getTrackUnlocksForStage(stageId: number): GameState['skills']['unlockedTracks'] {
-  const unlocked: GameState['skills']['unlockedTracks'] = ['click'];
-  if (stageId >= 3) unlocked.push('auto');
-  if (stageId >= 4) unlocked.push('crit');
-  if (stageId >= 5) unlocked.push('time');
-  return unlocked;
-}
-
-function unlockTrackForStage(skills: GameState['skills'], stageId: number): GameState['skills'] {
-  const unlocked = new Set(skills.unlockedTracks);
-  getTrackUnlocksForStage(stageId).forEach((trackId) => unlocked.add(trackId));
-  return { ...skills, unlockedTracks: Array.from(unlocked) as GameState['skills']['unlockedTracks'] };
-}
-
-function resetMechanicState(state: GameState): Pick<GameState, 'mechanicCharge' | 'mechanicStep' | 'mechanicTriggered'> {
-  if (getCurrentStage(state).mechanic === 'remnant_cooling') {
-    return { mechanicCharge: 0, mechanicStep: 0, mechanicTriggered: false };
-  }
-  return { mechanicCharge: 0, mechanicStep: 0, mechanicTriggered: false };
-}
-
-function recordLateStageClickRate(state: GameState, now: number): number[] {
-  const stage = getCurrentStage(state);
-  if (stage.id < 13 || stage.id > 16) {
-    return state.clickRateLog;
-  }
-  const elapsedSec = Math.max(1, (now - state.stageStartedAt) / 1000);
-  const clickRate = Math.max(0, state.totalClicks - state.stageClicksAtStageStart) / elapsedSec;
-  return [...state.clickRateLog, clickRate].slice(-4);
-}
-
-function buildAtlasEntry(state: GameState, now: number): UniverseAtlasEntry | null {
-  const endingId = state.selectedEndingId ?? state.lastEndingId;
-  if (!endingId) {
-    return null;
-  }
-  return {
-    universeIndex: state.universeCount,
-    atlasName: state.currentUniverseSeed.atlasName,
-    endingId,
-    durationMs: state.totalTimePlayed,
-    totalClicks: state.totalClicks,
-    collisions: state.collisions,
-    completedAt: now,
-    seed: state.currentUniverseSeed,
-  };
-}
+// ---------------------------------------------------------------------------
+// Root reducer — routes actions to slice handlers
+// ---------------------------------------------------------------------------
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case 'HYDRATE':
-      return withHydratedTransient(action.payload);
-    case 'TICK': {
-      const stage = getCurrentStage(state);
-      const shouldEndImplosion =
-        state.imploding &&
-        state.condenseStartedAt !== null &&
-        action.now - state.condenseStartedAt >= TUNING.CONDENSE_IMPLOSION_MS;
-      const modifiers = getActiveModifiers(state.skills, {
-        currentQuanta: state.quanta,
-        stagesCleared: state.stageIdx,
-        secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
-        stageId: stage.id,
-        progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-        clickLevel: state.skills.click.level,
-      });
-      const shouldClearCombo =
-        state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
-      const canAccrue =
-        !state.completedRun &&
-        state.pendingCondenseStageIdx === null &&
-        !state.imploding &&
-        state.selectedEndingId === null;
-      const progress = getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost));
-      const baseAuto = getAutoRate(modifiers);
-      const autoRate = baseAuto;
-      const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
-      const timeBoost = getCompositeBoostMultiplier(state.shopBoosts, 'time_', action.now);
-      const stageAutoBonus =
-        stage.mechanic === 'reionization'
-          ? autoRate * state.mechanicCharge * 0.5
-          : stage.mechanic === 'first_stars'
-            ? autoRate * Math.min(1.5, state.mechanicCharge * 0.12)
-            : 0;
-      const gained = canAccrue ? (((autoRate + stageAutoBonus) * action.dt) / 1000) * quantaBoost : 0;
-      // V8-D: accumulate cosmic seconds directly; rate = 10^aeonLevel cosmic-sec/real-sec.
-      const cosmicRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost);
-      const cosmicDelta = canAccrue ? cosmicRate * (action.dt / 1000) : 0;
-      const nextCosmicClockSec = state.completedRun
-        ? state.cosmicClockSec
-        : state.cosmicClockSec + cosmicDelta;
-      const nextTimeGauge = getTimeGaugeForCosmicClock(state.stageIdx, nextCosmicClockSec);
-      const mechanic = getMechanic(stage.mechanic);
-      const tickResult =
-        canAccrue && mechanic.onTick
-          ? mechanic.onTick({ state, stage, now: action.now, progress01: progress })
-          : null;
-      return {
-        ...state,
-        quanta: safeAdd(state.quanta, gained + (tickResult?.quantaDelta ?? 0)),
-        timeGauge: nextTimeGauge,
-        entropy: safeAdd(state.entropy, tickResult?.entropyDelta ?? 0),
-        totalTimePlayed: state.completedRun ? state.totalTimePlayed : state.totalTimePlayed + action.dt,
-        combo: shouldClearCombo ? 0 : state.combo,
-        imploding: shouldEndImplosion ? false : state.imploding,
-        cosmicClockSec: nextCosmicClockSec,
-        mechanicCharge: Math.max(0, state.mechanicCharge + (tickResult?.mechanicChargeDelta ?? 0)),
-        mechanicStep: tickResult?.mechanicStep ?? state.mechanicStep,
-        mechanicTriggered: state.mechanicTriggered || Boolean(tickResult?.trigger),
-      };
-    }
-    case 'CLICK': {
-      if (state.completedRun) {
-        debugDroppedClick('completed run');
-        return state;
-      }
-      if (state.pendingCondenseStageIdx !== null) {
-        debugDroppedClick('pending condense');
-        return state;
-      }
-      if (state.imploding) {
-        debugDroppedClick('imploding');
-        return state;
-      }
-      if (state.selectedEndingId !== null) {
-        debugDroppedClick('ending selected');
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      const modifiers = getActiveModifiers(state.skills, {
-        currentQuanta: state.quanta,
-        stagesCleared: state.stageIdx,
-        secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
-        stageId: stage.id,
-        progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-        clickLevel: state.skills.click.level,
-      });
-      const combo =
-        action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
-      const clickPower = getAdjustedClickPower(state);
-      const comboMult = getComboMult(combo, getComboCapBonus(state));
-      const critEnabled = stage.id > 2;
-      const isCrit =
-        critEnabled &&
-        (action.forceCrit === true ||
-          action.randomValue < getCritChance(state.skills.crit.level, combo, modifiers));
-      const critMult = isCrit ? getCritMultiplier(state.skills.crit.level, modifiers) : 1;
-      const gainMultiplier = action.gainMultiplier ?? 1;
-      const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
-      const gained = Math.floor(
-        (clickPower * comboMult * critMult * gainMultiplier + (action.gainFlat ?? 0)) * quantaBoost,
-      );
-      const eventId = nextEventId(state);
-      const nextQuanta = safeAdd(state.quanta, gained + (action.quantaDelta ?? 0));
-      const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
-      const particleName = pickParticleName(stage.id, nextProgress);
-      const entropyGained = getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0);
-      return {
-        ...state,
-        quanta: nextQuanta,
-        entropy: safeAdd(state.entropy, entropyGained),
-        totalClicks: state.totalClicks + 1,
-        combo,
-        lastClick: action.now,
-        eventCounter: eventId,
-        lastClickEvent: createClickEvent(
-          eventId,
-          action.x,
-          action.y,
-          gained,
-          isCrit,
-          combo,
-          comboMult,
-          particleName,
-          entropyGained,
-        ),
-        mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
-        mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
-        mechanicTriggered: state.mechanicTriggered || Boolean(action.trigger),
-      };
-    }
-    case 'BUY_CLICK': {
-      if (
-        state.completedRun ||
-        state.pendingCondenseStageIdx !== null ||
-        state.imploding ||
-        state.selectedEndingId !== null
-      ) {
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      const cost = getClickCost(stage, state.clickLevel);
-      if (state.quanta < cost) {
-        return state;
-      }
-      return {
-        ...state,
-        quanta: state.quanta - cost,
-        clickLevel: state.clickLevel + 1,
-      };
-    }
-    case 'BUY_AUTO': {
-      if (
-        state.completedRun ||
-        state.pendingCondenseStageIdx !== null ||
-        state.imploding ||
-        state.selectedEndingId !== null
-      ) {
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      const cost = getAutoCost(stage, state.autoLevel);
-      if (state.quanta < cost) {
-        return state;
-      }
-      return {
-        ...state,
-        quanta: state.quanta - cost,
-        autoLevel: state.autoLevel + 1,
-      };
-    }
-    case 'BUY_CRIT': {
-      if (
-        state.completedRun ||
-        state.pendingCondenseStageIdx !== null ||
-        state.imploding ||
-        state.selectedEndingId !== null
-      ) {
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      const cost = getCritCost(stage, state.critLevel);
-      if (state.quanta < cost) {
-        return state;
-      }
-      return {
-        ...state,
-        quanta: state.quanta - cost,
-        critLevel: state.critLevel + 1,
-      };
-    }
-    case 'START_CONDENSE': {
-      if (import.meta.env.DEV) {
-        const _s = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-        console.debug('[transition] START_CONDENSE', {
-          stageIdx: state.stageIdx, quanta: state.quanta, threshold: _s.threshold,
-          cosmicClockSec: state.cosmicClockSec, required: _s.cosmicTimeSec,
-          pendingCondenseStageIdx: state.pendingCondenseStageIdx, imploding: state.imploding,
-        });
-      }
-      if (state.completedRun || state.pendingCondenseStageIdx !== null) {
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      if (stage.id === STAGES.length) {
-        return state;
-      }
-      const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
-      if (!canCondense(state)) {
-        return state;
-      }
-      const earned = getEntropyOnCondense(state.quanta, effectiveThreshold);
-      const progressAtCondense = getProgress(state.quanta, effectiveThreshold);
-      const condenseEntry = { stageId: stage.id, progressAtCondense };
-      const vacuumDecayEligible =
-        state.endingProgressFlags.vacuumDecayEligible ||
-        (stage.id === 14 && isVacuumDecayProgress(progressAtCondense));
-      const endingsUnlocked: EndingId[] =
-        vacuumDecayEligible && !state.endingsUnlocked.includes('vacuum_decay')
-          ? [...state.endingsUnlocked, 'vacuum_decay']
-          : state.endingsUnlocked;
-      return {
-        ...state,
-        entropy: state.entropy + earned,
-        pendingCondenseStageIdx: state.stageIdx,
-        pendingCondenseEntropy: earned,
-        combo: 0,
-        lastClick: 0,
-        imploding: true,
-        condenseStartedAt: action.now,
-        endingsUnlocked,
-        endingProgressFlags: {
-          ...state.endingProgressFlags,
-          vacuumDecayEligible,
-        },
-        condenseProgressHistory: [...state.condenseProgressHistory, condenseEntry].slice(-16),
-      };
-    }
-    case 'ADVANCE_STAGE': {
-      if (import.meta.env.DEV) {
-        const _s = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-        console.debug('[transition] ADVANCE_STAGE', {
-          stageIdx: state.stageIdx, quanta: state.quanta, threshold: _s.threshold,
-          cosmicClockSec: state.cosmicClockSec, required: _s.cosmicTimeSec,
-          pendingCondenseStageIdx: state.pendingCondenseStageIdx, imploding: state.imploding,
-        });
-      }
-      if (state.pendingCondenseStageIdx === null) {
-        return state;
-      }
-      if (state.stageIdx >= STAGES.length - 1) {
-        return {
-          ...state,
-          pendingCondenseStageIdx: null,
-          pendingCondenseEntropy: 0,
-          imploding: false,
-          condenseStartedAt: null,
-          completedRun: true,
-        };
-      }
-      const stage = getCurrentStage(state);
-      const nextClickRateLog = recordLateStageClickRate(state, action.now);
-      const nextStageIdx = state.stageIdx + 1;
-      const nextStageId = nextStageIdx + 1;
-      const nextCosmicClockSec = stage.cosmicTimeSec;
-      const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, nextCosmicClockSec);
-      const nextState = {
-        ...state,
-        stageIdx: nextStageIdx,
-        timeGauge: nextTimeGauge,
-        cosmicClockSec: nextCosmicClockSec,
-        combo: 0,
-        lastClick: 0,
-        pendingCondenseStageIdx: null,
-        pendingCondenseEntropy: 0,
-        imploding: false,
-        condenseStartedAt: null,
-        stageStartedAt: action.now,
-        skills: unlockTrackForStage(state.skills, nextStageId),
-        skillPoints: state.skillPoints + getSkillPointsForStageAdvance(stage.id),
-        clickRateLog: nextClickRateLog,
-        stageClicksAtStageStart: state.totalClicks,
-      };
-      return {
-        ...nextState,
-        ...resetMechanicState(nextState),
-      };
-    }
-    case 'ADMIN_NEXT_STAGE': {
-      if (state.stageIdx >= STAGES.length - 1) {
-        return {
-          ...state,
-          completedRun: true,
-          pendingCondenseStageIdx: null,
-          pendingCondenseEntropy: 0,
-          imploding: false,
-          condenseStartedAt: null,
-          selectedEndingId: null,
-          endingStartedAt: null,
-        };
-      }
-      const nextStageIdx = state.stageIdx + 1;
-      const nextState: GameState = {
-        ...state,
-        stageIdx: nextStageIdx,
-        quanta: 0,
-        timeGauge: 0,
-        clickLevel: 0,
-        autoLevel: 0,
-        critLevel: 0,
-        combo: 0,
-        lastClick: 0,
-        pendingCondenseStageIdx: null,
-        pendingCondenseEntropy: 0,
-        imploding: false,
-        condenseStartedAt: null,
-        selectedEndingId: null,
-        endingStartedAt: null,
-        completedRun: false,
-        stageStartedAt: action.now,
-        cosmicClockSec: getStageStartCosmicTime(nextStageIdx),
-        tutorialDone: true,
-        skills: unlockTrackForStage(state.skills, nextStageIdx + 1),
-        stageClicksAtStageStart: state.totalClicks,
-      };
-      return {
-        ...nextState,
-        ...resetMechanicState(nextState),
-      };
-    }
-    case 'ADMIN_PREV_STAGE': {
-      if (state.stageIdx <= 0) return state;
-      const prevStageIdx = state.stageIdx - 1;
-      const prevStageState: GameState = {
-        ...state,
-        stageIdx: prevStageIdx,
-        quanta: 0,
-        timeGauge: 0,
-        combo: 0,
-        lastClick: 0,
-        pendingCondenseStageIdx: null,
-        pendingCondenseEntropy: 0,
-        imploding: false,
-        condenseStartedAt: null,
-        selectedEndingId: null,
-        endingStartedAt: null,
-        completedRun: false,
-        stageStartedAt: action.now,
-        cosmicClockSec: getStageStartCosmicTime(prevStageIdx),
-        skills: unlockTrackForStage(state.skills, prevStageIdx + 1),
-        stageClicksAtStageStart: state.totalClicks,
-      };
-      return { ...prevStageState, ...resetMechanicState(prevStageState) };
-    }
-    case 'ADMIN_SET_PROGRESS': {
-      const _adminStage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-      const targetQuanta = Math.floor(_adminStage.threshold * action.fraction);
-      const targetCosmicSec =
-        getStageStartCosmicTime(state.stageIdx) +
-        (_adminStage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
-      return {
-        ...state,
-        quanta: targetQuanta,
-        cosmicClockSec: targetCosmicSec,
-      };
-    }
-    case 'ADMIN_RESTART_RUN': {
-      const startStageIdx = hasUnlock(state, 'inflaton_spark') ? 1 : 0;
-      const resetState = createInitialGameState(action.now);
-      return {
-        ...resetState,
-        stageIdx: startStageIdx,
-        cosmicClockSec: getStageStartCosmicTime(startStageIdx),
-        universeCount: state.universeCount,
-        cumulativeBoost: state.cumulativeBoost,
-        condensedMass: state.condensedMass,
-        echoes: state.echoes,
-        singularityUnlocks: state.singularityUnlocks,
-        endingsCompleted: state.endingsCompleted,
-        lastEndingId: state.lastEndingId,
-        tutorialDone: state.tutorialDone,
-        cosmicHoursThisRun: state.cosmicHoursThisRun,
-        dailyCheckIns: state.dailyCheckIns,
-        skillPoints: state.skillPoints,
-        endingsUnlocked: state.endingsUnlocked,
-        endingProgressFlags: createDefaultEndingProgressFlags(),
-        clickRateLog: [],
-        condenseProgressHistory: [],
-        universeAtlas: state.universeAtlas,
-        currentUniverseSeed: state.currentUniverseSeed,
-        stageClicksAtStageStart: 0,
-        tutorialFlags: state.tutorialFlags,
-        shopBoosts: state.shopBoosts,
-        totalShopSpentUSD: state.totalShopSpentUSD,
-        skills:
-          state.universeCount > 1
-            ? { ...state.skills, unlockedTracks: ['click', 'crit', 'auto', 'time'] }
-            : state.skills,
-      };
-    }
-    case 'SELECT_ENDING': {
-      const stage = getCurrentStage(state);
-      if (
-        stage.id !== STAGES.length ||
-        state.quanta < stage.threshold ||
-        state.cosmicClockSec < stage.cosmicTimeSec
-      ) {
-        return state;
-      }
-      const options = getEndingOptions(state, action.now);
-      const selectedOption = options.find((option) => option.id === action.endingId);
-      if (!selectedOption?.unlocked) {
-        return state;
-      }
-      const nextClickRateLog = recordLateStageClickRate(state, action.now);
-      const bigCrunchEligible = isBigCrunchEligible(
-        { ...state, clickRateLog: nextClickRateLog },
-        action.now,
-      );
-      const endingsUnlocked = new Set(state.endingsUnlocked);
-      if (bigCrunchEligible) endingsUnlocked.add('big_crunch');
-      if (isBigRipEligible(state)) endingsUnlocked.add('big_rip');
-      if (state.endingProgressFlags.vacuumDecayEligible) endingsUnlocked.add('vacuum_decay');
-      return {
-        ...state,
-        selectedEndingId: action.endingId,
-        endingStartedAt: action.now,
-        clickRateLog: nextClickRateLog,
-        endingsUnlocked: Array.from(endingsUnlocked) as EndingId[],
-        endingProgressFlags: {
-          ...state.endingProgressFlags,
-          bigCrunchEligible,
-          bigRipEverEligible: state.endingProgressFlags.bigRipEverEligible || isBigRipEligible(state),
-        },
-      };
-    }
-    case 'COMPLETE_ENDING':
-      if (state.selectedEndingId === null) {
-        return state;
-      }
-      {
-        const completedEndings = Array.from(
-          new Set([...state.endingsCompleted, state.selectedEndingId]),
-        );
-        const atlasEntry = buildAtlasEntry(state, action.now);
-        const universeAtlas = atlasEntry ? [...state.universeAtlas, atlasEntry] : state.universeAtlas;
-        const permanentUnlocks: EndingId[] =
-          state.selectedEndingId === 'bounce' || completedEndings.includes('bounce')
-            ? ALL_ENDINGS
-            : (Array.from(new Set([...state.endingsUnlocked, state.selectedEndingId])) as EndingId[]);
-        return {
-          ...state,
-          completedRun: true,
-          condensedMass:
-            state.condensedMass +
-            getCondensedMassReward(state.entropy, state.selectedEndingId, state.universeCount),
-          echoes:
-            state.echoes +
-            (state.endingsCompleted.includes(state.selectedEndingId)
-              ? 0
-              : getEchoReward(state.endingsCompleted.length)),
-          endingsCompleted: completedEndings,
-          endingsUnlocked: permanentUnlocks,
-          lastEndingId: state.selectedEndingId,
-          selectedEndingId: null,
-          endingStartedAt: null,
-          universeAtlas,
-        };
-      }
-    case 'BUY_SINGULARITY_UNLOCK': {
-      const unlock = SINGULARITY_UNLOCK_LOOKUP[action.unlockId];
-      if (!unlock || state.singularityUnlocks.includes(action.unlockId) || state.condensedMass < unlock.cost) {
-        return state;
-      }
-      return {
-        ...state,
-        condensedMass: state.condensedMass - unlock.cost,
-        singularityUnlocks: [...state.singularityUnlocks, action.unlockId],
-      };
-    }
-    case 'DISMISS_OFFLINE_MODAL':
-      return {
-        ...state,
-        offlineElapsedMs: 0,
-        offlineGained: 0,
-      };
-    case 'REPORT_ENCOUNTER': {
-      if (state.pendingCondenseStageIdx !== null || state.completedRun) {
-        return state;
-      }
-      const eventId = nextEventId(state);
-      return {
-        ...state,
-        eventCounter: eventId,
-        lastEncounterEvent: createEncounterEvent(eventId, action.name, action.color),
-      };
-    }
-    case 'REPORT_COLLISION': {
-      if (state.pendingCondenseStageIdx !== null || state.completedRun) {
-        return state;
-      }
-      const stage = getCurrentStage(state);
-      const modifiers = getCurrentModifiers(state);
-      const mult = getEncounterRewardMultiplier(state);
-      const clickScaledBonus = getAdjustedClickPower(state) * getEncounterClickMultiplier(action.tier);
-      const rawBonus = Math.max(action.bonus, clickScaledBonus);
-      const scaledClickBonus = clickScaledBonus * mult * modifiers.encounterBonusMult;
-      const cap = Math.max(
-        stage.threshold * (modifiers.manyWorldsCapMult > 1 ? 0.05 : 0.02),
-        scaledClickBonus,
-      );
-      const cappedBonus = Math.min(rawBonus * mult * modifiers.encounterBonusMult, cap);
-      const tierEntropyFloor =
-        action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
-      const entropyGained = Math.max(action.entropyBonus, tierEntropyFloor) * mult * stage.id;
-      const eventId = nextEventId(state);
-      return {
-        ...state,
-        quanta: safeAdd(state.quanta, cappedBonus),
-        entropy: safeAdd(state.entropy, entropyGained),
-        collisions: state.collisions + 1,
-        eventCounter: eventId,
-        lastCollisionEvent: createCollisionEvent(
-          eventId,
-          action.x,
-          action.y,
-          cappedBonus,
-          entropyGained,
-          action.name,
-          action.tier,
-        ),
-      };
-    }
-    case 'CLEAR_CLICK_EVENT':
-      return state.lastClickEvent?.id === action.id ? { ...state, lastClickEvent: null } : state;
-    case 'CLEAR_COLLISION_EVENT':
-      return state.lastCollisionEvent?.id === action.id
-        ? { ...state, lastCollisionEvent: null }
-        : state;
-    case 'CLEAR_ENCOUNTER_EVENT':
-      return state.lastEncounterEvent?.id === action.id
-        ? { ...state, lastEncounterEvent: null }
-        : state;
-    case 'SET_TUTORIAL_DONE':
-      return { ...state, tutorialDone: true };
-    case 'PRESTIGE': {
-      const resetState = createInitialGameState(action.now);
-      const nextSeed = generateUniverseSeed(state.universeCount);
-      return {
-        ...resetState,
-        universeCount: state.universeCount + 1,
-        cumulativeBoost: state.cumulativeBoost,
-        condensedMass: state.condensedMass,
-        echoes: state.echoes,
-        singularityUnlocks: state.singularityUnlocks,
-        endingsCompleted: state.endingsCompleted,
-        lastEndingId: state.lastEndingId,
-        endingsUnlocked: state.endingsUnlocked,
-        endingProgressFlags: createDefaultEndingProgressFlags(),
-        universeAtlas: state.universeAtlas,
-        currentUniverseSeed: nextSeed,
-        tutorialFlags: state.tutorialFlags,
-        totalShopSpentUSD: state.totalShopSpentUSD,
-      };
-    }
-    case 'AWARD_SKILL_POINTS':
-      return {
-        ...state,
-        skillPoints: Math.max(0, state.skillPoints + action.amount),
-      };
-    case 'BUY_TRACK_LEVEL': {
-      const treeId = action.trackId;
-      const treeDef = findTree(treeId);
-      if (!treeDef) return state;
-      if (!state.skills.unlockedTracks.includes(treeId)) return state;
-      const branch = state.skills[treeId];
-      const nextLevel = branch.level + 1;
-      if (nextLevel > treeDef.rootMaxLevel) return state;
-      const cost = Math.ceil(treeDef.rootCostCurve(nextLevel));
-      if (state.quanta < cost) return state;
-      const nextSkills = {
-        ...state.skills,
-        [treeId]: { ...branch, level: nextLevel },
-      };
-      const bigRipEverEligible =
-        state.endingProgressFlags.bigRipEverEligible ||
-        (treeId === 'time' &&
-          nextLevel >= 30 &&
-          nextSkills.ownedCrossNodes.includes('time_lv30'));
-      const endingsUnlocked: EndingId[] =
-        bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
-          ? [...state.endingsUnlocked, 'big_rip']
-          : state.endingsUnlocked;
-      return {
-        ...state,
-        quanta: state.quanta - cost,
-        clickLevel: treeId === 'click' ? nextLevel : state.clickLevel,
-        autoLevel: treeId === 'auto' ? nextLevel : state.autoLevel,
-        critLevel: treeId === 'crit' ? nextLevel : state.critLevel,
-        skills: nextSkills,
-        endingsUnlocked,
-        endingProgressFlags: {
-          ...state.endingProgressFlags,
-          bigRipEverEligible,
-        },
-      };
-    }
-    case 'BUY_CROSS_NODE': {
-      const { nodeId } = action;
-      const nodeDef = findNode(nodeId);
-      if (!nodeDef) return state;
-      if (state.skills.ownedCrossNodes.includes(nodeId)) return state;
-      const meetsRequirements = Object.entries(nodeDef.requires).every(([trackId, requiredLevel]) => {
-        const branch = state.skills[trackId as 'click' | 'auto' | 'crit' | 'time'];
-        return branch.level >= (requiredLevel ?? 0);
-      });
-      if (!meetsRequirements || state.quanta < nodeDef.cost) return state;
-      if (state.skillPoints < nodeDef.spCost) return state;
-      const nextSkills = {
-        ...state.skills,
-        ownedCrossNodes: [...state.skills.ownedCrossNodes, nodeId],
-      };
-      const bigRipEverEligible =
-        state.endingProgressFlags.bigRipEverEligible ||
-        (nodeId === 'time_lv30' && state.skills.time.level >= 30);
-      const endingsUnlocked: EndingId[] =
-        bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
-          ? [...state.endingsUnlocked, 'big_rip']
-          : state.endingsUnlocked;
-      return {
-        ...state,
-        quanta: state.quanta - nodeDef.cost,
-        skillPoints: state.skillPoints - nodeDef.spCost,
-        skills: nextSkills,
-        endingsUnlocked,
-        endingProgressFlags: {
-          ...state.endingProgressFlags,
-          bigRipEverEligible,
-        },
-      };
-    }
-    case 'BUY_SHOP_ITEM': {
-      const item = findShopItem(action.itemId);
-      if (!item) return state;
-      const next = item.applyEffect(state, action.now);
-      return {
-        ...next,
-        totalShopSpentUSD: state.totalShopSpentUSD + item.priceUSD,
-      };
-    }
-    case 'UNLOCK_TRACK':
-      return state.skills.unlockedTracks.includes(action.trackId)
-        ? state
-        : { ...state, skills: { ...state.skills, unlockedTracks: [...state.skills.unlockedTracks, action.trackId] } };
-    case 'MARK_TUTORIAL_STAGE_SEEN':
-      return state.tutorialFlags[action.stageId]
-        ? state
-        : {
-            ...state,
-            tutorialFlags: {
-              ...state.tutorialFlags,
-              [action.stageId]: true,
-            },
-          };
-    case 'MARK_TUTORIAL_FLAG':
-      return state.tutorialFlags[action.flagId]
-        ? state
-        : {
-            ...state,
-            tutorialFlags: {
-              ...state.tutorialFlags,
-              [action.flagId]: true,
-            },
-          };
+    case 'HYDRATE':               return handleHydrate(state, action);
+    case 'TICK':                  return handleTick(state, action);
+    case 'CLICK':                 return handleClick(state, action);
+    case 'BUY_CLICK':             return handleBuyClick(state, action);
+    case 'BUY_AUTO':              return handleBuyAuto(state, action);
+    case 'BUY_CRIT':              return handleBuyCrit(state, action);
+    case 'START_CONDENSE':        return handleStartCondense(state, action);
+    case 'ADVANCE_STAGE':         return handleAdvanceStage(state, action);
+    case 'SELECT_ENDING':         return handleSelectEnding(state, action);
+    case 'COMPLETE_ENDING':       return handleCompleteEnding(state, action);
+    case 'PRESTIGE':              return handlePrestige(state, action);
+    case 'BUY_TRACK_LEVEL':       return handleBuyTrackLevel(state, action);
+    case 'BUY_CROSS_NODE':        return handleBuyCrossNode(state, action);
+    case 'BUY_SHOP_ITEM':         return handleBuyShopItem(state, action);
+    case 'ADMIN_NEXT_STAGE':      return handleAdminNextStage(state, action);
+    case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
+    case 'ADMIN_SET_PROGRESS':    return handleAdminSetProgress(state, action);
+    case 'ADMIN_RESTART_RUN':     return handleAdminRestartRun(state, action);
+    case 'BUY_SINGULARITY_UNLOCK': return handleBuySingularityUnlock(state, action);
+    case 'DISMISS_OFFLINE_MODAL': return handleDismissOfflineModal(state);
+    case 'REPORT_ENCOUNTER':      return handleReportEncounter(state, action);
+    case 'REPORT_COLLISION':      return handleReportCollision(state, action);
+    case 'CLEAR_CLICK_EVENT':     return handleClearClickEvent(state, action);
+    case 'CLEAR_COLLISION_EVENT': return handleClearCollisionEvent(state, action);
+    case 'CLEAR_ENCOUNTER_EVENT': return handleClearEncounterEvent(state, action);
+    case 'SET_TUTORIAL_DONE':     return handleSetTutorialDone(state);
+    case 'AWARD_SKILL_POINTS':    return handleAwardSkillPoints(state, action);
+    case 'UNLOCK_TRACK':          return handleUnlockTrack(state, action);
+    case 'MARK_TUTORIAL_STAGE_SEEN': return handleMarkTutorialStageSeen(state, action);
+    case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
     default: {
       const exhaustiveAction: never = action;
       return exhaustiveAction;
