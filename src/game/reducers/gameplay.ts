@@ -17,6 +17,7 @@ import {
   getAutoCost,
   getCritCost,
 } from '../formulas';
+import { getStageStartCosmicTime } from '../timeFlow';
 import { getActiveModifiers } from '../skills/effects';
 import { getMechanic } from '../mechanics';
 import { pickParticleName, getParticleEntropyBonus } from '../particles';
@@ -76,11 +77,18 @@ export function handleTick(state: GameState, action: TickAction): GameState {
         ? baseAuto * Math.min(1.5, state.mechanicCharge * 0.12)
         : 0;
   const gained = canAccrue ? (((baseAuto + stageAutoBonus) * action.dt) / 1000) * quantaBoost : 0;
-  const cosmicRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost);
-  const cosmicDelta = canAccrue ? cosmicRate * (action.dt / 1000) : 0;
+  // Fill time gauge at gaugeRate%/s regardless of the absolute cosmic-time span.
+  // This prevents mid-game stages (6+) from becoming impossible to complete.
+  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost);
+  const stageStartCosmic = getStageStartCosmicTime(state.stageIdx);
+  const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
+  const safeCosmic = Math.max(state.cosmicClockSec, stageStartCosmic);
+  const cosmicDelta = canAccrue && logSpan > 0
+    ? (gaugeRate * (action.dt / 1000) * logSpan * Math.LN10 * safeCosmic) / 100
+    : 0;
   const nextCosmicClockSec = state.completedRun
     ? state.cosmicClockSec
-    : state.cosmicClockSec + cosmicDelta;
+    : safeCosmic + cosmicDelta;
   const nextTimeGauge = getTimeGaugeForCosmicClock(state.stageIdx, nextCosmicClockSec);
   const mechanic = getMechanic(stage.mechanic);
   const tickResult =

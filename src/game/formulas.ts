@@ -118,7 +118,10 @@ export function getCosmicTimeFillRate(
   mods: Modifiers,
   boostMultiplier = 1,
 ): number {
-  return Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult * boostMultiplier;
+  // Raw rate grows 10× per level, but is capped at 20 %/s so the gauge always takes ≥5 s.
+  // This prevents the time gate from becoming trivially instant once high time levels are bought.
+  const raw = Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult * boostMultiplier;
+  return Math.min(20, raw);
 }
 
 export function getTimeFillRateGauge(

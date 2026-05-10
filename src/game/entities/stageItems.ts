@@ -89,6 +89,37 @@ const RARITY_SIZE: Record<EntityRarity, EntityVisual['size']> = {
   legendary: 'large',
 };
 
+// Color tint blended with the stage accent — gives each rarity a distinct hue feel
+const RARITY_TINT: Record<EntityRarity, { hex: string; amount: number }> = {
+  common:    { hex: '#888888', amount: 0.08 }, // slight grey muting
+  rare:      { hex: '#44aaff', amount: 0.16 }, // cool blue shift
+  epic:      { hex: '#cc44ff', amount: 0.26 }, // vivid purple
+  legendary: { hex: '#ffcc22', amount: 0.36 }, // warm gold
+};
+
+// Non-flat effect values are scaled up by rarity so legendary/epic feel impactful
+const RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
+  common:    1.0,
+  rare:      1.0,
+  epic:      1.8,
+  legendary: 3.0,
+};
+
+function blendHex(base: string, tint: string, t: number): string {
+  const r1 = parseInt(base.slice(1, 3), 16);
+  const g1 = parseInt(base.slice(3, 5), 16);
+  const b1 = parseInt(base.slice(5, 7), 16);
+  const r2 = parseInt(tint.slice(1, 3), 16);
+  const g2 = parseInt(tint.slice(3, 5), 16);
+  const b2 = parseInt(tint.slice(5, 7), 16);
+  return (
+    '#' +
+    Math.round(r1 * (1 - t) + r2 * t).toString(16).padStart(2, '0') +
+    Math.round(g1 * (1 - t) + g2 * t).toString(16).padStart(2, '0') +
+    Math.round(b1 * (1 - t) + b2 * t).toString(16).padStart(2, '0')
+  );
+}
+
 function item(
   name: string,
   formula: string,
@@ -264,27 +295,34 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
   const threshold = STAGE_THRESHOLDS[stageId];
   const color = STAGE_ACCENTS[stageId];
 
-  return specs.map((spec, index) => ({
-    id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
-    stageId,
-    name: spec.name,
-    formula: spec.formula,
-    description: spec.description,
-    rarity: spec.rarity,
-    baseCost: Math.ceil(threshold * BASE_COST_FACTORS[spec.rarity]),
-    costScaling: COST_SCALING[spec.rarity],
-    maxCount: MAX_COUNTS[spec.rarity],
-    effect: spec.effect,
-    visual: {
-      symbol: spec.formula,
-      glyph: glyphFor(stageId, spec),
-      color,
-      glowColor: color,
-      size: RARITY_SIZE[spec.rarity],
-      motion: motionFor(spec.rarity, index),
-    },
-    ...(spec.endingId ? { endingId: spec.endingId } : {}),
-  }));
+  return specs.map((spec, index) => {
+    const tint = RARITY_TINT[spec.rarity];
+    const entityColor = blendHex(color, tint.hex, tint.amount);
+    // Multiplier effects are NOT scaled up by rarity — they compound multiplicatively across stages.
+    // Auto, click, crit, and time effects get rarity scaling to make higher rarities feel impactful.
+    const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : RARITY_EFFECT_SCALE[spec.rarity];
+    return {
+      id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
+      stageId,
+      name: spec.name,
+      formula: spec.formula,
+      description: spec.description,
+      rarity: spec.rarity,
+      baseCost: Math.ceil(threshold * BASE_COST_FACTORS[spec.rarity]),
+      costScaling: COST_SCALING[spec.rarity],
+      maxCount: MAX_COUNTS[spec.rarity],
+      effect: { ...spec.effect, value: spec.effect.value * effectScale },
+      visual: {
+        symbol: spec.formula,
+        glyph: glyphFor(stageId, spec),
+        color: entityColor,
+        glowColor: entityColor,
+        size: RARITY_SIZE[spec.rarity],
+        motion: motionFor(spec.rarity, index),
+      },
+      ...(spec.endingId ? { endingId: spec.endingId } : {}),
+    };
+  });
 }
 
 export const STAGE_ENTITIES: StageEntity[] = [

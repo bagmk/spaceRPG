@@ -86,13 +86,15 @@ describe('gameReducer', () => {
   });
 
   it('fills the logarithmic cosmic clock according to Aeon Drive level', () => {
-    // V8-D: cosmicClockSec accumulates directly at rate = 10^aeonLevel per second
+    // Gauge-rate formula: the time gauge fills at gaugeRate %/s (capped at 20 %/s).
+    // Stage 1: start=1e-34, end=1e-32, logSpan=2.
     const state = createInitialGameState(0);
     const next = gameReducer(state, { type: 'TICK', now: 1000, dt: 1000 });
-    // level 0: rate = 1/s, dt=1s → cosmicClockSec ≈ 1
-    expect(next.cosmicClockSec).toBeCloseTo(1, 5);
-    // timeGauge is capped at 125 since rate=1 vastly overshoots the 1e-32 target
-    expect(next.timeGauge).toBe(125);
+    // T0: gaugeRate=1 %/s, dt=1s → timeGauge advances by ~1%
+    expect(next.timeGauge).toBeCloseTo(1, 0);
+    // cosmic clock advances slightly from 1e-34
+    expect(next.cosmicClockSec).toBeGreaterThan(1e-34);
+    expect(next.cosmicClockSec).toBeLessThan(2e-34);
 
     const aeonState = {
       ...state,
@@ -102,9 +104,8 @@ describe('gameReducer', () => {
       },
     };
     const aeonNext = gameReducer(aeonState, { type: 'TICK', now: 1000, dt: 1000 });
-    // level 5: rate = 10^5/s, dt=1s → cosmicClockSec ≈ 1e5
-    expect(aeonNext.cosmicClockSec).toBeCloseTo(1e5, 5);
-    expect(aeonNext.timeGauge).toBe(125);
+    // T5: rate=10^5 but capped to 20 %/s → timeGauge advances ~14% in 1s (Euler step)
+    expect(aeonNext.timeGauge).toBeCloseTo(14, 0);
   });
 
   it('uses the softer V5 crit multiplier at low Quantum Lens level', () => {

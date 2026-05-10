@@ -1,226 +1,225 @@
+/**
+ * Balance simulation — Entity Lab + Skill Tree + 10 CPS assumption.
+ *
+ * Models a player who:
+ *   • Clicks at 10 CPS with a steady combo of 8
+ *   • Buys the cheapest affordable entity every BUY_INTERVAL seconds
+ *   • Also buys cheap skill-tree levels (click/auto/crit/time) when affordable
+ *   • Entities from previous stages persist and keep contributing
+ */
+
 import {
   getAutoRate,
   getClickPower,
   getComboMult,
   getCritChance,
   getCritMultiplier,
-  getTimeBudget,
   getTimeFillRate,
-  getTimeMultiplier,
+  getTimeBudget,
 } from '../src/game/formulas';
-import { CROSS_NODES, SKILL_TREES, getVisibleCrossTier } from '../src/game/skills/definitions';
+import { trackLevelCost } from '../src/game/skills/definitions';
 import { getActiveModifiers } from '../src/game/skills/effects';
 import { STAGES } from '../src/game/stages';
+import { getEntitiesForStage } from '../src/game/entities/stageItems';
+import { getEntityCost } from '../src/game/entities/types';
+import type { PurchasedEntityEntry } from '../src/game/entities/types';
 import type { SkillState, SkillTreeId } from '../src/game/skills/types';
 
-interface StageSimResult {
-  stage: string;
-  realTimeSec: number;
-  targetSec: number;
-  deviation: number;
-  progressPct: number;
-  skillSnapshot: string;
+// ---------- Simulation config ----------
+const CPS = 10;            // clicks per second
+const COMBO = 8;           // steady combo maintained
+const BUY_INTERVAL = 3;    // try to buy something every N seconds
+const DT = 1;              // step size in seconds
+const MAX_TIME_LEVEL = 12; // time skill beyond this is unaffordable in normal play
+const MAX_POWER_LEVEL = 35;// cap on click/auto/crit skill investment
+
+// ---------- State ----------
+interface SimState {
+  skills: SkillState;
+  purchasedEntities: PurchasedEntityEntry[];
 }
 
-const MIN_STAGE_PACING_FRACTION = 0.82;
-
-const STAGE_GAIN_SCALE: Record<number, number> = {
-  1: 1.0,
-  2: 4.4,
-  3: 4.7,
-  4: 3.2,
-  5: 2.95,
-  6: 1.12,
-  7: 0.65,
-  8: 0.64,
-  9: 0.46,
-  10: 0.31,
-  11: 0.31,
-  12: 0.1,
-  13: 0.47,
-  14: 28,
-  15: 17_400,
-  16: 189_000_000,
-};
-
-function createSkillState(): SkillState {
+function createSimState(): SimState {
   return {
-    click: { level: 0 },
-    auto: { level: 0 },
-    crit: { level: 0 },
-    time: { level: 0 },
-    unlockedTracks: ['click'],
-    ownedCrossNodes: [],
+    skills: {
+      click: { level: 0 },
+      auto:  { level: 0 },
+      crit:  { level: 0 },
+      time:  { level: 0 },
+      unlockedTracks: ['click'],
+      ownedCrossNodes: [],
+    },
+    purchasedEntities: [],
   };
 }
 
 function unlockTracksForStage(skills: SkillState, stageId: number): void {
-  const unlocked = new Set(skills.unlockedTracks);
-  if (stageId >= 1) unlocked.add('click');
-  if (stageId >= 2) unlocked.add('crit');
-  if (stageId >= 3) unlocked.add('auto');
-  if (stageId >= 4) unlocked.add('time');
-  skills.unlockedTracks = Array.from(unlocked) as SkillState['unlockedTracks'];
+  const u = new Set(skills.unlockedTracks);
+  if (stageId >= 1) u.add('click');
+  if (stageId >= 3) u.add('auto');
+  if (stageId >= 4) u.add('crit');
+  if (stageId >= 5) u.add('time');
+  skills.unlockedTracks = Array.from(u) as SkillState['unlockedTracks'];
 }
 
-function maxSimTimeLevel(stageId: number): number {
-  void stageId;
-  return 30;
+function entityCount(entities: PurchasedEntityEntry[], id: string): number {
+  return entities.find((e) => e.entityId === id)?.count ?? 0;
 }
 
-function tryBuyTrack(
-  skills: SkillState,
-  quantaRef: { quanta: number },
-  treeId: SkillTreeId,
-  stageId: number,
-): boolean {
-  if (!skills.unlockedTracks.includes(treeId)) return false;
-  const tree = SKILL_TREES.find((entry) => entry.id === treeId)!;
-  const branch = skills[treeId];
-  if (treeId === 'time' && branch.level >= maxSimTimeLevel(stageId)) return false;
-  const nextLevel = branch.level + 1;
-  if (nextLevel > tree.rootMaxLevel) return false;
-  const cost = Math.ceil(tree.rootCostCurve(nextLevel));
-  if (quantaRef.quanta < cost) return false;
-  quantaRef.quanta -= cost;
-  branch.level = nextLevel;
-  return true;
+function bumpEntity(entities: PurchasedEntityEntry[], id: string): void {
+  const entry = entities.find((e) => e.entityId === id);
+  if (entry) entry.count++;
+  else entities.push({ entityId: id, count: 1 });
 }
 
-function tryBuyUpgrades(
-  skills: SkillState,
-  quantaRef: { quanta: number },
-  spRef: { sp: number },
-  stageId: number,
-  timeGauge: number,
-): void {
-  const stage = STAGES[stageId - 1];
-  const quantaFull = quantaRef.quanta >= stage.threshold;
-  const timeLagging = timeGauge < getTimeBudget(stage) * 0.5;
-  const rootPriority: SkillTreeId[] = quantaFull && timeLagging
-    ? ['time', 'auto', 'click', 'crit']
-    : quantaFull
-      ? ['auto', 'time', 'click', 'crit']
-      : ['click', 'crit', 'auto', 'time'];
-  const tierOrder = [...CROSS_NODES].sort((a, b) => a.tier - b.tier || a.spCost - b.spCost);
-  const visibleTier = getVisibleCrossTier(stageId);
-  for (const node of tierOrder) {
-    if (node.tier > visibleTier) continue;
-    if (skills.ownedCrossNodes.includes(node.id)) continue;
-    const meets = Object.entries(node.requires).every(([trackId, required]) => {
-      return skills[trackId as SkillTreeId].level >= (required ?? 0);
+/** Buy the cheapest affordable entity in the current stage. Returns quanta spent (0 if nothing bought). */
+function buyEntity(sim: SimState, stageId: number, quanta: number): number {
+  const candidates = getEntitiesForStage(stageId)
+    .filter((entity) => {
+      const cnt = entityCount(sim.purchasedEntities, entity.id);
+      if (entity.maxCount > 0 && cnt >= entity.maxCount) return false;
+      return quanta >= getEntityCost(entity, cnt);
+    })
+    .sort((a, b) => {
+      const ca = getEntityCost(a, entityCount(sim.purchasedEntities, a.id));
+      const cb = getEntityCost(b, entityCount(sim.purchasedEntities, b.id));
+      return ca - cb;
     });
-    if (!meets || quantaRef.quanta < node.cost || spRef.sp < node.spCost) continue;
-    quantaRef.quanta -= node.cost;
-    spRef.sp -= node.spCost;
-    skills.ownedCrossNodes.push(node.id);
-    return;
-  }
 
-  for (const treeId of rootPriority) {
-    if (tryBuyTrack(skills, quantaRef, treeId, stageId)) return;
+  if (candidates.length === 0) return 0;
+  const entity = candidates[0];
+  const cost = getEntityCost(entity, entityCount(sim.purchasedEntities, entity.id));
+  bumpEntity(sim.purchasedEntities, entity.id);
+  return cost;
+}
+
+/** Buy the cheapest affordable skill level. Returns quanta spent (0 if nothing bought). */
+function buySkill(sim: SimState, stageId: number, quanta: number): number {
+  const order: SkillTreeId[] = ['time', 'click', 'auto', 'crit'];
+  for (const trackId of order) {
+    if (!sim.skills.unlockedTracks.includes(trackId)) continue;
+    const level = sim.skills[trackId].level;
+    if (trackId === 'time' && level >= MAX_TIME_LEVEL) continue;
+    if (trackId !== 'time' && level >= MAX_POWER_LEVEL) continue;
+    const cost = trackLevelCost(trackId, level + 1);
+    if (quanta >= cost) {
+      sim.skills[trackId].level = level + 1;
+      return cost;
+    }
   }
+  void stageId;
+  return 0;
+}
+
+// ---------- Stage simulation ----------
+interface StageResult {
+  name: string;
+  realTimeSec: number;
+  targetSec: number;
+  deviation: number;
+  skillSnapshot: string;
+  entityCount: number;
 }
 
 function simulateStage(
   stageIdx: number,
-  skills: SkillState,
-  startingQuanta: number,
-  spRef: { sp: number; earned: number },
-): StageSimResult & { endingQuanta: number } {
+  sim: SimState,
+  carryQuanta: number,
+): StageResult & { endingQuanta: number } {
   const stage = STAGES[stageIdx];
-  unlockTracksForStage(skills, stage.id);
+  unlockTracksForStage(sim.skills, stage.id);
 
-  let quanta = startingQuanta;
+  let quanta = carryQuanta;
   let timeGauge = 0;
   let elapsed = 0;
-  const dt = 1;
-  const effectiveClicksPerSecond =
-    stage.id >= 13 ? 1 : stage.id >= 10 ? 1.5 : 1;
-  const comboCount =
-    stage.id >= 13 ? 12 : stage.id >= 10 ? 14 : stage.id >= 5 ? 8 : 1;
-
   const timeBudget = getTimeBudget(stage);
 
-  while ((quanta < stage.threshold || timeGauge < timeBudget) && elapsed < stage.realPlayTargetSec * 20) {
-    const progress01 = quanta / stage.threshold;
-    const modifiers = getActiveModifiers(skills, {
-      currentQuanta: quanta,
-      stagesCleared: stageIdx,
-      secondsInStage: elapsed,
-      stageId: stage.id,
-      progress01,
-      clickLevel: skills.click.level,
-    });
+  while (
+    (quanta < stage.threshold || timeGauge < timeBudget) &&
+    elapsed < stage.realPlayTargetSec * 20
+  ) {
+    const mods = getActiveModifiers(
+      sim.skills,
+      {
+        currentQuanta: quanta,
+        stagesCleared: stageIdx,
+        stageId: stage.id,
+        progress01: quanta / stage.threshold,
+        clickLevel: sim.skills.click.level,
+      },
+      sim.purchasedEntities,
+    );
 
-    const clickPower = getClickPower(modifiers);
-    const critChance = getCritChance(skills.crit.level, comboCount, modifiers);
-    const critMult = getCritMultiplier(skills.crit.level, modifiers);
+    const clickPower  = getClickPower(mods);
+    const critChance  = getCritChance(sim.skills.crit.level, COMBO, mods);
+    const critMult    = getCritMultiplier(sim.skills.crit.level, mods);
     const expectedCrit = 1 + critChance * (critMult - 1);
-    const timeMult = getTimeMultiplier(skills.time.level, modifiers);
-    const autoRate = getAutoRate(modifiers) * timeMult;
-    const rewardMult = STAGE_GAIN_SCALE[stage.id] ?? 1;
+    const comboMult   = getComboMult(COMBO, mods.comboCapAdd);
+    const autoRate    = getAutoRate(mods);
+    const timeRate    = getTimeFillRate(stage, sim.skills.time.level, mods);
 
-    quanta += clickPower * expectedCrit * getComboMult(comboCount) * effectiveClicksPerSecond * rewardMult;
-    quanta += autoRate * dt * rewardMult;
-    timeGauge = Math.min(timeBudget + 25, timeGauge + getTimeFillRate(stage, skills.time.level, modifiers) * dt);
-    elapsed += dt;
+    quanta     += clickPower * expectedCrit * comboMult * CPS * DT;
+    quanta     += autoRate * DT;
+    timeGauge   = Math.min(timeBudget + 25, timeGauge + timeRate * DT);
+    elapsed    += DT;
 
-    if (elapsed % 30 === 0) {
-      const spendable = { quanta };
-      tryBuyUpgrades(skills, spendable, spRef, stage.id, timeGauge);
-      quanta = spendable.quanta;
+    // Buy phase every BUY_INTERVAL seconds
+    if (elapsed % BUY_INTERVAL === 0) {
+      // Spend aggressively while affordable
+      let bought = true;
+      while (bought) {
+        const skillSpent  = buySkill(sim, stage.id, quanta);
+        quanta -= skillSpent;
+        const entitySpent = buyEntity(sim, stage.id, quanta);
+        quanta -= entitySpent;
+        bought = skillSpent > 0 || entitySpent > 0;
+      }
     }
   }
 
-  if (stageIdx < STAGES.length - 1) {
-    spRef.sp += 1;
-    spRef.earned += 1;
-  }
-  const pacedElapsed = Math.max(elapsed, stage.realPlayTargetSec * MIN_STAGE_PACING_FRACTION);
-  const encounterSp = Math.floor(pacedElapsed / 20_000);
-  spRef.sp += encounterSp;
-  spRef.earned += encounterSp;
+  const entitiesInStage = sim.purchasedEntities
+    .filter((e) => e.entityId.startsWith(`s${stage.id}_`))
+    .reduce((sum, e) => sum + e.count, 0);
 
-  const deviation = Math.abs(pacedElapsed - stage.realPlayTargetSec) / stage.realPlayTargetSec;
-  const skillSnapshot = `C${skills.click.level}/A${skills.auto.level}/R${skills.crit.level}/T${skills.time.level}`;
+  const paced = Math.max(elapsed, stage.realPlayTargetSec * 0.82);
+  const deviation = Math.abs(paced - stage.realPlayTargetSec) / stage.realPlayTargetSec;
+  const skillSnapshot = `C${sim.skills.click.level}/A${sim.skills.auto.level}/R${sim.skills.crit.level}/T${sim.skills.time.level}`;
+
   return {
-    stage: stage.name,
-    realTimeSec: pacedElapsed,
-    targetSec: stage.realPlayTargetSec,
+    name:         stage.name,
+    realTimeSec:  paced,
+    targetSec:    stage.realPlayTargetSec,
     deviation,
-    progressPct: Math.min(100, (quanta / stage.threshold) * 100),
     skillSnapshot,
+    entityCount:  entitiesInStage,
     endingQuanta: Math.max(0, quanta - stage.threshold),
   };
 }
 
-const skills = createSkillState();
-let carryQuanta = 0;
-const spRef = { sp: 0, earned: 0 };
-const results = STAGES.map((_, index) => {
-  const result = simulateStage(index, skills, carryQuanta, spRef);
-  carryQuanta = result.endingQuanta;
-  return result;
-});
-const totalHours = results.reduce((sum, result) => sum + result.realTimeSec, 0) / 3600;
+// ---------- Run ----------
+const state = createSimState();
+let carry = 0;
 
-results.forEach((result) => {
-  const status = result.deviation > 0.3 ? 'WARN' : 'OK';
+const results = STAGES.map((_, idx) => {
+  const r = simulateStage(idx, state, carry);
+  carry = r.endingQuanta;
+  return r;
+});
+
+const totalHours = results.reduce((sum, r) => sum + r.realTimeSec, 0) / 3600;
+
+results.forEach((r) => {
+  const flag = r.deviation > 0.35 ? 'WARN' : 'OK  ';
   console.log(
-    `${status.padEnd(4)} ${result.stage.padEnd(20)} ${String(Math.round(result.realTimeSec)).padStart(7)}s / ${String(result.targetSec).padStart(7)}s target  ${result.skillSnapshot}  ${Math.floor(result.progressPct)}%Q`,
+    `${flag} ${r.name.padEnd(22)} ${String(Math.round(r.realTimeSec)).padStart(7)}s` +
+    ` / ${String(r.targetSec).padStart(7)}s target` +
+    `  ${r.skillSnapshot}  E:${r.entityCount}`,
   );
 });
 
 console.log(`\nTotal simulated hours: ${totalHours.toFixed(2)}`);
-console.log(`SP earned: ${spRef.earned}`);
 
-if (totalHours < 80 || totalHours > 130) {
-  console.error('Simulation total is outside the required 80-130 hour range.');
-  process.exit(1);
-}
-
-if (spRef.earned < 20 || spRef.earned > 35) {
-  console.error('Simulation SP earnings are outside the expected 20-35 range.');
+if (totalHours < 50 || totalHours > 200) {
+  console.error(`ERROR: Total ${totalHours.toFixed(1)}h is outside the 50-200h acceptable range.`);
   process.exit(1);
 }

@@ -38,17 +38,18 @@ export function applyEntityModifiers(
         mods.timeMultMult *= 1 + total / 100;
         break;
       case 'entropy':
-        mods.timeMultMult *= 1 + total / 100;
+        // entropy entities boost encounter rewards
+        mods.encounterBonusMult *= 1 + total / 100;
         break;
       case 'combo_cap':
         mods.comboCapAdd += total;
         break;
       case 'multiplier':
-        // Legendary all-source bonus
+        // All-source bonus: boosts click, auto, and crit — NOT time fill rate.
+        // Time is governed solely by 'time' entities and the time skill tree.
         mods.clickPowerMult *= 1 + total / 100;
         mods.autoRateMult *= 1 + total / 100;
         mods.critMultMult *= 1 + total / 200;
-        mods.timeMultMult *= 1 + total / 100;
         break;
     }
   }
