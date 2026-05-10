@@ -531,7 +531,7 @@ export function GameScreen({
             purchasedEntities={state.purchasedEntities}
             quanta={state.quanta}
             onPurchase={(entityId) => dispatch({ type: 'PURCHASE_ENTITY', entityId })}
-            onClose={() => { setEntityPanelOpen(false); setViewingStageId(null); }}
+            onClose={() => setEntityPanelOpen(false)}
             onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
           />
         ) : null}

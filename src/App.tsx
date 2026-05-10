@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useRef, useState } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { IntroScreen } from './components/IntroScreen';
 import { FinalScreen } from './components/FinalScreen';
@@ -10,6 +11,38 @@ import { useGameState } from './hooks/useGameState';
 import { createInitialGameState } from './game/reducer';
 import { STAGES } from './game/stages';
 import { getStageStartCosmicTime } from './game/timeFlow';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[GameError]', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100dvh', gap: '16px', color: '#c0b8d0', fontFamily: 'monospace' }}>
+          <p style={{ margin: 0 }}>오류가 발생했습니다. 페이지를 새로고침해주세요.</p>
+          <button
+            style={{ padding: '8px 20px', background: '#4a3060', border: '1px solid #8060b0', borderRadius: '6px', color: '#e0d8f0', cursor: 'pointer' }}
+            onClick={() => window.location.reload()}
+          >
+            새로고침
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type Route = 'intro' | 'game' | 'final' | 'atlas';
 
@@ -106,14 +139,16 @@ export default function App() {
       ) : null}
 
       {route === 'game' ? (
-        <GameScreen
-          state={state}
-          dispatch={dispatch}
-          soundManager={soundManagerRef.current}
-          muted={muted}
-          onToggleMute={() => setMuted((current) => !current)}
-          onRequestReset={() => setShowResetConfirm(true)}
-        />
+        <ErrorBoundary>
+          <GameScreen
+            state={state}
+            dispatch={dispatch}
+            soundManager={soundManagerRef.current}
+            muted={muted}
+            onToggleMute={() => setMuted((current) => !current)}
+            onRequestReset={() => setShowResetConfirm(true)}
+          />
+        </ErrorBoundary>
       ) : null}
 
       {route === 'final' ? (

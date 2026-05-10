@@ -16,7 +16,8 @@ const GLOW_RADIUS: Record<EntityRarity, number> = {
   legendary: 28,
 };
 
-const MAX_VISIBLE_PER_ENTITY = 24;
+const MAX_VISIBLE_PER_ENTITY = 10;
+const MAX_TOTAL_ENTITY_DRAW = 60;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 interface EntityDrawItem {
@@ -358,6 +359,7 @@ export function drawEntities(
   }
 
   if (items.length === 0) return;
+  if (items.length > MAX_TOTAL_ENTITY_DRAW) items.length = MAX_TOTAL_ENTITY_DRAW;
 
   const positions: EntityPosition[] = items.map((item) => {
     const iconSize = ICON_SIZE[item.rarity];
