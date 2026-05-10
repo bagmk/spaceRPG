@@ -55,7 +55,7 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  });
+  }, state.purchasedEntities);
 }
 
 export function getAdjustedClickPower(state: GameState): number {

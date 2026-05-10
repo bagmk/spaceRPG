@@ -1,4 +1,6 @@
 import type { SkillState } from './types';
+import type { PurchasedEntityEntry } from '../entities/types';
+import { applyEntityModifiers } from '../entities/effects';
 
 export interface ModifierContext {
   currentQuanta?: number;
@@ -105,20 +107,18 @@ const TOTAL_CROSS_NODE_COUNT = 24;
 export function getActiveModifiers(
   skills: SkillState | undefined,
   ctx: ModifierContext,
+  purchasedEntities?: PurchasedEntityEntry[],
 ): Modifiers {
   const mods = defaultModifiers();
-  if (!skills) {
-    return mods;
-  }
 
-  const clickLevel = skills.click.level;
-  const autoLevel = skills.auto.level;
+  const clickLevel = skills?.click.level ?? 0;
+  const autoLevel = skills?.auto.level ?? 0;
 
   mods.clickPowerMult = Math.pow(2, clickLevel);
 
   mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(2, autoLevel);
 
-  for (const nodeId of skills.ownedCrossNodes) {
+  for (const nodeId of skills?.ownedCrossNodes ?? []) {
     const mult = CROSS_NODE_MULTS[nodeId];
     if (!mult) {
       continue;
@@ -149,12 +149,16 @@ export function getActiveModifiers(
     mods.clickPowerMult *= 4;
     mods.autoRateMult *= 4;
   }
-  if (skills.ownedCrossNodes.length >= TOTAL_CROSS_NODE_COUNT) {
+  if ((skills?.ownedCrossNodes.length ?? 0) >= TOTAL_CROSS_NODE_COUNT) {
     mods.clickPowerMult *= 2;
     mods.autoRateMult *= 2;
     mods.apexMult = 2;
     mods.bigBangUnlocked = true;
     mods.eternalReturnUnlocked = true;
+  }
+
+  if (purchasedEntities && purchasedEntities.length > 0) {
+    applyEntityModifiers(mods, purchasedEntities);
   }
 
   return mods;

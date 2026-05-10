@@ -10,6 +10,7 @@ import type {
   DailyCheckInState,
   EndingProgressFlags,
   GameState,
+  PurchasedEntityEntry,
   UniverseAtlasEntry,
   UniverseSeed,
 } from './types';
@@ -48,6 +49,10 @@ export function createDefaultSkills(): SkillState {
     unlockedTracks: ['click'],
     ownedCrossNodes: [],
   };
+}
+
+export function createDefaultPurchasedEntities(): PurchasedEntityEntry[] {
+  return [];
 }
 
 export function createInitialGameState(now: number): GameState {
@@ -106,5 +111,6 @@ export function createInitialGameState(now: number): GameState {
     tutorialFlags: {},
     shopBoosts: [],
     totalShopSpentUSD: 0,
+    purchasedEntities: [],
   };
 }

@@ -1,11 +1,12 @@
 import type { EndingId, EndingOption, GameState, Stage, UniverseSeed, AnomalyType } from './types';
+import { STAGE_ENTITIES } from './entities/stageItems';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
 
 const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, string> = {
   big_crunch: 'Crit > 1/sec across stages 13-16.',
-  big_rip: 'Aeon Drive Lv 30 plus the Lv 30 Time SP node.',
+  big_rip: 'Own 12 Cosmic Time or all-source entities.',
   vacuum_decay: 'Condense near 25%, 50%, 75%, or 100% in the proton decay era.',
   bounce: 'Universe count >= 5, with Heat Death, Big Crunch, Big Rip, and Vacuum Decay completed.',
 };
@@ -195,11 +196,22 @@ export function applyUniverseToStage(stage: Stage, seed: UniverseSeed): Stage {
   };
 }
 
-export function isBigRipEligible(state: Pick<GameState, 'skills' | 'endingsUnlocked' | 'endingsCompleted'>): boolean {
+export function isBigRipEligible(
+  state: Pick<GameState, 'skills' | 'endingsUnlocked' | 'endingsCompleted' | 'purchasedEntities'>,
+): boolean {
+  const timeEntityCount = state.purchasedEntities.reduce((sum, entry) => {
+    const entity = STAGE_ENTITIES.find((candidate) => candidate.id === entry.entityId);
+    if (!entity) return sum;
+    return entity.effect.type === 'time' || entity.effect.type === 'multiplier'
+      ? sum + entry.count
+      : sum;
+  }, 0);
+
   return (
     state.endingsUnlocked.includes('big_rip') ||
     state.endingsCompleted.includes('big_rip') ||
-    (state.skills.time.level >= 30 && state.skills.ownedCrossNodes.includes('time_lv30'))
+    (state.skills.time.level >= 30 && state.skills.ownedCrossNodes.includes('time_lv30')) ||
+    timeEntityCount >= 12
   );
 }
 

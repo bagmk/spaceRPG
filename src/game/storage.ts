@@ -18,7 +18,7 @@ function isBrowser(): boolean {
 
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 7,
+    version: 8,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
@@ -62,6 +62,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     tutorialFlags: state.tutorialFlags,
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
+    purchasedEntities: state.purchasedEntities,
   };
 }
 
@@ -119,6 +120,12 @@ export function loadGame(): PersistentGameState | null {
         : null;
     }
     if ((parsed as { version?: number }).version === 7) {
+      // v7 → v8: add purchasedEntities
+      const migrated = validateV5(parsed as Partial<SaveState>);
+      if (!migrated) return null;
+      return { ...migrated, purchasedEntities: [] };
+    }
+    if ((parsed as { version?: number }).version === 8) {
       return validateV5(parsed as Partial<SaveState>);
     }
     return null;

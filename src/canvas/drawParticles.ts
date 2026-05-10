@@ -36,9 +36,9 @@ export function drawParticles({ ctx, stage, particles, flyers, bursts }: DrawPar
       flyer.spriteId ?? stage.id,
       flyer.x,
       flyer.y,
-      flyer.auto ? 1.7 : 2.6,
+      flyer.auto ? 1.5 : 1.1,
       stage.coreColor,
-      flyer.life,
+      flyer.auto ? flyer.life * 0.85 : flyer.life * 0.55,
       flyer.life * Math.PI * 2,
     );
     ctx.shadowBlur = 0;

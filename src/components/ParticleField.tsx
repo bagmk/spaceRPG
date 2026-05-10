@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import { drawCluster } from '../canvas/drawCluster';
 import { drawCore } from '../canvas/drawCore';
 import { drawEffects } from '../canvas/drawEffects';
+import { drawEntities } from '../canvas/drawEntities';
 import { drawParticles } from '../canvas/drawParticles';
 import { drawRogues } from '../canvas/drawRogues';
 import { drawStars } from '../canvas/drawStars';
@@ -27,6 +28,7 @@ import type {
   Star,
   WakeTrail,
 } from '../game/types';
+import type { PurchasedEntityEntry } from '../game/entities/types';
 import { useGameLoop } from '../hooks/useGameLoop';
 
 interface CollisionPayload {
@@ -59,6 +61,7 @@ interface ParticleFieldProps {
   clickVfxScale: number;
   gravityMod: number;
   anomaly: AnomalyType | null;
+  purchasedEntities: PurchasedEntityEntry[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   onEncounter: (payload: EncounterPayload) => void;
   onCollision: (payload: CollisionPayload) => void;
@@ -193,6 +196,7 @@ function createBurstSet(
   color: string,
   speedBase: number,
   stageId?: number,
+  radiusScale = 1,
 ): Burst[] {
   return Array.from({ length: count }, (_, index) => {
     const angle = (index / count) * Math.PI * 2 + Math.random() * 0.4;
@@ -203,7 +207,7 @@ function createBurstSet(
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       turn: (Math.random() < 0.5 ? -1 : 1) * (0.012 + Math.random() * 0.018),
-      r: 2 + Math.random() * 2.5,
+      r: (2 + Math.random() * 2.5) * radiusScale,
       life: 1,
       color,
       spriteId: stageId,
@@ -938,6 +942,7 @@ export const ParticleField = memo(function ParticleField({
   clickVfxScale,
   gravityMod,
   anomaly,
+  purchasedEntities,
   onGatherClick,
   onEncounter,
   onCollision,
@@ -1076,7 +1081,7 @@ export const ParticleField = memo(function ParticleField({
     );
     for (let index = 0; index < clickEmissionCount; index += 1) {
       const angle = (index / Math.max(1, clickEmissionCount)) * Math.PI * 2;
-      const radius = clickEmissionCount > 1 ? 10 + clickEmissionCount * 2 : 0;
+      const radius = clickEmissionCount > 1 ? 4 + clickEmissionCount : 0;
       worldRef.current.flyers.push(
         createCurvedFlyer(
           lastClickEvent.x + Math.cos(angle) * radius,
@@ -1092,11 +1097,18 @@ export const ParticleField = memo(function ParticleField({
       ...createBurstSet(
         lastClickEvent.x,
         lastClickEvent.y,
-        (lastClickEvent.isCrit ? TUNING.CRIT_BURST_COUNT : TUNING.CLICK_BURST_COUNT) *
-          Math.max(1, clickEmissionCount),
+        Math.max(
+          1,
+          Math.floor(
+            (lastClickEvent.isCrit ? TUNING.CRIT_BURST_COUNT : TUNING.CLICK_BURST_COUNT) *
+              Math.max(1, clickEmissionCount) *
+              0.55,
+          ),
+        ),
         lastClickEvent.isCrit ? '#ffffff' : stage.coreColor,
-        (lastClickEvent.isCrit ? 4.5 : 2.2) * clickVfxScale,
+        (lastClickEvent.isCrit ? 2.4 : 1.2) * clickVfxScale,
         stage.id,
+        lastClickEvent.isCrit ? 0.48 : 0.38,
       ),
     );
     if (stage.clusterMode === 'blackHole') {
@@ -1108,7 +1120,7 @@ export const ParticleField = memo(function ParticleField({
         vx: Math.cos(angle) * 6,
         vy: Math.sin(angle) * 6,
         turn: 0.018,
-        r: 3,
+        r: 1.5,
         life: 1,
         color: getHawkingPhotonColor(getProgress(quanta, effectiveThreshold)),
         spriteId: stage.id,
@@ -1121,8 +1133,8 @@ export const ParticleField = memo(function ParticleField({
           lastClickEvent.x,
           lastClickEvent.y,
           30 + clickEmissionCount * 5,
-          clickEmissionCount >= 5 ? 1000 : 800,
-          clickEmissionCount >= 6 ? 8 : 5,
+          clickEmissionCount >= 5 ? 760 : 620,
+          clickEmissionCount >= 6 ? 3 : 2,
         ),
       );
     }
@@ -1413,6 +1425,7 @@ export const ParticleField = memo(function ParticleField({
       now,
       progress: visualProgress,
     });
+    drawEntities(ctx, cx, cy, stage.id, purchasedEntities, now);
     drawParticles({
       ctx,
       stage,

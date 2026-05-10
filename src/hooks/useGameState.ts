@@ -61,13 +61,17 @@ export function useGameState(): UseGameStateResult {
         return baseState;
       }
       const stage = STAGES[Math.min(payload.stageIdx, STAGES.length - 1)];
-      const modifiers = getActiveModifiers(payload.skills, {
-        currentQuanta: payload.quanta,
-        stagesCleared: payload.stageIdx,
-        secondsInStage: Math.max(0, (now - payload.stageStartedAt) / 1000),
-        stageId: stage.id,
-        clickLevel: payload.skills.click.level,
-      });
+      const modifiers = getActiveModifiers(
+        payload.skills,
+        {
+          currentQuanta: payload.quanta,
+          stagesCleared: payload.stageIdx,
+          secondsInStage: Math.max(0, (now - payload.stageStartedAt) / 1000),
+          stageId: stage.id,
+          clickLevel: payload.skills.click.level,
+        },
+        payload.purchasedEntities ?? [],
+      );
       const autoRate = getAutoRate(modifiers);
       const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')
         ? 1
@@ -135,6 +139,7 @@ export function useGameState(): UseGameStateResult {
     saveGame(state);
   }, [
     state.stageIdx,
+    state.quanta,
     state.timeGauge,
     state.pendingCondenseStageIdx,
     state.completedRun,
@@ -145,6 +150,7 @@ export function useGameState(): UseGameStateResult {
     state.skillPoints,
     state.shopBoosts,
     state.totalShopSpentUSD,
+    state.purchasedEntities,
   ]);
 
   return {

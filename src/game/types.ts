@@ -13,6 +13,7 @@ export type * from './types/events';
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from './types/events';
 import type { SkillState, SkillTreeId } from './skills/types';
+import type { PurchasedEntityEntry } from './entities/types';
 
 // ---------------------------------------------------------------------------
 // Stage
@@ -186,8 +187,10 @@ export interface CanvasWorld {
 // Save / persistent state
 // ---------------------------------------------------------------------------
 
+export type { PurchasedEntityEntry } from './entities/types';
+
 export interface SaveState {
-  version: 7;
+  version: 8;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -231,6 +234,7 @@ export interface SaveState {
   tutorialFlags: Record<string, boolean>;
   shopBoosts: ShopBoost[];
   totalShopSpentUSD: number;
+  purchasedEntities: PurchasedEntityEntry[];
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

@@ -34,6 +34,7 @@ import {
   handlePrestige,
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
+import { handlePurchaseEntity } from './reducers/entities';
 import { handleBuyShopItem } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -111,7 +112,8 @@ export type GameAction =
   | { type: 'BUY_SHOP_ITEM'; itemId: string; now: number }
   | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
-  | { type: 'MARK_TUTORIAL_FLAG'; flagId: string };
+  | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
+  | { type: 'PURCHASE_ENTITY'; entityId: string };
 
 // ---------------------------------------------------------------------------
 // Serialization helpers
@@ -162,6 +164,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     tutorialFlags: state.tutorialFlags,
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
+    purchasedEntities: state.purchasedEntities,
   };
 }
 
@@ -201,6 +204,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'UNLOCK_TRACK':          return handleUnlockTrack(state, action);
     case 'MARK_TUTORIAL_STAGE_SEEN': return handleMarkTutorialStageSeen(state, action);
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
+    case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
     default: {
       const exhaustiveAction: never = action;
       return exhaustiveAction;

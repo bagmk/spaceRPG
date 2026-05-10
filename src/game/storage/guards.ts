@@ -7,6 +7,7 @@ import type {
   UniverseAtlasEntry,
   UniverseSeed,
   DailyCheckInState,
+  PurchasedEntityEntry,
   ShopBoost,
   LegacyShopBoosts,
 } from '../types';
@@ -113,6 +114,12 @@ export function isLegacyShopBoosts(value: unknown): value is LegacyShopBoosts {
     const b = boost as Record<string, unknown>;
     return isFiniteNumber(b.factor) && isFiniteNumber(b.expiresAt);
   });
+}
+
+export function isPurchasedEntityEntry(value: unknown): value is PurchasedEntityEntry {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as Record<string, unknown>;
+  return typeof r.entityId === 'string' && isFiniteNumber(r.count);
 }
 
 export function isSkillState(value: unknown): boolean {

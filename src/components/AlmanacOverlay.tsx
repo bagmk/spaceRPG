@@ -125,9 +125,9 @@ export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: Alm
                   const unlocked = effectiveProgress >= log.progress;
                   return (
                     <div key={log.progress} className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}>
-                      <div className="almanac-log-progress">
-                        {unlocked ? `${log.progress}%` : '???'}
-                      </div>
+                      {!unlocked && (
+                        <div className="almanac-log-progress">???</div>
+                      )}
                       <div className="almanac-log-body">
                         <div className="almanac-log-entry-title">
                           {unlocked ? log.title : '— locked —'}

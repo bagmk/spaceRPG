@@ -24,6 +24,8 @@ import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
 import { getStageStartCosmicTime } from '../game/timeFlow';
+import { getEntityCost } from '../game/entities/types';
+import { getEntitiesForStage } from '../game/entities/stageItems';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
 import { EncounterAlert } from './EncounterAlert';
@@ -34,7 +36,7 @@ import { ScaleIndicator } from './ScaleIndicator';
 import { SpeechBubble } from './SpeechBubble';
 import { ShopButton, ShopPanel } from './ShopPanel';
 import { ActiveBoostHud } from './ActiveBoostHud';
-import { SkillsButton, SkillsPanel } from './skills/SkillsPanel';
+import { EntityPanel } from './EntityPanel';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { OfflineProgressModal } from './OfflineProgressModal';
 import { EndingChooser } from './EndingChooser';
@@ -43,7 +45,6 @@ import { BigRipEnding } from './endings/BigRipEnding';
 import { BounceEnding } from './endings/BounceEnding';
 import { HeatDeathEnding } from './endings/HeatDeathEnding';
 import { VacuumDecayEnding } from './endings/VacuumDecayEnding';
-import { CROSS_NODES, SKILL_TREES, getVisibleCrossTier } from '../game/skills/definitions';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
@@ -68,14 +69,13 @@ interface EncounterEntry {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'skills' | 'shop' | 'resource';
+  anchor: 'entity' | 'shop' | 'resource';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
 }
 
 type TransitionPhase = 'idle' | 'bursting' | 'quote' | 'revealing';
-type StatPopupTrack = 'click' | 'auto' | 'crit' | 'time';
 
 interface GameScreenProps {
   state: GameState;
@@ -119,12 +119,11 @@ export function GameScreen({
   onToggleMute,
   onRequestReset,
 }: GameScreenProps) {
-  const [skillsOpen, setSkillsOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const [entityPanelOpen, setEntityPanelOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
   const [showInfoHint, setShowInfoHint] = useState(false);
-  const [statPopup, setStatPopup] = useState<{ trackId: StatPopupTrack; x: number; y: number } | null>(null);
-  const skillsAnchorRef = useRef<HTMLDivElement | null>(null);
+  const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
@@ -143,7 +142,7 @@ export function GameScreen({
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  });
+  }, state.purchasedEntities);
   const autoRate = getAutoRate(modifiers);
   const clickPower = getClickPower(modifiers);
   const critMultiplier = getCritMultiplier(state.skills.crit.level, modifiers);
@@ -191,60 +190,42 @@ export function GameScreen({
           stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
         )
       : cosmicClockFromGauge;
-  const canShowSkills = stage.id >= 2;
   const canShowShop = state.universeCount > 1 || stage.id >= 6;
-  const statPopupTree = statPopup ? SKILL_TREES.find((tree) => tree.id === statPopup.trackId) : null;
-  const statPopupLevel = statPopup ? state.skills[statPopup.trackId].level : 0;
-  const statPopupNextLevel = statPopupLevel + 1;
-  const statPopupUnlocked = statPopup ? state.skills.unlockedTracks.includes(statPopup.trackId) : false;
-  const statPopupCost = statPopupTree ? Math.ceil(statPopupTree.rootCostCurve(statPopupNextLevel)) : 0;
-  const statPopupCanBuy = Boolean(statPopup && statPopupUnlocked && state.quanta >= statPopupCost);
-  const hasAffordableSkill = useMemo(
-    () => {
-      const canBuyTrack = SKILL_TREES.some((tree) => {
-        const trackId = tree.id;
-        if (!state.skills.unlockedTracks.includes(trackId)) return false;
-        const level = state.skills[trackId].level;
-        return state.quanta >= Math.ceil(tree.rootCostCurve(level + 1));
-      });
-      if (canBuyTrack) return true;
-      const visibleTier = getVisibleCrossTier(stage.id);
-      return CROSS_NODES.some((node) => {
-        if (node.tier > visibleTier) return false;
-        if (state.skills.ownedCrossNodes.includes(node.id)) return false;
-        const meetsRequirements = Object.entries(node.requires).every(([trackId, requiredLevel]) => {
-          return state.skills[trackId as 'click' | 'auto' | 'crit' | 'time'].level >= (requiredLevel ?? 0);
-        });
-        return meetsRequirements && state.quanta >= node.cost && state.skillPoints >= node.spCost;
-      });
-    },
-    [stage.id, state.quanta, state.skillPoints, state.skills],
-  );
+  const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
+  const hasAffordableEntity = currentStageEntities.some((entity) => {
+    const count = state.purchasedEntities.find((entry) => entry.entityId === entity.id)?.count ?? 0;
+    const maxed = entity.maxCount > 0 && count >= entity.maxCount;
+    return !maxed && state.quanta >= getEntityCost(entity, count);
+  });
+  const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
+    const entry = state.purchasedEntities.find((candidate) => candidate.entityId === entity.id);
+    return sum + (entry?.count ?? 0);
+  }, 0);
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
-    if (state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
+    if (entityPanelOpen || state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
       return null;
     }
-    const stageBubbles: Record<number, string> = {
-      2: 'Stellar Forge unlocked. Your clicks grow stronger.',
-      3: 'Cosmic Web unlocked. Quanta begin gathering on their own.',
-      4: 'Quantum Lens unlocked. Critical hits begin from this stage.',
-      5: 'Aeon Drive unlocked. Bend the flow of cosmic time.',
-    };
-    const stageFlag = `stage-${stage.id}-skills`;
-    if (stageBubbles[stage.id] && !state.tutorialFlags[stageFlag] && canShowSkills) {
+    if (hasAffordableEntity && !state.tutorialFlags['entity-lab-intro']) {
       return {
-        flagId: stageFlag,
-        anchor: 'skills',
-        message: stageBubbles[stage.id],
-        ctaLabel: 'Open Skills',
-        onCta: () => setSkillsOpen(true),
+        flagId: 'entity-lab-intro',
+        anchor: 'entity',
+        message: 'Entity Lab turns quanta into stage entities. They appear in the field and replace the old skill upgrades.',
+        ctaLabel: 'Open Entity Lab',
+        onCta: () => setEntityPanelOpen(true),
+      };
+    }
+    if (ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-canvas']) {
+      return {
+        flagId: 'entity-lab-canvas',
+        anchor: 'entity',
+        message: 'Purchased entities now orbit the center. Buying more copies adds more bodies, not just a number.',
       };
     }
     if (stage.id >= 5 && !state.tutorialFlags['time-gauge-visible']) {
       return {
         flagId: 'time-gauge-visible',
         anchor: 'resource',
-        message: 'Cosmic time accumulates. Aeon Drive levels speed it up.',
+        message: 'Cosmic time accumulates here. Time-type entities in the lab speed this gauge up.',
       };
     }
     if (canShowShop && !state.tutorialFlags['shop-visible']) {
@@ -267,7 +248,9 @@ export function GameScreen({
   }, [
     canCondense,
     canShowShop,
-    canShowSkills,
+    entityPanelOpen,
+    hasAffordableEntity,
+    ownedCurrentStageEntityCount,
     stage.id,
     state.tutorialFlags,
     state.universeCount,
@@ -489,6 +472,7 @@ export function GameScreen({
           clickVfxScale={modifiers.clickVfxScale}
           gravityMod={state.currentUniverseSeed.gravityMod}
           anomaly={state.currentUniverseSeed.anomaly}
+          purchasedEntities={state.purchasedEntities}
           onGatherClick={(x, y, forceCrit) => {
             const mechanicResult = mechanic.onClick?.({
               state,
@@ -532,8 +516,14 @@ export function GameScreen({
         {shopOpen && canShowShop ? (
           <ShopPanel state={state} dispatch={dispatch} onClose={() => setShopOpen(false)} />
         ) : null}
-        {skillsOpen && canShowSkills ? (
-          <SkillsPanel state={state} dispatch={dispatch} onClose={() => setSkillsOpen(false)} />
+        {entityPanelOpen ? (
+          <EntityPanel
+            currentStageId={stage.id}
+            purchasedEntities={state.purchasedEntities}
+            quanta={state.quanta}
+            onPurchase={(entityId) => dispatch({ type: 'PURCHASE_ENTITY', entityId })}
+            onClose={() => setEntityPanelOpen(false)}
+          />
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
           <div className="hud-stage-title">{`Stage ${stage.id}: ${stage.name}`}</div>
@@ -559,70 +549,22 @@ export function GameScreen({
           </button>
         </div>
         <div className="stat-header" aria-label="Core stats">
-          <button
-            className="stat-header-item"
-            type="button"
-            onClick={(event) => setStatPopup({ trackId: 'click', x: event.clientX, y: event.clientY })}
-          >
+          <span className="stat-header-item stat-header-readout">
             {`Quanta x${formatWhole(clickPower)}`}
-          </button>
-          <button
-            className="stat-header-item"
-            type="button"
-            onClick={(event) => setStatPopup({ trackId: 'auto', x: event.clientX, y: event.clientY })}
-          >
+          </span>
+          <span className="stat-header-item stat-header-readout">
             {`Auto ${formatRate(autoRate)}`}
-          </button>
+          </span>
           {stage.id > 2 ? (
-            <button
-              className="stat-header-item"
-              type="button"
-              onClick={(event) => setStatPopup({ trackId: 'crit', x: event.clientX, y: event.clientY })}
-            >
+            <span className="stat-header-item stat-header-readout">
               {`Crit x${formatWhole(critMultiplier)}`}
-            </button>
+            </span>
           ) : null}
-          <button
-            className="stat-header-item"
-            type="button"
-            onClick={(event) => setStatPopup({ trackId: 'time', x: event.clientX, y: event.clientY })}
-          >
+          <span className="stat-header-item stat-header-readout">
             {`Time x${formatWhole(timeMult)}`}
-          </button>
+          </span>
           <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
         </div>
-        {statPopup && statPopupTree ? (
-          <div
-            className="stat-upgrade-popup"
-            style={{
-              left: Math.max(12, Math.min(window.innerWidth - 224, statPopup.x - 100)),
-              top: Math.max(48, statPopup.y + 14),
-            }}
-          >
-            <button
-              type="button"
-              className="popup-close"
-              aria-label="Close stat upgrade"
-              onClick={() => setStatPopup(null)}
-            >
-              x
-            </button>
-            <strong>{`${statPopupTree.label} Lv ${statPopupLevel} -> ${statPopupNextLevel}`}</strong>
-            <span>{`Cost: ${formatGameNumber(statPopupCost)} quanta`}</span>
-            {!statPopupUnlocked ? <span>{`Unlocks at Stage ${statPopupTree.unlockStageId}`}</span> : null}
-            <button
-              type="button"
-              className="q-continue stat-buy"
-              disabled={!statPopupCanBuy}
-              onClick={() => {
-                dispatch({ type: 'BUY_TRACK_LEVEL', trackId: statPopup.trackId });
-                setStatPopup(null);
-              }}
-            >
-              BUY +1
-            </button>
-          </div>
-        ) : null}
         <div className="hud-controls">
           <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); setShowInfoHint(false); }}>
             INFO
@@ -635,11 +577,15 @@ export function GameScreen({
           </button>
         </div>
         <div className="bottom-buttons">
-          {canShowSkills ? (
-            <div ref={skillsAnchorRef}>
-              <SkillsButton highlighted={hasAffordableSkill} onClick={() => setSkillsOpen(true)} />
-            </div>
-          ) : null}
+          <button
+            ref={entityAnchorRef}
+            type="button"
+            className={`entity-lab-button ${hasAffordableEntity ? 'affordable' : ''}`}
+            onClick={() => setEntityPanelOpen(true)}
+            aria-label="Open Entity Lab"
+          >
+            ⚗
+          </button>
           <div ref={shopAnchorRef} style={!canShowShop ? { width: 56, height: 56, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
             {canShowShop ? (
               <ShopButton
@@ -709,8 +655,8 @@ export function GameScreen({
       {activeTutorialBubble ? (
         <SpeechBubble
           anchorRef={
-            activeTutorialBubble.anchor === 'skills'
-              ? skillsAnchorRef
+            activeTutorialBubble.anchor === 'entity'
+              ? entityAnchorRef
               : activeTutorialBubble.anchor === 'shop'
                 ? shopAnchorRef
                 : resourceAnchorRef
@@ -718,9 +664,9 @@ export function GameScreen({
           position={
             activeTutorialBubble.anchor === 'resource'
               ? 'bottom'
-              : activeTutorialBubble.anchor === 'skills' || activeTutorialBubble.anchor === 'shop'
-                ? 'left'
-                : 'top'
+              : activeTutorialBubble.anchor === 'entity'
+                ? 'top'
+                : 'left'
           }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}

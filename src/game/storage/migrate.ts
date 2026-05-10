@@ -7,6 +7,7 @@ import {
   createDefaultEndingProgressFlags,
   createDefaultUniverseAtlas,
   createDefaultCondenseProgressHistory,
+  createDefaultPurchasedEntities,
 } from '../defaults';
 import type { PersistentGameState, SaveState, SingularityUnlockId, EndingId } from '../types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4 } from './legacyTypes';
@@ -23,6 +24,7 @@ import {
   isTutorialFlags,
   isLegacyShopBoosts,
   isSkillState,
+  isPurchasedEntityEntry,
 } from './guards';
 import { normalizeSkillState, normalizeShopBoosts, getUnlockedTracksForProgress } from './normalize';
 
@@ -150,6 +152,9 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
     tutorialFlags: v4.universeCount && v4.universeCount > 1 ? { allDismissed: true } : {},
     shopBoosts: normalizeShopBoosts(record.shopBoosts),
     totalShopSpentUSD: 0,
+    purchasedEntities: Array.isArray(record.purchasedEntities)
+      ? record.purchasedEntities.filter(isPurchasedEntityEntry)
+      : createDefaultPurchasedEntities(),
   };
 }
 
@@ -200,7 +205,8 @@ export function validateV5(
     !isFiniteNumber(parsed.stageClicksAtStageStart) ||
     !isTutorialFlags(parsed.tutorialFlags) ||
     !(Array.isArray(parsed.shopBoosts) || isLegacyShopBoosts(parsed.shopBoosts)) ||
-    !isFiniteNumber(parsed.totalShopSpentUSD)
+    !isFiniteNumber(parsed.totalShopSpentUSD) ||
+    !(Array.isArray(parsed.purchasedEntities) && parsed.purchasedEntities.every(isPurchasedEntityEntry))
   ) {
     return null;
   }
@@ -249,5 +255,6 @@ export function validateV5(
     tutorialFlags: parsed.tutorialFlags,
     shopBoosts: normalizeShopBoosts(parsed.shopBoosts),
     totalShopSpentUSD: parsed.totalShopSpentUSD,
+    purchasedEntities: parsed.purchasedEntities,
   };
 }
