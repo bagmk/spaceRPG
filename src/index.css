@@ -4225,13 +4225,7 @@ button.stat-header-item {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .entity-glyph *,
-  .entity-glyph {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-  }
-}
+
 
 .entity-card__info {
   grid-column: 2;
