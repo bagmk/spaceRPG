@@ -42,20 +42,46 @@ src/
 
 | File | Lines | What it does |
 |------|-------|--------------|
-| `types.ts` | 441 | All shared TypeScript interfaces. `SaveState` → `PersistentGameState` → `GameState`. Canvas types live here too (`CanvasWorld`, `Rogue`, `Mote`, etc.). |
-| `constants.ts` | ~60 | `TUNING` object — all magic numbers (crit cap, combo mult, cost growth, etc.) |
-| `formulas.ts` | 350 | ALL game math functions + ALL number/time formatters. No side effects. |
-| `reducer.ts` | 1 118 | `GameAction` union type + `gameReducer()` — one giant switch. Also holds `createInitialGameState()`. |
-| `stages.ts` | 506 | `STAGES` array — 16 stage definitions with thresholds, cosmic times, colors, background configs. |
-| `storage.ts` | 735 | `saveGame()`, `loadGame()`, migration chain from v1→v7. |
-| `multiverse.ts` | 290 | Ending eligibility logic, universe seed generation, `UniverseAtlasEntry` builders. |
-| `timeFlow.ts` | ~60 | `getStageStartCosmicTime()` — helper for cosmic clock reset on stage advance. |
-| `particles.ts` | ~80 | `PARTICLE_DEFINITIONS` — named particle types and their entropy bonuses. |
-| `encounters.ts` | ~60 | Rogue encounter name/color tables. |
-| `audio.ts` | ~120 | `SoundManager` class — Web Audio API wrapper. |
-| `almanac.ts` | ~200 | Encyclopedia text entries keyed by `AlmanacId`. |
-| `stageLogs.ts` | ~80 | Stage transition log text. |
-| `scaleIndicator.ts` | ~40 | Scale label data for the `ScaleIndicator` component. |
+| `types.ts` | ~30 | 얇은 배럴. `export type * from './types/canvas'` + `export type * from './types/events'` + 핵심 게임 타입(`SaveState`, `PersistentGameState`, `GameState`, `CanvasWorld` 등). |
+| `types/canvas.ts` | ~120 | Canvas 전용 타입: `Rogue`, `Star`, `Mote`, `Flyer`, `Burst`, `Shockwave` 등. |
+| `types/events.ts` | ~30 | UI 이벤트 타입: `FloatingClickEvent`, `FloatingCollisionEvent`, `EncounterEvent`. |
+| `defaults.ts` | ~80 | 모든 `createDefault*()` 함수 + `createInitialGameState()`. 단일 소스. |
+| `constants.ts` | ~60 | `TUNING` object — 모든 매직넘버 (crit cap, combo mult, cost growth 등). |
+| `formulas.ts` | 350 | 모든 게임 수식 + 숫자/시간 포맷터. 사이드 이펙트 없음. |
+| `reducer.ts` | ~170 | `GameAction` union + `toPersistentState()` + 얇은 라우팅 switch. 로직은 `reducers/`에. |
+| `stages.ts` | 506 | `STAGES` 배열 — 16 스테이지 정의 (임계값, 우주시간, 색상, 배경). |
+| `storage.ts` | ~120 | Public API: `saveGame()`, `loadGame()`, `clearSave()` 등. 로직은 `storage/`에. |
+| `multiverse.ts` | 290 | 엔딩 판정 로직, 우주 씨드 생성, `UniverseAtlasEntry` 빌더. |
+| `timeFlow.ts` | ~60 | `getStageStartCosmicTime()` — 스테이지 진행 시 우주 시계 초기화 헬퍼. |
+| `particles.ts` | ~80 | `PARTICLE_DEFINITIONS` — 파티클 타입 + 엔트로피 보너스. |
+| `encounters.ts` | ~60 | Rogue 조우 이름/색상 테이블. |
+| `audio.ts` | ~120 | `SoundManager` 클래스 — Web Audio API 래퍼. |
+| `almanac.ts` | ~200 | `AlmanacId` 키의 백과사전 텍스트. |
+| `stageLogs.ts` | ~80 | 스테이지 전환 로그 텍스트. |
+| `scaleIndicator.ts` | ~40 | `ScaleIndicator` 컴포넌트용 스케일 레이블 데이터. |
+
+#### `game/reducers/` — 슬라이스 핸들러
+
+`reducer.ts` 의 switch가 각 핸들러로 라우팅. 타입: `Extract<GameAction, { type: 'TICK' }>` 패턴.
+
+| File | Handlers |
+|------|----------|
+| `helpers.ts` | `getCurrentStage`, `getAdjustedClickPower`, `createClickEvent`, `buildAtlasEntry` 등 공통 유틸 |
+| `gameplay.ts` | `TICK`, `CLICK`, `BUY_CLICK`, `BUY_AUTO`, `BUY_CRIT`, `REPORT_COLLISION`, `REPORT_ENCOUNTER` |
+| `stage.ts` | `START_CONDENSE`, `ADVANCE_STAGE`, `SELECT_ENDING`, `COMPLETE_ENDING`, `PRESTIGE` |
+| `skills.ts` | `BUY_TRACK_LEVEL`, `BUY_CROSS_NODE` |
+| `shop.ts` | `BUY_SHOP_ITEM` |
+| `admin.ts` | `ADMIN_NEXT_STAGE`, `ADMIN_PREV_STAGE`, `ADMIN_SET_PROGRESS`, `ADMIN_RESTART_RUN`, `BUY_SINGULARITY_UNLOCK` |
+| `meta.ts` | `HYDRATE`, `DISMISS_OFFLINE_MODAL`, `SET_TUTORIAL_DONE`, `AWARD_SKILL_POINTS`, `UNLOCK_TRACK`, `MARK_TUTORIAL_*`, `CLEAR_*_EVENT` |
+
+#### `game/storage/` — 세이브 서브모듈
+
+| File | What it does |
+|------|--------------|
+| `legacyTypes.ts` | `SaveStateV1`~`V6` 인터페이스 |
+| `guards.ts` | `isFiniteNumber`, `isEndingId`, `isSkillState` 등 런타임 타입 가드 |
+| `normalize.ts` | `normalizeSkillState()`, `normalizeShopBoosts()` |
+| `migrate.ts` | `migrateV1ToV2` ~ `migrateV4ToV5` + `validateV5()` |
 
 #### `game/mechanics/` — stage mechanic plug-ins
 
@@ -222,23 +248,21 @@ Modifiers flow: `getActiveModifiers(state.skills, ctx) → Modifiers` — always
 
 ### Critical
 
-1. **`reducer.ts` (1 118 lines)** — one switch handles all 30 action types. Every new system bloats it further. Fix: extract slice handlers into `reducers/click.ts`, `reducers/stage.ts`, `reducers/skills.ts`, `reducers/shop.ts`, compose in `reducer.ts`.
+1. **`ParticleField.tsx` (~1 500 lines)** — physics simulation + canvas rendering + React lifecycle all in one file. `CanvasWorld` ref state is untestable. Fix: extract `CanvasWorld` physics to `canvas/world.ts` as pure functions; `ParticleField.tsx` becomes a thin rAF runner.
 
-2. **`ParticleField.tsx` (1 515 lines)** — physics simulation + canvas rendering + React lifecycle all in one file. `CanvasWorld` ref state is untestable. Fix: extract `CanvasWorld` physics to `canvas/world.ts` as pure functions; `ParticleField.tsx` becomes a thin rAF runner.
-
-3. **`index.css` (2 799 lines)** — all styles in one file. No locality. Fix: create `.module.css` files per component directory going forward. Keep `index.css` for global resets and CSS variables only.
+2. **`index.css` (~2 800 lines)** — all styles in one file. No locality. Fix: create `.module.css` files per component directory going forward. Keep `index.css` for global resets and CSS variables only.
 
 ### Moderate
 
-4. **`types.ts` (441 lines)** — mixes canvas types (`Rogue`, `Mote`, `Star`, `CanvasWorld`) with game types (`GameState`, `SaveState`). Fix: split into `types/game.ts`, `types/canvas.ts`, `types/events.ts`, `types/save.ts`.
+3. **`GameScreen.tsx` (~768 lines)** — manages transition state machine, tutorial bubbles, stat popups, and HUD layout simultaneously. Fix: extract `useTransitionPhase` and `useTutorialBubble` hooks.
 
-5. **`GameScreen.tsx` (768 lines)** — manages transition state machine, tutorial bubbles, stat popups, and HUD layout simultaneously. Fix: extract `TransitionManager.tsx` and `TutorialBubbleLayer.tsx`.
+4. **`stages.ts` (506 lines)** — 16 stage blobs with computed fields mixed in. Fix: `stages/data.ts` for raw definitions + `stages/builder.ts` to fill computed fields.
 
-6. **`storage.ts` (735 lines)** — migration chain is one long function. Fix: split into `storage/migrate.ts` with named per-version functions.
+### Completed ✅
 
-### Minor
-
-7. **`stages.ts` (506 lines)** — 16 stage blobs with computed fields mixed in. Fix: `stages/data.ts` for raw definitions + `stages/builder.ts` to fill computed fields (`timelinePos`, `cosmicTimeSpanSec`).
+- ~~`reducer.ts` (1 118 lines)~~ → `reducer.ts` (~170 lines) + `reducers/` 6 슬라이스 파일
+- ~~`storage.ts` (735 lines)~~ → `storage.ts` (~120 lines) + `storage/` 4 서브모듈
+- ~~`types.ts` (441 lines)~~ → `types.ts` (배럴) + `types/canvas.ts` + `types/events.ts`
 
 ---
 
@@ -262,14 +286,17 @@ Modifiers flow: `getActiveModifiers(state.skills, ctx) → Modifiers` — always
 2. Handle the `itemId` in the `BUY_SHOP_ITEM` case in `reducer.ts`
 
 ### New save field
-1. Add field to `SaveState` in `types.ts`
-2. Add default value in `createInitialGameState()` in `reducer.ts`
-3. Bump `version` in `SaveState` and add migration step in `storage.ts`
+1. `types.ts` 의 `SaveState` / `PersistentGameState` / `GameState` 에 필드 추가
+2. `defaults.ts` 의 `createInitialGameState()` 에 기본값 추가
+3. `storage/migrate.ts` 의 `migrateV4ToV5()` + `validateV5()` 에 추가
+4. `reducer.ts` 의 `toPersistentState()` 에 추가
+5. `SaveState.version` 을 8 로 bump (현재 7)
 
 ### New game action
-1. Add to `GameAction` union in `reducer.ts`
-2. Add case in `gameReducer` switch
-3. Dispatch from a component via `dispatch({ type: 'MY_ACTION', ... })`
+1. `reducer.ts` 의 `GameAction` union에 추가
+2. `gameReducer` switch에 case 추가 — 해당 슬라이스 파일의 핸들러로 라우팅
+3. `reducers/` 에 핸들러 함수 구현 (`handleXxx(state, action): GameState`)
+4. 컴포넌트에서 `dispatch({ type: 'MY_ACTION', ... })`
 
 ---
 

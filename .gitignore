@@ -38,3 +38,7 @@ dist/
 # Lockfiles (keep one if needed)
 # package-lock.json
 # yarn.lock
+
+# Working notes (AI prompts, scratch files)
+REFACTOR_PROMPT*.md
+REFACTOR_TEST*.md
