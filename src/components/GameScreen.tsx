@@ -123,14 +123,23 @@ export function GameScreen({
   const [entityPanelOpen, setEntityPanelOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
   const [showInfoHint, setShowInfoHint] = useState(false);
+  const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
   const rawStage = STAGES[state.stageIdx];
+  // Display stage can be overridden when browsing past stages in Entity Lab
+  const displayRawStage = viewingStageId !== null
+    ? (STAGES.find((s) => s.id === viewingStageId) ?? rawStage)
+    : rawStage;
   const stage = useMemo(
     () => applyUniverseToStage(rawStage, state.currentUniverseSeed),
     [rawStage, state.currentUniverseSeed],
+  );
+  const displayStage = useMemo(
+    () => applyUniverseToStage(displayRawStage, state.currentUniverseSeed),
+    [displayRawStage, state.currentUniverseSeed],
   );
   const mechanic = getMechanic(stage.mechanic);
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
@@ -273,8 +282,8 @@ export function GameScreen({
   });
 
   useEffect(() => {
-    soundManager?.setStage(stage.id - 1, stage.silenceBeforeMs ?? 0);
-  }, [soundManager, stage.id, stage.silenceBeforeMs]);
+    soundManager?.setStage(displayStage.id - 1, displayStage.silenceBeforeMs ?? 0);
+  }, [soundManager, displayStage.id, displayStage.silenceBeforeMs]);
 
   useEffect(() => {
     if (stage.mechanic === 'life_evolution' && progress01 >= 0.99 && !civPlayed.current) {
@@ -418,7 +427,7 @@ export function GameScreen({
   return (
     <div
       className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''}`}
-      style={{ '--accent': stage.accent, '--core': stage.coreColor } as CSSProperties}
+      style={{ '--accent': displayStage.accent, '--core': displayStage.coreColor } as CSSProperties}
     >
       <main className="field">
         {import.meta.env.DEV ? (
@@ -457,7 +466,7 @@ export function GameScreen({
           </div>
         ) : null}
         <ParticleField
-          stage={stage}
+          stage={displayStage}
           quanta={state.quanta}
           autoRate={autoRate}
           timeMult={timeMult}
@@ -522,11 +531,25 @@ export function GameScreen({
             purchasedEntities={state.purchasedEntities}
             quanta={state.quanta}
             onPurchase={(entityId) => dispatch({ type: 'PURCHASE_ENTITY', entityId })}
-            onClose={() => setEntityPanelOpen(false)}
+            onClose={() => { setEntityPanelOpen(false); setViewingStageId(null); }}
+            onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
           />
         ) : null}
+        {viewingStageId !== null && !entityPanelOpen ? (
+          <div className="viewing-stage-banner">
+            <span className="viewing-stage-banner__dot" />
+            {`Stage ${displayStage.id}: ${displayStage.name}`}
+            <button
+              type="button"
+              className="viewing-stage-banner__return"
+              onClick={() => setViewingStageId(null)}
+            >
+              ← Current
+            </button>
+          </div>
+        ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
-          <div className="hud-stage-title">{`Stage ${stage.id}: ${stage.name}`}</div>
+          <div className="hud-stage-title">{`Stage ${displayStage.id}: ${displayStage.name}`}</div>
           <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumberShort(effectiveThreshold)}`}</div>
           <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
             <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, progress01 * 100)}%` }} />
@@ -597,7 +620,7 @@ export function GameScreen({
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
-        <ScaleIndicator stageId={stage.id} />
+        <ScaleIndicator stageId={displayStage.id} />
         <ActiveBoostHud boosts={state.shopBoosts} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => setShowInfoHint(true)} />

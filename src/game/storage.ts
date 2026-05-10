@@ -4,6 +4,14 @@ import { STORAGE_KEYS, TUNING } from './constants';
 import type { GameState, PersistentGameState, SaveState } from './types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
 import { migrateV1ToV2, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, validateV5 } from './storage/migrate';
+import { getStageStartCosmicTime } from './timeFlow';
+
+/** Repairs saves corrupted by past bugs (e.g. Infinity cosmicClockSec → null in JSON). */
+function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
+  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) return parsed;
+  const stageIdx = Number.isFinite(parsed.stageIdx) ? (parsed.stageIdx as number) : 0;
+  return { ...parsed, cosmicClockSec: getStageStartCosmicTime(stageIdx) };
+}
 
 const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
 const SAVE_KEY_V2 = 'cosmic_coalescence_save_v2';
@@ -121,12 +129,12 @@ export function loadGame(): PersistentGameState | null {
     }
     if ((parsed as { version?: number }).version === 7) {
       // v7 → v8: add purchasedEntities
-      const migrated = validateV5(parsed as Partial<SaveState>);
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return { ...migrated, purchasedEntities: [] };
     }
     if ((parsed as { version?: number }).version === 8) {
-      return validateV5(parsed as Partial<SaveState>);
+      return validateV5(repairSave(parsed as Partial<SaveState>));
     }
     return null;
   } catch {

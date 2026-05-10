@@ -46,9 +46,10 @@ interface Props {
   quanta: number;
   onPurchase: (entityId: string) => void;
   onClose: () => void;
+  onStageSelect?: (stageId: number) => void;
 }
 
-export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurchase, onClose }: Props) {
+export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurchase, onClose, onStageSelect }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +125,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
                       .filter(Boolean)
                       .join(' ')}
                     style={{ '--node-color': s.accent } as CSSProperties}
-                    onClick={() => setSelectedStageId(s.id)}
+                    onClick={() => { setSelectedStageId(s.id); onStageSelect?.(s.id); }}
                     aria-label={`Stage ${s.id}: ${s.name}`}
                     aria-pressed={isSelected}
                   >
