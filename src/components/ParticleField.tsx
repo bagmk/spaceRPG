@@ -47,6 +47,7 @@ interface EncounterPayload {
 
 interface ParticleFieldProps {
   stage: Stage;
+  actualStageId: number;
   quanta: number;
   autoRate: number;
   timeMult: number;
@@ -928,6 +929,7 @@ function createRogue(world: CanvasWorld, stage: Stage, width: number, height: nu
 
 export const ParticleField = memo(function ParticleField({
   stage,
+  actualStageId,
   quanta,
   autoRate,
   timeMult,
@@ -1425,7 +1427,7 @@ export const ParticleField = memo(function ParticleField({
       now,
       progress: visualProgress,
     });
-    drawEntities(ctx, cx, cy, stage.id, purchasedEntities, now);
+    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now);
     drawParticles({
       ctx,
       stage,

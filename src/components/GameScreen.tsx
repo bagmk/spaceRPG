@@ -467,6 +467,7 @@ export function GameScreen({
         ) : null}
         <ParticleField
           stage={displayStage}
+          actualStageId={stage.id}
           quanta={state.quanta}
           autoRate={autoRate}
           timeMult={timeMult}
