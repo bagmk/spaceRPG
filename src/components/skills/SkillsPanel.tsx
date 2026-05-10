@@ -447,33 +447,34 @@ export function SkillsPanel({ state, dispatch, onClose }: SkillsPanelProps) {
           </div>
         </div>
 
-        {tutorialActive ? (
-          <div className="skills-walkthrough" role="dialog" aria-live="polite">
-            <div className={`tutorial-focus step-${tutorialStep + 1}`} />
-            <div className="walkthrough-card">
-              <div className="q-stage">{`Step ${tutorialStep + 1} / ${tutorialSteps.length}`}</div>
-              <strong>{tutorialSteps[tutorialStep].label}</strong>
-              <p>{tutorialSteps[tutorialStep].body}</p>
-              <div className="walkthrough-actions">
-                {tutorialStep > 0 ? (
-                  <button type="button" className="mini-button" onClick={() => setTutorialStep((step) => step - 1)}>
-                    Back
-                  </button>
-                ) : null}
-                {tutorialStep < tutorialSteps.length - 1 ? (
-                  <button type="button" className="q-continue" onClick={() => setTutorialStep((step) => step + 1)}>
-                    Next
-                  </button>
-                ) : (
-                  <button type="button" className="q-continue" onClick={dismissTutorial}>
-                    Got it!
-                  </button>
-                )}
-              </div>
+      </aside>
+
+      {tutorialActive ? (
+        <div className="skills-walkthrough" role="dialog" aria-live="polite">
+          <div className={`tutorial-focus step-${tutorialStep + 1}`} />
+          <div className="walkthrough-card" onClick={(e) => e.stopPropagation()}>
+            <div className="q-stage">{`Step ${tutorialStep + 1} / ${tutorialSteps.length}`}</div>
+            <strong>{tutorialSteps[tutorialStep].label}</strong>
+            <p>{tutorialSteps[tutorialStep].body}</p>
+            <div className="walkthrough-actions">
+              {tutorialStep > 0 ? (
+                <button type="button" className="mini-button" onClick={() => setTutorialStep((step) => step - 1)}>
+                  Back
+                </button>
+              ) : null}
+              {tutorialStep < tutorialSteps.length - 1 ? (
+                <button type="button" className="q-continue" onClick={() => setTutorialStep((step) => step + 1)}>
+                  Next
+                </button>
+              ) : (
+                <button type="button" className="q-continue" onClick={dismissTutorial}>
+                  Got it!
+                </button>
+              )}
             </div>
           </div>
-        ) : null}
-      </aside>
+        </div>
+      ) : null}
 
       {popup ? (
         <div
