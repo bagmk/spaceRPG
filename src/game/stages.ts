@@ -29,7 +29,7 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     time: '1e-12 s',
     cosmicTimeSec: 1e-12,
     realPlayTargetSec: 120,
-    threshold: 4.693e7,
+    threshold: 9.386e8,
   clusterMode: 'baryogenesis',
     mechanic: 'matter_asymmetry',
     accent: '#ff8a47',
