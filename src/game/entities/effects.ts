@@ -25,7 +25,7 @@ export function applyEntityModifiers(
         mods.autoRateAdd += scaledFlatGain(entity.baseCost, total);
         break;
       case 'click':
-        mods.clickPowerAdd += scaledFlatGain(entity.baseCost, total);
+        mods.clickPowerMult *= 1 + total / 100;
         break;
       case 'crit':
         if (isFlat) {

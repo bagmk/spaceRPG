@@ -184,6 +184,42 @@ export function saveMutedPreference(muted: boolean): void {
   }
 }
 
+export function loadBgmMuted(): boolean {
+  if (!isBrowser()) return TUNING.AUDIO_DEFAULT_MUTED;
+  const raw = localStorage.getItem('cc_bgm_muted');
+  if (raw === null) return TUNING.AUDIO_DEFAULT_MUTED;
+  return raw === 'true';
+}
+
+export function saveBgmMuted(v: boolean): void {
+  if (!isBrowser()) return;
+  try { localStorage.setItem('cc_bgm_muted', String(v)); } catch { /* noop */ }
+}
+
+export function loadSfxMuted(): boolean {
+  if (!isBrowser()) return false;
+  const raw = localStorage.getItem('cc_sfx_muted');
+  if (raw === null) return false;
+  return raw === 'true';
+}
+
+export function saveSfxMuted(v: boolean): void {
+  if (!isBrowser()) return;
+  try { localStorage.setItem('cc_sfx_muted', String(v)); } catch { /* noop */ }
+}
+
+export function loadLanguage(): 'en' | 'ko' {
+  if (!isBrowser()) return 'en';
+  const raw = localStorage.getItem('cc_language');
+  if (raw === 'ko') return 'ko';
+  return 'en';
+}
+
+export function saveLanguage(lang: 'en' | 'ko'): void {
+  if (!isBrowser()) return;
+  try { localStorage.setItem('cc_language', lang); } catch { /* noop */ }
+}
+
 export function clearAllStoredState(): void {
   clearSave();
   if (!isBrowser()) return;

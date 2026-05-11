@@ -289,23 +289,6 @@ function drawBaryogenesis(args: DrawClusterArgs): void {
   const t = now / 1000;
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.98, stage.accent, 0.1 + progress * 0.04);
 
-  // draw pair links and annihilation pulses
-  for (let i = 0; i < cluster.motes.length; i += 2) {
-    const a = cluster.motes[i];
-    const b = cluster.motes[i + 1] ?? a;
-    ctx.strokeStyle = hexToRgba(stage.coreColor, 0.06 + progress * 0.12);
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-
-    // subtle connecting glow
-    const midx = (a.x + b.x) / 2;
-    const midy = (a.y + b.y) / 2;
-    drawSoftNode(ctx, midx - cx, midy - cy, Math.max(2, Math.hypot(a.x - b.x, a.y - b.y) * 0.06), stage.coreColor, 0.12 + progress * 0.28);
-  }
-
   // motes render with a small charge overlay (±) via sprite rotation
   cluster.motes.forEach((mote, idx) => {
     const flicker = 0.6 + Math.sin(t * 8 + idx) * 0.2;

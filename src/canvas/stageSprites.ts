@@ -198,22 +198,12 @@ function drawSpriteBaryon(
   ctx: CanvasRenderingContext2D,
   r: number,
   color: string,
-  t: number,
+  _t: number,
 ): void {
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(0, 0, Math.max(1.2, r), 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.6, 0);
-  ctx.lineTo(r * 0.6, 0);
-  if (Math.sin(t * 3) > 0) {
-    ctx.moveTo(0, -r * 0.6);
-    ctx.lineTo(0, r * 0.6);
-  }
-  ctx.stroke();
 }
 
 function drawSpriteQuark(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {

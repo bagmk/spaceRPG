@@ -29,7 +29,9 @@ export class SoundManager {
 
   private unlocked = false;
 
-  private muted: boolean;
+  private bgmMuted: boolean;
+
+  private sfxMuted: boolean;
 
   private clickTimestamps: number[] = [];
 
@@ -37,8 +39,9 @@ export class SoundManager {
 
   private ambient: ActiveDrone | null = null;
 
-  constructor(muted: boolean) {
-    this.muted = muted;
+  constructor(bgmMuted: boolean, sfxMuted: boolean) {
+    this.bgmMuted = bgmMuted;
+    this.sfxMuted = sfxMuted;
   }
 
   unlock(): void {
@@ -49,19 +52,24 @@ export class SoundManager {
     this.unlocked = true;
     void ctx.resume();
     if (this.ambient) {
-      this.ambient.gain.gain.setValueAtTime(this.muted ? 0 : this.ambient.gain.gain.value, ctx.currentTime);
+      const targetGain = this.bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
+      this.ambient.gain.gain.setValueAtTime(targetGain, ctx.currentTime);
     }
   }
 
-  setMuted(muted: boolean): void {
-    this.muted = muted;
+  setBgmMuted(bgmMuted: boolean): void {
+    this.bgmMuted = bgmMuted;
     const ctx = this.context;
-    const master = this.masterGain;
-    if (!ctx || !master) {
+    if (!ctx || !this.ambient) {
       return;
     }
-    master.gain.cancelScheduledValues(ctx.currentTime);
-    master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.03);
+    const targetGain = bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
+    this.ambient.gain.gain.cancelScheduledValues(ctx.currentTime);
+    this.ambient.gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.05);
+  }
+
+  setSfxMuted(sfxMuted: boolean): void {
+    this.sfxMuted = sfxMuted;
   }
 
   setStage(stageIdx: number, silenceBeforeMs = 0): void {
@@ -96,7 +104,7 @@ export class SoundManager {
       oscA.start();
       oscB.start();
 
-      const targetGain = this.muted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
+      const targetGain = this.bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
       if (silenceBeforeMs > 0) {
         gain.gain.setValueAtTime(0, ctx.currentTime);
         gain.gain.linearRampToValueAtTime(0, ctx.currentTime + silenceBeforeMs / 1000);
@@ -133,7 +141,7 @@ export class SoundManager {
 
   playClick(stageIdx: number, isCrit: boolean): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     const now = performance.now();
@@ -184,7 +192,7 @@ export class SoundManager {
       return;
     }
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     const baseFreq = 180 * Math.pow(1.08, stageIdx);
@@ -197,7 +205,7 @@ export class SoundManager {
 
   playCollision(tier: RogueTypeKey): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     try {
@@ -222,7 +230,7 @@ export class SoundManager {
   playCondenseExplosion(): void {
     const ctx = this.ensureContext();
     const master = this.masterGain;
-    if (!this.isUsable() || !ctx || !master || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !master || !this.unlocked || this.sfxMuted) {
       return;
     }
     try {
@@ -280,7 +288,7 @@ export class SoundManager {
 
   playBigBang(): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     try {
@@ -317,7 +325,7 @@ export class SoundManager {
 
   playTimeAccelerationWhoosh(intensity: number): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     const duration = 0.8;
@@ -355,7 +363,7 @@ export class SoundManager {
 
   playEndingSting(endingId: EndingId): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     const volume = dbToGain(TUNING.BIG_BANG_VOLUME_DB - 2);
@@ -380,7 +388,7 @@ export class SoundManager {
 
   playCivilizationFlicker(): void {
     const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.muted) {
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
       return;
     }
     const base = dbToGain(TUNING.CLICK_VOLUME_DB - 6);
@@ -415,7 +423,7 @@ export class SoundManager {
     }
     const context = new AudioCtor();
     const masterGain = context.createGain();
-    masterGain.gain.value = this.muted ? 0 : 1;
+    masterGain.gain.value = 1;
     masterGain.connect(context.destination);
     this.context = context;
     this.masterGain = masterGain;

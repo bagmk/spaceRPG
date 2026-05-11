@@ -6,7 +6,16 @@ import { FinalScreen } from './components/FinalScreen';
 import { BigBangCinematic } from './components/BigBangCinematic';
 import { MultiverseAtlas } from './components/MultiverseAtlas';
 import { SoundManager } from './game/audio';
-import { clearAllStoredState, clearSave, loadMutedPreference, saveMutedPreference } from './game/storage';
+import {
+  clearAllStoredState,
+  clearSave,
+  loadBgmMuted,
+  saveBgmMuted,
+  loadSfxMuted,
+  saveSfxMuted,
+  loadLanguage,
+  saveLanguage,
+} from './game/storage';
 import { useGameState } from './hooks/useGameState';
 import { createInitialGameState } from './game/reducer';
 import { STAGES } from './game/stages';
@@ -50,16 +59,19 @@ export default function App() {
   const { state, dispatch, hadSavedGame } = useGameState();
   const [route, setRoute] = useState<Route>('intro');
   const [resumeAvailable, setResumeAvailable] = useState(hadSavedGame);
-  const [muted, setMuted] = useState(loadMutedPreference());
+  const [bgmMuted, setBgmMuted] = useState(loadBgmMuted);
+  const [sfxMuted, setSfxMuted] = useState(loadSfxMuted);
+  const [language, setLanguage] = useState(loadLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [bigBangRestarting, setBigBangRestarting] = useState(false);
   const [openingCinematic, setOpeningCinematic] = useState(false);
   const soundManagerRef = useRef<SoundManager | null>(null);
 
   useEffect(() => {
-    const manager = new SoundManager(muted);
+    const manager = new SoundManager(bgmMuted, sfxMuted);
     soundManagerRef.current = manager;
     return () => manager.dispose();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -93,14 +105,22 @@ export default function App() {
     setResumeAvailable(false);
     setShowResetConfirm(false);
     setRoute('intro');
-    setMuted(loadMutedPreference());
     window.history.replaceState(null, '', window.location.pathname);
   }, [dispatch]);
 
   useEffect(() => {
-    soundManagerRef.current?.setMuted(muted);
-    saveMutedPreference(muted);
-  }, [muted]);
+    soundManagerRef.current?.setBgmMuted(bgmMuted);
+    saveBgmMuted(bgmMuted);
+  }, [bgmMuted]);
+
+  useEffect(() => {
+    soundManagerRef.current?.setSfxMuted(sfxMuted);
+    saveSfxMuted(sfxMuted);
+  }, [sfxMuted]);
+
+  useEffect(() => {
+    saveLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     if (state.completedRun) {
@@ -144,8 +164,12 @@ export default function App() {
             state={state}
             dispatch={dispatch}
             soundManager={soundManagerRef.current}
-            muted={muted}
-            onToggleMute={() => setMuted((current) => !current)}
+            bgmMuted={bgmMuted}
+            sfxMuted={sfxMuted}
+            language={language}
+            onToggleBgm={() => setBgmMuted((v) => !v)}
+            onToggleSfx={() => setSfxMuted((v) => !v)}
+            onToggleLanguage={() => setLanguage((v) => (v === 'en' ? 'ko' : 'en'))}
             onRequestReset={() => setShowResetConfirm(true)}
           />
         </ErrorBoundary>

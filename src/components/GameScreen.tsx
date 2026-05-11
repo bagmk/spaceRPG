@@ -49,6 +49,7 @@ import { VacuumDecayEnding } from './endings/VacuumDecayEnding';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
+import { SettingsPanel } from './SettingsPanel';
 
 interface FloatingEntry {
   id: number;
@@ -97,8 +98,12 @@ interface GameScreenProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   soundManager: SoundManager | null;
-  muted: boolean;
-  onToggleMute: () => void;
+  bgmMuted: boolean;
+  sfxMuted: boolean;
+  language: 'en' | 'ko';
+  onToggleBgm: () => void;
+  onToggleSfx: () => void;
+  onToggleLanguage: () => void;
   onRequestReset: () => void;
 }
 
@@ -131,13 +136,18 @@ export function GameScreen({
   state,
   dispatch,
   soundManager,
-  muted,
-  onToggleMute,
+  bgmMuted,
+  sfxMuted,
+  language,
+  onToggleBgm,
+  onToggleSfx,
+  onToggleLanguage,
   onRequestReset,
 }: GameScreenProps) {
   const [shopOpen, setShopOpen] = useState(false);
   const [entityPanelOpen, setEntityPanelOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -621,23 +631,31 @@ export function GameScreen({
           </div>
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
-          <div className="hud-stage-title">{`Stage ${displayStage.id}: ${displayStage.name}`}</div>
-          <div className="hud-quanta">
-            {`Quanta ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
-          </div>
-          <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
-            <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
-          </div>
-          <div className="hud-cosmic-time">
-            {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
-            <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
-          </div>
-          <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
-            <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
-          </div>
-          {timeEstimateLabel && !isViewingPastStage ? (
-            <div className="hud-time-estimate">{timeEstimateLabel} remaining</div>
-          ) : null}
+          <button
+            type="button"
+            ref={infoAnchorRef}
+            className="hud-info-click-zone"
+            onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
+            title={language === 'ko' ? '정보 / 튜토리얼 보기' : 'View Info / Tutorial'}
+          >
+            <div className="hud-stage-title">{`Stage ${displayStage.id}: ${displayStage.name}`}</div>
+            <div className="hud-quanta">
+              {`Quanta ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
+            </div>
+            <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
+              <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
+            </div>
+            <div className="hud-cosmic-time">
+              {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
+              <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
+            </div>
+            <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
+              <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
+            </div>
+            {timeEstimateLabel && !isViewingPastStage ? (
+              <div className="hud-time-estimate">{timeEstimateLabel} remaining</div>
+            ) : null}
+          </button>
           <button
             type="button"
             className={`hud-condense ${isViewingPastStage ? 'hud-condense--completed' : ''}`}
@@ -677,14 +695,13 @@ export function GameScreen({
           </div>
         </div>
         <div className="hud-controls">
-          <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>
-            INFO
-          </button>
-          <button type="button" className="mini-button" onClick={onToggleMute}>
-            {muted ? 'SOUND' : 'MUTE'}
-          </button>
-          <button type="button" className="mini-button" onClick={onRequestReset}>
-            RESET
+          <button
+            type="button"
+            className="mini-button settings-gear-btn"
+            onClick={() => setSettingsOpen(true)}
+            title={language === 'ko' ? '설정' : 'Settings'}
+          >
+            ⚙
           </button>
         </div>
         <div className="bottom-buttons">
@@ -763,6 +780,19 @@ export function GameScreen({
         />
       ) : null}
 
+      {settingsOpen ? (
+        <SettingsPanel
+          bgmMuted={bgmMuted}
+          sfxMuted={sfxMuted}
+          language={language}
+          onToggleBgm={onToggleBgm}
+          onToggleSfx={onToggleSfx}
+          onToggleLanguage={onToggleLanguage}
+          onRequestReset={() => { setSettingsOpen(false); onRequestReset(); }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
+
       {activeTutorialBubble ? (
         <SpeechBubble
           anchorRef={
@@ -802,9 +832,9 @@ export function GameScreen({
       {state.tutorialFlags['milestone-seen'] && !state.tutorialFlags['info-hint-seen'] && !almanacOpen ? (
         <SpeechBubble
           anchorRef={infoAnchorRef}
-          position="top"
-          message="Stage events are recorded here. Open INFO to explore discovered milestones."
-          ctaLabel="Open INFO"
+          position="bottom"
+          message={language === 'ko' ? '스테이지 기록이 여기 표시됩니다. 클릭해서 탐색하세요.' : 'Stage events are recorded here. Click to explore milestones.'}
+          ctaLabel={language === 'ko' ? '열기' : 'Open'}
           onCta={() => {
             setAlmanacOpen(true);
             dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' });
