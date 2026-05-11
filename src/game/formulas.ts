@@ -119,10 +119,13 @@ export function getCosmicTimeFillRate(
   boostMultiplier = 1,
   stageNumber = 1,
 ): number {
-  // Per-stage cap applies to the aeon base rate — timeMultMult (entities + skills) and shop boosts can exceed it.
-  const stageCap = 100 / (Math.pow(stageNumber, 2) * 300);
+  // Per-stage cap applies to the aeon base rate.
+  // timeMultMult (entities + skills) applies with log-scale dampening so upgrades feel meaningful
+  // but can't multiply the rate by hundreds. boostMultiplier (shop) bypasses dampening.
+  const stageCap = 100 / (Math.pow(stageNumber, 2) * 600);
   const base = Math.min(stageCap, Math.pow(10, aeonLevel) * mods.apexMult);
-  return base * mods.timeMultMult * boostMultiplier;
+  const timeBoost = 1 + Math.log(Math.max(1, mods.timeMultMult));
+  return base * timeBoost * boostMultiplier;
 }
 
 export function getTimeFillRateGauge(
