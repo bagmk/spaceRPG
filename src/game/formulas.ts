@@ -117,11 +117,13 @@ export function getCosmicTimeFillRate(
   aeonLevel: number,
   mods: Modifiers,
   boostMultiplier = 1,
+  stageNumber = 1,
 ): number {
-  // Raw rate grows 10× per level, but is capped at 20 %/s so the gauge always takes ≥5 s.
-  // This prevents the time gate from becoming trivially instant once high time levels are bought.
+  // Per-stage cap: even with every upgrade maxed, stage N cannot fill faster than N² × 300 s.
+  // Stage 1 → 300 s minimum, Stage 5 → 7500 s (~2 h), Stage 10 → 30000 s (~8.3 h).
+  const stageCap = 100 / (Math.pow(stageNumber, 2) * 300);
   const raw = Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult * boostMultiplier;
-  return Math.min(20, raw);
+  return Math.min(stageCap, raw);
 }
 
 export function getTimeFillRateGauge(
@@ -130,22 +132,20 @@ export function getTimeFillRateGauge(
   mods: Modifiers,
   boostMultiplier = 1,
 ): number {
-  void stage;
-  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier);
+  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier, stage.id);
 }
 
 export function getTimeFillRate(
-  _stage: Stage,
+  stage: Stage,
   aeonLevel: number,
   mods: Modifiers,
   boostMultiplier = 1,
 ): number {
-  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier);
+  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier, stage.id);
 }
 
 export function getTimeFillSeconds(stage: Stage, aeonLevel: number, mods: Modifiers): number {
-  void stage;
-  const rate = getCosmicTimeFillRate(aeonLevel, mods);
+  const rate = getCosmicTimeFillRate(aeonLevel, mods, 1, stage.id);
   return rate <= 0 ? Number.POSITIVE_INFINITY : 100 / rate;
 }
 

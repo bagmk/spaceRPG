@@ -3007,6 +3007,12 @@ button.stat-header-item {
   animation: timeline-node-pulse 2.4s ease-in-out infinite;
 }
 
+.entity-timeline__node--completed:not(.entity-timeline__node--selected) .entity-timeline__dot {
+  color: color-mix(in srgb, var(--node-color) 70%, #aaa);
+  border-color: color-mix(in srgb, var(--node-color) 35%, transparent);
+  opacity: 0.7;
+}
+
 .entity-timeline__label {
   font-size: 8px;
   color: rgba(255, 255, 255, 0.35);
@@ -3086,6 +3092,24 @@ button.stat-header-item {
   color: #3a4560;
   font-size: 13px;
   padding: 40px 0;
+}
+
+.entity-panel__cleared-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 10%, rgba(0,0,0,0.3));
+  border-bottom: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 20%, transparent);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--stage-accent, #8090b0) 80%, #fff);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.entity-panel__cleared-paw {
+  font-size: 14px;
+  opacity: 0.75;
 }
 
 /* Entity card */

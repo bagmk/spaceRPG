@@ -79,7 +79,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const gained = canAccrue ? (((baseAuto + stageAutoBonus) * action.dt) / 1000) * quantaBoost : 0;
   // Fill time gauge at gaugeRate%/s regardless of the absolute cosmic-time span.
   // This prevents mid-game stages (6+) from becoming impossible to complete.
-  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost);
+  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost, state.stageIdx + 1);
   const stageStartCosmic = getStageStartCosmicTime(state.stageIdx);
   const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
   const safeCosmic = Math.max(state.cosmicClockSec, stageStartCosmic);
@@ -88,7 +88,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     : 0;
   const nextCosmicClockSec = state.completedRun
     ? state.cosmicClockSec
-    : safeCosmic + cosmicDelta;
+    : Math.min(safeCosmic + cosmicDelta, stage.cosmicTimeSec);
   const nextTimeGauge = getTimeGaugeForCosmicClock(state.stageIdx, nextCosmicClockSec);
   const mechanic = getMechanic(stage.mechanic);
   const tickResult =

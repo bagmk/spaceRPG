@@ -79,7 +79,8 @@ describe('scaling formulas', () => {
     expect(getClickPower(modifiers)).toBe(32);   // 2^5
     expect(getAutoRate(modifiers)).toBe(32);      // 2^5
     expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);   // 10^5 unchanged
-    expect(getCosmicTimeFillRate(skills.time.level, modifiers)).toBe(20); // capped at 20 %/s
+    // Stage 5 cap = 100 / (5² × 300) = 100/7500 ≈ 1.333e-2 %/s (≥ 7500 s min)
+    expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(100 / 7500, 10);
   });
 
   it('caps expected crit chance at 50 percent', () => {

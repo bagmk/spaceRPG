@@ -8,9 +8,13 @@ const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
 const ENDING_IDS: EndingId[] = ['heat_death', 'big_rip', 'big_crunch', 'vacuum_decay', 'bounce'];
 
 describe('stage entity definitions', () => {
-  it('defines at least eight entities for every stage', () => {
-    for (const stageId of STAGE_IDS) {
-      expect(getEntitiesForStage(stageId).length).toBeGreaterThanOrEqual(8);
+  it('defines the correct entity count per stage', () => {
+    // S1=4, S2=8, S3=12, S4-16=14
+    expect(getEntitiesForStage(1).length).toBe(4);
+    expect(getEntitiesForStage(2).length).toBe(8);
+    expect(getEntitiesForStage(3).length).toBe(12);
+    for (const stageId of STAGE_IDS.filter((id) => id >= 4)) {
+      expect(getEntitiesForStage(stageId).length).toBe(14);
     }
   });
 
@@ -38,9 +42,10 @@ describe('stage entity definitions', () => {
     }
   });
 
-  it('gives every stage at least one legendary entity', () => {
-    for (const stageId of STAGE_IDS) {
-      expect(getEntitiesForStage(stageId).some((entity) => entity.rarity === 'legendary')).toBe(true);
+  it('gives stages 4-16 at least two legendary entities', () => {
+    for (const stageId of STAGE_IDS.filter((id) => id >= 4)) {
+      const legendaries = getEntitiesForStage(stageId).filter((e) => e.rarity === 'legendary');
+      expect(legendaries.length).toBeGreaterThanOrEqual(2);
     }
   });
 

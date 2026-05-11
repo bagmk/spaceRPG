@@ -121,6 +121,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
                       'entity-timeline__node',
                       isSelected ? 'entity-timeline__node--selected' : '',
                       isCurrent ? 'entity-timeline__node--current' : '',
+                      s.id < currentStageId ? 'entity-timeline__node--completed' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -129,7 +130,9 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
                     aria-label={`Stage ${s.id}: ${s.name}`}
                     aria-pressed={isSelected}
                   >
-                    <span className="entity-timeline__dot">{s.id}</span>
+                    <span className="entity-timeline__dot">
+                      {s.id < currentStageId && !isSelected ? '🐾' : s.id}
+                    </span>
                     <span className="entity-timeline__label">{s.name}</span>
                   </button>
                 </Fragment>
@@ -137,6 +140,14 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
             })}
           </div>
         </div>
+
+        {/* Cleared stage banner */}
+        {selectedStage && selectedStage.id < currentStageId && (
+          <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
+            <span className="entity-panel__cleared-paw">🐾</span>
+            <span>Stage {selectedStage.id} cleared — entities still active</span>
+          </div>
+        )}
 
         {/* Entity list — key changes on stage switch to replay entry animations */}
         <div className="entity-panel__list" key={selectedStageId}>

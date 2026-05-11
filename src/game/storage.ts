@@ -5,11 +5,19 @@ import type { GameState, PersistentGameState, SaveState } from './types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
 import { migrateV1ToV2, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, validateV5 } from './storage/migrate';
 import { getStageStartCosmicTime } from './timeFlow';
+import { STAGES } from './stages';
 
-/** Repairs saves corrupted by past bugs (e.g. Infinity cosmicClockSec → null in JSON). */
+/** Repairs saves corrupted by past bugs (e.g. Infinity cosmicClockSec → null in JSON, or runaway accumulation). */
 function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
-  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) return parsed;
   const stageIdx = Number.isFinite(parsed.stageIdx) ? (parsed.stageIdx as number) : 0;
+  const clampedIdx = Math.max(0, Math.min(stageIdx, STAGES.length - 1));
+  const maxClock = STAGES[clampedIdx].cosmicTimeSec;
+  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) {
+    if ((parsed.cosmicClockSec as number) > maxClock) {
+      return { ...parsed, cosmicClockSec: maxClock };
+    }
+    return parsed;
+  }
   return { ...parsed, cosmicClockSec: getStageStartCosmicTime(stageIdx) };
 }
 
