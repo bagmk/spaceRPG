@@ -11,14 +11,23 @@ export function useGameLoop(callback: (now: number, dt: number) => void, active 
     if (!active) {
       return undefined;
     }
+    const TARGET_FRAME_MS = 1000 / 30; // cap at 30 fps — enough for this game
     let frameId = 0;
     let last = performance.now();
     let lastErrorAt = 0;
     let lastErrorMessage = '';
 
     const loop = (now: number) => {
+      frameId = window.requestAnimationFrame(loop);
+
+      // Skip frame when tab is hidden to avoid background CPU burn
+      if (document.hidden) return;
+
+      // Skip frame if not enough time has passed (throttle to 30 fps)
       const rawDt = now - last;
-      last = now;
+      if (rawDt < TARGET_FRAME_MS) return;
+
+      last = now - (rawDt % TARGET_FRAME_MS); // keep phase aligned
       const dt = Math.min(rawDt, 100);
       try {
         callbackRef.current(now, dt);
@@ -30,7 +39,6 @@ export function useGameLoop(callback: (now: number, dt: number) => void, active 
           console.error('[debug] useGameLoop callback threw:', err);
         }
       }
-      frameId = window.requestAnimationFrame(loop);
     };
 
     frameId = window.requestAnimationFrame(loop);
