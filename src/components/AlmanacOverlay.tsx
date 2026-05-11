@@ -85,7 +85,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
             ) : (
               <>
                 <p className="resource-subhead">{pickLang(almanac?.short, language)}</p>
-                <p>{pickLang(almanac?.body, language) || stageMeta?.quote}</p>
+                <p>{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
                 {almanac?.uncertaintyNote ? (
                   <p className="almanac-note">{`${t(language, 'almanacNote')}: ${pickLang(almanac.uncertaintyNote, language)}`}</p>
                 ) : null}

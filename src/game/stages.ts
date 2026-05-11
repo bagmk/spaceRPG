@@ -21,6 +21,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Space outruns its own horizon. In less than an instant, the possible becomes unimaginably large.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '공간은 스스로의 지평선보다 빠르게 달린다. 찰나보다 짧은 사이, 가능성은 상상할 수 없을 만큼 커진다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 2,
@@ -40,6 +43,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Matter does not win by much. One survivor in a billion is enough to build every future star and hand.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '물질의 승리는 아주 근소하다. 십억 개 중 하나의 생존자만으로도 미래의 모든 별과 손이 만들어진다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 3,
@@ -59,6 +65,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The young universe is still too hot for permanence. Matter exists as a storm before it learns to settle.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '어린 우주는 아직 영속을 허락하기엔 너무 뜨겁다. 물질은 가라앉는 법을 배우기 전 폭풍으로 존재한다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 4,
@@ -78,6 +87,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The furnace cools just enough for the first simple nuclei to hold. A narrow window decides the chemical future.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '화로가 겨우 식자 최초의 단순한 원자핵이 버틴다. 좁은 창 하나가 화학적 미래를 결정한다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 5,
@@ -97,6 +109,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The fog thins. Electrons find their homes, and light finally moves freely through a transparent cosmos.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '안개가 엷어진다. 전자는 제 집을 찾고, 빛은 마침내 투명해진 우주를 자유롭게 지난다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 6,
@@ -116,6 +131,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'No stars yet, no sunrise anywhere. Only neutral hydrogen drifting through a darkness that seems endless.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '아직 별도, 어디에도 해돋이도 없다. 끝없어 보이는 어둠 속을 중성 수소만이 떠돈다.',
+    quoteAttrKo: '오리지널 우주 산문',
     silenceBeforeMs: 5000,
   },
   {
@@ -136,6 +154,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The first stars arrive in blinding blue-white bursts. They live fast, die young, and rewrite the dark.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '최초의 별들이 눈부신 청백색 폭발처럼 도착한다. 그들은 빨리 살고 젊게 죽으며 어둠을 다시 쓴다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 8,
@@ -155,6 +176,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Starlight pushes back the neutral haze. The universe becomes legible one ionized frontier at a time.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '별빛이 중성의 안개를 밀어낸다. 우주는 이온화된 전선 하나씩 읽을 수 있는 곳이 된다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 9,
@@ -174,6 +198,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Gravity gathers light into structure. Filaments, knots, and spirals reveal the hidden architecture of space.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '중력이 빛을 구조로 모은다. 필라멘트와 매듭, 나선은 공간의 숨은 건축을 드러낸다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 10,
@@ -193,6 +220,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Around an ordinary star, dust keeps its appointments. Stone, metal, and ice negotiate the shapes of worlds.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '평범한 별 주위에서 먼지는 제 약속을 지킨다. 돌과 금속, 얼음이 세계의 형태를 협상한다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 11,
@@ -212,6 +242,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'On one small rock, chemistry learns to remember itself. Almost everything you call history waits inside the final flicker.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '작은 바위 하나 위에서 화학은 스스로를 기억하는 법을 배운다. 당신이 역사라 부르는 거의 모든 것이 마지막 깜빡임 안에서 기다린다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 12,
@@ -231,6 +264,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The star swells without ceremony. What it consumes is precious only to those who once lived there.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '별은 아무 의식도 없이 부풀어 오른다. 그것이 삼키는 것들은 한때 그곳에 살던 이들에게만 소중하다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 13,
@@ -250,6 +286,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'The era of ordinary starlight ends. The universe keeps going, but the age of lamps is over.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '평범한 별빛의 시대가 끝난다. 우주는 계속되지만, 등불의 시대는 지나갔다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 14,
@@ -269,6 +308,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Even the most stubborn matter has an ending. Given enough time, solidity becomes a rumor.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '가장 완고한 물질에도 끝은 있다. 충분한 시간이 주어지면 단단함은 소문이 된다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 15,
@@ -288,6 +330,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Black holes inherit the silence. They rule an empty kingdom with a patience measured in impossible years.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '블랙홀들이 침묵을 물려받는다. 그들은 불가능한 세월로 재는 인내로 빈 왕국을 다스린다.',
+    quoteAttrKo: '오리지널 우주 산문',
   },
   {
     id: 16,
@@ -307,6 +352,9 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     quote:
       'Everything approaches equilibrium. And still, at the far edge of silence, one last possibility trembles.',
     quoteAttr: 'Original cosmic prose',
+    quoteKo:
+      '모든 것이 평형으로 다가간다. 그래도 침묵의 가장 먼 끝에서 마지막 가능성 하나가 떨린다.',
+    quoteAttrKo: '오리지널 우주 산문',
     silenceBeforeMs: 7000,
   },
 ];

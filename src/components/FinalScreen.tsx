@@ -14,6 +14,10 @@ interface FinalScreenProps {
 
 export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas }: FinalScreenProps) {
   const finalStage = STAGES[STAGES.length - 1];
+  const finalQuote = language === 'ko' ? finalStage.quoteKo ?? finalStage.quote : finalStage.quote;
+  const finalQuoteAttr = language === 'ko'
+    ? finalStage.quoteAttrKo ?? t(language, 'quoteAttrOriginal')
+    : finalStage.quoteAttr;
   const universeBoost = getUniverseBoost(state.entropy);
   const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
   const condensedMassReward =
@@ -29,8 +33,8 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
     <section className="final-screen">
       <div className="final-card">
         <div className="q-stage">{`${t(language, 'finalUniverse')} #${state.universeCount}`}</div>
-        <h1>"{finalStage.quote}"</h1>
-        <p className="final-attr">{finalStage.quoteAttr}</p>
+        <h1>"{finalQuote}"</h1>
+        <p className="final-attr">{finalQuoteAttr}</p>
         <div className="final-stats">
           <div>
             <strong>{formatWhole(state.entropy)}</strong>

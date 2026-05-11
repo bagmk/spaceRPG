@@ -1,5 +1,6 @@
 import { hexToRgba } from '../game/formulas';
 import type { RogueTypeKey, Stage } from '../game/types';
+import type { Lang } from '../i18n';
 
 const ROGUE_NAMES: Record<number, Record<RogueTypeKey, string>> = {
   1: { minor: 'Inflation Shard', major: 'Vacuum Pulse', massive: 'Expansion Front' },
@@ -18,6 +19,58 @@ const ROGUE_NAMES: Record<number, Record<RogueTypeKey, string>> = {
   14: { minor: 'Decay Spark', major: 'Crystal Ghost', massive: 'Degenerate Core' },
   15: { minor: 'Hawking Trace', major: 'Photon Arc', massive: 'Rogue Horizon' },
   16: { minor: 'Thermal Ripple', major: 'Ghost Fluctuation', massive: 'Boltzmann Flicker' },
+};
+
+const ROGUE_NAME_KO: Record<string, string> = {
+  'Inflation Shard': '인플레이션 파편',
+  'Vacuum Pulse': '진공 파동',
+  'Expansion Front': '팽창 전선',
+  'Matter Survivor': '물질 생존자',
+  'Charge Pair': '전하 쌍',
+  'Annihilation Knot': '쌍소멸 매듭',
+  'Quark Flicker': '쿼크 섬광',
+  'Gluon Coil': '글루온 고리',
+  'Plasma Surge': '플라스마 쇄도',
+  'Bound Proton': '결합 양성자',
+  'Helium Seed': '헬륨 씨앗',
+  'Fusion Bloom': '융합 개화',
+  'Captured Electron': '포획 전자',
+  'Young Atom': '어린 원자',
+  'Photon Torrent': '광자 급류',
+  'Cold Hydrogen': '차가운 수소',
+  'Shadow Drift': '그림자 표류',
+  'Silent Cloud': '침묵의 구름',
+  'Protostar': '원시별',
+  'Blue Giant': '청색거성',
+  'Population III Titan': '제3종족 거성',
+  'Ion Bubble': '이온 거품',
+  'Bright Front': '밝은 전선',
+  'Clearing Wave': '개벽의 파동',
+  'Spiral Wisp': '나선 성운결',
+  'Dense Core': '고밀도 핵',
+  'Quasar Heart': '퀘이사 심장',
+  'Planetesimal': '미행성체',
+  'Young World': '어린 행성',
+  'Accretion Giant': '강착 거체',
+  'Living Cell': '살아있는 세포',
+  'Ocean Bloom': '바다 개화',
+  'Memory Cluster': '기억 군집',
+  'Solar Ember': '태양 불씨',
+  'Ash Ring': '재의 고리',
+  'Scorched Orbit': '그을린 궤도',
+  'Cooling Dwarf': '식어가는 왜성',
+  'Cold Relic': '차가운 유물',
+  'Iron Remnant': '철 잔해',
+  'Decay Spark': '붕괴 불꽃',
+  'Crystal Ghost': '결정 유령',
+  'Degenerate Core': '축퇴핵',
+  'Hawking Trace': '호킹 흔적',
+  'Photon Arc': '광자 호',
+  'Rogue Horizon': '떠도는 지평선',
+  'Thermal Ripple': '열적 물결',
+  'Ghost Fluctuation': '유령 요동',
+  'Boltzmann Flicker': '볼츠만 깜빡임',
+  'Rogue Object': '떠도는 천체',
 };
 
 const ROGUE_SHAPES: Record<number, string> = {
@@ -41,6 +94,10 @@ const ROGUE_SHAPES: Record<number, string> = {
 
 export function getStageRogueName(stageId: number, typeKey: RogueTypeKey): string {
   return ROGUE_NAMES[stageId]?.[typeKey] ?? 'Rogue Object';
+}
+
+export function getRogueNameLabel(name: string, lang: Lang): string {
+  return lang === 'ko' ? ROGUE_NAME_KO[name] ?? name : name;
 }
 
 export function getStageRogueColor(stage: Stage, typeKey: RogueTypeKey): string {

@@ -27,6 +27,10 @@ export const STRINGS = {
   clickToGather: { en: 'CLICK TO GATHER QUANTA', ko: '클릭하여 퀀타를 모으세요' },
   viewingStage:  { en: 'Stage',   ko: '단계' },
   returnCurrent: { en: '← Current', ko: '← 현재' },
+  quoteContinue: { en: 'CONTINUE →', ko: '계속 →' },
+  quoteStage:    { en: 'STAGE',      ko: '단계' },
+  quoteAttrOriginal: { en: 'Original cosmic prose', ko: '오리지널 우주 산문' },
+  encounterAlert: { en: 'Encounter', ko: '조우' },
 
   // ── Intro screen ──────────────────────────────────────────────
   introBegin:    { en: 'BEGIN',   ko: '시작' },

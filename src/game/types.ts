@@ -39,6 +39,8 @@ export interface Stage {
   autoUpgradeName: string;
   quote: string;
   quoteAttr: string;
+  quoteKo?: string;
+  quoteAttrKo?: string;
   zoomDirection: 'in' | 'out' | 'none';
   silenceBeforeMs?: number;
   endingId?: EndingId;

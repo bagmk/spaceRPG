@@ -51,6 +51,7 @@ import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
+import { getRogueNameLabel } from '../canvas/stageSprites';
 
 interface FloatingEntry {
   id: number;
@@ -416,13 +417,14 @@ export function GameScreen({
       return undefined;
     }
     const event = state.lastCollisionEvent;
+    const rogueName = getRogueNameLabel(event.name, language);
     setFloatingEntries((current) => [
       ...current,
       {
         id: event.id,
         x: event.x,
         y: event.y,
-        text: `+${formatWhole(event.bonus)} · ${event.name.toUpperCase()}`,
+        text: `+${formatWhole(event.bonus)} · ${rogueName.toUpperCase()}`,
         entropyGained: event.entropyGained,
         variant: 'collision',
       },
@@ -440,20 +442,20 @@ export function GameScreen({
       window.clearTimeout(floatTimeoutId);
       window.clearTimeout(shakeTimeoutId);
     };
-  }, [dispatch, soundManager, state.lastCollisionEvent]);
+  }, [dispatch, language, soundManager, state.lastCollisionEvent]);
 
   useEffect(() => {
     if (!state.lastEncounterEvent) {
       return undefined;
     }
     const event = state.lastEncounterEvent;
-    setEncounterEntries((current) => [...current, event]);
+    setEncounterEntries((current) => [...current, { ...event, name: getRogueNameLabel(event.name, language) }]);
     dispatch({ type: 'CLEAR_ENCOUNTER_EVENT', id: event.id });
     const timeoutId = window.setTimeout(() => {
       setEncounterEntries((current) => current.filter((entry) => entry.id !== event.id));
     }, TUNING.ENCOUNTER_ALERT_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [dispatch, state.lastEncounterEvent]);
+  }, [dispatch, language, state.lastEncounterEvent]);
 
   useEffect(() => {
     if (state.pendingCondenseStageIdx === null) {
@@ -648,11 +650,7 @@ export function GameScreen({
                 <span className="hud-stage-kicker">{`${t(language, 'hudStage')} ${displayStageNumber}`}</span>
                 <div className="hud-stage-title">{displayStageLabel}</div>
               </div>
-              <div className="hud-quanta-block">
-                <span className="hud-stage-kicker">{t(language, 'hudQuanta')}</span>
-                <strong className="hud-quanta-value">{formatGameNumber(displayQuanta)}</strong>
-                <span className="hud-info-button" aria-hidden="true">i</span>
-              </div>
+              <span className="hud-info-button" aria-hidden="true">i</span>
             </div>
             <div className="hud-meter">
               <div className="hud-meter-row">
@@ -725,6 +723,15 @@ export function GameScreen({
           </span>
         </div>
         <div className="bottom-buttons">
+          <div ref={shopAnchorRef} style={!canShowShop ? { width: '100%', height: 48, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
+            {canShowShop ? (
+              <ShopButton
+                highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}
+                onClick={() => setShopOpen(true)}
+                label={t(language, 'hudShop')}
+              />
+            ) : null}
+          </div>
           <button
             ref={entityAnchorRef}
             type="button"
@@ -735,15 +742,6 @@ export function GameScreen({
             <span className="hud-action-icon" aria-hidden="true">⚗</span>
             <span className="hud-action-label">{t(language, 'hudLab')}</span>
           </button>
-          <div ref={shopAnchorRef} style={!canShowShop ? { width: 48, height: 48, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
-            {canShowShop ? (
-              <ShopButton
-                highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}
-                onClick={() => setShopOpen(true)}
-                label={t(language, 'hudShop')}
-              />
-            ) : null}
-          </div>
           <button
             type="button"
             className="mini-button settings-gear-btn bottom-settings-button"
@@ -751,7 +749,8 @@ export function GameScreen({
             title={t(language, 'hudSettings')}
             aria-label={t(language, 'hudSettings')}
           >
-            ⚙
+            <span className="hud-action-icon" aria-hidden="true">⚙</span>
+            <span className="hud-action-label">{t(language, 'hudSettings')}</span>
           </button>
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
@@ -779,13 +778,14 @@ export function GameScreen({
           />
         ))}
         {encounterEntries.map((entry) => (
-          <EncounterAlert key={entry.id} color={entry.color} name={entry.name} />
+          <EncounterAlert key={entry.id} color={entry.color} name={entry.name} language={language} />
         ))}
       </main>
 
       {state.pendingCondenseStageIdx !== null && !state.imploding && transitionPhase === 'quote' ? (
         <QuoteOverlay
           stage={STAGES[state.pendingCondenseStageIdx]}
+          language={language}
           visible
           onContinue={() => {
             setRevealStartedAt(performance.now());
