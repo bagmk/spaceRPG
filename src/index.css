@@ -378,6 +378,32 @@ canvas {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Top-center variant — sits above the playfield, separate from hud-info */
+.stat-header.stat-header--top {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 6px 10px;
+  border-top: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 10px;
+  pointer-events: auto;
+  justify-content: center;
+  gap: 4px;
+  max-width: calc(100vw - 280px);
+}
+
+@media (max-width: 600px) {
+  .stat-header.stat-header--top {
+    top: auto;
+    bottom: 96px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
 .stat-header-item {
   font-size: 9px;
   padding: 2px 6px;

@@ -20,9 +20,10 @@ import { useGameState } from './hooks/useGameState';
 import { createInitialGameState } from './game/reducer';
 import { STAGES } from './game/stages';
 import { getStageStartCosmicTime } from './game/timeFlow';
+import { t } from './i18n';
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
-  constructor(props: { children: ReactNode }) {
+class ErrorBoundary extends Component<{ language: 'en' | 'ko'; children: ReactNode }, { error: Error | null }> {
+  constructor(props: { language: 'en' | 'ko'; children: ReactNode }) {
     super(props);
     this.state = { error: null };
   }
@@ -39,12 +40,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     if (this.state.error) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100dvh', gap: '16px', color: '#c0b8d0', fontFamily: 'monospace' }}>
-          <p style={{ margin: 0 }}>오류가 발생했습니다. 페이지를 새로고침해주세요.</p>
+          <p style={{ margin: 0 }}>{t(this.props.language, 'errorReload')}</p>
           <button
             style={{ padding: '8px 20px', background: '#4a3060', border: '1px solid #8060b0', borderRadius: '6px', color: '#e0d8f0', cursor: 'pointer' }}
             onClick={() => window.location.reload()}
           >
-            새로고침
+            {t(this.props.language, 'errorReloadBtn')}
           </button>
         </div>
       );
@@ -134,6 +135,7 @@ export default function App() {
         <IntroScreen
           canResume={resumeAvailable}
           canOpenAtlas={state.universeAtlas.length > 0}
+          language={language}
           onResume={() => {
             soundManagerRef.current?.unlock();
             setRoute(state.completedRun ? 'final' : 'game');
@@ -159,7 +161,7 @@ export default function App() {
       ) : null}
 
       {route === 'game' ? (
-        <ErrorBoundary>
+        <ErrorBoundary language={language}>
           <GameScreen
             state={state}
             dispatch={dispatch}
@@ -221,11 +223,11 @@ export default function App() {
       {showResetConfirm ? (
         <div className="reset-backdrop" role="dialog" aria-modal="true">
           <div className="reset-modal">
-            <h2>Delete save?</h2>
-            <p>This will permanently delete your save. Are you sure?</p>
+            <h2>{t(language, 'resetTitle')}</h2>
+            <p>{t(language, 'resetWarn')}</p>
             <div className="reset-actions">
               <button className="mini-button" type="button" onClick={() => setShowResetConfirm(false)}>
-                CANCEL
+                {t(language, 'resetCancel')}
               </button>
               <button
                 className="q-continue"
@@ -235,7 +237,7 @@ export default function App() {
                   window.location.reload();
                 }}
               >
-                CONFIRM RESET
+                {t(language, 'resetConfirm')}
               </button>
             </div>
           </div>

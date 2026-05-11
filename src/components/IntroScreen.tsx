@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TUNING } from '../game/constants';
 import { clamp } from '../game/formulas';
+import { t, type Lang } from '../i18n';
 
 type IntroPhase = 'idle' | 'expanding' | 'done';
 
-const GENESIS_MS = 680;
+const GENESIS_MS = 2600;
 const BIG_BANG_TO_GAME_MS = 760;
 
 interface IntroScreenProps {
   canResume: boolean;
   canOpenAtlas: boolean;
+  language: Lang;
   onResume: () => void;
   onNewStart: () => void;
   onComplete: () => void;
@@ -38,6 +40,7 @@ function mixHex(a: string, b: string, amount: number): string {
 export function IntroScreen({
   canResume,
   canOpenAtlas,
+  language,
   onResume,
   onNewStart,
   onComplete,
@@ -138,8 +141,8 @@ export function IntroScreen({
         className="genesis-line"
         style={{ opacity: genesisOpacity, color: elapsed < GENESIS_MS ? '#f8f1d8' : '#050505' }}
       >
-        <span>Let there be light</span>
-        <small>Genesis 1:3</small>
+        <span>{t(language, 'introLetThere')}</span>
+        <small>{t(language, 'introGenesis')}</small>
       </div>
       <div className="intro-content">
         <div
@@ -152,7 +155,7 @@ export function IntroScreen({
           }}
         />
         <div className="intro-ticker">{phase === 'expanding' ? INTRO_TIMES[tickerIndex] : ''}</div>
-        <p className="intro-tagline">From the first instant to the end of time.</p>
+        <p className="intro-tagline">{t(language, 'introTagline')}</p>
         {phase === 'idle' ? (
           canResume ? (
             <div className="intro-actions">
@@ -164,7 +167,7 @@ export function IntroScreen({
                   onResume();
                 }}
               >
-                RESUME
+                {t(language, 'introResume')}
               </button>
               <button
                 className="q-continue intro-button"
@@ -174,22 +177,22 @@ export function IntroScreen({
                   beginBigBang();
                 }}
               >
-                NEW BIG BANG
+                {t(language, 'introNewBang')}
               </button>
               {canOpenAtlas ? (
                 <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
-                  MULTIVERSE ATLAS
+                  {t(language, 'introAtlas')}
                 </button>
               ) : null}
             </div>
           ) : (
             <div className="intro-actions">
               <button className="q-continue intro-button" type="button" onClick={beginBigBang}>
-                BEGIN
+                {t(language, 'introBegin')}
               </button>
               {canOpenAtlas ? (
                 <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
-                  MULTIVERSE ATLAS
+                  {t(language, 'introAtlas')}
                 </button>
               ) : null}
             </div>

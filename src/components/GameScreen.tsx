@@ -50,6 +50,7 @@ import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { SettingsPanel } from './SettingsPanel';
+import { t, stageName } from '../i18n';
 
 interface FloatingEntry {
   id: number;
@@ -279,8 +280,8 @@ export function GameScreen({
       return {
         flagId: 'entity-lab-intro',
         anchor: 'entity',
-        message: 'Entity Lab turns quanta into stage entities. They appear in the field and replace the old skill upgrades.',
-        ctaLabel: 'Open Entity Lab',
+        message: t(language, 'tutEntityLabIntro'),
+        ctaLabel: t(language, 'tutEntityLabOpen'),
         onCta: openEntityPanel,
       };
     }
@@ -288,7 +289,7 @@ export function GameScreen({
       return {
         flagId: 'entity-lab-canvas',
         anchor: 'entity',
-        message: 'Purchased entities now orbit the center. Buying more copies adds more bodies, not just a number.',
+        message: t(language, 'tutEntityLabCanvas'),
         autoCloseMs: 6000,
       };
     }
@@ -296,7 +297,7 @@ export function GameScreen({
       return {
         flagId: 'time-gauge-visible',
         anchor: 'resource',
-        message: 'Cosmic time accumulates here. Time-type entities in the lab speed this gauge up.',
+        message: t(language, 'tutTimeGauge'),
         autoCloseMs: 6000,
       };
     }
@@ -304,8 +305,8 @@ export function GameScreen({
       return {
         flagId: 'shop-visible',
         anchor: 'shop',
-        message: 'Cosmic Shop has temporary boosts. Free in test mode.',
-        ctaLabel: 'Open Shop',
+        message: t(language, 'tutShop'),
+        ctaLabel: t(language, 'tutShopOpen'),
         onCta: () => setShopOpen(true),
       };
     }
@@ -313,7 +314,7 @@ export function GameScreen({
       return {
         flagId: 'boost-hud-seen',
         anchor: 'boost',
-        message: 'Active boosts appear here and count down in real time. Stack purchases to extend the duration.',
+        message: t(language, 'tutBoost'),
         autoCloseMs: 7000,
       };
     }
@@ -321,7 +322,7 @@ export function GameScreen({
       return {
         flagId: 'condense-ready',
         anchor: 'resource',
-        message: 'Both gauges are full. Press Condense to advance.',
+        message: t(language, 'tutCondense'),
         autoCloseMs: 8000,
       };
     }
@@ -332,6 +333,7 @@ export function GameScreen({
     entityPanelOpen,
     hasActiveBoost,
     hasAffordableEntity,
+    language,
     ownedCurrentStageEntityCount,
     stage.id,
     state.shopBoosts,
@@ -620,13 +622,13 @@ export function GameScreen({
         {viewingStageId !== null && !entityPanelOpen ? (
           <div className="viewing-stage-banner">
             <span className="viewing-stage-banner__dot" />
-            {`Stage ${displayStage.id}: ${displayStage.name}`}
+            {`${t(language, 'hudStage')} ${displayStage.id}: ${stageName(language, displayStage.id, displayStage.name)}`}
             <button
               type="button"
               className="viewing-stage-banner__return"
               onClick={() => setViewingStageId(null)}
             >
-              ← Current
+              {t(language, 'returnCurrent')}
             </button>
           </div>
         ) : null}
@@ -636,11 +638,11 @@ export function GameScreen({
             ref={infoAnchorRef}
             className="hud-info-click-zone"
             onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
-            title={language === 'ko' ? '정보 / 튜토리얼 보기' : 'View Info / Tutorial'}
+            title={t(language, 'hudViewInfo')}
           >
-            <div className="hud-stage-title">{`Stage ${displayStage.id}: ${displayStage.name}`}</div>
+            <div className="hud-stage-title">{`${t(language, 'hudStage')} ${displayStage.id}: ${stageName(language, displayStage.id, displayStage.name)}`}</div>
             <div className="hud-quanta">
-              {`Quanta ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
+              {`${t(language, 'hudQuanta')} ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
             </div>
             <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
               <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
@@ -653,7 +655,7 @@ export function GameScreen({
               <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
             </div>
             {timeEstimateLabel && !isViewingPastStage ? (
-              <div className="hud-time-estimate">{timeEstimateLabel} remaining</div>
+              <div className="hud-time-estimate">{timeEstimateLabel} {t(language, 'hudRemaining')}</div>
             ) : null}
           </button>
           <button
@@ -662,9 +664,9 @@ export function GameScreen({
             disabled={isViewingPastStage || !canCondense}
             title={
               isViewingPastStage
-                ? 'This stage has already been condensed.'
+                ? t(language, 'hudCondenseAlready')
                 : canCondense
-                  ? `Condense for ${formatWhole(entropyPreview)} entropy`
+                  ? `${t(language, 'hudCondenseFor')} ${formatWhole(entropyPreview)} ${t(language, 'hudEntropy').toLowerCase()}`
                   : condenseHint
             }
             onClick={() => {
@@ -674,32 +676,32 @@ export function GameScreen({
               }
             }}
           >
-            {isViewingPastStage ? '🐾 Completed' : 'Condense'}
+            {isViewingPastStage ? t(language, 'hudCompleted') : t(language, 'hudCondense')}
           </button>
-          <div className="stat-header" aria-label="Core stats">
-            <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-              {`Quanta x${formatWhole(clickPower * shopQuantaMult)}`}
+        </div>
+        <div className="stat-header stat-header--top" aria-label="Core stats">
+          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+            {`${t(language, 'hudQuanta')} x${formatWhole(clickPower * shopQuantaMult)}`}
+          </span>
+          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+            {`${t(language, 'hudAuto')} ${formatRate(autoRate * shopQuantaMult)}`}
+          </span>
+          {state.skills.unlockedTracks.includes('crit') ? (
+            <span className="stat-header-item stat-header-readout">
+              {`${t(language, 'hudCrit')} x${formatHeaderMultiplier(critMultiplier)}`}
             </span>
-            <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-              {`Auto ${formatRate(autoRate * shopQuantaMult)}`}
-            </span>
-            {state.skills.unlockedTracks.includes('crit') ? (
-              <span className="stat-header-item stat-header-readout">
-                {`Crit x${formatHeaderMultiplier(critMultiplier)}`}
-              </span>
-            ) : null}
-            <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
-              {`Time x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
-            </span>
-            <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
-          </div>
+          ) : null}
+          <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
+            {`${t(language, 'hudTime')} x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
+          </span>
+          <span className="stat-header-item stat-header-readout">{`${t(language, 'hudEntropy')} ${formatWhole(state.entropy)}`}</span>
         </div>
         <div className="hud-controls">
           <button
             type="button"
             className="mini-button settings-gear-btn"
             onClick={() => setSettingsOpen(true)}
-            title={language === 'ko' ? '설정' : 'Settings'}
+            title={t(language, 'hudSettings')}
           >
             ⚙
           </button>
@@ -731,7 +733,7 @@ export function GameScreen({
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}
         {stage.id === 1 && state.totalClicks === 0 && !interactionLocked ? (
-          <div className="click-tutorial-hint">CLICK TO GATHER QUANTA</div>
+          <div className="click-tutorial-hint">{t(language, 'clickToGather')}</div>
         ) : null}
         {floatingEntries.map((entry) => (
           <FloatingNumber
@@ -833,8 +835,8 @@ export function GameScreen({
         <SpeechBubble
           anchorRef={infoAnchorRef}
           position="bottom"
-          message={language === 'ko' ? '스테이지 기록이 여기 표시됩니다. 클릭해서 탐색하세요.' : 'Stage events are recorded here. Click to explore milestones.'}
-          ctaLabel={language === 'ko' ? '열기' : 'Open'}
+          message={t(language, 'tutStageLog')}
+          ctaLabel={t(language, 'tutStageLogOpen')}
           onCta={() => {
             setAlmanacOpen(true);
             dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' });
