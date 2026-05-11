@@ -120,8 +120,11 @@ export function getCosmicTimeFillRate(
   stageNumber = 1,
 ): number {
   // Per-stage cap applies to the aeon base rate.
-  // Stage 1 is the tutorial: fixed 2-min base. Stage 2+ follow s²×600s.
-  const baseSeconds = stageNumber <= 1 ? 120 : Math.pow(stageNumber, 2) * 600;
+  // Stage 1: fixed 2-min tutorial. Stage 2: shorter ramp-up. Stage 3+: s²×600s.
+  const baseSeconds =
+    stageNumber <= 1 ? 120 :
+    stageNumber === 2 ? Math.pow(stageNumber, 2) * 240 :
+    Math.pow(stageNumber, 2) * 600;
   const stageCap = 100 / baseSeconds;
   const base = Math.min(stageCap, Math.pow(10, aeonLevel) * mods.apexMult);
   const timeBoost = Math.min(12, mods.timeMultMult);
