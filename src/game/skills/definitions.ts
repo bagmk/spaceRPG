@@ -160,7 +160,7 @@ export const SKILL_TREES: SkillTreeDef[] = [
     rootMaxLevel: 40,
     rootCostCurve: (level) => trackLevelCost('time', level),
     milestones: {
-      1: { name: 'Tick Tock', desc: 'Cosmic time compresses by 10× per level.' },
+      1: { name: 'Tick Tock', desc: 'Cosmic time accelerates with every level.' },
       5: { name: 'Cosmic Pulse', desc: 'Unlocks an SP node slot.' },
       10: { name: 'Time Dilation', desc: 'Unlocks an SP node slot.' },
       15: { name: 'Temporal Flow', desc: 'Unlocks an SP node slot.' },

@@ -609,7 +609,7 @@ export function GameScreen({
           }
         />
         {shopOpen && canShowShop ? (
-          <ShopPanel state={state} dispatch={dispatch} onClose={() => setShopOpen(false)} />
+          <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => setShopOpen(false)} />
         ) : null}
         {entityPanelOpen ? (
           <EntityPanel
@@ -757,8 +757,8 @@ export function GameScreen({
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
-        <ScaleIndicator stageId={displayStage.id} />
-        <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} />
+        <ScaleIndicator stageId={displayStage.id} language={language} />
+        <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} language={language} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}

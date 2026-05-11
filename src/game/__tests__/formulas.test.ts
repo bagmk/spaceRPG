@@ -15,6 +15,7 @@ import {
 import { getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
+import { SKILL_TIME_RATE_BASE, TIME_MIN_STAGE_SECONDS } from '../balance';
 
 describe('formatWhole', () => {
   it('formats small whole numbers without suffixes', () => {
@@ -61,7 +62,7 @@ describe('scaling formulas', () => {
     expect(getAutoRate(scaled)).toBeGreaterThan(getAutoRate(none));
   });
 
-  it('uses V8 2x scaling for click/auto and 10x scaling for time at level 5', () => {
+  it('uses V8 2x scaling for click/auto and tuned time scaling at level 5', () => {
     const skills = {
       click: { level: 5 },
       auto: { level: 5 },
@@ -78,9 +79,21 @@ describe('scaling formulas', () => {
     });
     expect(getClickPower(modifiers)).toBe(32);   // 2^5
     expect(getAutoRate(modifiers)).toBe(32);      // 2^5
-    expect(getTimeMultiplier(skills.time.level, modifiers)).toBe(1e5);   // 10^5 unchanged
-    // Stage 5 cap = 100 / (5² × 300) = 100/7500 ≈ 1.333e-2 %/s (≥ 7500 s min)
-    expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(100 / 7500, 10);
+    expect(getTimeMultiplier(skills.time.level, modifiers)).toBeCloseTo(Math.pow(SKILL_TIME_RATE_BASE, 5), 10);
+    expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(
+      (100 / (5 ** 2 * 600)) * Math.pow(SKILL_TIME_RATE_BASE, 5),
+      10,
+    );
+  });
+
+  it('makes late-stage Aeon Drive levels reduce time without going instant', () => {
+    const modifiers = defaultModifiers();
+    const stage16Level0 = getCosmicTimeFillRate(0, modifiers, 1, 16);
+    const stage16Level10 = getCosmicTimeFillRate(10, modifiers, 1, 16);
+    const stage16Level40 = getCosmicTimeFillRate(40, modifiers, 1, 16);
+    expect(stage16Level10).toBeGreaterThan(stage16Level0);
+    expect(100 / stage16Level10).toBeLessThan(100 / stage16Level0);
+    expect(stage16Level40).toBeLessThanOrEqual(100 / TIME_MIN_STAGE_SECONDS);
   });
 
   it('caps expected crit chance at 50 percent', () => {

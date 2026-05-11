@@ -4,6 +4,7 @@ import { formatWhole, getCompositeBoostMultiplier } from '../game/formulas';
 import type { GameAction } from '../game/reducer';
 import { SHOP_ITEMS } from '../game/shop/items';
 import type { GameState, ShopBoost } from '../game/types';
+import { t, type Lang, type StringKey } from '../i18n';
 
 const ITEM_VISUAL: Record<string, { icon: string; color: string }> = {
   time_boost:      { icon: '⟳', color: '#4df0cc' },
@@ -13,6 +14,13 @@ const ITEM_VISUAL: Record<string, { icon: string; color: string }> = {
 };
 
 const FREE_ITEM_ID = 'cosmic_surge';
+
+const SHOP_COPY: Record<string, { label: StringKey; description: StringKey }> = {
+  time_boost: { label: 'shopQuickTimeName', description: 'shopQuickTimeDesc' },
+  cosmic_surge: { label: 'shopCosmicSurgeName', description: 'shopCosmicSurgeDesc' },
+  time_boost_xl: { label: 'shopAeonSurgeName', description: 'shopAeonSurgeDesc' },
+  cosmic_surge_xl: { label: 'shopQuantaStormName', description: 'shopQuantaStormDesc' },
+};
 
 function formatRemaining(boosts: ShopBoost[], prefix: string, now: number): string | null {
   const active = boosts.filter((b) => b.id.startsWith(prefix) && b.expiresAt > now);
@@ -24,6 +32,7 @@ function formatRemaining(boosts: ShopBoost[], prefix: string, now: number): stri
 interface ShopPanelProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  language: Lang;
   onClose: () => void;
 }
 
@@ -49,7 +58,7 @@ export function ShopButton({
   );
 }
 
-export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
+export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
   const isTutorial = !state.tutorialFlags['shop-first-used'];
   const activeBoosts = state.shopBoosts.filter((b) => b.expiresAt > now);
@@ -91,13 +100,13 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
         {/* Header */}
         <div className="shop-panel2__header">
           <div>
-            <div className="shop-panel2__eyebrow">Cosmic Shop</div>
+            <div className="shop-panel2__eyebrow">{t(language, 'shopEyebrow')}</div>
             <div className="shop-panel2__title">
-              {isTutorial ? 'Welcome Gift' : 'Boosts'}
+              {isTutorial ? t(language, 'shopWelcomeGift') : t(language, 'shopBoosts')}
             </div>
             {isTutorial && (
               <div className="shop-panel2__tutorial-hint">
-                Claim your free Quanta Boost to continue ↓
+                {t(language, 'shopTutorialHint')}
               </div>
             )}
           </div>
@@ -106,7 +115,7 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
               type="button"
               className="entity-panel__close"
               onClick={onClose}
-              aria-label="Close shop"
+              aria-label={t(language, 'shopClose')}
             >
               ✕
             </button>
@@ -121,6 +130,9 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
             const locked = isTutorial && item.id !== FREE_ITEM_ID;
             const boostPrefix = item.id.startsWith('time') ? 'time_' : 'quanta_';
             const remaining = formatRemaining(activeBoosts, boostPrefix, now);
+            const copy = SHOP_COPY[item.id];
+            const itemLabel = copy ? t(language, copy.label) : item.label;
+            const itemDescription = copy ? t(language, copy.description) : item.description;
 
             return (
               <article
@@ -143,16 +155,16 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
                 <div className="shop-boost-card__icon">{visual.icon}</div>
 
                 <div className="shop-boost-card__body">
-                  <div className="shop-boost-card__name">{item.label}</div>
-                  <div className="shop-boost-card__desc">{item.description}</div>
+                  <div className="shop-boost-card__name">{itemLabel}</div>
+                  <div className="shop-boost-card__desc">{itemDescription}</div>
                   {remaining && (
-                    <div className="shop-boost-card__timer">{`⏱ ${remaining} left`}</div>
+                    <div className="shop-boost-card__timer">{`⏱ ${remaining} ${t(language, 'shopLeft')}`}</div>
                   )}
                 </div>
 
                 <div className="shop-boost-card__right">
                   {isFree ? (
-                    <div className="shop-boost-card__free-badge">FREE</div>
+                    <div className="shop-boost-card__free-badge">{t(language, 'shopFree')}</div>
                   ) : (
                     !locked && (
                       <div className="shop-boost-card__price">{`$${item.priceUSD.toFixed(2)}`}</div>
@@ -164,7 +176,7 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
                     disabled={locked}
                     onClick={() => handleBuy(item.id)}
                   >
-                    {isFree ? 'Claim' : 'Buy'}
+                    {isFree ? t(language, 'shopClaim') : t(language, 'shopBuy')}
                   </button>
                 </div>
               </article>
@@ -175,12 +187,12 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
         {/* Active boosts summary */}
         {activeBoosts.length > 0 && (
           <div className="shop-panel2__status">
-            <div className="shop-panel2__status-title">Active Boosts</div>
+            <div className="shop-panel2__status-title">{t(language, 'shopActiveBoosts')}</div>
             {(['time_', 'quanta_'] as const).map((prefix) => {
               const mult = getCompositeBoostMultiplier(activeBoosts, prefix, now);
               const rem = formatRemaining(activeBoosts, prefix, now);
               if (mult <= 1 || !rem) return null;
-              const label = prefix === 'time_' ? 'Time' : 'Quanta';
+              const label = prefix === 'time_' ? t(language, 'hudTime') : t(language, 'hudQuanta');
               const color = prefix === 'time_' ? '#4df0cc' : '#ffd766';
               return (
                 <div
@@ -198,7 +210,7 @@ export function ShopPanel({ state, dispatch, onClose }: ShopPanelProps) {
 
         {!isTutorial && (
           <div className="shop-panel2__footer">
-            {`Total spent: $${state.totalShopSpentUSD.toFixed(2)} (test mode)`}
+            {`${t(language, 'shopTotalSpent')}: $${state.totalShopSpentUSD.toFixed(2)} (${t(language, 'shopTestMode')})`}
           </div>
         )}
       </aside>

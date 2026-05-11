@@ -1,18 +1,19 @@
 import { forwardRef, useEffect, useState } from 'react';
 import { formatWhole, getCompositeBoostMultiplier } from '../game/formulas';
 import type { ShopBoost } from '../game/types';
+import { t, type Lang } from '../i18n';
 
-function formatRemaining(boosts: ShopBoost[], prefix: string, now: number): string {
+function formatRemaining(boosts: ShopBoost[], prefix: string, now: number, language: Lang): string {
   const active = boosts.filter((boost) => boost.id.startsWith(prefix) && boost.expiresAt > now);
-  if (active.length === 0) return '0:00 left';
+  if (active.length === 0) return `0:00 ${t(language, 'shopLeft')}`;
   const remainingSec = Math.max(0, Math.floor((Math.min(...active.map((boost) => boost.expiresAt)) - now) / 1000));
   const minutes = Math.floor(remainingSec / 60);
   const seconds = remainingSec % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')} left`;
+  return `${minutes}:${seconds.toString().padStart(2, '0')} ${t(language, 'shopLeft')}`;
 }
 
-export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[] }>(
-  function ActiveBoostHud({ boosts }, ref) {
+export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[]; language: Lang }>(
+  function ActiveBoostHud({ boosts, language }, ref) {
     const [now, setNow] = useState(Date.now());
 
     useEffect(() => {
@@ -30,12 +31,12 @@ export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[] }
 
     return (
       <div ref={ref} className="active-boost-hud">
-        <div className="scale-title">Active Boosts</div>
+        <div className="scale-title">{t(language, 'shopActiveBoosts')}</div>
         {timeCount > 0 ? (
-          <div>{`Time x${formatWhole(timeMult)} (${formatRemaining(active, 'time_', now)})`}</div>
+          <div>{`${t(language, 'hudTime')} x${formatWhole(timeMult)} (${formatRemaining(active, 'time_', now, language)})`}</div>
         ) : null}
         {quantaCount > 0 ? (
-          <div>{`Quanta x${formatWhole(quantaMult)} (${formatRemaining(active, 'quanta_', now)})`}</div>
+          <div>{`${t(language, 'hudQuanta')} x${formatWhole(quantaMult)} (${formatRemaining(active, 'quanta_', now, language)})`}</div>
         ) : null}
       </div>
     );

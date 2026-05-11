@@ -1,5 +1,6 @@
 import { TUNING } from './constants';
 import { STAGES } from './stages';
+import { SKILL_TIME_RATE_BASE, TIME_MIN_STAGE_SECONDS } from './balance';
 import type { EndingId, GameState, ShopBoost, Stage, TimedShopBoost } from './types';
 import type { Modifiers } from './skills/effects';
 
@@ -106,7 +107,7 @@ export function getCritChance(critLevel: number, combo: number, mods: Modifiers)
 }
 
 export function getTimeMultiplier(timeLevel: number, mods: Modifiers): number {
-  return Math.pow(10, timeLevel) * mods.apexMult * mods.timeMultMult;
+  return Math.pow(SKILL_TIME_RATE_BASE, timeLevel) * mods.apexMult * mods.timeMultMult;
 }
 
 export function getTimeBudget(_stage: Stage): number {
@@ -119,16 +120,17 @@ export function getCosmicTimeFillRate(
   boostMultiplier = 1,
   stageNumber = 1,
 ): number {
-  // Per-stage cap applies to the aeon base rate.
-  // Stage 1: fixed 2-min tutorial. Stage 2: shorter ramp-up. Stage 3+: s²×600s.
+  // Stage sets the unupgraded duration; Aeon Drive and time bonuses scale that
+  // baseline so late-stage level-ups still shorten the clock.
   const baseSeconds =
     stageNumber <= 1 ? 120 :
     stageNumber === 2 ? Math.pow(stageNumber, 2) * 240 :
     Math.pow(stageNumber, 2) * 600;
-  const stageCap = 100 / baseSeconds;
-  const base = Math.min(stageCap, Math.pow(10, aeonLevel) * mods.apexMult);
-  const timeBoost = Math.min(12, mods.timeMultMult);
-  return base * timeBoost * boostMultiplier;
+  const baseRate = 100 / baseSeconds;
+  const levelBoost = Math.pow(SKILL_TIME_RATE_BASE, Math.max(0, aeonLevel)) * mods.apexMult;
+  const timeBoost = Math.max(0, mods.timeMultMult);
+  const maxRate = 100 / TIME_MIN_STAGE_SECONDS;
+  return Math.min(maxRate, baseRate * levelBoost * timeBoost * boostMultiplier);
 }
 
 export function getTimeFillRateGauge(

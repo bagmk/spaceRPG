@@ -109,6 +109,10 @@ export const ENTITY_RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
 export const SKILL_CLICK_POWER_BASE = 2;
 /** autoRateAdd = base^level — change exponent base here. */
 export const SKILL_AUTO_RATE_BASE = 2;
+/** Cosmic-time gauge speed multiplier per Aeon Drive level. */
+export const SKILL_TIME_RATE_BASE = 1.55;
+/** Hard lower bound for any stage's time-gauge duration after all boosts. */
+export const TIME_MIN_STAGE_SECONDS = 12;
 
 export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
   click_lv5: 1.4,
@@ -162,6 +166,8 @@ export const BALANCE = {
   skill: {
     clickPowerBase: SKILL_CLICK_POWER_BASE,
     autoRateBase: SKILL_AUTO_RATE_BASE,
+    timeRateBase: SKILL_TIME_RATE_BASE,
+    timeMinStageSeconds: TIME_MIN_STAGE_SECONDS,
     crossNodeMults: SKILL_CROSS_NODE_MULTS,
     totalCrossNodeCount: SKILL_TOTAL_CROSS_NODE_COUNT,
   },

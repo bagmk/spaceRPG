@@ -105,7 +105,7 @@ describe('stage entity definitions', () => {
     ]);
 
     expect(mods.autoRateAdd).toBeGreaterThan(0);
-    expect(mods.clickPowerAdd).toBeGreaterThan(0);
+    expect(mods.clickPowerMult).toBeGreaterThan(1);
     expect(mods.timeMultMult).toBeGreaterThan(1);
   });
 });
