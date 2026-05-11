@@ -724,16 +724,6 @@ export function GameScreen({
             <strong>{formatWhole(state.entropy)}</strong>
           </span>
         </div>
-        <div className="hud-controls">
-          <button
-            type="button"
-            className="mini-button settings-gear-btn"
-            onClick={() => setSettingsOpen(true)}
-            title={t(language, 'hudSettings')}
-          >
-            ⚙
-          </button>
-        </div>
         <div className="bottom-buttons">
           <button
             ref={entityAnchorRef}
@@ -754,6 +744,15 @@ export function GameScreen({
               />
             ) : null}
           </div>
+          <button
+            type="button"
+            className="mini-button settings-gear-btn bottom-settings-button"
+            onClick={() => setSettingsOpen(true)}
+            title={t(language, 'hudSettings')}
+            aria-label={t(language, 'hudSettings')}
+          >
+            ⚙
+          </button>
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
