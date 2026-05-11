@@ -2075,7 +2075,11 @@ export function drawEntities(
   }
 
   if (items.length === 0) return;
-  if (items.length > MAX_TOTAL_ENTITY_DRAW) items.length = MAX_TOTAL_ENTITY_DRAW;
+  if (items.length > MAX_TOTAL_ENTITY_DRAW) {
+    const RARITY_PRIORITY: Record<string, number> = { legendary: 0, epic: 1, rare: 2, common: 3 };
+    items.sort((a, b) => (RARITY_PRIORITY[a.rarity] ?? 3) - (RARITY_PRIORITY[b.rarity] ?? 3));
+    items.length = MAX_TOTAL_ENTITY_DRAW;
+  }
 
   if (stageId === 11) {
     drawLifeEarthEntities(ctx, cx, cy, items, now);

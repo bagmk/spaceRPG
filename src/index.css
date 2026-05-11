@@ -338,6 +338,13 @@ canvas {
   box-shadow: 0 0 8px #6d8fff;
 }
 
+.hud-time-estimate {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #6d8fff;
+  opacity: 0.8;
+}
+
 .hud-condense {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.14);

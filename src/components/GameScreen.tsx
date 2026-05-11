@@ -220,6 +220,24 @@ export function GameScreen({
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
   const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers);
+  const timeRemainingSeconds =
+    timeProgress01 >= 1 || timeFlowRate <= 0
+      ? 0
+      : (100 - Math.min(100, timeGauge)) / timeFlowRate;
+  const timeEstimateLabel = (() => {
+    if (timeRemainingSeconds <= 0) return '';
+    const s = timeRemainingSeconds;
+    if (s < 60) return `~${Math.ceil(s)}s`;
+    if (s < 3600) return `~${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`;
+    if (s < 86400) {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      return m > 0 ? `~${h}h ${m}m` : `~${h}h`;
+    }
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    return h > 0 ? `~${d}d ${h}h` : `~${d}d`;
+  })();
   const cosmicClockFromGauge = state.cosmicClockSec;
   const displayedCosmicClock =
     state.currentUniverseSeed.anomaly === 'inverted_time'
@@ -617,6 +635,9 @@ export function GameScreen({
           <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
             <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
           </div>
+          {timeEstimateLabel && !isViewingPastStage ? (
+            <div className="hud-time-estimate">{timeEstimateLabel} remaining</div>
+          ) : null}
           <button
             type="button"
             className={`hud-condense ${isViewingPastStage ? 'hud-condense--completed' : ''}`}
