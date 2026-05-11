@@ -2827,18 +2827,44 @@ button.stat-header-item {
     text-align: center;
   }
 
-  /* ── Stat readout: below the HUD, left-aligned, tiny ── */
+  /* ── Stat readout: just below the HUD box, left-aligned ── */
   .stat-header {
-    top: auto;
-    bottom: 90px;
-    left: 8px;
-    right: auto;
+    top: 8px;
+    bottom: auto;
+    left: 172px;
+    right: 52px;
     transform: none;
-    max-width: 160px;
+    max-width: none;
     flex-wrap: wrap;
     font-size: 8px;
-    gap: 4px;
+    gap: 3px 6px;
     line-height: 1.4;
+    align-content: flex-start;
+  }
+
+  /* ── Shop / Entity buttons: smaller on mobile ── */
+  .shop-button,
+  .skills-button,
+  .entity-lab-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .shop-button span,
+  .skills-button span {
+    font-size: 17px;
+  }
+
+  .entity-lab-button {
+    font-size: 17px;
+  }
+
+  .bottom-buttons {
+    gap: 6px;
+    bottom: 10px;
+    right: 10px;
   }
 
   /* ── Scale indicator: small, bottom-left ── */
