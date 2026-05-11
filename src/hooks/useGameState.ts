@@ -5,8 +5,6 @@ import { TUNING } from '../game/constants';
 import {
   getCompositeBoostMultiplier,
   getAutoRate,
-  getCosmicClockForGauge,
-  getTimeFillRate,
   safeAdd,
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
@@ -78,22 +76,11 @@ export function useGameState(): UseGameStateResult {
         : TUNING.OFFLINE_BASE_RATE;
       const quantaBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'quanta_', now);
       const gained = autoRate * awaySec * offlineMultiplier * quantaBoost;
-      const timeBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'time_', now);
-      const timeGauge = Math.min(
-        125,
-        baseState.timeGauge +
-          getTimeFillRate(stage, payload.skills.time.level, modifiers, timeBoost) *
-            awaySec *
-            offlineMultiplier,
-      );
-      const cosmicClockSec = getCosmicClockForGauge(payload.stageIdx, timeGauge);
       const todayKey = getDayKey(new Date(now));
       const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
       return {
         ...baseState,
         quanta: safeAdd(baseState.quanta, gained),
-        timeGauge,
-        cosmicClockSec,
         lastSaveAt: now,
         offlineElapsedMs: awaySec * 1000,
         offlineGained: gained,
