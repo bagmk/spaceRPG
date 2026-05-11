@@ -1,11 +1,13 @@
 import { formatDuration } from '../game/formulas';
 import { formatUniverseModifier, getAnomalyLabel } from '../game/multiverse';
 import type { UniverseAtlasEntry, UniverseSeed } from '../game/types';
+import { t, type Lang } from '../i18n';
 
 interface MultiverseAtlasProps {
   entries: UniverseAtlasEntry[];
   currentSeed: UniverseSeed;
   currentUniverseCount: number;
+  language: Lang;
   onBack: () => void;
 }
 
@@ -13,29 +15,30 @@ export function MultiverseAtlas({
   entries,
   currentSeed,
   currentUniverseCount,
+  language,
   onBack,
 }: MultiverseAtlasProps) {
   return (
     <section className="final-screen atlas-screen">
       <div className="final-card atlas-card">
-        <div className="q-stage">UNIVERSE LOG</div>
-        <h1>Multiverse Atlas</h1>
-        <p className="final-attr">Every prestige bends gravity, time, color, and occasionally reality itself.</p>
+        <div className="q-stage">{t(language, 'atlasLogTitle')}</div>
+        <h1>{t(language, 'atlasHeadline')}</h1>
+        <p className="final-attr">{t(language, 'atlasIntro')}</p>
 
         <div className="atlas-current">
-          <div className="atlas-current-label">{`Current Seed · Universe #${currentUniverseCount}`}</div>
+          <div className="atlas-current-label">{`${t(language, 'atlasCurrentSeed')} · ${t(language, 'finalUniverse')} #${currentUniverseCount}`}</div>
           <div className="atlas-current-name">{currentSeed.atlasName}</div>
           <div className="atlas-meta">
-            <span>{`Gravity ${formatUniverseModifier(currentSeed.gravityMod)}`}</span>
-            <span>{`Time ${formatUniverseModifier(currentSeed.timeMod)}`}</span>
-            <span>{`Hue +${currentSeed.paletteShift}°`}</span>
-            <span>{`Anomaly ${getAnomalyLabel(currentSeed.anomaly)}`}</span>
+            <span>{`${t(language, 'atlasGravity')} ${formatUniverseModifier(currentSeed.gravityMod)}`}</span>
+            <span>{`${t(language, 'atlasTime')} ${formatUniverseModifier(currentSeed.timeMod)}`}</span>
+            <span>{`${t(language, 'atlasHue')} +${currentSeed.paletteShift}°`}</span>
+            <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(currentSeed.anomaly)}`}</span>
           </div>
         </div>
 
         <div className="atlas-list">
           {entries.length === 0 ? (
-            <div className="atlas-empty">No completed universes yet. The first log entry appears after your first ending.</div>
+            <div className="atlas-empty">{t(language, 'atlasEmpty')}</div>
           ) : (
             entries
               .slice()
@@ -48,14 +51,14 @@ export function MultiverseAtlas({
                     <span>{entry.endingId.replace('_', ' ')}</span>
                     <span>{formatDuration(entry.durationMs)}</span>
                   </div>
-                  <div className="atlas-meta atlas-hover-hint">Hover or focus for details</div>
+                  <div className="atlas-meta atlas-hover-hint">{t(language, 'atlasHoverHint')}</div>
                   <div className="atlas-meta atlas-detail">
-                    <span>{`Gravity ${formatUniverseModifier(entry.seed.gravityMod)}`}</span>
-                    <span>{`Time ${formatUniverseModifier(entry.seed.timeMod)}`}</span>
-                    <span>{`Hue +${entry.seed.paletteShift}°`}</span>
-                    <span>{`Anomaly ${getAnomalyLabel(entry.seed.anomaly)}`}</span>
-                    <span>{`${entry.totalClicks} clicks`}</span>
-                    <span>{`${entry.collisions} encounters`}</span>
+                    <span>{`${t(language, 'atlasGravity')} ${formatUniverseModifier(entry.seed.gravityMod)}`}</span>
+                    <span>{`${t(language, 'atlasTime')} ${formatUniverseModifier(entry.seed.timeMod)}`}</span>
+                    <span>{`${t(language, 'atlasHue')} +${entry.seed.paletteShift}°`}</span>
+                    <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(entry.seed.anomaly)}`}</span>
+                    <span>{`${entry.totalClicks} ${t(language, 'atlasClicks')}`}</span>
+                    <span>{`${entry.collisions} ${t(language, 'atlasEncounters')}`}</span>
                   </div>
                 </article>
               ))
@@ -63,7 +66,7 @@ export function MultiverseAtlas({
         </div>
 
         <button className="mini-button atlas-back" type="button" onClick={onBack}>
-          BACK
+          {t(language, 'atlasBack')}
         </button>
       </div>
     </section>

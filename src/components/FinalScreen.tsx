@@ -2,15 +2,17 @@ import { getCondensedMassReward, getEchoReward, getUniverseBoost, formatDuration
 import { STAGES } from '../game/stages';
 import type { GameState, SingularityUnlockId } from '../game/types';
 import { SingularityTree } from './SingularityTree';
+import { t, type Lang } from '../i18n';
 
 interface FinalScreenProps {
   state: GameState;
+  language: Lang;
   onPrestige: () => void;
   onUnlock: (unlockId: SingularityUnlockId) => void;
   onOpenAtlas: () => void;
 }
 
-export function FinalScreen({ state, onPrestige, onUnlock, onOpenAtlas }: FinalScreenProps) {
+export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas }: FinalScreenProps) {
   const finalStage = STAGES[STAGES.length - 1];
   const universeBoost = getUniverseBoost(state.entropy);
   const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
@@ -26,33 +28,33 @@ export function FinalScreen({ state, onPrestige, onUnlock, onOpenAtlas }: FinalS
   return (
     <section className="final-screen">
       <div className="final-card">
-        <div className="q-stage">{`UNIVERSE #${state.universeCount}`}</div>
+        <div className="q-stage">{`${t(language, 'finalUniverse')} #${state.universeCount}`}</div>
         <h1>"{finalStage.quote}"</h1>
         <p className="final-attr">{finalStage.quoteAttr}</p>
         <div className="final-stats">
           <div>
             <strong>{formatWhole(state.entropy)}</strong>
-            <span>Total entropy gained this run</span>
+            <span>{t(language, 'finalTotalEntropy')}</span>
           </div>
           <div>
             <strong>{formatWhole(state.totalClicks)}</strong>
-            <span>Total clicks</span>
+            <span>{t(language, 'finalTotalClicks')}</span>
           </div>
           <div>
             <strong>{formatWhole(state.collisions)}</strong>
-            <span>Encounters survived</span>
+            <span>{t(language, 'finalEncounters')}</span>
           </div>
           <div>
             <strong>{formatDuration(state.totalTimePlayed)}</strong>
-            <span>Time elapsed</span>
+            <span>{t(language, 'finalTimeElapsed')}</span>
           </div>
         </div>
-        <div className="final-summary">{`Universe #${state.universeCount} completed.`}</div>
-        <div className="final-boost">{`Atlas name: ${state.currentUniverseSeed.atlasName}`}</div>
-        <div className="final-boost">{`Prestige reward: +${formatWhole(universeBoost)} universe boost`}</div>
-        <div className="final-boost">{`Completion reward: +${formatWhole(condensedMassReward)} condensed mass`}</div>
+        <div className="final-summary">{`${t(language, 'finalUniverse')} #${state.universeCount} ${t(language, 'finalCompleted')}`}</div>
+        <div className="final-boost">{`${t(language, 'finalAtlasName')}: ${state.currentUniverseSeed.atlasName}`}</div>
+        <div className="final-boost">{`${t(language, 'finalPrestigeReward')}: +${formatWhole(universeBoost)} ${t(language, 'finalUniverseBoost')}`}</div>
+        <div className="final-boost">{`${t(language, 'finalCompletionReward')}: +${formatWhole(condensedMassReward)} ${t(language, 'finalCondensedMass')}`}</div>
         {echoReward > 0 ? (
-          <div className="final-boost">{`New ending reward: +${formatWhole(echoReward)} echoes`}</div>
+          <div className="final-boost">{`${t(language, 'finalNewEndingReward')}: +${formatWhole(echoReward)} ${t(language, 'finalEchoes')}`}</div>
         ) : null}
         <SingularityTree
           condensedMass={state.condensedMass}
@@ -60,10 +62,10 @@ export function FinalScreen({ state, onPrestige, onUnlock, onOpenAtlas }: FinalS
           onUnlock={onUnlock}
         />
         <button className="q-continue final-button" type="button" onClick={onPrestige}>
-          INITIATE NEXT BIG BANG
+          {t(language, 'finalNextBigBang')}
         </button>
         <button className="mini-button atlas-back" type="button" onClick={onOpenAtlas}>
-          OPEN MULTIVERSE ATLAS
+          {t(language, 'finalOpenAtlas')}
         </button>
       </div>
     </section>

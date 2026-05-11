@@ -180,6 +180,7 @@ export default function App() {
       {route === 'final' ? (
         <FinalScreen
           state={state}
+          language={language}
           onUnlock={(unlockId) => dispatch({ type: 'BUY_SINGULARITY_UNLOCK', unlockId })}
           onOpenAtlas={() => setRoute('atlas')}
           onPrestige={() => {
@@ -216,6 +217,7 @@ export default function App() {
           entries={state.universeAtlas}
           currentSeed={state.currentUniverseSeed}
           currentUniverseCount={state.universeCount}
+          language={language}
           onBack={() => setRoute(state.completedRun ? 'final' : 'intro')}
         />
       ) : null}

@@ -1,16 +1,18 @@
 import type { EndingOption, EndingId } from '../game/types';
+import { t, type Lang } from '../i18n';
 
 interface EndingChooserProps {
   options: EndingOption[];
   onChoose: (endingId: EndingId) => void;
+  language: Lang;
 }
 
-export function EndingChooser({ options, onChoose }: EndingChooserProps) {
+export function EndingChooser({ options, onChoose, language }: EndingChooserProps) {
   return (
     <div className="overlay-backdrop" role="dialog" aria-modal="true">
       <div className="overlay-card ending-chooser">
-        <div className="q-stage">The End</div>
-        <h2>Choose the shape of the last moment.</h2>
+        <div className="q-stage">{t(language, 'endingHeadline')}</div>
+        <h2>{t(language, 'endingPrompt')}</h2>
         <div className="ending-options">
           {options.map((option) => (
             <button

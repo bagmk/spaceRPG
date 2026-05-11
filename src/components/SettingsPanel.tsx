@@ -1,36 +1,16 @@
 import { useEffect, useRef } from 'react';
+import { t, type Lang } from '../i18n';
 
 interface SettingsPanelProps {
   bgmMuted: boolean;
   sfxMuted: boolean;
-  language: 'en' | 'ko';
+  language: Lang;
   onToggleBgm: () => void;
   onToggleSfx: () => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
   onClose: () => void;
 }
-
-const T = {
-  en: {
-    title: 'Settings',
-    bgm: 'BGM',
-    sfx: 'Sound Effects',
-    language: 'Language',
-    reset: 'Reset Game',
-    on: 'ON',
-    off: 'OFF',
-  },
-  ko: {
-    title: '설정',
-    bgm: '배경음악',
-    sfx: '효과음',
-    language: '언어',
-    reset: '게임 초기화',
-    on: '켜짐',
-    off: '꺼짐',
-  },
-} as const;
 
 export function SettingsPanel({
   bgmMuted,
@@ -43,7 +23,6 @@ export function SettingsPanel({
   onClose,
 }: SettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const t = T[language];
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -61,39 +40,39 @@ export function SettingsPanel({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="settings-header">
-          <span className="settings-title">{t.title}</span>
+          <span className="settings-title">{t(language, 'settingsTitle')}</span>
           <button type="button" className="settings-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="settings-row">
-          <span className="settings-label">{t.bgm}</span>
+          <span className="settings-label">{t(language, 'settingsBgm')}</span>
           <button
             type="button"
             className={`settings-toggle ${!bgmMuted ? 'settings-toggle--on' : ''}`}
             onClick={onToggleBgm}
           >
-            {bgmMuted ? t.off : t.on}
+            {bgmMuted ? t(language, 'settingsOff') : t(language, 'settingsOn')}
           </button>
         </div>
 
         <div className="settings-row">
-          <span className="settings-label">{t.sfx}</span>
+          <span className="settings-label">{t(language, 'settingsSfx')}</span>
           <button
             type="button"
             className={`settings-toggle ${!sfxMuted ? 'settings-toggle--on' : ''}`}
             onClick={onToggleSfx}
           >
-            {sfxMuted ? t.off : t.on}
+            {sfxMuted ? t(language, 'settingsOff') : t(language, 'settingsOn')}
           </button>
         </div>
 
         <div className="settings-row">
-          <span className="settings-label">{t.language}</span>
+          <span className="settings-label">{t(language, 'settingsLanguage')}</span>
           <button
             type="button"
             className="settings-lang-toggle"
             onClick={onToggleLanguage}
-            title={language === 'en' ? 'Switch to Korean' : '영어로 전환'}
+            title={t(language, language === 'en' ? 'settingsLangSwitchToKo' : 'settingsLangSwitchToEn')}
           >
             {language === 'en' ? '🇺🇸 EN' : '🇰🇷 KO'}
           </button>
@@ -106,7 +85,7 @@ export function SettingsPanel({
           className="settings-reset-btn"
           onClick={onRequestReset}
         >
-          {t.reset}
+          {t(language, 'settingsReset')}
         </button>
       </div>
     </div>

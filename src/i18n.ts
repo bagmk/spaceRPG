@@ -83,6 +83,53 @@ export const STRINGS = {
 
   settingsLangSwitchToKo: { en: 'Switch to Korean', ko: '한국어로 전환' },
   settingsLangSwitchToEn: { en: 'Switch to English', ko: '영어로 전환' },
+
+  // ── Settings panel ────────────────────────────────────────────
+  settingsTitle:     { en: 'Settings',       ko: '설정' },
+  settingsBgm:       { en: 'BGM',            ko: '배경음악' },
+  settingsSfx:       { en: 'Sound Effects',  ko: '효과음' },
+  settingsLanguage:  { en: 'Language',       ko: '언어' },
+  settingsReset:     { en: 'Reset Game',     ko: '게임 초기화' },
+  settingsOn:        { en: 'ON',             ko: '켜짐' },
+  settingsOff:       { en: 'OFF',            ko: '꺼짐' },
+
+  // ── Ending chooser ────────────────────────────────────────────
+  endingHeadline:    { en: 'The End',                              ko: '마지막' },
+  endingPrompt:      { en: 'Choose the shape of the last moment.', ko: '마지막 순간의 형태를 선택하세요.' },
+
+  // ── Final screen ──────────────────────────────────────────────
+  finalUniverse:        { en: 'UNIVERSE',                  ko: '우주' },
+  finalTotalEntropy:    { en: 'Total entropy gained this run', ko: '이번 회차에서 얻은 총 엔트로피' },
+  finalTotalClicks:     { en: 'Total clicks',              ko: '총 클릭 수' },
+  finalEncounters:      { en: 'Encounters survived',       ko: '살아남은 조우' },
+  finalTimeElapsed:     { en: 'Time elapsed',              ko: '경과 시간' },
+  finalCompleted:       { en: 'completed.',                ko: '완료.' },
+  finalAtlasName:       { en: 'Atlas name',                ko: '도감 이름' },
+  finalPrestigeReward:  { en: 'Prestige reward',           ko: '회귀 보상' },
+  finalUniverseBoost:   { en: 'universe boost',            ko: '우주 부스트' },
+  finalCompletionReward:{ en: 'Completion reward',         ko: '완료 보상' },
+  finalCondensedMass:   { en: 'condensed mass',            ko: '응축 질량' },
+  finalNewEndingReward: { en: 'New ending reward',         ko: '새 엔딩 보상' },
+  finalEchoes:          { en: 'echoes',                    ko: '에코' },
+  finalNextBigBang:     { en: 'INITIATE NEXT BIG BANG',    ko: '다음 빅뱅 시작' },
+  finalOpenAtlas:       { en: 'OPEN MULTIVERSE ATLAS',     ko: '다중우주 도감 열기' },
+
+  // ── Multiverse atlas ──────────────────────────────────────────
+  atlasLogTitle:        { en: 'UNIVERSE LOG',              ko: '우주 기록' },
+  atlasHeadline:        { en: 'Multiverse Atlas',          ko: '다중우주 도감' },
+  atlasIntro:           { en: 'Every prestige bends gravity, time, color, and occasionally reality itself.',
+                          ko: '회귀할 때마다 중력, 시간, 색, 그리고 때로는 현실 자체가 휘어집니다.' },
+  atlasCurrentSeed:     { en: 'Current Seed',              ko: '현재 시드' },
+  atlasGravity:         { en: 'Gravity',                   ko: '중력' },
+  atlasTime:            { en: 'Time',                      ko: '시간' },
+  atlasHue:             { en: 'Hue',                       ko: '색조' },
+  atlasAnomaly:         { en: 'Anomaly',                   ko: '이상' },
+  atlasEmpty:           { en: 'No completed universes yet. The first log entry appears after your first ending.',
+                          ko: '아직 완료된 우주가 없습니다. 첫 엔딩 이후 첫 기록이 표시됩니다.' },
+  atlasHoverHint:       { en: 'Hover or focus for details', ko: '자세히 보려면 가리키거나 포커스하세요' },
+  atlasClicks:          { en: 'clicks',                    ko: '클릭' },
+  atlasEncounters:      { en: 'encounters',                ko: '조우' },
+  atlasBack:            { en: 'BACK',                      ko: '뒤로' },
 } as const;
 
 export type StringKey = keyof typeof STRINGS;

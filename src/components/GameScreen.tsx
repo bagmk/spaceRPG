@@ -848,6 +848,7 @@ export function GameScreen({
       {canChooseEnding ? (
         <EndingChooser
           options={endingOptions}
+          language={language}
           onChoose={(endingId) => {
             soundManager?.playEndingSting(endingId);
             dispatch({ type: 'SELECT_ENDING', endingId, now: performance.now() });
