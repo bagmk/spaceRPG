@@ -1,6 +1,12 @@
 import type { SkillState } from './types';
 import type { PurchasedEntityEntry } from '../entities/types';
 import { applyEntityModifiers } from '../entities/effects';
+import {
+  SKILL_CLICK_POWER_BASE,
+  SKILL_AUTO_RATE_BASE,
+  SKILL_CROSS_NODE_MULTS,
+  SKILL_TOTAL_CROSS_NODE_COUNT,
+} from '../balance';
 
 export interface ModifierContext {
   currentQuanta?: number;
@@ -75,35 +81,6 @@ export function defaultModifiers(): Modifiers {
   };
 }
 
-const CROSS_NODE_MULTS: Record<string, number> = {
-  click_lv5: 1.4,
-  click_lv10: 1.8,
-  click_lv15: 2.4,
-  click_lv20: 3.2,
-  click_lv25: 4.4,
-  click_lv30: 6,
-  auto_lv5: 1.4,
-  auto_lv10: 1.8,
-  auto_lv15: 2.4,
-  auto_lv20: 3.2,
-  auto_lv25: 4.4,
-  auto_lv30: 6,
-  crit_lv5: 1.15,
-  crit_lv10: 1.3,
-  crit_lv15: 1.5,
-  crit_lv20: 1.75,
-  crit_lv25: 2.05,
-  crit_lv30: 2.5,
-  time_lv5: 1.25,
-  time_lv10: 1.6,
-  time_lv15: 2.1,
-  time_lv20: 2.8,
-  time_lv25: 3.6,
-  time_lv30: 5,
-};
-
-const TOTAL_CROSS_NODE_COUNT = 24;
-
 export function getActiveModifiers(
   skills: SkillState | undefined,
   ctx: ModifierContext,
@@ -114,12 +91,12 @@ export function getActiveModifiers(
   const clickLevel = skills?.click.level ?? 0;
   const autoLevel = skills?.auto.level ?? 0;
 
-  mods.clickPowerMult = Math.pow(2, clickLevel);
+  mods.clickPowerMult = Math.pow(SKILL_CLICK_POWER_BASE, clickLevel);
 
-  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(2, autoLevel);
+  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(SKILL_AUTO_RATE_BASE, autoLevel);
 
   for (const nodeId of skills?.ownedCrossNodes ?? []) {
-    const mult = CROSS_NODE_MULTS[nodeId];
+    const mult = SKILL_CROSS_NODE_MULTS[nodeId];
     if (!mult) {
       continue;
     }
@@ -149,7 +126,7 @@ export function getActiveModifiers(
     mods.clickPowerMult *= 4;
     mods.autoRateMult *= 4;
   }
-  if ((skills?.ownedCrossNodes.length ?? 0) >= TOTAL_CROSS_NODE_COUNT) {
+  if ((skills?.ownedCrossNodes.length ?? 0) >= SKILL_TOTAL_CROSS_NODE_COUNT) {
     mods.clickPowerMult *= 2;
     mods.autoRateMult *= 2;
     mods.apexMult = 2;

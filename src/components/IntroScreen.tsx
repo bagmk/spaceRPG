@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TUNING } from '../game/constants';
 import { clamp } from '../game/formulas';
+import { INTRO_GENESIS_MS, INTRO_BIG_BANG_TO_GAME_MS } from '../game/balance';
 import { t, type Lang } from '../i18n';
 
 type IntroPhase = 'idle' | 'expanding' | 'done';
 
-const GENESIS_MS = 2600;
-const BIG_BANG_TO_GAME_MS = 760;
+const GENESIS_MS = INTRO_GENESIS_MS;
+const BIG_BANG_TO_GAME_MS = INTRO_BIG_BANG_TO_GAME_MS;
 
 interface IntroScreenProps {
   canResume: boolean;

@@ -7,8 +7,18 @@
 
 import type { EndingId } from '../types';
 import type { EntityEffectType, EntityGlyph, EntityRarity, EntityVisual, PurchasedEntityEntry, StageEntity } from './types';
+import {
+  ENTITY_COST_ANCHORS,
+  ENTITY_STAGE_ACCENT,
+  ENTITY_BASE_COST_FACTOR,
+  ENTITY_COST_SCALING,
+  ENTITY_MAX_COUNT,
+  ENTITY_RARITY_SIZE,
+  ENTITY_RARITY_TINT,
+  ENTITY_RARITY_EFFECT_SCALE,
+} from '../balance';
 
-type StageId = keyof typeof STAGE_THRESHOLDS;
+type StageId = keyof typeof ENTITY_COST_ANCHORS;
 
 interface EntitySpec {
   name: string;
@@ -23,91 +33,6 @@ interface EntitySpec {
   endingId?: EndingId;
   aliases?: string[];
 }
-
-const STAGE_THRESHOLDS = {
-  1: 1_725,
-  2: 3_800,
-  3: 52_000,
-  4: 750_000,
-  5: 1.1e7,
-  6: 1.6e8,
-  7: 2.4e9,
-  8: 3.7e10,
-  9: 6e11,
-  10: 1e13,
-  11: 1.8e14,
-  12: 3.5e15,
-  13: 6.5e16,
-  14: 1.3e18,
-  15: 2.7e19,
-  16: 5.6e20,
-} as const;
-
-const STAGE_ACCENTS: Record<StageId, string> = {
-  1: '#ff6b3d',
-  2: '#ff8a47',
-  3: '#ff6a45',
-  4: '#ffb45a',
-  5: '#63b7ff',
-  6: '#4e6188',
-  7: '#eef3ff',
-  8: '#9bd9ff',
-  9: '#6d8fff',
-  10: '#f7c86e',
-  11: '#68d8a4',
-  12: '#ff633f',
-  13: '#8a90a8',
-  14: '#8e69c9',
-  15: '#857299',
-  16: '#b0b5c7',
-};
-
-// Budget targets (total cost to max all items vs stage threshold):
-// S1 (4C): ~20×T  S2 (4C+4R): ~28×T  S3 (4C+4R+4E): ~36×T
-// S4-15 (4C+4R+4E+2L): ~38×T  S16 (4C+3R+2E+5L): ~36×T
-const BASE_COST_FACTORS: Record<EntityRarity, number> = {
-  common: 0.07,
-  rare: 0.08,
-  epic: 0.25,
-  legendary: 1.2,
-};
-
-const COST_SCALING: Record<EntityRarity, number> = {
-  common: 1.12,
-  rare: 1.18,
-  epic: 1.28,
-  legendary: 1.55,
-};
-
-const MAX_COUNTS: Record<EntityRarity, number> = {
-  common: 20,
-  rare: 10,
-  epic: 5,
-  legendary: 2,
-};
-
-const RARITY_SIZE: Record<EntityRarity, EntityVisual['size']> = {
-  common: 'tiny',
-  rare: 'small',
-  epic: 'medium',
-  legendary: 'large',
-};
-
-// Color tint blended with the stage accent — gives each rarity a distinct hue feel
-const RARITY_TINT: Record<EntityRarity, { hex: string; amount: number }> = {
-  common:    { hex: '#888888', amount: 0.08 }, // slight grey muting
-  rare:      { hex: '#44aaff', amount: 0.16 }, // cool blue shift
-  epic:      { hex: '#cc44ff', amount: 0.26 }, // vivid purple
-  legendary: { hex: '#ffcc22', amount: 0.36 }, // warm gold
-};
-
-// Non-flat effect values are scaled up by rarity so legendary/epic feel impactful
-const RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
-  common:    1.0,
-  rare:      1.0,
-  epic:      1.8,
-  legendary: 3.0,
-};
 
 function blendHex(base: string, tint: string, t: number): string {
   const r1 = parseInt(base.slice(1, 3), 16);
@@ -302,15 +227,15 @@ function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
 }
 
 function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
-  const threshold = STAGE_THRESHOLDS[stageId];
-  const color = STAGE_ACCENTS[stageId];
+  const threshold = ENTITY_COST_ANCHORS[stageId];
+  const color = ENTITY_STAGE_ACCENT[stageId];
 
   return specs.map((spec, index) => {
-    const tint = RARITY_TINT[spec.rarity];
+    const tint = ENTITY_RARITY_TINT[spec.rarity];
     const entityColor = blendHex(color, tint.hex, tint.amount);
     // Multiplier effects are NOT scaled up by rarity — they compound multiplicatively across stages.
     // Auto, click, crit, and time effects get rarity scaling to make higher rarities feel impactful.
-    const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : RARITY_EFFECT_SCALE[spec.rarity];
+    const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : ENTITY_RARITY_EFFECT_SCALE[spec.rarity];
     return {
       id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
       stageId,
@@ -318,16 +243,16 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
       formula: spec.formula,
       description: spec.description,
       rarity: spec.rarity,
-      baseCost: Math.ceil(threshold * BASE_COST_FACTORS[spec.rarity]),
-      costScaling: COST_SCALING[spec.rarity],
-      maxCount: MAX_COUNTS[spec.rarity],
+      baseCost: Math.ceil(threshold * ENTITY_BASE_COST_FACTOR[spec.rarity]),
+      costScaling: ENTITY_COST_SCALING[spec.rarity],
+      maxCount: ENTITY_MAX_COUNT[spec.rarity],
       effect: { ...spec.effect, value: spec.effect.value * effectScale },
       visual: {
         symbol: spec.formula,
         glyph: glyphFor(stageId, spec),
         color: entityColor,
         glowColor: entityColor,
-        size: RARITY_SIZE[spec.rarity],
+        size: ENTITY_RARITY_SIZE[spec.rarity],
         motion: motionFor(spec.rarity, index),
       },
       ...(spec.endingId ? { endingId: spec.endingId } : {}),
