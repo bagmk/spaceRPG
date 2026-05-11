@@ -259,6 +259,8 @@ export function GameScreen({
       : cosmicClockFromGauge;
   const canShowShop = state.universeCount > 1 || stage.id >= 6;
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > Date.now());
+  const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
+  const displayStageNumber = String(displayStage.id).padStart(2, '0');
   const openEntityPanel = () => {
     setViewingStageId(null);
     setEntityPanelOpen(true);
@@ -614,6 +616,7 @@ export function GameScreen({
             currentStageId={stage.id}
             purchasedEntities={state.purchasedEntities}
             quanta={state.quanta}
+            language={language}
             onPurchase={(entityId) => dispatch({ type: 'PURCHASE_ENTITY', entityId })}
             onClose={() => setEntityPanelOpen(false)}
             onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
@@ -622,7 +625,7 @@ export function GameScreen({
         {viewingStageId !== null && !entityPanelOpen ? (
           <div className="viewing-stage-banner">
             <span className="viewing-stage-banner__dot" />
-            {`${t(language, 'hudStage')} ${displayStage.id}: ${stageName(language, displayStage.id, displayStage.name)}`}
+            {`${t(language, 'hudStage')} ${displayStage.id}: ${displayStageLabel}`}
             <button
               type="button"
               className="viewing-stage-banner__return"
@@ -640,19 +643,37 @@ export function GameScreen({
             onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
             title={t(language, 'hudViewInfo')}
           >
-            <div className="hud-stage-title">{`${t(language, 'hudStage')} ${displayStage.id}: ${stageName(language, displayStage.id, displayStage.name)}`}</div>
-            <div className="hud-quanta">
-              {`${t(language, 'hudQuanta')} ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
+            <div className="hud-overview">
+              <div className="hud-stage-block">
+                <span className="hud-stage-kicker">{`${t(language, 'hudStage')} ${displayStageNumber}`}</span>
+                <div className="hud-stage-title">{displayStageLabel}</div>
+              </div>
+              <div className="hud-quanta-block">
+                <span className="hud-stage-kicker">{t(language, 'hudQuanta')}</span>
+                <strong className="hud-quanta-value">{formatGameNumber(displayQuanta)}</strong>
+                <span className="hud-info-button" aria-hidden="true">i</span>
+              </div>
             </div>
-            <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
-              <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
+            <div className="hud-meter">
+              <div className="hud-meter-row">
+                <span>{t(language, 'hudQuanta')}</span>
+                <span>{`${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}</span>
+              </div>
+              <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
+                <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
+              </div>
             </div>
-            <div className="hud-cosmic-time">
-              {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
-              <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
-            </div>
-            <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
-              <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
+            <div className="hud-meter hud-meter--time">
+              <div className="hud-meter-row">
+                <span>{t(language, 'hudTime')}</span>
+                <span className="hud-cosmic-time">
+                  {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
+                  <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
+                </span>
+              </div>
+              <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
+                <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
+              </div>
             </div>
             {timeEstimateLabel && !isViewingPastStage ? (
               <div className="hud-time-estimate">{timeEstimateLabel} {t(language, 'hudRemaining')}</div>
@@ -681,20 +702,27 @@ export function GameScreen({
         </div>
         <div className="stat-header stat-header--top" aria-label="Core stats">
           <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-            {`${t(language, 'hudQuanta')} x${formatWhole(clickPower * shopQuantaMult)}`}
+            <span className="stat-header-label">{t(language, 'hudQuanta')}</span>
+            <strong>{`x${formatWhole(clickPower * shopQuantaMult)}`}</strong>
           </span>
           <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-            {`${t(language, 'hudAuto')} ${formatRate(autoRate * shopQuantaMult)}`}
+            <span className="stat-header-label">{t(language, 'hudAuto')}</span>
+            <strong>{formatRate(autoRate * shopQuantaMult)}</strong>
           </span>
           {state.skills.unlockedTracks.includes('crit') ? (
             <span className="stat-header-item stat-header-readout">
-              {`${t(language, 'hudCrit')} x${formatHeaderMultiplier(critMultiplier)}`}
+              <span className="stat-header-label">{t(language, 'hudCrit')}</span>
+              <strong>{`x${formatHeaderMultiplier(critMultiplier)}`}</strong>
             </span>
           ) : null}
           <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
-            {`${t(language, 'hudTime')} x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
+            <span className="stat-header-label">{t(language, 'hudTime')}</span>
+            <strong>{`x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}</strong>
           </span>
-          <span className="stat-header-item stat-header-readout">{`${t(language, 'hudEntropy')} ${formatWhole(state.entropy)}`}</span>
+          <span className="stat-header-item stat-header-readout">
+            <span className="stat-header-label">{t(language, 'hudEntropy')}</span>
+            <strong>{formatWhole(state.entropy)}</strong>
+          </span>
         </div>
         <div className="hud-controls">
           <button
@@ -714,13 +742,15 @@ export function GameScreen({
             onClick={openEntityPanel}
             aria-label="Open Entity Lab"
           >
-            ⚗
+            <span className="hud-action-icon" aria-hidden="true">⚗</span>
+            <span className="hud-action-label">{t(language, 'hudLab')}</span>
           </button>
           <div ref={shopAnchorRef} style={!canShowShop ? { width: 48, height: 48, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
             {canShowShop ? (
               <ShopButton
                 highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}
                 onClick={() => setShopOpen(true)}
+                label={t(language, 'hudShop')}
               />
             ) : null}
           </div>
@@ -730,7 +760,7 @@ export function GameScreen({
         <ScaleIndicator stageId={displayStage.id} />
         <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
-          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
+          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}
         {stage.id === 1 && state.totalClicks === 0 && !interactionLocked ? (
           <div className="click-tutorial-hint">{t(language, 'clickToGather')}</div>
@@ -778,6 +808,7 @@ export function GameScreen({
         <AlmanacOverlay
           currentStageId={stage.id}
           progressPercent={Math.floor(progress01 * 100)}
+          language={language}
           onClose={() => setAlmanacOpen(false)}
         />
       ) : null}

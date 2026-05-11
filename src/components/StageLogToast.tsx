@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { STAGE_LOGS } from '../game/stageLogs';
+import { STAGE_LOGS, pickLogText } from '../game/stageLogs';
+import type { Lang } from '../i18n';
 
 interface StageLogToastProps {
   stageId: number;
   progressPercent: number; // 0–100
+  language: Lang;
   onFirstDismiss?: () => void;
 }
 
@@ -13,7 +15,7 @@ interface ToastItem {
   message: string;
 }
 
-export function StageLogToast({ stageId, progressPercent, onFirstDismiss }: StageLogToastProps) {
+export function StageLogToast({ stageId, progressPercent, language, onFirstDismiss }: StageLogToastProps) {
   const shownRef = useRef(new Set<string>());
   const queueRef = useRef<ToastItem[]>([]);
   const [queueVersion, setQueueVersion] = useState(0);
@@ -42,7 +44,7 @@ export function StageLogToast({ stageId, progressPercent, onFirstDismiss }: Stag
       for (const log of newItems) {
         const key = `${stageId}:${log.progress}`;
         shownRef.current.add(key);
-        queueRef.current.push({ id: key, title: log.title, message: log.message });
+        queueRef.current.push({ id: key, title: pickLogText(log.title, language), message: pickLogText(log.message, language) });
       }
       setQueueVersion((v) => v + 1);
     }

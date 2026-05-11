@@ -6,6 +6,7 @@
  */
 
 import type { EndingId } from '../types';
+import type { Lang } from '../../i18n';
 import type { EntityEffectType, EntityGlyph, EntityRarity, EntityVisual, PurchasedEntityEntry, StageEntity } from './types';
 import {
   ENTITY_COST_ANCHORS,
@@ -22,8 +23,10 @@ type StageId = keyof typeof ENTITY_COST_ANCHORS;
 
 interface EntitySpec {
   name: string;
+  nameKo?: string;
   formula: string;
   description: string;
+  descriptionKo?: string;
   rarity: EntityRarity;
   effect: {
     type: EntityEffectType;
@@ -32,6 +35,15 @@ interface EntitySpec {
   };
   endingId?: EndingId;
   aliases?: string[];
+}
+
+/** Translate a localized entity field, falling back to English. */
+export function entityName(entity: StageEntity, lang: Lang): string {
+  return lang === 'ko' && entity.nameKo ? entity.nameKo : entity.name;
+}
+
+export function entityDescription(entity: StageEntity, lang: Lang): string {
+  return lang === 'ko' && entity.descriptionKo ? entity.descriptionKo : entity.description;
 }
 
 function blendHex(base: string, tint: string, t: number): string {
@@ -236,12 +248,18 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     // Multiplier effects are NOT scaled up by rarity — they compound multiplicatively across stages.
     // Auto, click, crit, and time effects get rarity scaling to make higher rarities feel impactful.
     const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : ENTITY_RARITY_EFFECT_SCALE[spec.rarity];
+    // Auto-populate Korean translations from lookup table when not already on the spec.
+    const ko = ENTITY_KO_TRANSLATIONS[spec.name];
+    const nameKo = spec.nameKo ?? ko?.name;
+    const descriptionKo = spec.descriptionKo ?? ko?.description;
     return {
       id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
       stageId,
       name: spec.name,
+      ...(nameKo ? { nameKo } : {}),
       formula: spec.formula,
       description: spec.description,
+      ...(descriptionKo ? { descriptionKo } : {}),
       rarity: spec.rarity,
       baseCost: Math.ceil(threshold * ENTITY_BASE_COST_FACTOR[spec.rarity]),
       costScaling: ENTITY_COST_SCALING[spec.rarity],
@@ -260,6 +278,247 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     };
   });
 }
+
+/**
+ * Korean translations keyed by entity English name.
+ * Keeps the bulky `item(...)` calls below readable while still feeding KO copy
+ * through the central `stage()` builder.
+ */
+const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string }> = {
+  // Stage 1
+  'Quantum Fluctuation':    { name: '양자 요동',        description: '모든 미래 구조를 잉태할 진공 에너지의 잔물결.' },
+  'False Vacuum Bubble':    { name: '거짓 진공 거품',   description: '응축된 에너지를 토해내는 불안정한 진공 주머니.' },
+  'Inflaton Surge':         { name: '인플라톤 폭주',    description: '폭발력을 증폭시키는 인플라톤 장의 급등.' },
+
+  // Stage 2
+  'Up Quark':               { name: '업 쿼크',          description: '모든 양성자에 두 번씩 등장하는 가벼운 쿼크.' },
+  'Down Quark':             { name: '다운 쿼크',        description: '양성자와 중성자가 공유하는 가벼운 쿼크.' },
+  'Electron':               { name: '전자',             description: '모든 미래 원자를 돌게 될 안정한 경입자.' },
+  'Neutrino':               { name: '중성미자',         description: '물질을 거의 그대로 통과하는 질량 미세한 경입자.' },
+  'Gluon':                  { name: '글루온',           description: '쿼크를 강입자 속에 묶는 색력 매개입자.' },
+  'Strange Quark':          { name: '스트레인지 쿼크',  description: '기묘도를 지닌 2세대 쿼크.' },
+  'W Boson':                { name: 'W 보손',           description: '쿼크의 향(flavor)을 바꾸는 약력 매개입자.' },
+  'CP Violation Pocket':    { name: 'CP 비대칭 영역',   description: '물질이 반물질보다 살아남게 하는 미세한 비대칭.' },
+
+  // Stage 3
+  'Free Quark':             { name: '자유 쿼크',        description: '뜨거운 플라스마 바다에서 아직 갇히지 않은 쿼크.' },
+  'Gluon Plasma':           { name: '글루온 플라스마',  description: '풀려난 색력 매개입자의 밀집 욕조.' },
+  'Pion':                   { name: '파이온',           description: '잔여 강력을 매개하는 가벼운 중간자.' },
+  'Muon':                   { name: '뮤온',             description: '플라스마에 잠깐 가득했던 무거운 전자의 사촌.' },
+  'Plasma Vortex':          { name: '플라스마 소용돌이',description: '거의 완벽한 QCD 유체의 휘몰아치는 액적.' },
+  'Charm Quark':            { name: '참 쿼크',          description: '플라스마 속의 무거운 2세대 쿼크.' },
+  'Kaon':                   { name: '케이온',           description: 'CP 위반 채널과 얽힌 기묘 중간자.' },
+  'Bottom Quark':           { name: '바텀 쿼크',        description: '향 진동(oscillation)을 일으키는 무거운 쿼크.' },
+  'Color Flux Tube':        { name: '색 자속 끈',       description: '갇힌 쿼크를 잇는 탄성 색장 끈.' },
+  'Top Quark Decay':        { name: '탑 쿼크 붕괴',     description: '가장 무거운 쿼크 — 생기는 순간 거의 사라진다.' },
+  'QCD Phase Boundary':     { name: 'QCD 상경계',       description: '강결합 물질의 상이 바뀌는 임계선.' },
+  'Confinement Onset':      { name: '갇힘 개시',        description: '쿼크가 영구히 강입자 속에 갇히기 시작한다.' },
+
+  // Stage 4
+  'Proton':                 { name: '양성자',           description: '모든 미래 수소를 떠받치는 안정한 중입자.' },
+  'Neutron':                { name: '중성자',           description: '가벼운 핵으로 융합해 들어가는 중성 중입자.' },
+  'Deuterium':              { name: '중수소',           description: '핵융합 사슬의 첫 안정한 다리, 수소-2.' },
+  'Gamma Ray':              { name: '감마선',           description: '각 융합 단계에서 방출되는 고에너지 광자.' },
+  'Tritium':                { name: '삼중수소',         description: '헬륨 합성을 떠받치는 방사성 수소-3.' },
+  'Helium-3':               { name: '헬륨-3',           description: '양성자-양성자 사슬의 가벼운 헬륨 동위원소.' },
+  'Beryllium-7':            { name: '베릴륨-7',         description: '리튬-7로 가는 불안정한 디딤돌.' },
+  'Helium-4':               { name: '헬륨-4',           description: '원시 원소 비율을 고정하는 안정한 헬륨.' },
+  'Primordial Fireball':    { name: '원시 화구',        description: '갓 태어난 우주의 들끓는 핵 화로.' },
+  'Lithium-7':              { name: '리튬-7',           description: '빅뱅 화로에서 만들어진 가장 무거운 핵.' },
+  'Neutrino Freeze-out':    { name: '중성미자 동결',    description: '중성미자가 식어가는 플라스마와 교환을 멈춘다.' },
+  'Neutron-Proton Ratio':   { name: '중성자/양성자 비', description: '원시 원소 비율을 결정짓는 1:7의 비율.' },
+  'BBN Completion':         { name: '빅뱅 핵합성 완료', description: '가벼운 원소 합성이 영원히 고정된다.' },
+  'Fusion Window':          { name: '융합의 창',        description: '원자 역사 전체를 결정짓는 3분의 창.' },
+
+  // Stage 5
+  'Hydrogen Atom':          { name: '수소 원자',        description: '양성자가 전자를 붙잡아 중성이 된다.' },
+  'Free Electron':          { name: '자유 전자',        description: '중성 기체 시대 직전의 마지막 떠도는 전하.' },
+  'Helium Atom':            { name: '헬륨 원자',        description: '헬륨 핵이 전자 두 개를 모두 끌어들인다.' },
+  'CMB Photon':             { name: 'CMB 광자',         description: '플라스마 안개가 걷히며 풀려난 빛.' },
+  'Hydrogen Cloud':         { name: '수소 구름',        description: '최초의 구름으로 모이는 중성 수소.' },
+  'Photon Decoupling':      { name: '광자 분리',        description: '빛이 물질에서 떨어져 자유롭게 흐른다.' },
+  'Baryon Acoustic Oscillation': { name: '바리온 음향 진동', description: '모든 대규모 구조를 잉태한 얼어붙은 음파.' },
+  'Plasma to Gas':          { name: '플라스마→기체',    description: '이온화 플라스마가 식어 투명한 중성 기체가 된다.' },
+  'Dark Matter Halo':       { name: '암흑물질 헤일로',  description: '은하 형성 위치를 정하는 보이지 않는 중력 우물.' },
+  'Density Perturbation':   { name: '밀도 요동',        description: '최초 구조의 씨앗이 되는 미세한 과밀.' },
+  'Last Scattering Surface':{ name: '최후 산란면',      description: 'CMB 광자가 마지막으로 산란된 껍질.' },
+  'CMB Anisotropy':         { name: 'CMB 비등방성',     description: '잔광 빛에 새겨진 미세한 온도 대비.' },
+  'Cosmic Transparency':    { name: '우주의 투명화',    description: '우주가 마침내 빛에 투명해진다.' },
+  'Structure Seed':         { name: '구조 씨앗',        description: '모든 은하로 자라날 원시 요동.' },
+
+  // Stage 6
+  'Cold Hydrogen':          { name: '차가운 수소',      description: '별빛 없는 어둠 속을 떠도는 중성 수소.' },
+  '21cm Signal':            { name: '21cm 신호',        description: '차가운 암흑 가스를 추적하는 수소 스핀 전이선.' },
+  'Dark Matter Filament':   { name: '암흑물질 필라멘트',description: '가스가 천천히 흐르는 보이지 않는 발판.' },
+  'Cold Gas Cloud':         { name: '차가운 가스 구름', description: '식어가며 안쪽으로 긴 붕괴를 시작하는 구름.' },
+  'Molecular Hydrogen':     { name: '분자 수소',        description: '가스가 열을 식혀 붕괴할 수 있게 해주는 분자.' },
+  'Protogalactic Cloud':    { name: '원시 은하 구름',   description: '은하가 될 길 위의 거대한 가스 저장소.' },
+  'Dark Matter Clump':      { name: '암흑물질 덩어리',  description: '국소 중력 우물을 깊게 만드는 밀집된 암흑 매듭.' },
+  'Gravitational Potential':{ name: '중력 퍼텐셜',      description: '미래 별의 요람으로 가스를 끌어들이는 깊은 우물.' },
+  'Mini Halo':              { name: '미니 헤일로',      description: '최초의 별을 품을 만큼 밀집된 작은 암흑 헤일로.' },
+  'Baryonic Streaming':     { name: '바리온 스트리밍',  description: '최초 별을 지연시키는 초음속 가스 흐름.' },
+  'Dark Energy Background': { name: '암흑에너지 배경',  description: '팽창을 조용히 가속하는 진공 에너지.' },
+  'Silk Damping':           { name: '실크 감쇠',        description: '광자 확산으로 지워지는 소규모 요동.' },
+  'Gravitational Collapse': { name: '중력 붕괴',        description: '중력이 마침내 압력을 이기고 운명을 점화한다.' },
+  'First Cosmic Dawn Seed': { name: '우주여명의 씨앗',  description: '점화되면 어둠을 끝낼 마지막 씨앗.' },
+
+  // Stage 7
+  'Protostar':              { name: '원시별',           description: '점화를 향해 수축하며 가열되는 가스 구체.' },
+  'UV Photon':              { name: '자외선 광자',      description: '수소에서 전자를 뜯어내는 고에너지 광자.' },
+  'Main Sequence Star':     { name: '주계열성',         description: '긴 평온기를 보내는 안정한 수소 연소 별.' },
+  'Hydrogen Fusion':        { name: '수소 융합',        description: '항성 핵에서 양성자 네 개가 헬륨 하나로 융합된다.' },
+  'Oxygen':                 { name: '산소',             description: '탄소 위에 헬륨이 포획되어 산소가 만들어진다.' },
+  'Stellar Wind':           { name: '항성풍',           description: '뜨거운 항성 표면에서 불어 나오는 입자류.' },
+  'HII Region':             { name: 'HII 영역',         description: '뜨거운 별 주위에 빛나는 이온화 수소 구름.' },
+  'Carbon First':           { name: '최초의 탄소',      description: '삼중알파 반응이 탄소 화학의 새벽을 연다.' },
+  'Pop III Cluster':        { name: '종족 III 성단',    description: '1세대로 함께 태어난 금속이 없는 별 무리.' },
+  'First Heavy Elements':   { name: '최초의 중원소',    description: '항성 핵이 헬륨 너머 철까지 원소를 단조한다.' },
+  'Stellar Feedback':       { name: '항성 피드백',      description: '주위 가스 구름을 다시 빚는 별의 에너지.' },
+  'Supernova Precursor':    { name: '초신성 전조',      description: '폭발적 중력 붕괴를 앞둔 거대 별.' },
+  'Pop III Supernova':      { name: '종족 III 초신성',  description: '최초의 별이 폭발하며 우주에 중원소를 뿌린다.' },
+  'Pair Instability SN':    { name: '쌍 불안정 초신성', description: '감마 쌍생성으로 완전히 파괴되는 거대 별.' },
+
+  // Stage 8
+  'Ionizing Photon':        { name: '이온화 광자',      description: '수소 전자를 떼어낼 만큼 강한 광자.' },
+  'Ionized Hydrogen':       { name: '이온화 수소',      description: '자외선 별빛에 전자를 빼앗긴 수소.' },
+  'HII Bubble':             { name: 'HII 거품',         description: '어린 별 주위로 팽창하는 이온화 가스 구.' },
+  'Lyman Break':            { name: '라이먼 단절',      description: 'HII 영역의 경계를 표시하는 스펙트럼 단절.' },
+  'Quasar':                 { name: '퀘이사',           description: '강착하는 블랙홀이 이온화를 멀리까지 뚫는다.' },
+  'Early Galaxy':           { name: '초기 은하',        description: '이온화 빛을 폭포처럼 쏟아내는 어린 은하.' },
+  'Ionization Front':       { name: '이온화 전선',      description: '중성 가스를 들불처럼 가로지르는 경계면.' },
+  'X-Ray Background':       { name: 'X선 배경',         description: '전선 앞 가스를 미리 가열하는 단단한 X선.' },
+  'Metagalactic UV':        { name: '메타은하 UV',      description: '가스를 계속 이온화하는 범우주적 자외선 배경.' },
+  'Bubble Merger':          { name: '거품 융합',        description: '인접한 이온화 영역이 합쳐져 투명한 바다가 된다.' },
+  'Gunn-Peterson Trough':   { name: '건-피터슨 골',     description: '완전 재이온화를 확증하는 중성 수소의 부재.' },
+  'Intergalactic Medium':   { name: '은하간 매질',      description: '은하 사이 이온화 상태를 추적하는 희박한 가스.' },
+  'Reionization Complete':  { name: '재이온화 완료',    description: '대부분의 우주 수소가 이온화되어 우주가 맑아진다.' },
+  'Epoch of Reionization':  { name: '재이온화 시기',    description: '암흑기를 마감한 위대한 우주의 정화.' },
+
+  // Stage 9
+  'Dwarf Galaxy':           { name: '왜소은하',         description: '수백만의 어린 별을 품은 작은 은하.' },
+  'Gas Accretion':          { name: '가스 강착',        description: '은하 원반으로 흘러드는 차가운 가스 줄기.' },
+  'Spiral Arm':             { name: '나선팔',           description: '원반 따라 별 형성을 잉태하는 밀도파.' },
+  'Star Formation Cloud':   { name: '별 형성 구름',     description: '새 항성단으로 붕괴하는 분자 구름.' },
+  'Galaxy Merger':          { name: '은하 충돌',        description: '가스를 휘저어 폭발적 별형성을 일으키는 은하 충돌.' },
+  'Galaxy Cluster':         { name: '은하단',           description: '수백 개 은하의 중력 도시.' },
+  'Supermassive BH':        { name: '초대질량 블랙홀', description: '숙주 은하와 함께 진화하는 중심 블랙홀.' },
+  'Active Galactic Nucleus':{ name: '활동성 은하핵',    description: '숙주 은하 전체보다 밝은 강착 중심.' },
+  'Gravitational Lens':     { name: '중력 렌즈',        description: '배경 빛을 호와 고리로 휘는 질량.' },
+  'Filamentary Structure':  { name: '필라멘트 구조',    description: '은하 마디를 잇는 암흑물질과 가스의 실.' },
+  'Cosmic Web Node':        { name: '우주 거미줄 마디', description: '대규모 거미줄의 심장에 있는 필라멘트 교차점.' },
+  'Cosmic Void':            { name: '우주 보이드',      description: '수백 메가파섹에 걸친 거대한 저밀도 영역.' },
+  'Large Scale Structure':  { name: '대규모 구조',      description: '필라멘트·마디·보이드로 짜인 우주의 거미줄 전체.' },
+
+  // Stage 10
+  'Dust Grain':             { name: '먼지 알갱이',      description: '행성으로 가는 긴 여정을 시작하는 규산염 입자.' },
+  'Iron Core':              { name: '철 핵',            description: '분화한 암석 행성의 금속이 풍부한 중심.' },
+  'Planetesimal':           { name: '미행성',           description: '무수한 먼지가 모여 만든 킬로미터 크기 천체.' },
+  'Water Ice':              { name: '얼음물',           description: '혜성이 원반 전역에 운반한 얼어붙은 물.' },
+  'Rocky Planet':           { name: '암석 행성',        description: '안정한 고체 표면을 가진 규산염 행성.' },
+  'Comet':                  { name: '혜성',             description: '휘발성 물질과 유기물을 안쪽으로 옮기는 얼음 천체.' },
+  'Asteroid Belt':          { name: '소행성대',         description: '결국 합쳐지지 못한 미행성들의 고리.' },
+  'Gas Giant':              { name: '가스 행성',        description: '계의 모양을 결정하는 수소-헬륨 거대 행성.' },
+  'Moon':                   { name: '위성',             description: '자전축을 안정시키고 조석을 일으키는 위성.' },
+  'Liquid Water':           { name: '액체 물',          description: '복잡한 화학을 가능케 하는 안정한 표면 용매.' },
+  'Magnetic Field':         { name: '자기장',           description: '해로운 항성풍을 막아주는 행성 방패.' },
+  'Goldilocks Zone':        { name: '골디락스 영역',    description: '표면의 물이 액체로 머무는 궤도 구역.' },
+  'Sun':                    { name: '태양',             description: '온 생물권에 빛을 보내주는 안정한 G형 별.' },
+  'Habitable World':        { name: '생명 가능 행성',   description: '생명을 위한 모든 조건이 맞아떨어진 세계.' },
+
+  // Stage 11
+  'Lipid Membrane':         { name: '지질 막',          description: '안과 밖의 화학을 가르는 경계.' },
+  'RNA Molecule':           { name: 'RNA 분자',         description: '스스로 복제하면서 촉매로도 작용하는 분자.' },
+  'DNA Helix':              { name: 'DNA 이중나선',     description: '유전 기억을 미래로 전하는 견고한 이중나선.' },
+  'Prokaryote':             { name: '원핵생물',         description: '핵이 없는 단순한 세포 — 최초의 진정한 생명.' },
+  'Photosynthesis':         { name: '광합성',           description: '빛으로 화학반응을 일으켜 대기에 산소를 내놓는다.' },
+  'Cambrian Explosion':     { name: '캄브리아 대폭발',  description: '고대 바다에서 폭발적으로 등장한 새 몸체 설계들.' },
+  'Eukaryote':              { name: '진핵생물',         description: '내부 소기관과 핵을 갖춘 복잡한 세포.' },
+  'Multicellular Life':     { name: '다세포 생명',      description: '세포가 분화하고 한 몸으로 협력한다.' },
+  'Artificial Satellite':   { name: '인공위성',         description: '최초의 기계가 지구를 돌며 살아 있는 행성을 측량한다.' },
+  'Neuron':                 { name: '뉴런',             description: '빠른 정보 처리를 가능케 하는 신호 세포.' },
+  'Deep Space Probe':       { name: '심우주 탐사선',    description: '행성 너머로 지구를 싣고 가는 작은 기계.' },
+  'Homo Sapiens':           { name: '호모 사피엔스',    description: '생물학을 문화와 기계로 바꾸는 종.' },
+  'Space Telescope':        { name: '우주 망원경',      description: '대기 위에서 과거를 되짚는 맑은 눈.' },
+
+  // Stage 12
+  'Red Giant Envelope':     { name: '적색거성 외피',    description: '내행성을 삼킬 만큼 부풀어 오른 항성 외층.' },
+  'Stellar Wind AGB':       { name: 'AGB 항성풍',       description: '말기에 외피 질량을 우주로 흩뿌리는 별.' },
+  'Carbon-O Core':          { name: '탄소-산소 핵',     description: '핵융합이 끝난 뒤 남은 작고 단단한 탄소-산소 핵.' },
+  'Helium Flash':           { name: '헬륨 섬광',        description: '압축된 항성 핵에서 헬륨이 폭주 점화한다.' },
+  'Planetary Nebula':       { name: '행성상 성운',      description: '죽어가는 태양형 별이 벗어 던진 빛나는 가스 껍질.' },
+  'Mass Transfer':          { name: '질량 이동',        description: '쌍성 동반성이 항성 잔해에 물질을 꾸준히 공급한다.' },
+  'Degenerate Electron':    { name: '축퇴 전자',        description: '파울리 배타 원리로 압력을 버티는 빽빽한 전자.' },
+  'White Dwarf':            { name: '백색왜성',         description: '전자 압력으로 버티며 영겁을 식어가는 잔해.' },
+  'Neutron Star':           { name: '중성자별',         description: '수 km 안에 핵 밀도가 응축된 붕괴한 핵.' },
+  'Nova Eruption':          { name: '신성 폭발',        description: '백색왜성 표면에서 강착된 수소가 섬광을 일으킨다.' },
+  'Magnetar':               { name: '마그네타',         description: '알려진 가장 강한 자기장을 가진 중성자별.' },
+  'Gravitational Wave':     { name: '중력파',           description: '가속하는 치밀 잔해가 만드는 시공간의 잔물결.' },
+  'Type Ia Supernova':      { name: 'Ia형 초신성',      description: '거리 표준으로 쓰이는 백색왜성의 폭발.' },
+  'Core Collapse SN':       { name: '핵붕괴 초신성',    description: '거대 별 핵이 함몰한 뒤 바깥으로 튕겨 나간다.' },
+
+  // Stage 13
+  'Brown Dwarf':            { name: '갈색왜성',         description: '중력 수축의 열만으로 희미하게 빛나는 실패한 별.' },
+  'Cold Gas Remnant':       { name: '차가운 가스 잔재', description: '별 형성이 식어가며 남은 성간 가스.' },
+  'Cooling White Dwarf':    { name: '식어가는 백색왜성',description: '수조 년에 걸쳐 천천히 어두워지는 백색왜성.' },
+  'Stellar Graveyard':      { name: '항성의 묘지',      description: '살아 있는 별보다 잔해가 더 많아진 은하.' },
+  'Galaxy Halo Dispersal':  { name: '은하 헤일로 흩어짐',description: '고대 별들이 은하 외곽 헤일로로 흩어져 간다.' },
+  'Gravitational Slingshot':{ name: '중력 새총',        description: '근접 통과로 은하 밖으로 별을 날려 보내는 사건.' },
+  'Pulsar':                 { name: '펄사',             description: '전파 빔을 휘두르며 회전하는 중성자별.' },
+  'Black Dwarf':            { name: '흑색왜성',         description: '언젠가 백색왜성이 모두 식어 어두워졌을 때 남을 잔해.' },
+  'Iron Star':              { name: '철 별',            description: '먼 미래에 양자 터널링으로 철로 수렴해 가는 물질.' },
+  'Binary BH Merger':       { name: '쌍 블랙홀 병합',   description: '두 블랙홀이 나선 융합하며 시공간을 울린다.' },
+  'Stellar Mass BH':        { name: '항성질량 블랙홀',  description: '거대 별이 붕괴해 남긴 블랙홀.' },
+  'Last Red Dwarf':         { name: '마지막 적색왜성',  description: '수소 공급을 다 써가는 마지막 작은 별.' },
+  'Total Darkness':         { name: '완전한 어둠',      description: '별빛이 끝나고 은하에는 잔해만 남는다.' },
+
+  // Stage 14
+  'Decay Positron':         { name: '붕괴 양전자',      description: '붕괴하는 중입자가 방출하는 반전자.' },
+  'Pion Decay':             { name: '파이온 붕괴',      description: '중성 파이온이 두 개의 광자로 즉시 변환된다.' },
+  'Decay Neutrino':         { name: '붕괴 중성미자',    description: '우주로 자유롭게 빠져나가는 유령 같은 붕괴 부산물.' },
+  'Proton Decay':           { name: '양성자 붕괴',      description: '모든 바리온 물질의 가설적 느린 분해.' },
+  'Diamond Star':           { name: '다이아몬드 별',    description: '깊은 어둠 속에서 결정화한 탄소 잔해가 빛난다.' },
+  'GW Echo':                { name: '중력파 메아리',    description: '고대 병합의 희미한 중력파 기억.' },
+  'Quantum Tunneling':      { name: '양자 터널링',      description: '확률만으로 장벽을 건너는 입자.' },
+  'Relic Neutrino Background':{ name: '잔존 중성미자 배경',description: '거의 정지 상태로 식어버린 빅뱅 중성미자.' },
+  'GUT Monopole Decay':     { name: 'GUT 단극자 붕괴',  description: '오래된 자기 단극자가 마침내 불안정해진다.' },
+  'Positronium Atom':       { name: '포지트로늄',       description: '전자와 양전자가 잠시 서로를 도는 원자.' },
+  'Dark Matter Annihilation':{ name: '암흑물질 소멸',   description: '암흑물질 후보들이 마침내 서로를 지운다.' },
+  'BH Domination':          { name: '블랙홀 지배기',    description: '블랙홀이 남은 질량-에너지의 대부분을 차지한다.' },
+  'Last Baryon':            { name: '마지막 바리온',    description: '거대한 붕괴 시계를 기다리는 마지막 양성자.' },
+  'Baryon Washout':         { name: '바리온 소진',      description: '우주 전역에서 바리온 수가 0으로 시들어 간다.' },
+
+  // Stage 15
+  'Hawking Photon':         { name: '호킹 광자',        description: '사건의 지평선에서 천천히 빠져나오는 복사.' },
+  'Virtual Particle Pair':  { name: '가상 입자쌍',      description: '블랙홀의 기울기에 의해 갈라지는 진공 쌍.' },
+  'Ergosphere':             { name: '에르고권',         description: '에너지를 채굴할 수 있는 회전 끌림 영역.' },
+  'Event Horizon':          { name: '사건의 지평선',    description: '아무것도 빠져나올 수 없는 시간의 경계.' },
+  'Penrose Process':        { name: '펜로즈 과정',      description: '회전 블랙홀에서 회전 에너지를 추출한다.' },
+  'BH Merger Wave':         { name: '블랙홀 병합파',    description: '블랙홀 나선 융합이 마지막 기하를 흔든다.' },
+  'BH Entropy':             { name: '블랙홀 엔트로피',  description: '지평선 면적이 모든 내부 상태를 결정한다.' },
+  'Stellar BH Evaporation': { name: '항성 블랙홀 증발', description: '작은 블랙홀이 천천히 스스로를 복사로 흩뜨린다.' },
+  'Supermassive Evaporation':{ name: '초대질량 증발',   description: '가장 큰 블랙홀이 마침내 사그라들어 사라진다.' },
+  'Firewall':               { name: '파이어월',         description: '사건의 지평선에 있다는 가설적 고에너지 장벽.' },
+  'Information Paradox':    { name: '정보 역설',        description: '최후의 증발에서 정보는 살아남는가?' },
+  'Planck Remnant':          { name: '플랑크 잔해',      description: '완전 증발 뒤 남을지 모르는 플랑크 규모 잔해.' },
+  'Final Evaporation Flash':{ name: '최후 증발 섬광',   description: '마지막 블랙홀이 끝나며 터뜨리는 마지막 빛.' },
+  'Last Black Hole':        { name: '마지막 블랙홀',    description: '궁극의 방출을 준비하는 바로 그 마지막 지평선.' },
+
+  // Stage 16
+  'Relic Electron':         { name: '잔존 전자',        description: '짝이 어디에도 남지 않은 외로운 전자.' },
+  'Lone Photon':            { name: '외로운 광자',      description: '결코 산란되지 않을 우주를 가로지르는 단 하나의 광자.' },
+  'Relic Positron':         { name: '잔존 양전자',      description: '끝없이 팽창하는 공허 속을 떠도는 양전자.' },
+  'Relic Neutrino':         { name: '잔존 중성미자',    description: '거의 정지 상태로 영원을 가로지르는 차가운 중성미자.' },
+  'Cosmic Background Photon':{ name: '우주 배경 광자',  description: '남아 있는 모든 빛이 배경 잡음으로 잦아든다.' },
+  'Thermal Equilibrium':    { name: '열적 평형',        description: '온도 차이가 어디서나 한꺼번에 사라진다.' },
+  'Max Entropy':             { name: '최대 엔트로피',    description: '어떤 물리 과정도 더 이상 일으킬 자유 에너지가 없다.' },
+  'De Sitter Vacuum':       { name: '드 시터 진공',     description: '모든 물질이 사라진 뒤에도 암흑에너지 공간은 남는다.' },
+  'Quantum Fluctuation Final':{ name: '최후의 양자 요동',description: '빈 공간조차 가까스로 흔들릴 수 있다.' },
+  'Thermal Death':          { name: '열적 죽음',        description: '최대 엔트로피에 도달해 어떤 과정도 일어날 수 없다.' },
+  'Dark Energy Spike':      { name: '암흑에너지 폭주',  description: '가속 팽창이 모든 구조를 갈가리 찢는다.' },
+  'Gravitational Singularity':{ name: '중력 특이점',    description: '모든 밀도가 단 하나의 점으로 되돌아간다.' },
+  'True Vacuum Bubble':     { name: '진정한 진공 거품', description: '더 낮은 에너지의 진공이 팽창해 물리법칙을 다시 쓴다.' },
+  'Quantum Bounce':         { name: '양자 반동',        description: '붕괴가 전혀 새로운 팽창으로 튕겨 오른다.' },
+};
 
 // Item counts per stage: S1=3C, S2=4C+4R, S3=4C+4R+4E, S4-15=4C+4R+4E+2L, S16=4C+3R+2E+5L(endings)
 // Effect distribution: each C/R/E group has 1 auto + 1 click + 1 crit + 1 time; L = multiplier only

@@ -64,8 +64,10 @@ export interface StageEntity {
   id: string;
   stageId: number;      // 1-16
   name: string;
+  nameKo?: string;
   formula: string;      // short label: 'H₂O', 'p⁺'
   description: string;  // max ~60 chars — mobile readable
+  descriptionKo?: string;
   rarity: EntityRarity;
   baseCost: number;
   costScaling: number;  // multiplier per purchase, e.g. 1.15

@@ -30,9 +30,11 @@ interface ShopPanelProps {
 export function ShopButton({
   highlighted,
   onClick,
+  label = 'Shop',
 }: {
   highlighted: boolean;
   onClick: () => void;
+  label?: string;
 }) {
   return (
     <button
@@ -41,7 +43,8 @@ export function ShopButton({
       onClick={onClick}
       aria-label="Open cosmic shop"
     >
-      <span>$</span>
+      <span className="hud-action-icon" aria-hidden="true">$</span>
+      <span className="hud-action-label">{label}</span>
     </button>
   );
 }

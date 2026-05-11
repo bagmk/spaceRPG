@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { ALMANAC } from '../game/almanac';
-import { STAGE_LOGS, getLogsForStage } from '../game/stageLogs';
+import { ALMANAC, pickLang } from '../game/almanac';
+import { STAGE_LOGS, getLogsForStage, pickLogText } from '../game/stageLogs';
 import { STAGES } from '../game/stages';
+import { t, stageName, type Lang } from '../i18n';
 
 interface AlmanacOverlayProps {
-  currentStageId: number;    // 1-indexed current stage
-  progressPercent: number;   // 0–100 for current stage
+  currentStageId: number;
+  progressPercent: number;
+  language: Lang;
   onClose: () => void;
 }
 
-export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: AlmanacOverlayProps) {
+export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
   const pillsRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll selected pill into view
   useEffect(() => {
     const container = pillsRef.current;
     if (!container) return;
@@ -25,14 +26,13 @@ export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: Alm
   const isCurrent = (id: number) => id === currentStageId;
   const isFuture = (id: number) => id > currentStageId;
 
-  // Logs visible for the selected stage
   const allLogs = getLogsForStage(selectedId);
   const effectiveProgress = isPast(selectedId) ? 100 : isCurrent(selectedId) ? progressPercent : -1;
 
   const almanac = ALMANAC[selectedId];
   const stageMeta = STAGES.find((s) => s.id === selectedId);
+  const localizedStageName = stageMeta ? stageName(language, stageMeta.id, stageMeta.name) : t(language, 'almanacUnknown');
 
-  // Count unlocked logs across all stages for the header badge
   const unlockedCount = STAGE_LOGS.filter((l) => {
     if (l.stageId < currentStageId) return true;
     if (l.stageId === currentStageId) return progressPercent >= l.progress;
@@ -41,18 +41,16 @@ export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: Alm
   const totalCount = STAGE_LOGS.length;
 
   return (
-    <div className="overlay-backdrop" role="dialog" aria-modal="true" aria-label="Cosmic Almanac">
+    <div className="overlay-backdrop" role="dialog" aria-modal="true" aria-label={t(language, 'almanacTitle')}>
       <div className="overlay-card almanac-overlay">
-        {/* Header */}
         <div className="almanac-header">
           <div>
-            <span className="q-stage">Cosmic Almanac</span>
-            <span className="almanac-badge">{`${unlockedCount} / ${totalCount} discovered`}</span>
+            <span className="q-stage">{t(language, 'almanacTitle')}</span>
+            <span className="almanac-badge">{`${unlockedCount} / ${totalCount} ${t(language, 'almanacDiscovered')}`}</span>
           </div>
-          <button className="mini-button" type="button" onClick={onClose}>CLOSE</button>
+          <button className="mini-button" type="button" onClick={onClose}>{t(language, 'almanacClose')}</button>
         </div>
 
-        {/* Stage pills */}
         <div className="almanac-stage-pills" ref={pillsRef}>
           {STAGES.map((s) => {
             const state = isPast(s.id) ? 'past' : isCurrent(s.id) ? 'current' : 'future';
@@ -71,53 +69,52 @@ export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: Alm
           })}
         </div>
 
-        {/* Selected stage content */}
         <div className="almanac-content">
-          {/* Left: almanac info */}
           <div className="almanac-info">
             <div className={`almanac-stage-label ${isFuture(selectedId) ? 'muted' : ''}`}>
-              {`Stage ${selectedId} / 16`}
+              {`${t(language, 'almanacStageOf')} ${selectedId} / 16`}
             </div>
             <h2 className="almanac-stage-name">
-              {isFuture(selectedId) ? <span className="almanac-locked-name">{stageMeta?.name ?? '???'}</span> : (almanac?.title ?? stageMeta?.name)}
+              {isFuture(selectedId)
+                ? <span className="almanac-locked-name">{localizedStageName}</span>
+                : (pickLang(almanac?.title, language) || localizedStageName)}
             </h2>
 
             {isFuture(selectedId) ? (
-              <p className="almanac-locked-body">This era has not yet been reached. Its secrets remain sealed.</p>
+              <p className="almanac-locked-body">{t(language, 'almanacLockedEra')}</p>
             ) : (
               <>
-                <p className="resource-subhead">{almanac?.short}</p>
-                <p>{almanac?.body ?? stageMeta?.quote}</p>
+                <p className="resource-subhead">{pickLang(almanac?.short, language)}</p>
+                <p>{pickLang(almanac?.body, language) || stageMeta?.quote}</p>
                 {almanac?.uncertaintyNote ? (
-                  <p className="almanac-note">{`Note: ${almanac.uncertaintyNote}`}</p>
+                  <p className="almanac-note">{`${t(language, 'almanacNote')}: ${pickLang(almanac.uncertaintyNote, language)}`}</p>
                 ) : null}
                 {almanac?.cosmicEra ? (
                   <div className="almanac-era">
-                    <div className="q-stage">Era Info</div>
-                    <div>{`Time: ${almanac.cosmicEra.timeRange}`}</div>
-                    <div>{`Temp: ${almanac.cosmicEra.temperature}`}</div>
-                    <div>{`Key: ${almanac.cosmicEra.keyParticles.join(', ')}`}</div>
-                    <p>{almanac.cosmicEra.realWorldScale}</p>
+                    <div className="q-stage">{t(language, 'almanacEraInfo')}</div>
+                    <div>{`${t(language, 'almanacEraTime')}: ${pickLang(almanac.cosmicEra.timeRange, language)}`}</div>
+                    <div>{`${t(language, 'almanacEraTemp')}: ${pickLang(almanac.cosmicEra.temperature, language)}`}</div>
+                    <div>{`${t(language, 'almanacEraKey')}: ${pickLang(almanac.cosmicEra.keyParticles, language)}`}</div>
+                    <p>{pickLang(almanac.cosmicEra.realWorldScale, language)}</p>
                   </div>
                 ) : null}
                 {almanac?.funFact ? (
-                  <p className="resource-subhead">{almanac.funFact}</p>
+                  <p className="resource-subhead">{pickLang(almanac.funFact, language)}</p>
                 ) : null}
               </>
             )}
           </div>
 
-          {/* Right: milestone log */}
           <div className="almanac-log">
             <div className="q-stage almanac-log-header">
-              {isFuture(selectedId) ? 'Milestones — Locked' : 'Milestones'}
+              {isFuture(selectedId) ? t(language, 'almanacMilestonesLocked') : t(language, 'almanacMilestones')}
             </div>
             {isFuture(selectedId) ? (
               <div className="almanac-log-locked-stage">
                 <div className="almanac-log-locked-count">
-                  {`${allLogs.length} milestones sealed`}
+                  {`${allLogs.length} ${t(language, 'almanacMilestonesSealed')}`}
                 </div>
-                <p className="almanac-locked-body">Complete previous stages to unlock this era.</p>
+                <p className="almanac-locked-body">{t(language, 'almanacUnlockHint')}</p>
               </div>
             ) : (
               <div className="almanac-log-list">
@@ -126,14 +123,14 @@ export function AlmanacOverlay({ currentStageId, progressPercent, onClose }: Alm
                   return (
                     <div key={log.progress} className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}>
                       {!unlocked && (
-                        <div className="almanac-log-progress">???</div>
+                        <div className="almanac-log-progress">{t(language, 'almanacUnknown')}</div>
                       )}
                       <div className="almanac-log-body">
                         <div className="almanac-log-entry-title">
-                          {unlocked ? log.title : '— locked —'}
+                          {unlocked ? pickLogText(log.title, language) : t(language, 'almanacLogLocked')}
                         </div>
                         {unlocked ? (
-                          <div className="almanac-log-entry-msg">{log.message}</div>
+                          <div className="almanac-log-entry-msg">{pickLogText(log.message, language)}</div>
                         ) : null}
                       </div>
                     </div>
