@@ -658,23 +658,23 @@ export function GameScreen({
           >
             {isViewingPastStage ? '🐾 Completed' : 'Condense'}
           </button>
-        </div>
-        <div className="stat-header" aria-label="Core stats">
-          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-            {`Quanta x${formatWhole(clickPower * shopQuantaMult)}`}
-          </span>
-          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
-            {`Auto ${formatRate(autoRate * shopQuantaMult)}`}
-          </span>
-          {state.skills.unlockedTracks.includes('crit') ? (
-            <span className="stat-header-item stat-header-readout">
-              {`Crit x${formatHeaderMultiplier(critMultiplier)}`}
+          <div className="stat-header" aria-label="Core stats">
+            <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+              {`Quanta x${formatWhole(clickPower * shopQuantaMult)}`}
             </span>
-          ) : null}
-          <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
-            {`Time x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
-          </span>
-          <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
+            <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+              {`Auto ${formatRate(autoRate * shopQuantaMult)}`}
+            </span>
+            {state.skills.unlockedTracks.includes('crit') ? (
+              <span className="stat-header-item stat-header-readout">
+                {`Crit x${formatHeaderMultiplier(critMultiplier)}`}
+              </span>
+            ) : null}
+            <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
+              {`Time x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
+            </span>
+            <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
+          </div>
         </div>
         <div className="hud-controls">
           <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>
@@ -697,7 +697,7 @@ export function GameScreen({
           >
             ⚗
           </button>
-          <div ref={shopAnchorRef} style={!canShowShop ? { width: 56, height: 56, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
+          <div ref={shopAnchorRef} style={!canShowShop ? { width: 48, height: 48, visibility: 'hidden', pointerEvents: 'none' } : undefined}>
             {canShowShop ? (
               <ShopButton
                 highlighted={state.shopBoosts.some((boost) => boost.expiresAt > Date.now())}

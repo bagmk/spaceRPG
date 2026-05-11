@@ -371,25 +371,21 @@ canvas {
 }
 
 .stat-header {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  z-index: 20;
-  transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 280px);
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat-header-item {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  padding: 4px 0;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
 }
 
 button.stat-header-item {
@@ -398,18 +394,13 @@ button.stat-header-item {
 
 .stat-header-readout {
   cursor: default;
-  color: rgba(255, 255, 255, 0.74);
 }
 
 .stat-header-readout.stat-boosted {
   color: #ffd766;
-  text-shadow: 0 0 8px rgba(255, 215, 102, 0.6);
-}
-
-.stat-header-item:not(:last-child)::after {
-  content: '·';
-  margin-left: 8px;
-  color: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 215, 102, 0.3);
+  background: rgba(255, 215, 102, 0.1);
+  text-shadow: 0 0 6px rgba(255, 215, 102, 0.4);
 }
 
 .stat-upgrade-popup,
@@ -1696,9 +1687,9 @@ button.stat-header-item {
 
 .skills-button,
 .shop-button {
-  width: 56px;
-  min-width: 56px;
-  height: 56px;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(8, 8, 8, 0.86);
@@ -1710,7 +1701,7 @@ button.stat-header-item {
 
 .skills-button span,
 .shop-button span {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -2827,38 +2818,29 @@ button.stat-header-item {
     text-align: center;
   }
 
-  /* ── Stat readout: just below the HUD box, left-aligned ── */
-  .stat-header {
-    top: 8px;
-    bottom: auto;
-    left: 172px;
-    right: 52px;
-    transform: none;
-    max-width: none;
-    flex-wrap: wrap;
-    font-size: 8px;
-    gap: 3px 6px;
-    line-height: 1.4;
-    align-content: flex-start;
+  /* ── Stat pills: compact inside the HUD box ── */
+  .stat-header-item {
+    font-size: 7px;
+    padding: 1px 4px;
   }
 
   /* ── Shop / Entity buttons: smaller on mobile ── */
   .shop-button,
   .skills-button,
   .entity-lab-button {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    font-size: 18px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    font-size: 16px;
   }
 
   .shop-button span,
   .skills-button span {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .entity-lab-button {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .bottom-buttons {
@@ -2934,8 +2916,8 @@ button.stat-header-item {
    ============================================================ */
 
 .entity-lab-button {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.07);
