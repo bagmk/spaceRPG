@@ -1143,17 +1143,18 @@ function lifeEntityGlow(item: EntityDrawItem): number {
   return GLOW_RADIUS[item.rarity] * scaleByRarity[item.rarity];
 }
 
-/** Stage 11: The Moon — orbits Earth, grows with ownedPower, proper z-order via isBehind flag */
+/** Stage 11: The Moon — orbits Earth, grows with moonFraction (Moon entity level 0–1), proper z-order */
 function drawMoon(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   earthRadius: number,
   now: number,
-  ownedPower: number,
+  moonFraction: number,   // 0 = no Moon entity, 1 = fully maxed
   isBehind: boolean,
 ): void {
-  const moonRadius = earthRadius * (0.24 + ownedPower * 0.14);
+  // Always show moon, but grows dramatically from level 1 → 20
+  const moonRadius = earthRadius * (0.16 + moonFraction * 0.36);
   const orbitR = earthRadius * 2.55;
   const orbTilt = 0.62;
   const angle = now * 0.000022;
@@ -1163,7 +1164,7 @@ function drawMoon(
   // Orbit track — draw only on the "behind" pass so it sits behind Earth
   if (isBehind) {
     ctx.save();
-    ctx.strokeStyle = hexToRgba('#a89c78', 0.06 + ownedPower * 0.04);
+    ctx.strokeStyle = hexToRgba('#a89c78', 0.06 + moonFraction * 0.04);
     ctx.lineWidth = 0.6;
     ctx.setLineDash([3, 8]);
     ctx.beginPath();
@@ -1177,11 +1178,11 @@ function drawMoon(
 
   ctx.save();
 
-  // Soft outer glow
+  // Soft outer glow — grows with moonFraction
   ctx.globalCompositeOperation = 'lighter';
   const glowR = moonRadius * 3.2;
   const glow = ctx.createRadialGradient(mx, my, 0, mx, my, glowR);
-  glow.addColorStop(0, hexToRgba('#d8d0b4', (0.22 + ownedPower * 0.1) * depthAlpha));
+  glow.addColorStop(0, hexToRgba('#d8d0b4', (0.18 + moonFraction * 0.18) * depthAlpha));
   glow.addColorStop(0.45, hexToRgba('#b0a880', 0.07 * depthAlpha));
   glow.addColorStop(1, hexToRgba('#887860', 0));
   ctx.fillStyle = glow;
@@ -1648,11 +1649,17 @@ function drawLifeEarthEntities(
   const moonAngle = now * 0.000022;
   const moonIsBehind = Math.sin(moonAngle) * 0.62 < 0; // back half of orbit
 
+  // Moon entity level → controls visual moon size (0 = tiny always-present, 1 = fully maxed)
+  const moonItem = items.find((item) => item.name.toLowerCase() === 'moon');
+  const moonFraction = moonItem
+    ? Math.min(1, moonItem.ownedCount / Math.max(1, moonItem.maxCount))
+    : 0.08; // always show a small moon even before buying the entity
+
   // ── Canvas-wide ambient ─────────────────────────────────────────────────
   drawLifeCanvasAmbient(ctx, cx, cy, 220, items, now);
 
   // Moon orbit track + moon body when behind Earth (drawn before clip so Earth covers it)
-  drawMoon(ctx, cx, cy, earthRadius, now, Math.max(0.25, ownedPower), moonIsBehind);
+  drawMoon(ctx, cx, cy, earthRadius, now, moonFraction, moonIsBehind);
 
   // Atmospheric halo around Earth (outside clip)
   if (ownedPower > 0) {
@@ -1788,7 +1795,7 @@ function drawLifeEarthEntities(
 
   // Moon in front of Earth (drawn after clip restore so it overlaps Earth)
   if (!moonIsBehind) {
-    drawMoon(ctx, cx, cy, earthRadius, now, Math.max(0.25, ownedPower), false);
+    drawMoon(ctx, cx, cy, earthRadius, now, moonFraction, false);
   }
 
   drawLifeOrbitEntities(ctx, cx, cy, earthRadius, orbitItems, now);
