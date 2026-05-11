@@ -1514,7 +1514,7 @@ function drawLifeOrbitEntities(
   // Orbit rings — prominently visible with glow + dashes
   const orbitCount = Math.min(4, Math.max(2, Math.ceil(items.length / 3)));
   for (let i = 0; i < orbitCount; i += 1) {
-    const orbitR = earthRadius + 22 + i * 18;
+    const orbitR = earthRadius + 45 + i * 32;
     const pulse = 0.65 + Math.sin(now * 0.0007 + i * 1.8) * 0.35;
     const tilt = 0.44 + i * 0.035;
     const tiltAngle = Math.sin(now * 0.00012 + i) * 0.14;
@@ -1540,7 +1540,7 @@ function drawLifeOrbitEntities(
     const isLegend = item.rarity === 'legendary';
     const isFreeFlight = textHas(text, 'probe', 'lander', 'ark');
     const orbitBand = index % 4;
-    const orbitR = earthRadius + 22 + orbitBand * 18 + (isLegend ? 18 : 0);
+    const orbitR = earthRadius + 45 + orbitBand * 32 + (isLegend ? 28 : 0);
     const speed = isFreeFlight ? 0.0002 + unit(seed, 82) * 0.00016 : 0.00034 + unit(seed, 82) * 0.00022;
     const angle = now * speed * (unit(seed, 83) > 0.5 ? 1 : -1) + unit(seed, 84) * Math.PI * 2;
     const tilt = 0.44 + unit(seed, 85) * 0.2;
@@ -1593,8 +1593,8 @@ function drawLifeOrbitEntities(
     }
 
     // Big soft glow
-    const glowR = size * 10;
-    const glowAlpha = item.rarity === 'legendary' ? 0.72 : 0.55;
+    const glowR = size * 6;
+    const glowAlpha = item.rarity === 'legendary' ? 0.42 : 0.28;
     const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
     glow.addColorStop(0, hexToRgba(item.glowColor, glowAlpha));
     glow.addColorStop(0.3, hexToRgba(item.glowColor, glowAlpha * 0.5));
@@ -1605,13 +1605,13 @@ function drawLifeOrbitEntities(
     ctx.fill();
 
     // Crisp inner glow
-    const innerGlow = ctx.createRadialGradient(x, y, 0, x, y, size * 3.5);
-    innerGlow.addColorStop(0, hexToRgba('#ffffff', 0.55));
-    innerGlow.addColorStop(0.4, hexToRgba(item.glowColor, 0.45));
+    const innerGlow = ctx.createRadialGradient(x, y, 0, x, y, size * 2.5);
+    innerGlow.addColorStop(0, hexToRgba('#ffffff', 0.4));
+    innerGlow.addColorStop(0.4, hexToRgba(item.glowColor, 0.32));
     innerGlow.addColorStop(1, hexToRgba(item.color, 0));
     ctx.fillStyle = innerGlow;
     ctx.beginPath();
-    ctx.arc(x, y, size * 3.5, 0, Math.PI * 2);
+    ctx.arc(x, y, size * 2.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Legendary pulsing outer ring
