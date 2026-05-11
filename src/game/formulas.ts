@@ -27,10 +27,10 @@ export function formatGameNumber(value: number): string {
   if (whole < 1e9) return `${(whole / 1e6).toFixed(2)}M`;
   if (whole < 1e12) return `${(whole / 1e9).toFixed(2)}B`;
   if (whole < 1e15) return `${(whole / 1e12).toFixed(2)}T`;
-  // 6 significant figures in scientific notation
+  // 3 significant figures in scientific notation
   const exp = Math.floor(Math.log10(whole));
   const mantissa = whole / Math.pow(10, exp);
-  return `${mantissa.toFixed(5)}e${exp}`;
+  return `${mantissa.toFixed(2)}e${exp}`;
 }
 
 /** Short form: 2 significant figures — for thresholds / totals where space is tight. */
@@ -119,11 +119,10 @@ export function getCosmicTimeFillRate(
   boostMultiplier = 1,
   stageNumber = 1,
 ): number {
-  // Per-stage cap: even with every upgrade maxed, stage N cannot fill faster than N² × 300 s.
-  // Stage 1 → 300 s minimum, Stage 5 → 7500 s (~2 h), Stage 10 → 30000 s (~8.3 h).
+  // Per-stage cap applies to the base rate only — shop boosts can exceed it.
   const stageCap = 100 / (Math.pow(stageNumber, 2) * 300);
-  const raw = Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult * boostMultiplier;
-  return Math.min(stageCap, raw);
+  const base = Math.min(stageCap, Math.pow(10, aeonLevel) * mods.apexMult * mods.timeMultMult);
+  return base * boostMultiplier;
 }
 
 export function getTimeFillRateGauge(
@@ -341,11 +340,23 @@ export function formatDuration(totalMs: number): string {
 }
 
 export function hexToRgba(hex: string, alpha: number): string {
+  const safeAlpha = Number.isFinite(alpha) ? alpha : 0;
+
+  if (hex.startsWith('rgb(') || hex.startsWith('rgba(')) {
+    const channels = hex.match(/[\d.]+/g);
+    if (channels && channels.length >= 3) {
+      return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${safeAlpha})`;
+    }
+  }
+
   const normalized = hex.replace('#', '');
   const r = parseInt(normalized.slice(0, 2), 16);
   const g = parseInt(normalized.slice(2, 4), 16);
   const b = parseInt(normalized.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  if ([r, g, b].some((channel) => Number.isNaN(channel))) {
+    return `rgba(255, 255, 255, ${safeAlpha})`;
+  }
+  return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
 }
 
 export function dbToGain(db: number): number {

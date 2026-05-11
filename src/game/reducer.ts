@@ -41,6 +41,7 @@ import {
   handleAdminPrevStage,
   handleAdminSetProgress,
   handleAdminRestartRun,
+  handleAdminMaxEntities,
   handleBuySingularityUnlock,
 } from './reducers/admin';
 import {
@@ -113,7 +114,8 @@ export type GameAction =
   | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
-  | { type: 'PURCHASE_ENTITY'; entityId: string };
+  | { type: 'PURCHASE_ENTITY'; entityId: string }
+  | { type: 'ADMIN_MAX_ENTITIES' };
 
 // ---------------------------------------------------------------------------
 // Serialization helpers
@@ -192,6 +194,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
     case 'ADMIN_SET_PROGRESS':    return handleAdminSetProgress(state, action);
     case 'ADMIN_RESTART_RUN':     return handleAdminRestartRun(state, action);
+    case 'ADMIN_MAX_ENTITIES':    return handleAdminMaxEntities(state);
     case 'BUY_SINGULARITY_UNLOCK': return handleBuySingularityUnlock(state, action);
     case 'DISMISS_OFFLINE_MODAL': return handleDismissOfflineModal(state);
     case 'REPORT_ENCOUNTER':      return handleReportEncounter(state, action);

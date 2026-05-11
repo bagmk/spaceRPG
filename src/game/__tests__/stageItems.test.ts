@@ -9,8 +9,8 @@ const ENDING_IDS: EndingId[] = ['heat_death', 'big_rip', 'big_crunch', 'vacuum_d
 
 describe('stage entity definitions', () => {
   it('defines the correct entity count per stage', () => {
-    // S1=4, S2=8, S3=12, S4-16=14
-    expect(getEntitiesForStage(1).length).toBe(4);
+    // S1=3, S2=8, S3=12, S4-16=14
+    expect(getEntitiesForStage(1).length).toBe(3);
     expect(getEntitiesForStage(2).length).toBe(8);
     expect(getEntitiesForStage(3).length).toBe(12);
     for (const stageId of STAGE_IDS.filter((id) => id >= 4)) {

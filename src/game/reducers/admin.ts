@@ -1,4 +1,4 @@
-/** Handlers: ADMIN_NEXT_STAGE, ADMIN_PREV_STAGE, ADMIN_SET_PROGRESS, ADMIN_RESTART_RUN, BUY_SINGULARITY_UNLOCK */
+/** Handlers: ADMIN_NEXT_STAGE, ADMIN_PREV_STAGE, ADMIN_SET_PROGRESS, ADMIN_RESTART_RUN, ADMIN_MAX_ENTITIES, BUY_SINGULARITY_UNLOCK */
 
 import { SINGULARITY_UNLOCK_LOOKUP } from '../constants';
 import { STAGES } from '../stages';
@@ -7,6 +7,8 @@ import { createInitialGameState, createDefaultEndingProgressFlags } from '../def
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { unlockTrackForStage, resetMechanicState, hasUnlock } from './helpers';
+import { getEntitiesForStage } from '../entities/stageItems';
+import { entityMatchesId } from '../entities/stageItems';
 
 type AdminNextStageAction = Extract<GameAction, { type: 'ADMIN_NEXT_STAGE' }>;
 type AdminPrevStageAction = Extract<GameAction, { type: 'ADMIN_PREV_STAGE' }>;
@@ -136,4 +138,26 @@ export function handleBuySingularityUnlock(
     condensedMass: state.condensedMass - unlock.cost,
     singularityUnlocks: [...state.singularityUnlocks, action.unlockId],
   };
+}
+
+const ADMIN_UNLIMITED_MAX = 10;
+
+export function handleAdminMaxEntities(state: GameState): GameState {
+  const currentStage = STAGES[state.stageIdx];
+  if (!currentStage) return state;
+
+  const entities = getEntitiesForStage(currentStage.id);
+  const updatedEntities = [...state.purchasedEntities];
+
+  for (const entity of entities) {
+    const targetCount = entity.maxCount > 0 ? entity.maxCount : ADMIN_UNLIMITED_MAX;
+    const existing = updatedEntities.find((e) => entityMatchesId(entity, e.entityId));
+    if (existing) {
+      existing.count = Math.max(existing.count, targetCount);
+    } else {
+      updatedEntities.push({ entityId: entity.id, count: targetCount });
+    }
+  }
+
+  return { ...state, purchasedEntities: updatedEntities };
 }

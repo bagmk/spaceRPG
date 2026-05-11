@@ -25,13 +25,13 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'cosmic_surge',
     label: 'Cosmic Surge',
-    description: 'Quanta x3 for 30 minutes.',
-    priceUSD: 2.99,
+    description: 'Quanta x3 for 10 minutes.',
+    priceUSD: 0.99,
     applyEffect: (state, now) => ({
       ...state,
       shopBoosts: [
         ...state.shopBoosts,
-        { id: `quanta_surge_${now}_${state.shopBoosts.length}`, factor: 3, expiresAt: now + 30 * 60_000 },
+        { id: `quanta_surge_${now}_${state.shopBoosts.length}`, factor: 3, expiresAt: now + 10 * 60_000 },
       ],
     }),
   },
@@ -45,6 +45,19 @@ export const SHOP_ITEMS: ShopItem[] = [
       shopBoosts: [
         ...state.shopBoosts,
         { id: `time_boost_xl_${now}_${state.shopBoosts.length}`, factor: 100, expiresAt: now + 30 * 60_000 },
+      ],
+    }),
+  },
+  {
+    id: 'cosmic_surge_xl',
+    label: 'Quanta Storm',
+    description: 'Quanta x30 for 30 minutes.',
+    priceUSD: 4.99,
+    applyEffect: (state, now) => ({
+      ...state,
+      shopBoosts: [
+        ...state.shopBoosts,
+        { id: `quanta_surge_xl_${now}_${state.shopBoosts.length}`, factor: 30, expiresAt: now + 30 * 60_000 },
       ],
     }),
   },

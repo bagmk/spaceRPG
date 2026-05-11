@@ -20,7 +20,6 @@ export function StageLogToast({ stageId, progressPercent, onFirstDismiss }: Stag
   const [current, setCurrent] = useState<ToastItem | null>(null);
   const [visible, setVisible] = useState(false);
   const prevStageIdRef = useRef(-1);
-  const firstDismissFiredRef = useRef(false);
 
   // Reset on stage change, then enqueue matching logs
   useEffect(() => {
@@ -58,26 +57,10 @@ export function StageLogToast({ stageId, progressPercent, onFirstDismiss }: Stag
     setVisible(true);
   }, [current, queueVersion]);
 
-  // Effect 2: timer — runs when current becomes non-null, cleaned up on unmount only
-  // Split from Effect 1 so that state updates from setCurrent don't cancel the timers.
-  useEffect(() => {
-    if (current === null) return undefined;
-    const hideId = window.setTimeout(() => setVisible(false), 3000);
-    const clearId = window.setTimeout(() => setCurrent(null), 3500);
-    return () => {
-      window.clearTimeout(hideId);
-      window.clearTimeout(clearId);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.id]); // key on ID so it only fires once per unique toast, not on every re-render
-
   const handleDismiss = () => {
     setVisible(false);
     window.setTimeout(() => setCurrent(null), 300);
-    if (!firstDismissFiredRef.current) {
-      firstDismissFiredRef.current = true;
-      onFirstDismiss?.();
-    }
+    onFirstDismiss?.();
   };
 
   if (!current) return null;

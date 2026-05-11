@@ -190,7 +190,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry } from './entities/types';
 
 export interface SaveState {
-  version: 8;
+  version: 9;
   stageIdx: number;
   quanta: number;
   timeGauge: number;

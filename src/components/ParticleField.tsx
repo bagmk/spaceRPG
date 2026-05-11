@@ -1344,7 +1344,8 @@ export const ParticleField = memo(function ParticleField({
     }
 
     if (!interactionLocked) {
-      world.rogueCooldown -= frameDt * Math.max(1, timeMult);
+      const encounterTimeScale = Math.min(2.5, Math.sqrt(Math.max(1, timeMult)));
+      world.rogueCooldown -= frameDt * encounterTimeScale;
       if (world.rogueCooldown <= 0 && world.rogues.length < TUNING.ROGUE_MAX) {
         world.rogues.push(createRogue(world, stage, width, height));
         world.rogueCooldown =
@@ -1427,7 +1428,6 @@ export const ParticleField = memo(function ParticleField({
       now,
       progress: visualProgress,
     });
-    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now);
     drawParticles({
       ctx,
       stage,
@@ -1435,6 +1435,7 @@ export const ParticleField = memo(function ParticleField({
       flyers: world.flyers,
       bursts: world.bursts,
     });
+    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now);
     drawRogues(ctx, world.rogues, width, height, now);
     drawEffects({
       ctx,

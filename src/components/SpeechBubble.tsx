@@ -8,6 +8,7 @@ interface SpeechBubbleProps {
   ctaLabel?: string;
   onCta?: () => void;
   onDismiss: () => void;
+  autoCloseMs?: number;
 }
 
 interface BubblePosition {
@@ -93,23 +94,28 @@ export function SpeechBubble({
   ctaLabel,
   onCta,
   onDismiss,
+  autoCloseMs,
 }: SpeechBubbleProps) {
   const [bubblePosition, setBubblePosition] = useState<BubblePosition | null>(null);
 
   useEffect(() => {
-    const update = () => {
-      const anchor = anchorRef.current;
-      if (!anchor) return;
-      setBubblePosition(resolvePosition(anchor.getBoundingClientRect(), position));
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    setBubblePosition(resolvePosition(anchor.getBoundingClientRect(), position));
+    // Only reposition on window resize, not on scroll/tick reflows.
+    const onResize = () => {
+      const el = anchorRef.current;
+      if (el) setBubblePosition(resolvePosition(el.getBoundingClientRect(), position));
     };
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
-    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, [anchorRef, position]);
+
+  useEffect(() => {
+    if (!autoCloseMs) return undefined;
+    const id = window.setTimeout(onDismiss, autoCloseMs);
+    return () => window.clearTimeout(id);
+  }, [autoCloseMs, onDismiss]);
 
   if (!bubblePosition) {
     return null;

@@ -2,7 +2,7 @@
 
 import type { Modifiers } from '../skills/effects';
 import type { PurchasedEntityEntry } from './types';
-import { STAGE_ENTITIES } from './stageItems';
+import { findEntityById } from './stageItems';
 
 function scaledFlatGain(baseCost: number, totalEffect: number): number {
   return Math.max(0, baseCost * (totalEffect / 100));
@@ -14,7 +14,7 @@ export function applyEntityModifiers(
 ): void {
   for (const entry of purchasedEntities) {
     if (entry.count <= 0) continue;
-    const entity = STAGE_ENTITIES.find((e) => e.id === entry.entityId);
+    const entity = findEntityById(entry.entityId);
     if (!entity) continue;
 
     const { type, value, isFlat } = entity.effect;

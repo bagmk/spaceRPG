@@ -1227,12 +1227,12 @@ function drawBlackHoleScene({ ctx, cluster, stage, cx, cy, width, height, progre
 }
 
 function getBlackbodyColor(temperature: number): string {
-  if (temperature < 2500) return 'rgb(120, 30, 0)';
-  if (temperature < 4000) return 'rgb(255, 100, 60)';
-  if (temperature < 5800) return 'rgb(255, 180, 100)';
-  if (temperature < 8000) return 'rgb(255, 235, 200)';
-  if (temperature < 12000) return 'rgb(220, 240, 255)';
-  return 'rgb(170, 200, 255)';
+  if (temperature < 2500) return '#781e00';
+  if (temperature < 4000) return '#ff643c';
+  if (temperature < 5800) return '#ffb464';
+  if (temperature < 8000) return '#ffebc8';
+  if (temperature < 12000) return '#dcf0ff';
+  return '#aac8ff';
 }
 
 function drawEarthPhase(

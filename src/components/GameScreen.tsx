@@ -12,6 +12,7 @@ import {
   getAutoRate,
   getClickPower,
   getCritMultiplier,
+  getCompositeBoostMultiplier,
   getEffectiveThreshold,
   getEntropyOnCondense,
   getTimeFillRate,
@@ -25,7 +26,7 @@ import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
 import { getStageStartCosmicTime } from '../game/timeFlow';
 import { getEntityCost } from '../game/entities/types';
-import { getEntitiesForStage } from '../game/entities/stageItems';
+import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
 import { EncounterAlert } from './EncounterAlert';
@@ -69,13 +70,28 @@ interface EncounterEntry {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'entity' | 'shop' | 'resource';
+  anchor: 'entity' | 'shop' | 'resource' | 'boost';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
+  autoCloseMs?: number;
 }
 
 type TransitionPhase = 'idle' | 'bursting' | 'quote' | 'revealing';
+
+function trimFixed(value: number, digits: number): string {
+  return value
+    .toFixed(digits)
+    .replace(/\.0+$/, '')
+    .replace(/(\.\d*[1-9])0+$/, '$1');
+}
+
+function formatHeaderMultiplier(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '1';
+  if (value < 2) return trimFixed(value, 2);
+  if (value < 100) return trimFixed(value, 1);
+  return formatWhole(value);
+}
 
 interface GameScreenProps {
   state: GameState;
@@ -122,12 +138,12 @@ export function GameScreen({
   const [shopOpen, setShopOpen] = useState(false);
   const [entityPanelOpen, setEntityPanelOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
-  const [showInfoHint, setShowInfoHint] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const boostAnchorRef = useRef<HTMLDivElement | null>(null);
   const rawStage = STAGES[state.stageIdx];
   // Display stage can be overridden when browsing past stages in Entity Lab
   const displayRawStage = viewingStageId !== null
@@ -141,9 +157,15 @@ export function GameScreen({
     () => applyUniverseToStage(displayRawStage, state.currentUniverseSeed),
     [displayRawStage, state.currentUniverseSeed],
   );
+  const isViewingPastStage = displayStage.id < stage.id;
   const mechanic = getMechanic(stage.mechanic);
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   const progress01 = getProgress(state.quanta, effectiveThreshold);
+  const displayEffectiveThreshold = isViewingPastStage
+    ? getEffectiveThreshold(displayStage, state.cumulativeBoost)
+    : effectiveThreshold;
+  const displayQuanta = state.quanta;
+  const displayProgress01 = getProgress(displayQuanta, displayEffectiveThreshold);
   const modifiers = getActiveModifiers(state.skills, {
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
@@ -156,8 +178,15 @@ export function GameScreen({
   const clickPower = getClickPower(modifiers);
   const critMultiplier = getCritMultiplier(state.skills.crit.level, modifiers);
   const timeMult = getTimeMultiplier(state.skills.time.level, modifiers);
+  const renderNow = Date.now();
+  const shopQuantaMult = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', renderNow);
+  const shopTimeMult = getCompositeBoostMultiplier(state.shopBoosts, 'time_', renderNow);
   const timeGauge = getTimeGaugeForCosmicClock(state.stageIdx, state.cosmicClockSec);
   const timeProgress01 = Math.min(1, timeGauge / 100);
+  const displayTimeGauge = isViewingPastStage
+    ? getTimeGaugeForCosmicClock(displayStage.id - 1, state.cosmicClockSec)
+    : timeGauge;
+  const displayTimeProgress01 = Math.min(1, displayTimeGauge / 100);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
@@ -200,15 +229,19 @@ export function GameScreen({
         )
       : cosmicClockFromGauge;
   const canShowShop = state.universeCount > 1 || stage.id >= 6;
+  const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > Date.now());
+  const openEntityPanel = () => {
+    setViewingStageId(null);
+    setEntityPanelOpen(true);
+  };
   const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
   const hasAffordableEntity = currentStageEntities.some((entity) => {
-    const count = state.purchasedEntities.find((entry) => entry.entityId === entity.id)?.count ?? 0;
+    const count = getPurchasedEntityCount(state.purchasedEntities, entity);
     const maxed = entity.maxCount > 0 && count >= entity.maxCount;
     return !maxed && state.quanta >= getEntityCost(entity, count);
   });
   const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
-    const entry = state.purchasedEntities.find((candidate) => candidate.entityId === entity.id);
-    return sum + (entry?.count ?? 0);
+    return sum + getPurchasedEntityCount(state.purchasedEntities, entity);
   }, 0);
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
     if (entityPanelOpen || state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
@@ -220,7 +253,7 @@ export function GameScreen({
         anchor: 'entity',
         message: 'Entity Lab turns quanta into stage entities. They appear in the field and replace the old skill upgrades.',
         ctaLabel: 'Open Entity Lab',
-        onCta: () => setEntityPanelOpen(true),
+        onCta: openEntityPanel,
       };
     }
     if (ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-canvas']) {
@@ -228,6 +261,7 @@ export function GameScreen({
         flagId: 'entity-lab-canvas',
         anchor: 'entity',
         message: 'Purchased entities now orbit the center. Buying more copies adds more bodies, not just a number.',
+        autoCloseMs: 6000,
       };
     }
     if (stage.id >= 5 && !state.tutorialFlags['time-gauge-visible']) {
@@ -235,6 +269,7 @@ export function GameScreen({
         flagId: 'time-gauge-visible',
         anchor: 'resource',
         message: 'Cosmic time accumulates here. Time-type entities in the lab speed this gauge up.',
+        autoCloseMs: 6000,
       };
     }
     if (canShowShop && !state.tutorialFlags['shop-visible']) {
@@ -246,11 +281,20 @@ export function GameScreen({
         onCta: () => setShopOpen(true),
       };
     }
+    if (hasActiveBoost && !state.tutorialFlags['boost-hud-seen']) {
+      return {
+        flagId: 'boost-hud-seen',
+        anchor: 'boost',
+        message: 'Active boosts appear here and count down in real time. Stack purchases to extend the duration.',
+        autoCloseMs: 7000,
+      };
+    }
     if (canCondense && !state.tutorialFlags['condense-ready']) {
       return {
         flagId: 'condense-ready',
         anchor: 'resource',
         message: 'Both gauges are full. Press Condense to advance.',
+        autoCloseMs: 8000,
       };
     }
     return null;
@@ -258,9 +302,11 @@ export function GameScreen({
     canCondense,
     canShowShop,
     entityPanelOpen,
+    hasActiveBoost,
     hasAffordableEntity,
     ownedCurrentStageEntityCount,
     stage.id,
+    state.shopBoosts,
     state.tutorialFlags,
     state.universeCount,
   ]);
@@ -463,16 +509,23 @@ export function GameScreen({
                 {`${pct * 100}%`}
               </button>
             ))}
+            <button
+              className="mini-button admin-button"
+              type="button"
+              onClick={() => dispatch({ type: 'ADMIN_MAX_ENTITIES' })}
+            >
+              MAX ENT
+            </button>
           </div>
         ) : null}
         <ParticleField
           stage={displayStage}
-          actualStageId={stage.id}
-          quanta={state.quanta}
+          actualStageId={displayStage.id}
+          quanta={displayQuanta}
           autoRate={autoRate}
           timeMult={timeMult}
-          cosmicClockSec={state.cosmicClockSec}
-          effectiveThreshold={effectiveThreshold}
+          cosmicClockSec={isViewingPastStage ? displayStage.cosmicTimeSec : state.cosmicClockSec}
+          effectiveThreshold={displayEffectiveThreshold}
           totalClicks={state.totalClicks}
           imploding={state.imploding}
           interactionLocked={interactionLocked}
@@ -551,46 +604,59 @@ export function GameScreen({
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
           <div className="hud-stage-title">{`Stage ${displayStage.id}: ${displayStage.name}`}</div>
-          <div className="hud-quanta">{`Quanta ${formatGameNumber(state.quanta)} / ${formatGameNumberShort(effectiveThreshold)}`}</div>
+          <div className="hud-quanta">
+            {`Quanta ${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}
+          </div>
           <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
-            <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, progress01 * 100)}%` }} />
+            <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
           </div>
           <div className="hud-cosmic-time">
             {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
-            <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(stage.cosmicTimeSec, 2)}`}</span>
+            <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
           </div>
           <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
-            <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, timeProgress01 * 100)}%` }} />
+            <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
           </div>
           <button
             type="button"
-            className="hud-condense"
-            disabled={!canCondense}
-            title={canCondense ? `Condense for ${formatWhole(entropyPreview)} entropy` : condenseHint}
-            onClick={() => dispatch({ type: 'START_CONDENSE', now: performance.now() })}
+            className={`hud-condense ${isViewingPastStage ? 'hud-condense--completed' : ''}`}
+            disabled={isViewingPastStage || !canCondense}
+            title={
+              isViewingPastStage
+                ? 'This stage has already been condensed.'
+                : canCondense
+                  ? `Condense for ${formatWhole(entropyPreview)} entropy`
+                  : condenseHint
+            }
+            onClick={() => {
+              if (!isViewingPastStage) {
+                dispatch({ type: 'START_CONDENSE', now: performance.now() });
+                dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'condense-ready' });
+              }
+            }}
           >
-            Condense
+            {isViewingPastStage ? '🐾 Completed' : 'Condense'}
           </button>
         </div>
         <div className="stat-header" aria-label="Core stats">
-          <span className="stat-header-item stat-header-readout">
-            {`Quanta x${formatWhole(clickPower)}`}
+          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+            {`Quanta x${formatWhole(clickPower * shopQuantaMult)}`}
           </span>
-          <span className="stat-header-item stat-header-readout">
-            {`Auto ${formatRate(autoRate)}`}
+          <span className={`stat-header-item stat-header-readout${shopQuantaMult > 1 ? ' stat-boosted' : ''}`}>
+            {`Auto ${formatRate(autoRate * shopQuantaMult)}`}
           </span>
-          {stage.id > 2 ? (
+          {state.skills.unlockedTracks.includes('crit') ? (
             <span className="stat-header-item stat-header-readout">
-              {`Crit x${formatWhole(critMultiplier)}`}
+              {`Crit x${formatHeaderMultiplier(critMultiplier)}`}
             </span>
           ) : null}
-          <span className="stat-header-item stat-header-readout">
-            {`Time x${formatWhole(timeMult)}`}
+          <span className={`stat-header-item stat-header-readout${shopTimeMult > 1 ? ' stat-boosted' : ''}`}>
+            {`Time x${formatHeaderMultiplier(timeMult * shopTimeMult)}`}
           </span>
           <span className="stat-header-item stat-header-readout">{`Entropy ${formatWhole(state.entropy)}`}</span>
         </div>
         <div className="hud-controls">
-          <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); setShowInfoHint(false); }}>
+          <button ref={infoAnchorRef} type="button" className="mini-button" onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>
             INFO
           </button>
           <button type="button" className="mini-button" onClick={onToggleMute}>
@@ -605,7 +671,7 @@ export function GameScreen({
             ref={entityAnchorRef}
             type="button"
             className={`entity-lab-button ${hasAffordableEntity ? 'affordable' : ''}`}
-            onClick={() => setEntityPanelOpen(true)}
+            onClick={openEntityPanel}
             aria-label="Open Entity Lab"
           >
             ⚗
@@ -622,9 +688,9 @@ export function GameScreen({
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={displayStage.id} />
-        <ActiveBoostHud boosts={state.shopBoosts} />
+        <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
-          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => setShowInfoHint(true)} />
+          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}
         {stage.id === 1 && state.totalClicks === 0 && !interactionLocked ? (
           <div className="click-tutorial-hint">CLICK TO GATHER QUANTA</div>
@@ -683,7 +749,9 @@ export function GameScreen({
               ? entityAnchorRef
               : activeTutorialBubble.anchor === 'shop'
                 ? shopAnchorRef
-                : resourceAnchorRef
+                : activeTutorialBubble.anchor === 'boost'
+                  ? boostAnchorRef
+                  : resourceAnchorRef
           }
           position={
             activeTutorialBubble.anchor === 'resource'
@@ -694,6 +762,7 @@ export function GameScreen({
           }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
+          autoCloseMs={activeTutorialBubble.autoCloseMs}
           onCta={
             activeTutorialBubble.onCta
               ? () => {
@@ -702,18 +771,24 @@ export function GameScreen({
                 }
               : undefined
           }
-          onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId })}
+          onDismiss={() => {
+            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'allDismissed' });
+          }}
         />
       ) : null}
 
-      {showInfoHint && !almanacOpen ? (
+      {state.tutorialFlags['milestone-seen'] && !state.tutorialFlags['info-hint-seen'] && !almanacOpen ? (
         <SpeechBubble
           anchorRef={infoAnchorRef}
           position="top"
           message="Stage events are recorded here. Open INFO to explore discovered milestones."
           ctaLabel="Open INFO"
-          onCta={() => { setAlmanacOpen(true); setShowInfoHint(false); }}
-          onDismiss={() => setShowInfoHint(false)}
+          onCta={() => {
+            setAlmanacOpen(true);
+            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' });
+          }}
+          onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' })}
         />
       ) : null}
 

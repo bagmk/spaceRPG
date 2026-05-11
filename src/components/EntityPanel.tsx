@@ -1,22 +1,15 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import type { PurchasedEntityEntry } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
-import { getEntitiesForStage } from '../game/entities/stageItems';
+import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import { STAGES } from '../game/stages';
 import { formatGameNumber } from '../game/formulas';
 import { EntityGlyph } from './EntityGlyph';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
 const RARITY_RANK = new Map<EntityRarity, number>(RARITY_ORDER.map((rarity, index) => [rarity, index]));
-
-const RARITY_LABELS: Record<EntityRarity, string> = {
-  common: 'COMMON',
-  rare: 'RARE',
-  epic: 'EPIC',
-  legendary: 'LEGENDARY',
-};
 
 const RARITY_COLORS: Record<EntityRarity, string> = {
   common: '#6db86d',
@@ -25,19 +18,48 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   legendary: '#ffa500',
 };
 
-const EFFECT_LABELS: Record<string, string> = {
-  auto: 'Auto Rate',
-  click: 'Click Power',
-  crit: 'Crit Chance',
-  time: 'Cosmic Time',
-  entropy: 'Entropy Gain',
-  combo_cap: 'Combo Cap',
-  multiplier: 'All Sources',
-};
-
-function formatEffectValue(value: number): string {
+function formatPct(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
+
+/** Returns the per-level effect label for an entity (e.g. "+1,210 Click Power" or "+0.5% Crit Chance"). */
+function formatEntityEffect(entity: StageEntity): string {
+  const { type, value, isFlat } = entity.effect;
+  if (type === 'click') {
+    return `+${formatGameNumber(entity.baseCost * value / 100)} Click Power`;
+  }
+  if (type === 'auto') {
+    return `+${formatGameNumber(entity.baseCost * value / 100)}/s Auto Rate`;
+  }
+  if (type === 'crit') {
+    return isFlat ? `+${formatPct(value)} Crit Chance` : `+${formatPct(value)} Crit Mult`;
+  }
+  if (type === 'time') return `+${formatPct(value)} Time Rate`;
+  if (type === 'multiplier') return `+${formatPct(value)} All Sources`;
+  if (type === 'entropy') return `+${formatPct(value)} Encounter Bonus`;
+  return `+${formatPct(value)} ${type}`;
+}
+
+/** Returns the cumulative effect label across all owned levels. */
+function formatEntityEffectTotal(entity: StageEntity, count: number): string {
+  if (count === 0) return '';
+  const { type, value, isFlat } = entity.effect;
+  if (type === 'click') {
+    return `+${formatGameNumber(entity.baseCost * value * count / 100)} total`;
+  }
+  if (type === 'auto') {
+    return `+${formatGameNumber(entity.baseCost * value * count / 100)}/s total`;
+  }
+  if (type === 'crit') {
+    return isFlat
+      ? `+${formatPct(value * count)} Crit Chance`
+      : `+${formatPct(value * count)} Crit Mult`;
+  }
+  if (type === 'time') return `+${formatPct(value * count)} Time Rate`;
+  if (type === 'multiplier') return `+${formatPct(value * count)} All Sources`;
+  if (type === 'entropy') return `+${formatPct(value * count)} Encounter`;
+  return `+${formatPct(value * count)} ${type}`;
 }
 
 interface Props {
@@ -51,6 +73,7 @@ interface Props {
 
 export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurchase, onClose, onStageSelect }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
+  const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const accessibleStages = useMemo(
@@ -71,13 +94,17 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
     [selectedStageId],
   );
 
-  const countOf = (entityId: string) =>
-    purchasedEntities.find((e) => e.entityId === entityId)?.count ?? 0;
+  const countOf = (entity: StageEntity) => getPurchasedEntityCount(purchasedEntities, entity);
+  const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
 
   useEffect(() => {
     if (!timelineRef.current) return;
     const selected = timelineRef.current.querySelector<HTMLElement>('.entity-timeline__node--selected');
     selected?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [selectedStageId]);
+
+  useEffect(() => {
+    setInspectedEntityId(null);
   }, [selectedStageId]);
 
   return (
@@ -145,7 +172,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
         {selectedStage && selectedStage.id < currentStageId && (
           <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
             <span className="entity-panel__cleared-paw">🐾</span>
-            <span>Stage {selectedStage.id} cleared — entities still active</span>
+            <span>Stage {selectedStage.id} cleared — entities still active and upgradeable</span>
           </div>
         )}
 
@@ -158,14 +185,28 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, onPurch
             <EntityCard
               key={entity.id}
               entity={entity}
-              count={countOf(entity.id)}
+              count={countOf(entity)}
               quanta={quanta}
               rarityColor={RARITY_COLORS[entity.rarity]}
               onPurchase={onPurchase}
+              onInspect={() => setInspectedEntityId(entity.id)}
               animDelay={idx * 45}
+              canPurchase={selectedStageId <= currentStageId}
             />
           ))}
         </div>
+        {inspectedEntity ? (
+          <EntityDetailCard
+            entity={inspectedEntity}
+            count={countOf(inspectedEntity)}
+            cost={getEntityCost(inspectedEntity, countOf(inspectedEntity))}
+            quanta={quanta}
+            rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
+            canPurchase={selectedStageId <= currentStageId}
+            onPurchase={onPurchase}
+            onClose={() => setInspectedEntityId(null)}
+          />
+        ) : null}
       </aside>
     </div>
   );
@@ -177,20 +218,22 @@ interface CardProps {
   quanta: number;
   rarityColor: string;
   onPurchase: (entityId: string) => void;
+  onInspect: () => void;
   animDelay: number;
+  canPurchase: boolean;
 }
 
-function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay }: CardProps) {
+function EntityCard({ entity, count, quanta, rarityColor, onPurchase, onInspect, animDelay, canPurchase }: CardProps) {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const cost = getEntityCost(entity, count);
   const maxed = entity.maxCount > 0 && count >= entity.maxCount;
-  const canAfford = quanta >= cost && !maxed;
-  const showLevelProgress = entity.maxCount > 1 && count > 0;
+  const canAfford = canPurchase && quanta >= cost && !maxed;
+  const showLevelProgress = entity.maxCount > 1;
   const levelProgress = showLevelProgress
     ? Math.min(100, Math.max(0, (count / entity.maxCount) * 100))
     : 0;
-  const totalEffectLabel = `+${formatEffectValue(entity.effect.value * count)}`;
+  const totalEffectLabel = formatEntityEffectTotal(entity, count);
 
   useEffect(() => {
     return () => {
@@ -200,7 +243,8 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
     };
   }, []);
 
-  const handlePurchase = () => {
+  const handlePurchase = (event?: MouseEvent<HTMLButtonElement>) => {
+    event?.stopPropagation();
     if (!canAfford) return;
     onPurchase(entity.id);
     setIsCelebrating(true);
@@ -213,14 +257,12 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
     }, entity.rarity === 'legendary' ? 1050 : 650);
   };
 
-  const effectLabel = (() => {
-    const label = EFFECT_LABELS[entity.effect.type] ?? entity.effect.type;
-    const val = formatEffectValue(entity.effect.value);
-    return `+${val} ${label}`;
-  })();
+  const effectLabel = formatEntityEffect(entity);
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={[
         'entity-card',
         `entity-card--${entity.rarity}`,
@@ -236,6 +278,13 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
           '--rarity-color': rarityColor,
         } as CSSProperties
       }
+      onClick={onInspect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onInspect();
+        }
+      }}
     >
       {/* Glyph with count badge */}
       <div className="entity-card__glyph">
@@ -250,11 +299,7 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
       {/* Info */}
       <div className="entity-card__info">
         <div className="entity-card__name">{entity.name}</div>
-        <div className="entity-card__desc">{entity.description}</div>
         <div className="entity-card__meta">
-          <span className="entity-card__rarity" style={{ color: rarityColor }}>
-            {RARITY_LABELS[entity.rarity]}
-          </span>
           <span className="entity-card__effect" style={{ color: rarityColor }}>
             {effectLabel}
           </span>
@@ -280,11 +325,17 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
 
       {/* Right: cost + buy button */}
       <div className="entity-card__right">
-        {!maxed && <div className="entity-card__cost">{formatGameNumber(cost)}</div>}
+        {canPurchase && !maxed ? <div className="entity-card__cost">{formatGameNumber(cost)}</div> : null}
         <button
-          className={`entity-card__buy ${maxed ? 'entity-card__buy--maxed' : ''}`}
+          className={[
+            'entity-card__buy',
+            maxed ? 'entity-card__buy--maxed' : '',
+            !canPurchase ? 'entity-card__buy--view' : '',
+          ].filter(Boolean).join(' ')}
           style={
-            maxed
+            !canPurchase
+              ? { borderColor: rarityColor, color: rarityColor }
+              : maxed
               ? { borderColor: rarityColor, color: rarityColor }
               : canAfford
                 ? { background: rarityColor }
@@ -293,9 +344,77 @@ function EntityCard({ entity, count, quanta, rarityColor, onPurchase, animDelay 
           disabled={!canAfford}
           onClick={handlePurchase}
         >
-          {maxed ? 'MAX' : 'GET'}
+          {!canPurchase ? 'LOCKED' : maxed ? 'MAX' : 'GET'}
         </button>
       </div>
+    </div>
+  );
+}
+
+interface DetailCardProps {
+  entity: StageEntity;
+  count: number;
+  cost: number;
+  quanta: number;
+  rarityColor: string;
+  canPurchase: boolean;
+  onPurchase: (entityId: string) => void;
+  onClose: () => void;
+}
+
+function EntityDetailCard({
+  entity,
+  count,
+  cost,
+  quanta,
+  rarityColor,
+  canPurchase,
+  onPurchase,
+  onClose,
+}: DetailCardProps) {
+  const maxed = entity.maxCount > 0 && count >= entity.maxCount;
+  const canAfford = canPurchase && !maxed && quanta >= cost;
+  const effectLabel = formatEntityEffect(entity);
+  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count) : '';
+
+  return (
+    <div className="entity-detail-layer" onClick={onClose}>
+      <article
+        className={`entity-detail-card entity-detail-card--${entity.rarity}`}
+        style={{ '--rarity-color': rarityColor } as CSSProperties}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="entity-detail-card__close"
+          aria-label="Close entity detail"
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <div className="entity-detail-card__visual">
+          <EntityGlyph entity={entity} color={rarityColor} />
+        </div>
+        <div className="entity-detail-card__formula" style={{ color: rarityColor }}>
+          {entity.formula}
+        </div>
+        <h3 className="entity-detail-card__name">{entity.name}</h3>
+        <p className="entity-detail-card__description">{entity.description}</p>
+        <div className="entity-detail-card__stats">
+          <span style={{ color: rarityColor }}>{effectLabel}</span>
+          <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? 'Owned' : 'Unowned'}</span>
+          {totalEffectLabel ? <span style={{ color: rarityColor }}>{totalEffectLabel}</span> : null}
+        </div>
+        <button
+          type="button"
+          className="entity-detail-card__buy"
+          style={canAfford ? { background: rarityColor } : { borderColor: rarityColor, color: rarityColor }}
+          disabled={!canAfford}
+          onClick={() => onPurchase(entity.id)}
+        >
+          {maxed ? 'MAXED' : canPurchase ? `GET · ${formatGameNumber(cost)}` : 'LOCKED'}
+        </button>
+      </article>
     </div>
   );
 }

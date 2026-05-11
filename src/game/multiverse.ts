@@ -1,5 +1,5 @@
 import type { EndingId, EndingOption, GameState, Stage, UniverseSeed, AnomalyType } from './types';
-import { STAGE_ENTITIES } from './entities/stageItems';
+import { findEntityById } from './entities/stageItems';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
@@ -200,7 +200,7 @@ export function isBigRipEligible(
   state: Pick<GameState, 'skills' | 'endingsUnlocked' | 'endingsCompleted' | 'purchasedEntities'>,
 ): boolean {
   const timeEntityCount = state.purchasedEntities.reduce((sum, entry) => {
-    const entity = STAGE_ENTITIES.find((candidate) => candidate.id === entry.entityId);
+    const entity = findEntityById(entry.entityId);
     if (!entity) return sum;
     return entity.effect.type === 'time' || entity.effect.type === 'multiplier'
       ? sum + entry.count

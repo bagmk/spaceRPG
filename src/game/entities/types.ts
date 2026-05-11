@@ -73,6 +73,7 @@ export interface StageEntity {
   effect: EntityEffect;
   visual: EntityVisual;
   endingId?: EndingId;  // optional Stage 16 ending-specific unlock
+  aliases?: string[];   // legacy IDs preserved when entity fantasy changes
 }
 
 /** What gets serialised in SaveState. */

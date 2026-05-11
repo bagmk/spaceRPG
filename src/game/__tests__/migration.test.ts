@@ -85,6 +85,27 @@ describe('save migration', () => {
     expect(migrated?.skills.unlockedTracks).toEqual(['click', 'crit', 'auto', 'time']);
   });
 
+  it('resets purchasedEntities when migrating a v8 save to v9 (entity IDs changed)', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        version: 8,
+        ...createInitialGameState(100),
+        purchasedEntities: [
+          { entityId: 's1_0_quantum_fluctuation', count: 5 },
+          { entityId: 's1_1_false_vacuum_bubble', count: 3 },
+        ],
+      }),
+    );
+
+    const migrated = loadGame();
+    expect(migrated?.purchasedEntities).toEqual([]);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

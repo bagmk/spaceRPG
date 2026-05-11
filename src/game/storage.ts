@@ -34,7 +34,7 @@ function isBrowser(): boolean {
 
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 8,
+    version: 9,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
@@ -142,6 +142,13 @@ export function loadGame(): PersistentGameState | null {
       return { ...migrated, purchasedEntities: [] };
     }
     if ((parsed as { version?: number }).version === 8) {
+      // v8 → v9: entity IDs changed format (0-indexed → 1-indexed zero-padded, names changed)
+      // reset purchasedEntities so stale IDs don't ghost as 0-count cards
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      if (!migrated) return null;
+      return { ...migrated, purchasedEntities: [] };
+    }
+    if ((parsed as { version?: number }).version === 9) {
       return validateV5(repairSave(parsed as Partial<SaveState>));
     }
     return null;
