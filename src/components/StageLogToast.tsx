@@ -21,7 +21,13 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
   const [queueVersion, setQueueVersion] = useState(0);
   const [current, setCurrent] = useState<ToastItem | null>(null);
   const [visible, setVisible] = useState(false);
+  const [showDismiss, setShowDismiss] = useState(false);
   const prevStageIdRef = useRef(-1);
+  const onFirstDismissRef = useRef(onFirstDismiss);
+
+  useEffect(() => {
+    onFirstDismissRef.current = onFirstDismiss;
+  }, [onFirstDismiss]);
 
   // Reset on stage change, then enqueue matching logs
   useEffect(() => {
@@ -31,6 +37,7 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
       queueRef.current = [];
       setCurrent(null);
       setVisible(false);
+      setShowDismiss(false);
     }
 
     const newItems = STAGE_LOGS.filter((log) => {
@@ -61,27 +68,41 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
 
   const handleDismiss = () => {
     setVisible(false);
+    setShowDismiss(false);
     window.setTimeout(() => setCurrent(null), 300);
-    onFirstDismiss?.();
+    onFirstDismissRef.current?.();
   };
+
+  useEffect(() => {
+    if (!current || !visible) return undefined;
+    setShowDismiss(false);
+    const revealDismissId = window.setTimeout(() => setShowDismiss(true), 3000);
+    const autoDismissId = window.setTimeout(handleDismiss, 7200);
+    return () => {
+      window.clearTimeout(revealDismissId);
+      window.clearTimeout(autoDismissId);
+    };
+  }, [current?.id, visible]);
 
   if (!current) return null;
 
   return (
     <div className={`stage-log-toast ${visible ? 'visible' : 'hiding'}`} aria-live="polite">
       <div className="stage-log-content">
-        <div>
+        <div className="stage-log-line">
           <div className="stage-log-title">{current.title}</div>
           <div className="stage-log-message">{current.message}</div>
         </div>
-        <button
-          type="button"
-          className="stage-log-dismiss"
-          aria-label="Dismiss message"
-          onClick={handleDismiss}
-        >
-          ×
-        </button>
+        {showDismiss ? (
+          <button
+            type="button"
+            className="stage-log-dismiss"
+            aria-label="Dismiss message"
+            onClick={handleDismiss}
+          >
+            ×
+          </button>
+        ) : null}
       </div>
     </div>
   );

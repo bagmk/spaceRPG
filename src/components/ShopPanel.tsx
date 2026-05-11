@@ -38,10 +38,12 @@ interface ShopPanelProps {
 
 export function ShopButton({
   highlighted,
+  disabled = false,
   onClick,
   label = 'Shop',
 }: {
   highlighted: boolean;
+  disabled?: boolean;
   onClick: () => void;
   label?: string;
 }) {
@@ -49,11 +51,13 @@ export function ShopButton({
     <button
       type="button"
       className={`shop-button ${highlighted ? 'affordable' : ''}`}
+      disabled={disabled}
       onClick={onClick}
-      aria-label="Open cosmic shop"
+      aria-label={disabled ? 'Cosmic shop locked' : 'Open cosmic shop'}
     >
       <span className="hud-action-icon" aria-hidden="true">$</span>
       <span className="hud-action-label">{label}</span>
+      {highlighted && !disabled ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
     </button>
   );
 }

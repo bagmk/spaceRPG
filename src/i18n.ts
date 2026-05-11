@@ -10,6 +10,7 @@ export const STRINGS = {
   // ── HUD labels ────────────────────────────────────────────────
   hudStage:      { en: 'Stage',   ko: '단계' },
   hudQuanta:     { en: 'Quanta',  ko: '퀀타' },
+  hudProgress:   { en: 'progress', ko: '진행' },
   hudAuto:       { en: 'Auto',    ko: '자동' },
   hudCrit:       { en: 'Crit',    ko: '치명타' },
   hudTime:       { en: 'Time',    ko: '시간' },
