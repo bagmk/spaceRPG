@@ -352,11 +352,11 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Up Quark',            'u',   'Light quark appearing twice in every proton.',            'common', 'auto',  0.8),
     item('Down Quark',          'd',   'Light quark shared by protons and neutrons.',             'common', 'click', 0.8),
     item('Electron',            'e⁻',  'Stable lepton that will orbit every future atom.',        'common', 'crit',  0.3, true),
-    item('Neutrino',            'ν',   'Nearly massless lepton crossing matter undisturbed.',     'common', 'time',  1.5),
+    item('Neutrino',            'ν',   'Nearly massless lepton crossing matter undisturbed.',     'common', 'time',  5.0),
     item('Gluon',               'g',   'Color-force carrier binding quarks inside hadrons.',      'rare',   'auto',  2.0),
     item('Strange Quark',       's',   'Second-generation quark carrying strangeness.',           'rare',   'click', 2.0),
     item('W Boson',             'W±',  'Weak-force carrier enabling quark flavor changes.',       'rare',   'crit',  0.5, true),
-    item('CP Violation Pocket', 'CP̸', 'Tiny asymmetry that lets matter outlast antimatter.',    'rare',   'time',  2.0),
+    item('CP Violation Pocket', 'CP̸', 'Tiny asymmetry that lets matter outlast antimatter.',    'rare',   'time',  8.0),
   ]),
 
   // ── Stage 3: Quark-Gluon Plasma (4C + 4R + 4E) ─────────────────────────────

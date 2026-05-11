@@ -124,7 +124,7 @@ export function getCosmicTimeFillRate(
   // but can't multiply the rate by hundreds. boostMultiplier (shop) bypasses dampening.
   const stageCap = 100 / (Math.pow(stageNumber, 2) * 600);
   const base = Math.min(stageCap, Math.pow(10, aeonLevel) * mods.apexMult);
-  const timeBoost = 1 + Math.log(Math.max(1, mods.timeMultMult));
+  const timeBoost = Math.min(12, mods.timeMultMult);
   return base * timeBoost * boostMultiplier;
 }
 
