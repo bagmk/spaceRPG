@@ -87,7 +87,19 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
   if (!current) return null;
 
   return (
-    <div className={`stage-log-toast ${visible ? 'visible' : 'hiding'}`} aria-live="polite">
+    <div
+      className={`stage-log-toast ${visible ? 'visible' : 'hiding'}`}
+      aria-live="polite"
+      onClick={handleDismiss}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleDismiss();
+        }
+      }}
+    >
       <div className="stage-log-content">
         <div className="stage-log-line">
           <div className="stage-log-title">{current.title}</div>
@@ -98,7 +110,10 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
             type="button"
             className="stage-log-dismiss"
             aria-label="Dismiss message"
-            onClick={handleDismiss}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleDismiss();
+            }}
           >
             ×
           </button>

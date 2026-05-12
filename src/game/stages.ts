@@ -19,11 +19,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Expansion Pulse',
     autoUpgradeName: 'Vacuum Surge',
     quote:
-      'Space outruns its own horizon. In less than an instant, the possible becomes unimaginably large.',
-    quoteAttr: 'Original cosmic prose',
+      'The universe is the ultimate free lunch.',
+    quoteAttr: 'Alan Guth',
     quoteKo:
-      '공간은 스스로의 지평선보다 빠르게 달린다. 찰나보다 짧은 사이, 가능성은 상상할 수 없을 만큼 커진다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '우주는 궁극의 공짜 점심이다.',
+    quoteAttrKo: '앨런 거스',
   },
   {
     id: 2,
@@ -41,11 +41,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Charge Bias',
     autoUpgradeName: 'Survivor Cascade',
     quote:
-      'Matter does not win by much. One survivor in a billion is enough to build every future star and hand.',
-    quoteAttr: 'Original cosmic prose',
+      'The cosmos is all that is or ever was or ever will be.',
+    quoteAttr: 'Carl Sagan, Cosmos (1980)',
     quoteKo:
-      '물질의 승리는 아주 근소하다. 십억 개 중 하나의 생존자만으로도 미래의 모든 별과 손이 만들어진다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '코스모스는 지금 있는 모든 것이며, 과거에 있었던 모든 것이며, 앞으로 있을 모든 것이다.',
+    quoteAttrKo: '칼 세이건, 《코스모스》 (1980)',
   },
   {
     id: 3,
@@ -63,11 +63,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Gluon Bond',
     autoUpgradeName: 'Plasma Pump',
     quote:
-      'The young universe is still too hot for permanence. Matter exists as a storm before it learns to settle.',
-    quoteAttr: 'Original cosmic prose',
+      'Nature uses only the longest threads to weave her patterns, so each small piece of her fabric reveals the organization of the entire tapestry.',
+    quoteAttr: 'Richard Feynman, The Character of Physical Law (1965)',
     quoteKo:
-      '어린 우주는 아직 영속을 허락하기엔 너무 뜨겁다. 물질은 가라앉는 법을 배우기 전 폭풍으로 존재한다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '자연은 오직 가장 긴 실만으로 그 패턴을 짜므로, 천의 아주 작은 조각 하나하나가 전체 구조를 드러낸다.',
+    quoteAttrKo: '리처드 파인만, 《물리 법칙의 특성》 (1965)',
   },
   {
     id: 4,
@@ -85,11 +85,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Fusion Pulse',
     autoUpgradeName: 'Helium Forge',
     quote:
-      'The furnace cools just enough for the first simple nuclei to hold. A narrow window decides the chemical future.',
-    quoteAttr: 'Original cosmic prose',
+      'Hydrogen is a light, odorless gas which, given enough time, turns into people.',
+    quoteAttr: 'Fred Hoyle',
     quoteKo:
-      '화로가 겨우 식자 최초의 단순한 원자핵이 버틴다. 좁은 창 하나가 화학적 미래를 결정한다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '수소는 가볍고 무색무취의 기체인데, 충분한 시간이 주어지면 사람이 된다.',
+    quoteAttrKo: '프레드 호일',
   },
   {
     id: 5,
@@ -107,11 +107,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Electron Capture',
     autoUpgradeName: 'Photon Release',
     quote:
-      'The fog thins. Electrons find their homes, and light finally moves freely through a transparent cosmos.',
-    quoteAttr: 'Original cosmic prose',
+      'The more the universe seems comprehensible, the more it also seems pointless.',
+    quoteAttr: 'Steven Weinberg, The First Three Minutes (1977)',
     quoteKo:
-      '안개가 엷어진다. 전자는 제 집을 찾고, 빛은 마침내 투명해진 우주를 자유롭게 지난다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '우주가 이해 가능해 보일수록, 더욱 무의미해 보인다.',
+    quoteAttrKo: '스티븐 와인버그, 《최초의 3분》 (1977)',
   },
   {
     id: 6,
@@ -129,11 +129,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Cold Drift',
     autoUpgradeName: 'Silent Accretion',
     quote:
-      'No stars yet, no sunrise anywhere. Only neutral hydrogen drifting through a darkness that seems endless.',
-    quoteAttr: 'Original cosmic prose',
+      'We have peered into a new world and have seen that it is more mysterious and more complex than we had imagined.',
+    quoteAttr: 'Vera Rubin',
     quoteKo:
-      '아직 별도, 어디에도 해돋이도 없다. 끝없어 보이는 어둠 속을 중성 수소만이 떠돈다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '우리는 새로운 세계를 들여다보았으며, 그것이 상상했던 것보다 훨씬 신비롭고 복잡하다는 것을 알았다.',
+    quoteAttrKo: '베라 루빈',
     silenceBeforeMs: 5000,
   },
   {
@@ -152,11 +152,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Protostar Spark',
     autoUpgradeName: 'Population Igniter',
     quote:
-      'The first stars arrive in blinding blue-white bursts. They live fast, die young, and rewrite the dark.',
-    quoteAttr: 'Original cosmic prose',
+      'The nitrogen in our DNA, the calcium in our teeth, the iron in our blood were made in the interiors of collapsing stars. We are made of star-stuff.',
+    quoteAttr: 'Carl Sagan, Cosmos (1980)',
     quoteKo:
-      '최초의 별들이 눈부신 청백색 폭발처럼 도착한다. 그들은 빨리 살고 젊게 죽으며 어둠을 다시 쓴다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '우리 DNA의 질소, 이빨의 칼슘, 피의 철분은 붕괴하는 별의 내부에서 만들어졌다. 우리는 별의 재료다.',
+    quoteAttrKo: '칼 세이건, 《코스모스》 (1980)',
   },
   {
     id: 8,
@@ -174,11 +174,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Ionizing Front',
     autoUpgradeName: 'Luminous Sweep',
     quote:
-      'Starlight pushes back the neutral haze. The universe becomes legible one ionized frontier at a time.',
-    quoteAttr: 'Original cosmic prose',
+      'With increasing distance, our knowledge fades. Eventually, we reach the dim boundary — the utmost limits of our telescopes.',
+    quoteAttr: 'Edwin Hubble, The Realm of the Nebulae (1936)',
     quoteKo:
-      '별빛이 중성의 안개를 밀어낸다. 우주는 이온화된 전선 하나씩 읽을 수 있는 곳이 된다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '거리가 멀어질수록 우리의 지식은 사라진다. 결국 우리는 망원경의 최외곽 한계, 어스름한 경계에 다다른다.',
+    quoteAttrKo: '에드윈 허블, 《성운의 왕국》 (1936)',
   },
   {
     id: 9,
@@ -196,11 +196,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Quasar Beam',
     autoUpgradeName: 'Web Spinner',
     quote:
-      'Gravity gathers light into structure. Filaments, knots, and spirals reveal the hidden architecture of space.',
-    quoteAttr: 'Original cosmic prose',
+      'If you\'re religious, it\'s like looking at God.',
+    quoteAttr: 'George Smoot, on the COBE CMB data (1992)',
     quoteKo:
-      '중력이 빛을 구조로 모은다. 필라멘트와 매듭, 나선은 공간의 숨은 건축을 드러낸다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '종교적인 사람이라면, 이것은 신을 보는 것과 같다.',
+    quoteAttrKo: '조지 스무트, COBE 우주배경복사 관측 결과에 대해 (1992)',
   },
   {
     id: 10,
@@ -218,11 +218,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Planetesimal Pull',
     autoUpgradeName: 'Accretion Disk',
     quote:
-      'Around an ordinary star, dust keeps its appointments. Stone, metal, and ice negotiate the shapes of worlds.',
-    quoteAttr: 'Original cosmic prose',
+      'Look again at that dot. That\'s here. That\'s home. That\'s us.',
+    quoteAttr: 'Carl Sagan, Pale Blue Dot (1994)',
     quoteKo:
-      '평범한 별 주위에서 먼지는 제 약속을 지킨다. 돌과 금속, 얼음이 세계의 형태를 협상한다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '저 점을 다시 보라. 저기가 여기다. 저기가 집이다. 저기가 우리다.',
+    quoteAttrKo: '칼 세이건, 《창백한 푸른 점》 (1994)',
   },
   {
     id: 11,
@@ -240,11 +240,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Living Spark',
     autoUpgradeName: 'Evolutionary Pressure',
     quote:
-      'On one small rock, chemistry learns to remember itself. Almost everything you call history waits inside the final flicker.',
-    quoteAttr: 'Original cosmic prose',
+      'There is grandeur in this view of life... from so simple a beginning endless forms most beautiful and most wonderful have been, and are being, evolved.',
+    quoteAttr: 'Charles Darwin, On the Origin of Species (1859)',
     quoteKo:
-      '작은 바위 하나 위에서 화학은 스스로를 기억하는 법을 배운다. 당신이 역사라 부르는 거의 모든 것이 마지막 깜빡임 안에서 기다린다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '이 생명의 관점에는 위엄이 있다... 이처럼 단순한 시작으로부터 가장 아름답고 경이로운 무한한 형태들이 진화해 왔으며, 지금도 진화하고 있다.',
+    quoteAttrKo: '찰스 다윈, 《종의 기원》 (1859)',
   },
   {
     id: 12,
@@ -262,11 +262,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Last Light',
     autoUpgradeName: 'Red Giant Wind',
     quote:
-      'The star swells without ceremony. What it consumes is precious only to those who once lived there.',
-    quoteAttr: 'Original cosmic prose',
+      'Things fall apart; the centre cannot hold.',
+    quoteAttr: 'W.B. Yeats, The Second Coming (1919)',
     quoteKo:
-      '별은 아무 의식도 없이 부풀어 오른다. 그것이 삼키는 것들은 한때 그곳에 살던 이들에게만 소중하다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '모든 것이 흩어진다; 중심은 버틸 수 없다.',
+    quoteAttrKo: 'W.B. 예이츠, 《재림》 (1919)',
   },
   {
     id: 13,
@@ -284,11 +284,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'White Dwarf Cooler',
     autoUpgradeName: 'Iron Star Compression',
     quote:
-      'The era of ordinary starlight ends. The universe keeps going, but the age of lamps is over.',
-    quoteAttr: 'Original cosmic prose',
+      'No matter how far we go into the future, there will always be new things happening, new information coming in, new worlds to explore.',
+    quoteAttr: 'Freeman Dyson, Infinite in All Directions (1988)',
     quoteKo:
-      '평범한 별빛의 시대가 끝난다. 우주는 계속되지만, 등불의 시대는 지나갔다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '미래가 아무리 멀어도, 항상 새로운 일이 일어나고, 새로운 정보가 오고, 탐험할 새로운 세계가 있을 것이다.',
+    quoteAttrKo: '프리먼 다이슨, 《모든 방향으로의 무한》 (1988)',
   },
   {
     id: 14,
@@ -306,11 +306,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Decay Catalyst',
     autoUpgradeName: 'Quantum Tunneling Loop',
     quote:
-      'Even the most stubborn matter has an ending. Given enough time, solidity becomes a rumor.',
-    quoteAttr: 'Original cosmic prose',
+      'Science cannot solve the ultimate mystery of nature. And that is because, in the last analysis, we ourselves are a part of the mystery that we are trying to solve.',
+    quoteAttr: 'Max Planck, Where Is Science Going? (1932)',
     quoteKo:
-      '가장 완고한 물질에도 끝은 있다. 충분한 시간이 주어지면 단단함은 소문이 된다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '과학은 자연의 궁극적인 신비를 풀 수 없다. 결국 우리 자신이 우리가 풀려는 신비의 일부이기 때문이다.',
+    quoteAttrKo: '막스 플랑크, 《과학은 어디로 가는가?》 (1932)',
   },
   {
     id: 15,
@@ -328,11 +328,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Hawking Radiator',
     autoUpgradeName: 'Event Horizon Drain',
     quote:
-      'Black holes inherit the silence. They rule an empty kingdom with a patience measured in impossible years.',
-    quoteAttr: 'Original cosmic prose',
+      'Not only does God play dice, but he sometimes throws them where they cannot be seen.',
+    quoteAttr: 'Stephen Hawking',
     quoteKo:
-      '블랙홀들이 침묵을 물려받는다. 그들은 불가능한 세월로 재는 인내로 빈 왕국을 다스린다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '신은 주사위를 던질 뿐 아니라, 때로는 볼 수 없는 곳으로 던진다.',
+    quoteAttrKo: '스티븐 호킹',
   },
   {
     id: 16,
@@ -350,11 +350,11 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     clickUpgradeName: 'Vacuum Flicker',
     autoUpgradeName: 'Final Divergence',
     quote:
-      'Everything approaches equilibrium. And still, at the far edge of silence, one last possibility trembles.',
-    quoteAttr: 'Original cosmic prose',
+      'This is the way the world ends / Not with a bang but a whimper.',
+    quoteAttr: 'T.S. Eliot, The Hollow Men (1925)',
     quoteKo:
-      '모든 것이 평형으로 다가간다. 그래도 침묵의 가장 먼 끝에서 마지막 가능성 하나가 떨린다.',
-    quoteAttrKo: '오리지널 우주 산문',
+      '세상은 이렇게 끝난다 / 쾅 소리가 아니라 흐느낌으로.',
+    quoteAttrKo: 'T.S. 엘리엇, 《텅 빈 사람들》 (1925)',
     silenceBeforeMs: 7000,
   },
 ];

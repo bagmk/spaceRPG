@@ -10,8 +10,6 @@ import { EntityGlyph } from './EntityGlyph';
 import { t, stageName, type Lang } from '../i18n';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
-type RarityFilter = EntityRarity | 'all';
-const RARITY_FILTERS: RarityFilter[] = ['all', ...RARITY_ORDER];
 const RARITY_RANK = new Map<EntityRarity, number>(RARITY_ORDER.map((rarity, index) => [rarity, index]));
 
 const RARITY_COLORS: Record<EntityRarity, string> = {
@@ -24,17 +22,6 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
 function formatPct(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
-}
-
-function rarityLabel(filter: RarityFilter, lang: Lang): string {
-  if (filter === 'all') return lang === 'ko' ? '전체' : 'All';
-  const labels: Record<EntityRarity, { en: string; ko: string }> = {
-    common: { en: 'Common', ko: '일반' },
-    rare: { en: 'Rare', ko: '희귀' },
-    epic: { en: 'Epic', ko: '에픽' },
-    legendary: { en: 'Legendary', ko: '전설' },
-  };
-  return labels[filter][lang];
 }
 
 /** Returns the per-level effect label for an entity (e.g. "+1,210 Click Power" or "+0.5% Crit Chance"). */
@@ -91,7 +78,6 @@ interface Props {
 export function EntityPanel({ currentStageId, purchasedEntities, quanta, language, onPurchase, onClose, onStageSelect }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
-  const [selectedRarity, setSelectedRarity] = useState<RarityFilter>('all');
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const accessibleStages = useMemo(
@@ -111,21 +97,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
       }),
     [selectedStageId],
   );
-  const entities = useMemo(
-    () => selectedRarity === 'all'
-      ? stageEntities
-      : stageEntities.filter((entity) => entity.rarity === selectedRarity),
-    [selectedRarity, stageEntities],
-  );
-  const rarityCounts = useMemo(
-    () => RARITY_FILTERS.reduce<Record<RarityFilter, number>>((acc, filter) => {
-      acc[filter] = filter === 'all'
-        ? stageEntities.length
-        : stageEntities.filter((entity) => entity.rarity === filter).length;
-      return acc;
-    }, { all: 0, common: 0, rare: 0, epic: 0, legendary: 0 }),
-    [stageEntities],
-  );
+  const entities = stageEntities;
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(purchasedEntities, entity);
   const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
@@ -138,26 +110,21 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
 
   useEffect(() => {
     setInspectedEntityId(null);
-    setSelectedRarity('all');
   }, [selectedStageId]);
 
   return (
     <div className="entity-overlay" onClick={onClose}>
-      <aside className="entity-panel" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="entity-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div
           className="entity-panel__header"
           style={{ '--stage-accent': selectedStage?.accent ?? '#8090b0' } as CSSProperties}
         >
-          <div>
-            <div className="entity-panel__title">{t(language, 'entityLabTitle')}</div>
-            <div className="entity-panel__stage" style={{ color: selectedStage?.accent }}>
-              {selectedStage ? `${t(language, 'entityLabStageLabel')} ${selectedStage.id} · ${stageName(language, selectedStage.id, selectedStage.name)}` : ''}
-            </div>
-          </div>
-          <div className="entity-panel__wallet">
-            <span>{t(language, 'hudQuanta')}</span>
-            <strong>{formatGameNumber(quanta)}</strong>
+          <div className="entity-panel__stage" style={{ color: selectedStage?.accent }}>
+            {selectedStage ? `${String(selectedStage.id).padStart(2, '0')} · ${stageName(language, selectedStage.id, selectedStage.name)}` : ''}
           </div>
           <button className="entity-panel__close" onClick={onClose}>✕</button>
         </div>
@@ -204,27 +171,6 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
               );
             })}
           </div>
-        </div>
-
-        <div className="entity-rarity-tabs" role="tablist" aria-label="Entity rarity filters">
-          {RARITY_FILTERS.map((filter) => {
-            const isSelected = filter === selectedRarity;
-            const color = filter === 'all' ? selectedStage?.accent ?? '#8090b0' : RARITY_COLORS[filter];
-            return (
-              <button
-                key={filter}
-                type="button"
-                role="tab"
-                className={`entity-rarity-tab${isSelected ? ' entity-rarity-tab--active' : ''}`}
-                style={{ '--rarity-color': color } as CSSProperties}
-                aria-selected={isSelected}
-                onClick={() => setSelectedRarity(filter)}
-              >
-                <span>{rarityLabel(filter, language)}</span>
-                <strong>{rarityCounts[filter]}</strong>
-              </button>
-            );
-          })}
         </div>
 
         {/* Cleared stage banner */}

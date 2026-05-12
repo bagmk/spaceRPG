@@ -16,7 +16,7 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
   const finalStage = STAGES[STAGES.length - 1];
   const finalQuote = language === 'ko' ? finalStage.quoteKo ?? finalStage.quote : finalStage.quote;
   const finalQuoteAttr = language === 'ko'
-    ? finalStage.quoteAttrKo ?? t(language, 'quoteAttrOriginal')
+    ? finalStage.quoteAttrKo ?? finalStage.quoteAttr
     : finalStage.quoteAttr;
   const universeBoost = getUniverseBoost(state.entropy);
   const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
@@ -32,45 +32,80 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
   return (
     <section className="final-screen">
       <div className="final-card">
-        <div className="q-stage">{`${t(language, 'finalUniverse')} #${state.universeCount}`}</div>
-        <h1>"{finalQuote}"</h1>
-        <p className="final-attr">{finalQuoteAttr}</p>
+
+        {/* Header */}
+        <div className="final-header">
+          <div className="final-universe-tag">
+            {t(language, 'finalUniverse')} <span className="final-universe-num">#{state.universeCount}</span>
+          </div>
+          <div className="final-atlas-name">{state.currentUniverseSeed.atlasName}</div>
+        </div>
+
+        {/* Quote */}
+        <div className="final-quote-block">
+          <blockquote className="final-quote-text">"{finalQuote}"</blockquote>
+          <cite className="final-quote-attr">— {finalQuoteAttr}</cite>
+        </div>
+
+        {/* Stats */}
         <div className="final-stats">
-          <div>
+          <div className="final-stat-cell">
             <strong>{formatWhole(state.entropy)}</strong>
             <span>{t(language, 'finalTotalEntropy')}</span>
           </div>
-          <div>
+          <div className="final-stat-cell">
             <strong>{formatWhole(state.totalClicks)}</strong>
             <span>{t(language, 'finalTotalClicks')}</span>
           </div>
-          <div>
+          <div className="final-stat-cell">
             <strong>{formatWhole(state.collisions)}</strong>
             <span>{t(language, 'finalEncounters')}</span>
           </div>
-          <div>
+          <div className="final-stat-cell">
             <strong>{formatDuration(state.totalTimePlayed)}</strong>
             <span>{t(language, 'finalTimeElapsed')}</span>
           </div>
         </div>
-        <div className="final-summary">{`${t(language, 'finalUniverse')} #${state.universeCount} ${t(language, 'finalCompleted')}`}</div>
-        <div className="final-boost">{`${t(language, 'finalAtlasName')}: ${state.currentUniverseSeed.atlasName}`}</div>
-        <div className="final-boost">{`${t(language, 'finalPrestigeReward')}: +${formatWhole(universeBoost)} ${t(language, 'finalUniverseBoost')}`}</div>
-        <div className="final-boost">{`${t(language, 'finalCompletionReward')}: +${formatWhole(condensedMassReward)} ${t(language, 'finalCondensedMass')}`}</div>
-        {echoReward > 0 ? (
-          <div className="final-boost">{`${t(language, 'finalNewEndingReward')}: +${formatWhole(echoReward)} ${t(language, 'finalEchoes')}`}</div>
-        ) : null}
+
+        {/* Rewards */}
+        <div className="final-rewards">
+          <div className="final-reward-row">
+            <span className="final-reward-icon">◈</span>
+            <span className="final-reward-label">{t(language, 'finalPrestigeReward')}</span>
+            <span className="final-reward-value">{`+${formatWhole(universeBoost)} ${t(language, 'finalUniverseBoost')}`}</span>
+          </div>
+          <div className="final-reward-row">
+            <span className="final-reward-icon">✦</span>
+            <span className="final-reward-label">{t(language, 'finalCompletionReward')}</span>
+            <span className="final-reward-value">{`+${formatWhole(condensedMassReward)} ${t(language, 'finalCondensedMass')}`}</span>
+          </div>
+          {echoReward > 0 ? (
+            <div className="final-reward-row final-reward-row--new">
+              <span className="final-reward-icon">★</span>
+              <span className="final-reward-label">{t(language, 'finalNewEndingReward')}</span>
+              <span className="final-reward-value">{`+${formatWhole(echoReward)} ${t(language, 'finalEchoes')}`}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Singularity Tree */}
         <SingularityTree
           condensedMass={state.condensedMass}
           unlocks={state.singularityUnlocks}
           onUnlock={onUnlock}
+          language={language}
         />
-        <button className="q-continue final-button" type="button" onClick={onPrestige}>
-          {t(language, 'finalNextBigBang')}
-        </button>
-        <button className="mini-button atlas-back" type="button" onClick={onOpenAtlas}>
-          {t(language, 'finalOpenAtlas')}
-        </button>
+
+        {/* Actions */}
+        <div className="final-actions">
+          <button className="final-action-primary" type="button" onClick={onPrestige}>
+            {t(language, 'finalNextBigBang')}
+          </button>
+          <button className="final-action-secondary" type="button" onClick={onOpenAtlas}>
+            {t(language, 'finalOpenAtlas')}
+          </button>
+        </div>
+
       </div>
     </section>
   );

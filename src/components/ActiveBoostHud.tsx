@@ -31,12 +31,11 @@ export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[]; 
 
     return (
       <div ref={ref} className="active-boost-hud">
-        <div className="scale-title">{t(language, 'shopActiveBoosts')}</div>
         {timeCount > 0 ? (
-          <div>{`${t(language, 'hudTime')} x${formatWhole(timeMult)} (${formatRemaining(active, 'time_', now, language)})`}</div>
+          <div className="active-boost-line">{`${t(language, 'hudTime')} x${formatWhole(timeMult)} (${formatRemaining(active, 'time_', now, language)})`}</div>
         ) : null}
         {quantaCount > 0 ? (
-          <div>{`${t(language, 'hudQuanta')} x${formatWhole(quantaMult)} (${formatRemaining(active, 'quanta_', now, language)})`}</div>
+          <div className="active-boost-line">{`${t(language, 'hudQuanta')} x${formatWhole(quantaMult)} (${formatRemaining(active, 'quanta_', now, language)})`}</div>
         ) : null}
       </div>
     );

@@ -39,7 +39,7 @@ export function FloatingNumber({
   return (
     <div
       className={`float-text ${variant}`}
-      style={{ left: `${x}px`, top: `${y}px`, animationDelay: `${delayMs}ms` }}
+      style={{ left: `${x}px`, top: `${y - 72}px`, animationDelay: `${delayMs}ms` }}
       aria-hidden="true"
     >
       <canvas ref={canvasRef} width={16} height={16} className="float-glyph" />

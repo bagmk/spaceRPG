@@ -1,36 +1,52 @@
 import type { EndingId, EndingOption, GameState, Stage, UniverseSeed, AnomalyType } from './types';
+import type { Lang } from '../i18n';
 import { findEntityById } from './entities/stageItems';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
 
-const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, string> = {
-  big_crunch: 'Crit > 1/sec across stages 13-16.',
-  big_rip: 'Own 12 Cosmic Time or all-source entities.',
-  vacuum_decay: 'Condense near 25%, 50%, 75%, or 100% in the proton decay era.',
-  bounce: 'Universe count >= 5, with Heat Death, Big Crunch, Big Rip, and Vacuum Decay completed.',
-};
+interface BilingualHint { en: string; ko: string; }
+interface BilingualCopy { label: BilingualHint; description: BilingualHint; }
 
-const ENDING_COPY: Record<EndingId, Pick<EndingOption, 'label' | 'description'>> = {
-  heat_death: {
-    label: 'Heat Death',
-    description: 'The clock continues into equilibrium.',
-  },
+const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, BilingualHint> = {
   big_crunch: {
-    label: 'Big Crunch',
-    description: 'Expansion reverses and all structure falls inward.',
+    en: 'Crit > 1/sec across stages 13–16.',
+    ko: '13~16단계에서 초당 치명타 > 1회.',
   },
   big_rip: {
-    label: 'Big Rip',
-    description: 'Acceleration tears apart every bound scale.',
+    en: 'Own 12 Cosmic Time or all-source entities.',
+    ko: '우주 시간 또는 만능 엔티티를 12개 이상 보유.',
   },
   vacuum_decay: {
-    label: 'Vacuum Decay',
-    description: 'A truer vacuum expands through everything that was.',
+    en: 'Condense near 25%, 50%, 75%, or 100% in the proton decay era.',
+    ko: '양성자 붕괴 시대에 25%, 50%, 75%, 100% 근처에서 응축.',
   },
   bounce: {
-    label: 'Bounce',
-    description: 'The cosmos folds inward and begins again with memory intact.',
+    en: 'Universe count ≥ 5, with Heat Death, Big Crunch, Big Rip, and Vacuum Decay completed.',
+    ko: '우주 횟수 ≥ 5, 열적 죽음·빅 크런치·빅 립·진공 붕괴 엔딩 완료.',
+  },
+};
+
+const ENDING_COPY: Record<EndingId, BilingualCopy> = {
+  heat_death: {
+    label:       { en: 'Heat Death',    ko: '열적 죽음' },
+    description: { en: 'The clock continues into equilibrium.',              ko: '시계는 평형 속으로 계속 흐른다.' },
+  },
+  big_crunch: {
+    label:       { en: 'Big Crunch',    ko: '빅 크런치' },
+    description: { en: 'Expansion reverses and all structure falls inward.', ko: '팽창이 역전되고 모든 구조가 안으로 붕괴한다.' },
+  },
+  big_rip: {
+    label:       { en: 'Big Rip',       ko: '빅 립' },
+    description: { en: 'Acceleration tears apart every bound scale.',        ko: '가속이 모든 묶인 규모를 찢어낸다.' },
+  },
+  vacuum_decay: {
+    label:       { en: 'Vacuum Decay',  ko: '진공 붕괴' },
+    description: { en: 'A truer vacuum expands through everything that was.', ko: '더 참된 진공이 존재했던 모든 것을 관통해 팽창한다.' },
+  },
+  bounce: {
+    label:       { en: 'Bounce',        ko: '반동' },
+    description: { en: 'The cosmos folds inward and begins again with memory intact.', ko: '우주가 안으로 접히고, 기억을 간직한 채 다시 시작한다.' },
   },
 };
 
@@ -255,7 +271,7 @@ export function isBounceEligible(
   return state.universeCount >= 5 && BASE_ENDINGS.every((endingId) => state.endingsCompleted.includes(endingId));
 }
 
-export function getEndingOptions(state: GameState, now: number): EndingOption[] {
+export function getEndingOptions(state: GameState, now: number, lang: Lang = 'en'): EndingOption[] {
   const everythingUnlocked =
     state.endingsCompleted.includes('bounce') || state.endingsUnlocked.includes('bounce');
   const bigCrunchUnlocked = everythingUnlocked || isBigCrunchEligible(state, now);
@@ -275,18 +291,19 @@ export function getEndingOptions(state: GameState, now: number): EndingOption[] 
     bounce: bounceUnlocked,
   };
 
+  const alwaysAvailable = lang === 'ko' ? '항상 선택 가능' : 'Always available';
   const requirementMap: Record<EndingId, string> = {
-    heat_death: 'Always available',
-    big_crunch: ENDING_HINTS.big_crunch,
-    big_rip: ENDING_HINTS.big_rip,
-    vacuum_decay: ENDING_HINTS.vacuum_decay,
-    bounce: ENDING_HINTS.bounce,
+    heat_death: alwaysAvailable,
+    big_crunch: ENDING_HINTS.big_crunch[lang],
+    big_rip: ENDING_HINTS.big_rip[lang],
+    vacuum_decay: ENDING_HINTS.vacuum_decay[lang],
+    bounce: ENDING_HINTS.bounce[lang],
   };
 
   return ALL_ENDINGS.map((endingId) => ({
     id: endingId,
-    label: ENDING_COPY[endingId].label,
-    description: ENDING_COPY[endingId].description,
+    label: ENDING_COPY[endingId].label[lang],
+    description: ENDING_COPY[endingId].description[lang],
     unlocked: unlockedMap[endingId],
     requirement: requirementMap[endingId],
   }));

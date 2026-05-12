@@ -236,7 +236,7 @@ export function GameScreen({
       : cosmicClockFromGauge;
   const canShowShop = state.universeCount > 1 || stage.id >= 6;
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > Date.now());
-  const hasShopNotification = canShowShop && (!state.tutorialFlags['shop-first-used'] || hasActiveBoost);
+  const hasShopNotification = canShowShop && !state.tutorialFlags['shop-first-used'];
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
   const displayStageNumber = String(displayStage.id).padStart(2, '0');
   const openEntityPanel = () => {
@@ -253,7 +253,6 @@ export function GameScreen({
     return sum + getPurchasedEntityCount(state.purchasedEntities, entity);
   }, 0);
   const showCondenseGate = isViewingPastStage || canCondense;
-  const entropyPipCount = Math.min(8, Math.max(0, Math.ceil(Math.log10(state.entropy + 1) * 1.4)));
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
     if (entityPanelOpen || state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
       return null;
@@ -617,41 +616,35 @@ export function GameScreen({
           </div>
         ) : null}
         <div className="hud-info" ref={resourceAnchorRef}>
-          <button
-            type="button"
-            ref={infoAnchorRef}
-            className="hud-info-click-zone"
-            onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
-            title={t(language, 'hudViewInfo')}
-          >
+          <div className="hud-info-click-zone">
             <div className="hud-topline">
-              <div className="hud-stage-chip" aria-hidden="true">{displayStageNumber}</div>
+              <button
+                type="button"
+                ref={infoAnchorRef}
+                className="hud-stage-chip"
+                onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
+                title={t(language, 'hudViewInfo')}
+                aria-label={t(language, 'hudViewInfo')}
+              >
+                {displayStageNumber}
+              </button>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
-                  <span className="hud-stage-kicker">{`${t(language, 'hudStage')} ${displayStageNumber}`}</span>
-                  <span className="hud-title-separator" aria-hidden="true">·</span>
                   <span className="hud-stage-title">{displayStageLabel}</span>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
                   <span className="hud-entropy-readout">
                     <span>{t(language, 'hudEntropy')}</span>
                     <strong>{formatWhole(state.entropy)}</strong>
                     <span className="hud-entropy-unit">kB</span>
-                    <span className="hud-entropy-pips" aria-hidden="true">
-                      {Array.from({ length: 8 }, (_, index) => (
-                        <span key={index} className={index < entropyPipCount ? 'filled' : ''} />
-                      ))}
-                    </span>
                   </span>
                 </div>
               </div>
-              <span className="hud-info-button" aria-hidden="true">i</span>
-              <ScaleIndicator stageId={displayStage.id} language={language} />
             </div>
             {!showCondenseGate ? (
               <div className="hud-progress-stack">
                 <div className="hud-meter">
                   <div className="hud-meter-row">
-                    <span>{`${t(language, 'hudQuanta')} ${t(language, 'hudProgress')}`}</span>
+                    <span>{t(language, 'hudQuanta')}</span>
                     <span>{`${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}</span>
                   </div>
                   <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
@@ -660,7 +653,7 @@ export function GameScreen({
                 </div>
                 <div className="hud-meter hud-meter--time">
                   <div className="hud-meter-row">
-                    <span>{`${t(language, 'hudTime')} ${t(language, 'hudProgress')}`}</span>
+                    <span>{t(language, 'hudTime')}</span>
                     <span className="hud-cosmic-time">
                       {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
                       <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
@@ -675,7 +668,7 @@ export function GameScreen({
                 </div>
               </div>
             ) : null}
-          </button>
+          </div>
           {showCondenseGate ? (
             <button
               type="button"
@@ -735,6 +728,7 @@ export function GameScreen({
         </div>
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
+        <ScaleIndicator stageId={displayStage.id} language={language} />
         <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} language={language} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
