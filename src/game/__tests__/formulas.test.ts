@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { STAGES } from '../stages';
 import {
   formatCosmicTime,
+  formatCosmicTimeProgressPair,
+  formatProgressNumberPair,
   formatWhole,
   getAutoRate,
   getClickPower,
@@ -46,6 +48,17 @@ describe('formatCosmicTime', () => {
 
   it('formats the V7 initial cosmic time without a one-second baseline', () => {
     expect(formatCosmicTime(1e-34)).toBe('1e-34s');
+  });
+});
+
+describe('compact HUD progress formatting', () => {
+  it('shares the target exponent for large matter progress', () => {
+    expect(formatProgressNumberPair(8.1e18, 8.5e18)).toBe('8.1/8.5 E18');
+  });
+
+  it('shares the target exponent and cosmic unit for large time progress', () => {
+    const tyr = 1e12 * 31_557_600;
+    expect(formatCosmicTimeProgressPair(4.25e14 * tyr, 7.3e14 * tyr)).toBe('4.25/7.3 E+14 TYR');
   });
 });
 

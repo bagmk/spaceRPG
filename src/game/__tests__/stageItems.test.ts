@@ -3,6 +3,7 @@ import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT } from '../balance';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
 const ENDING_IDS: EndingId[] = ['heat_death', 'big_rip', 'big_crunch', 'vacuum_decay', 'bounce'];
@@ -40,6 +41,14 @@ describe('stage entity definitions', () => {
     for (const entity of STAGE_ENTITIES) {
       expect(entity.maxCount).toBeGreaterThan(0);
     }
+  });
+
+  it('uses the tuned rarity caps and starting prices', () => {
+    expect(ENTITY_MAX_COUNT.rare).toBe(15);
+    expect(ENTITY_MAX_COUNT.epic).toBe(10);
+    expect(ENTITY_BASE_COST_FACTOR.rare).toBeCloseTo(0.32);
+    expect(ENTITY_BASE_COST_FACTOR.epic).toBeCloseTo(0.5);
+    expect(ENTITY_BASE_COST_FACTOR.legendary).toBeCloseTo(3.6);
   });
 
   it('gives stages 4-16 at least two legendary entities', () => {

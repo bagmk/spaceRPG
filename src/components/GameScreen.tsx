@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
-  formatCosmicTimeSigFigs,
-  formatGameNumber,
+  formatCosmicTimeProgressPair,
   formatGameNumberShort,
+  formatProgressNumberPair,
   formatWhole,
   canCondense as canCondenseNow,
   getAutoRate,
@@ -265,8 +265,27 @@ export function GameScreen({
   }, 0);
   const showCondenseGate = isViewingPastStage || canCondense;
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
-    if (entityPanelOpen || state.universeCount !== 1 || state.tutorialFlags.allDismissed) {
+    if (entityPanelOpen || state.universeCount !== 1) {
       return null;
+    }
+    if (stage.id === 1 && state.totalClicks === 0 && !state.tutorialFlags['matter-time-intro']) {
+      return {
+        flagId: 'matter-time-intro',
+        anchor: 'resource',
+        message: t(language, 'tutMatterTimeIntro'),
+        autoCloseMs: 9000,
+      };
+    }
+    if (state.tutorialFlags.allDismissed) {
+      return null;
+    }
+    if (stage.id >= 2 && !state.tutorialFlags['time-gauge-visible']) {
+      return {
+        flagId: 'time-gauge-visible',
+        anchor: 'resource',
+        message: t(language, 'tutTimeGauge'),
+        autoCloseMs: 7000,
+      };
     }
     if (hasAffordableEntity && !state.tutorialFlags['entity-lab-intro']) {
       return {
@@ -282,14 +301,6 @@ export function GameScreen({
         flagId: 'entity-lab-canvas',
         anchor: 'entity',
         message: t(language, 'tutEntityLabCanvas'),
-        autoCloseMs: 6000,
-      };
-    }
-    if (stage.id >= 5 && !state.tutorialFlags['time-gauge-visible']) {
-      return {
-        flagId: 'time-gauge-visible',
-        anchor: 'resource',
-        message: t(language, 'tutTimeGauge'),
         autoCloseMs: 6000,
       };
     }
@@ -329,6 +340,7 @@ export function GameScreen({
     ownedCurrentStageEntityCount,
     stage.id,
     state.shopBoosts,
+    state.totalClicks,
     state.tutorialFlags,
     state.universeCount,
   ]);
@@ -656,29 +668,28 @@ export function GameScreen({
               <div className="hud-progress-stack">
                 <div className="hud-meter">
                   <div className="hud-meter-row">
-                    <span>
-                      {t(language, 'hudQuanta')}
+                    <span className="hud-meter-label">
+                      <span className="hud-meter-label-text">{t(language, 'hudQuanta')}</span>
                       {autoRate > 0 && !isViewingPastStage ? (
                         <span className="hud-auto-rate">{`+${formatGameNumberShort(autoRate)}/s`}</span>
                       ) : null}
                     </span>
-                    <span>{`${formatGameNumberShort(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}</span>
+                    <span>{formatProgressNumberPair(displayQuanta, displayEffectiveThreshold)}</span>
                   </div>
-                  <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
+                  <div className="hud-gauge hud-quanta-gauge" aria-label="Matter progress">
                     <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
                   </div>
                 </div>
                 <div className="hud-meter hud-meter--time">
                   <div className="hud-meter-row">
-                    <span>
-                      {t(language, 'hudTime')}
+                    <span className="hud-meter-label">
+                      <span className="hud-meter-label-text">{t(language, 'hudTime')}</span>
                       {timeEstimateLabel && !isViewingPastStage ? (
-                        <span className="hud-time-estimate-inline">{` ${timeEstimateLabel}`}</span>
+                        <span className="hud-time-estimate-inline">{timeEstimateLabel}</span>
                       ) : null}
                     </span>
                     <span className="hud-cosmic-time">
-                      {formatCosmicTimeSigFigs(displayedCosmicClock, 3)}
-                      <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
+                      {formatCosmicTimeProgressPair(displayedCosmicClock, displayStage.cosmicTimeSec)}
                     </span>
                   </div>
                   <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
@@ -848,7 +859,6 @@ export function GameScreen({
           }
           onDismiss={() => {
             dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
-            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'allDismissed' });
           }}
         />
       ) : null}

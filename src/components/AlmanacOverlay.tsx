@@ -14,12 +14,21 @@ interface AlmanacOverlayProps {
 export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
   const pillsRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const infoRef = useRef<HTMLDivElement | null>(null);
+  const logRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const container = pillsRef.current;
     if (!container) return;
     const btn = container.querySelector<HTMLButtonElement>(`[data-stage-id="${selectedId}"]`);
     btn?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [selectedId]);
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    infoRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    logRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [selectedId]);
 
   const isPast = (id: number) => id < currentStageId;
@@ -69,8 +78,8 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
           })}
         </div>
 
-        <div className="almanac-content">
-          <div className="almanac-info">
+        <div className="almanac-content" ref={contentRef}>
+          <div className="almanac-info" ref={infoRef}>
             <div className={`almanac-stage-label ${isFuture(selectedId) ? 'muted' : ''}`}>
               {`${t(language, 'almanacStageOf')} ${selectedId} / 16`}
             </div>
@@ -105,7 +114,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
             )}
           </div>
 
-          <div className="almanac-log">
+          <div className="almanac-log" ref={logRef}>
             <div className="q-stage almanac-log-header">
               {isFuture(selectedId) ? t(language, 'almanacMilestonesLocked') : t(language, 'almanacMilestones')}
             </div>

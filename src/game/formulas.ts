@@ -49,6 +49,87 @@ export function formatGameNumberShort(value: number): string {
   return `${mantissa.toFixed(1)}e${exp}`;
 }
 
+function trimCompactNumber(value: string): string {
+  return value
+    .replace(/\.0+(?=($|E|e))/, '')
+    .replace(/(\.\d*?[1-9])0+(?=($|E|e))/, '$1')
+    .replace(/e\+/g, 'E+')
+    .replace(/e-/g, 'E-')
+    .replace(/e/g, 'E');
+}
+
+function formatCompactMantissa(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return '0';
+  const abs = Math.abs(value);
+  if (abs >= 0.0001) return trimCompactNumber(value.toFixed(4));
+  return trimCompactNumber(value.toExponential(1));
+}
+
+function formatSharedExponentPair(
+  current: number,
+  target: number,
+  suffix = '',
+  showPositiveExponentSign = false,
+): string {
+  if (!Number.isFinite(current) || !Number.isFinite(target) || target <= 0) return `0/0${suffix}`;
+  const basis = Math.max(Math.abs(current), Math.abs(target));
+  const exponent = Math.floor(Math.log10(basis));
+  const scale = Math.pow(10, exponent);
+  const exponentLabel = showPositiveExponentSign && exponent >= 0 ? `E+${exponent}` : `E${exponent}`;
+  const unitLabel = suffix ? ` ${suffix}` : '';
+  return `${formatCompactMantissa(current / scale)}/${formatCompactMantissa(target / scale)} ${exponentLabel}${unitLabel}`;
+}
+
+export function formatProgressNumberPair(current: number, target: number): string {
+  if (!Number.isFinite(current) || current < 0 || !Number.isFinite(target) || target <= 0) {
+    return '0/0';
+  }
+  if (target >= 1e15) {
+    return formatSharedExponentPair(current, target);
+  }
+  const scales = [
+    { value: 1e12, suffix: 'T' },
+    { value: 1e9, suffix: 'B' },
+    { value: 1e6, suffix: 'M' },
+    { value: 1e3, suffix: 'k' },
+  ];
+  const scale = scales.find((item) => target >= item.value);
+  if (scale) {
+    return `${formatCompactMantissa(current / scale.value)}/${formatCompactMantissa(target / scale.value)}${scale.suffix}`;
+  }
+  return `${Math.floor(current)}/${Math.floor(target)}`;
+}
+
+function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suffix: string; scientific?: boolean } {
+  if (targetSeconds < 1e-3) return { seconds: 1, suffix: 's', scientific: true };
+  if (targetSeconds < 1) return { seconds: 1e-3, suffix: 'ms' };
+  if (targetSeconds < 60) return { seconds: 1, suffix: 's' };
+  if (targetSeconds < 3600) return { seconds: 60, suffix: 'min' };
+  if (targetSeconds < 86_400) return { seconds: 3600, suffix: 'hr' };
+  if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 86_400, suffix: 'd' };
+
+  const targetYears = targetSeconds / SECONDS_PER_YEAR;
+  if (targetYears < 1e6) return { seconds: SECONDS_PER_YEAR, suffix: 'yr' };
+  if (targetYears < 1e9) return { seconds: SECONDS_PER_YEAR * 1e6, suffix: 'Myr' };
+  if (targetYears < 1e12) return { seconds: SECONDS_PER_YEAR * 1e9, suffix: 'Gyr' };
+  return { seconds: SECONDS_PER_YEAR * 1e12, suffix: 'Tyr' };
+}
+
+export function formatCosmicTimeProgressPair(currentSeconds: number, targetSeconds: number): string {
+  if (!Number.isFinite(currentSeconds) || currentSeconds <= 0 || !Number.isFinite(targetSeconds) || targetSeconds <= 0) {
+    return '0s';
+  }
+  const unit = getCosmicTimeDisplayUnit(targetSeconds);
+  const current = currentSeconds / unit.seconds;
+  const target = targetSeconds / unit.seconds;
+  const suffix = unit.suffix.toUpperCase();
+  const basis = Math.max(Math.abs(current), Math.abs(target));
+  if (unit.scientific || basis >= 1e4) {
+    return formatSharedExponentPair(current, target, suffix, true);
+  }
+  return `${formatCompactMantissa(current)}/${formatCompactMantissa(target)} ${suffix}`;
+}
+
 /**
  * Cosmic time with N significant figures, keeping the unit (yr/Myr/Gyr/Tyr).
  * Default: 6 sig figs. Use sigFigs=2 for the threshold display.

@@ -55,14 +55,12 @@ export const ENTITY_STAGE_ACCENT: Record<number, string> = {
   16: '#b0b5c7',
 };
 
-// Budget targets (total cost to max all items vs stage threshold):
-// S1 (4C): ~20×T  S2 (4C+4R): ~28×T  S3 (4C+4R+4E): ~36×T
-// S4-15 (4C+4R+4E+2L): ~38×T  S16 (4C+3R+2E+5L): ~36×T
+// Starting prices are anchored to each stage threshold, then tuned by rarity.
 export const ENTITY_BASE_COST_FACTOR: Record<EntityRarity, number> = {
   common: 0.07,
-  rare: 0.08,
-  epic: 0.25,
-  legendary: 1.2,
+  rare: 0.32,
+  epic: 0.5,
+  legendary: 3.6,
 };
 
 export const ENTITY_COST_SCALING: Record<EntityRarity, number> = {
@@ -74,8 +72,8 @@ export const ENTITY_COST_SCALING: Record<EntityRarity, number> = {
 
 export const ENTITY_MAX_COUNT: Record<EntityRarity, number> = {
   common: 20,
-  rare: 10,
-  epic: 5,
+  rare: 15,
+  epic: 10,
   legendary: 2,
 };
 
