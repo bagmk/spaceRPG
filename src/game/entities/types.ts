@@ -38,7 +38,7 @@ export type EntityGlyph =
 
 export type EntityEffectType =
   | 'auto'        // auto-rate flat economy gain
-  | 'click'       // click power flat economy gain
+  | 'click'       // click power percentage multiplier
   | 'crit'        // crit chance flat add
   | 'time'        // cosmic time multiplier
   | 'entropy'     // legacy; avoid for new Entity Lab data

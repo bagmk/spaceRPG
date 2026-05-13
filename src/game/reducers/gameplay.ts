@@ -129,7 +129,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
   const comboMult = getComboMult(combo, getComboCapBonus(state));
-  const critEnabled = stage.id > 2;
+  const critEnabled = stage.id > 2 || state.skills.crit.level > 0 || modifiers.critChanceAdd > 0;
   const isCrit =
     critEnabled &&
     (action.forceCrit === true ||
@@ -137,7 +137,8 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const critMult = isCrit ? getCritMultiplier(state.skills.crit.level, modifiers) : 1;
   const gainMultiplier = action.gainMultiplier ?? 1;
   const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
-  const gained = Math.floor(
+  const gained = Math.max(
+    1,
     (clickPower * comboMult * critMult * gainMultiplier + (action.gainFlat ?? 0)) * quantaBoost,
   );
   const eventId = nextEventId(state);

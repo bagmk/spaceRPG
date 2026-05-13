@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock } from '../formulas';
 import { createInitialGameState, gameReducer } from '../reducer';
+import { getEntityCost } from '../entities/types';
+import { getEntitiesForStage } from '../entities/stageItems';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 
@@ -150,17 +152,68 @@ describe('gameReducer', () => {
     expect(next.lastClickEvent?.particleName).toBeTruthy();
   });
 
-  it('suppresses critical hits during the first two stages', () => {
-    const skilled = {
-      ...createInitialGameState(0),
-      skills: {
-        ...createInitialGameState(0).skills,
-        crit: { level: 30 },
-        unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
-      },
-    };
+  it('applies purchased click entities to click gains immediately', () => {
+    const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'click');
+    expect(entity).toBeDefined();
+    if (!entity) return;
 
-    const stageOne = gameReducer(skilled, {
+    const funded = {
+      ...createInitialGameState(0),
+      quanta: getEntityCost(entity, 0) * 10,
+    };
+    const baseline = gameReducer(funded, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 1,
+      x: 100,
+      y: 100,
+    });
+    const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
+    const boosted = gameReducer(purchased, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 1,
+      x: 100,
+      y: 100,
+    });
+
+    expect(purchased.purchasedEntities).toEqual([{ entityId: entity.id, count: 1 }]);
+    expect(boosted.lastClickEvent?.gained).toBeGreaterThan(baseline.lastClickEvent?.gained ?? 0);
+  });
+
+  it('applies purchased crit entities to critical hit chance before the crit track unlocks', () => {
+    const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'crit');
+    expect(entity).toBeDefined();
+    if (!entity) return;
+
+    const funded = {
+      ...createInitialGameState(0),
+      quanta: getEntityCost(entity, 0) * 10,
+    };
+    const baseline = gameReducer(funded, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 0.004,
+      x: 100,
+      y: 100,
+    });
+    const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
+    const boosted = gameReducer(purchased, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 0.004,
+      x: 100,
+      y: 100,
+    });
+
+    expect(baseline.lastClickEvent?.isCrit).toBe(false);
+    expect(boosted.lastClickEvent?.isCrit).toBe(true);
+  });
+
+  it('suppresses forced critical hits during the first two stages without a crit source', () => {
+    const state = createInitialGameState(0);
+
+    const stageOne = gameReducer(state, {
       type: 'CLICK',
       now: 1000,
       randomValue: 0,
@@ -170,7 +223,7 @@ describe('gameReducer', () => {
     });
     expect(stageOne.lastClickEvent?.isCrit).toBe(false);
 
-    const stageTwo = gameReducer({ ...skilled, stageIdx: 1 }, {
+    const stageTwo = gameReducer({ ...state, stageIdx: 1 }, {
       type: 'CLICK',
       now: 1000,
       randomValue: 0,
@@ -180,7 +233,7 @@ describe('gameReducer', () => {
     });
     expect(stageTwo.lastClickEvent?.isCrit).toBe(false);
 
-    const stageThree = gameReducer({ ...skilled, stageIdx: 2 }, {
+    const stageThree = gameReducer({ ...state, stageIdx: 2 }, {
       type: 'CLICK',
       now: 1000,
       randomValue: 1,

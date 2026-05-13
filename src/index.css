@@ -7216,11 +7216,11 @@ button.stat-header-item {
 }
 
 .hud-meter {
-  min-height: 42px;
+  min-height: 36px;
   display: grid;
-  grid-template-columns: minmax(76px, 0.16fr) minmax(140px, 1fr) minmax(172px, auto);
+  grid-template-columns: minmax(148px, 0.28fr) minmax(120px, 1fr) minmax(140px, auto);
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 0 18px 0 20px;
   border: 1px solid rgba(255, 255, 255, 0.105);
   border-radius: 10px;
@@ -7247,6 +7247,8 @@ button.stat-header-item {
   font-size: 12px;
   letter-spacing: 0.08em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-meter-row > span:last-child {
@@ -7260,7 +7262,7 @@ button.stat-header-item {
 .hud-gauge {
   grid-column: 2;
   grid-row: 1;
-  height: 9px;
+  height: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.075);
   box-shadow:
@@ -7288,6 +7290,15 @@ button.stat-header-item {
 
 .hud-time-threshold {
   opacity: 0.48;
+}
+
+.hud-auto-rate {
+  margin-left: 5px;
+  color: #ff9f40;
+  font-size: 0.88em;
+  font-weight: 700;
+  font-family: var(--mono);
+  opacity: 0.9;
 }
 
 .hud-time-estimate,
@@ -7583,7 +7594,7 @@ button.stat-header-item {
 
 .stage-log-message {
   color: rgba(255, 226, 198, 0.82);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.45;
   text-wrap: balance;
   word-break: keep-all;
@@ -9147,6 +9158,36 @@ button.stat-header-item {
     text-align: center !important;
     justify-self: center !important;
     align-self: center !important;
+  }
+}
+
+/* Desktop HUD: reserve room for rate/time readouts, trimming only the bar column. */
+@media (min-width: 901px) {
+  .hud-meter,
+  .hud-meter.hud-meter--time {
+    grid-template-columns: 82px minmax(126px, 1fr) minmax(204px, auto) !important;
+    gap: 8px !important;
+  }
+
+  .hud-meter-row > span:first-child {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 4px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .hud-auto-rate,
+  .hud-time-estimate-inline {
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
+    font-size: 0.82em !important;
+  }
+
+  .hud-meter-row > span:last-child {
+    min-width: 204px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
   }
 }
 

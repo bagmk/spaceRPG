@@ -24,11 +24,11 @@ function formatPct(value: number): string {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
-/** Returns the per-level effect label for an entity (e.g. "+1,210 Click Power" or "+0.5% Crit Chance"). */
+/** Returns the per-level effect label for an entity (e.g. "+15% Click Power" or "+0.5% Crit Chance"). */
 function formatEntityEffect(entity: StageEntity, lang: Lang): string {
   const { type, value, isFlat } = entity.effect;
   if (type === 'click') {
-    return `+${formatGameNumber(entity.baseCost * value / 100)} ${t(lang, 'effectClickPower')}`;
+    return `+${formatPct(value)} ${t(lang, 'effectClickPower')}`;
   }
   if (type === 'auto') {
     return `+${formatGameNumber(entity.baseCost * value / 100)}${t(lang, 'effectAutoRateUnit')}`;
@@ -49,7 +49,7 @@ function formatEntityEffectTotal(entity: StageEntity, count: number, lang: Lang)
   if (count === 0) return '';
   const { type, value, isFlat } = entity.effect;
   if (type === 'click') {
-    return `+${formatGameNumber(entity.baseCost * value * count / 100)} ${t(lang, 'effectTotal')}`;
+    return `+${formatPct(value * count)} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'auto') {
     return `+${formatGameNumber(entity.baseCost * value * count / 100)}/s ${t(lang, 'effectTotal')}`;

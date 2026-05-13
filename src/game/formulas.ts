@@ -24,7 +24,8 @@ export function getClickPower(mods: Modifiers): number {
 export function formatGameNumber(value: number): string {
   if (!Number.isFinite(value) || value < 0) return '0';
   const whole = Math.floor(value);
-  if (whole < 1_000_000) return whole.toLocaleString('en-US');
+  if (whole < 1_000) return String(whole);
+  if (whole < 1_000_000) return `${(whole / 1_000).toFixed(whole < 10_000 ? 1 : 0)}k`;
   if (whole < 1e9) return `${(whole / 1e6).toFixed(2)}M`;
   if (whole < 1e12) return `${(whole / 1e9).toFixed(2)}B`;
   if (whole < 1e15) return `${(whole / 1e12).toFixed(2)}T`;
@@ -34,11 +35,12 @@ export function formatGameNumber(value: number): string {
   return `${mantissa.toFixed(2)}e${exp}`;
 }
 
-/** Short form: 2 significant figures — for thresholds / totals where space is tight. */
+/** Short form: compact notation — for thresholds / totals where space is tight. */
 export function formatGameNumberShort(value: number): string {
   if (!Number.isFinite(value) || value < 0) return '0';
   const whole = Math.floor(value);
-  if (whole < 1_000_000) return whole.toLocaleString('en-US');
+  if (whole < 1_000) return String(whole);
+  if (whole < 1_000_000) return `${(whole / 1_000).toFixed(whole < 10_000 ? 1 : 0)}k`;
   if (whole < 1e9) return `${(whole / 1e6).toFixed(1)}M`;
   if (whole < 1e12) return `${(whole / 1e9).toFixed(1)}B`;
   if (whole < 1e15) return `${(whole / 1e12).toFixed(1)}T`;

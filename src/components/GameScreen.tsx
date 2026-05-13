@@ -77,6 +77,17 @@ interface TutorialBubble {
 
 type TransitionPhase = 'idle' | 'bursting' | 'quote' | 'revealing';
 
+function formatFloatingGain(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0';
+  }
+  if (value < 10 && !Number.isInteger(value)) {
+    const rounded = value < 2 ? value.toFixed(2) : value.toFixed(1);
+    return rounded.replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1');
+  }
+  return formatWhole(value);
+}
+
 interface GameScreenProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -215,16 +226,16 @@ export function GameScreen({
   const timeEstimateLabel = (() => {
     if (timeRemainingSeconds <= 0) return '';
     const s = timeRemainingSeconds;
-    if (s < 60) return `~${Math.ceil(s)}s`;
-    if (s < 3600) return `~${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`;
+    if (s < 60) return `${Math.ceil(s)}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`;
     if (s < 86400) {
       const h = Math.floor(s / 3600);
       const m = Math.floor((s % 3600) / 60);
-      return m > 0 ? `~${h}h ${m}m` : `~${h}h`;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
     }
     const d = Math.floor(s / 86400);
     const h = Math.floor((s % 86400) / 3600);
-    return h > 0 ? `~${d}d ${h}h` : `~${d}d`;
+    return h > 0 ? `${d}d ${h}h` : `${d}d`;
   })();
   const cosmicClockFromGauge = state.cosmicClockSec;
   const displayedCosmicClock =
@@ -358,11 +369,12 @@ export function GameScreen({
     }
     const event = state.lastClickEvent;
     const emissionCount = Math.max(1, clickEmissionCount);
+    const gainedLabel = formatFloatingGain(event.gained);
     const text = event.isCrit
-      ? `CRIT +${formatWhole(event.gained)}`
+      ? `CRIT +${gainedLabel}`
       : event.comboMult > 1
-        ? `+${formatWhole(event.gained)} ×${formatWhole(event.comboMult)}`
-        : `+${formatWhole(event.gained)}`;
+        ? `+${gainedLabel} ×${formatWhole(event.comboMult)}`
+        : `+${gainedLabel}`;
     setFloatingEntries((current) => [
       ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + emissionCount),
       ...Array.from({ length: emissionCount }, (_, index) => {
@@ -644,8 +656,13 @@ export function GameScreen({
               <div className="hud-progress-stack">
                 <div className="hud-meter">
                   <div className="hud-meter-row">
-                    <span>{t(language, 'hudQuanta')}</span>
-                    <span>{`${formatGameNumber(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}</span>
+                    <span>
+                      {t(language, 'hudQuanta')}
+                      {autoRate > 0 && !isViewingPastStage ? (
+                        <span className="hud-auto-rate">{`+${formatGameNumberShort(autoRate)}/s`}</span>
+                      ) : null}
+                    </span>
+                    <span>{`${formatGameNumberShort(displayQuanta)} / ${formatGameNumberShort(displayEffectiveThreshold)}`}</span>
                   </div>
                   <div className="hud-gauge hud-quanta-gauge" aria-label="Quanta progress">
                     <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
@@ -653,13 +670,15 @@ export function GameScreen({
                 </div>
                 <div className="hud-meter hud-meter--time">
                   <div className="hud-meter-row">
-                    <span>{t(language, 'hudTime')}</span>
-                    <span className="hud-cosmic-time">
-                      {formatCosmicTimeSigFigs(displayedCosmicClock, 6)}
-                      <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
+                    <span>
+                      {t(language, 'hudTime')}
                       {timeEstimateLabel && !isViewingPastStage ? (
                         <span className="hud-time-estimate-inline">{` ${timeEstimateLabel}`}</span>
                       ) : null}
+                    </span>
+                    <span className="hud-cosmic-time">
+                      {formatCosmicTimeSigFigs(displayedCosmicClock, 3)}
+                      <span className="hud-time-threshold">{` / ${formatCosmicTimeSigFigs(displayStage.cosmicTimeSec, 2)}`}</span>
                     </span>
                   </div>
                   <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
