@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
-  formatCosmicTimeProgressPair,
+  formatCosmicTimeProgressParts,
   formatGameNumberShort,
-  formatProgressNumberPair,
+  formatProgressNumberParts,
   formatWhole,
   canCondense as canCondenseNow,
   getAutoRate,
@@ -245,6 +245,8 @@ export function GameScreen({
           stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
         )
       : cosmicClockFromGauge;
+  const matterReadout = formatProgressNumberParts(displayQuanta, displayEffectiveThreshold);
+  const timeReadout = formatCosmicTimeProgressParts(displayedCosmicClock, displayStage.cosmicTimeSec);
   const canShowShop = state.universeCount > 1 || stage.id >= 6;
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > Date.now());
   const hasShopNotification = canShowShop && !state.tutorialFlags['shop-first-used'];
@@ -674,7 +676,11 @@ export function GameScreen({
                         <span className="hud-auto-rate">{`+${formatGameNumberShort(autoRate)}/s`}</span>
                       ) : null}
                     </span>
-                    <span>{formatProgressNumberPair(displayQuanta, displayEffectiveThreshold)}</span>
+                    <span className="hud-readout">
+                      <span className="hud-readout-value">{matterReadout.value}</span>
+                      <span className="hud-readout-exponent">{matterReadout.exponent ?? ''}</span>
+                      <span className="hud-readout-unit">{matterReadout.unit}</span>
+                    </span>
                   </div>
                   <div className="hud-gauge hud-quanta-gauge" aria-label="Matter progress">
                     <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
@@ -688,8 +694,10 @@ export function GameScreen({
                         <span className="hud-time-estimate-inline">{timeEstimateLabel}</span>
                       ) : null}
                     </span>
-                    <span className="hud-cosmic-time">
-                      {formatCosmicTimeProgressPair(displayedCosmicClock, displayStage.cosmicTimeSec)}
+                    <span className="hud-readout hud-cosmic-time">
+                      <span className="hud-readout-value">{timeReadout.value}</span>
+                      <span className="hud-readout-exponent">{timeReadout.exponent ?? ''}</span>
+                      <span className="hud-readout-unit">{timeReadout.unit}</span>
                     </span>
                   </div>
                   <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">

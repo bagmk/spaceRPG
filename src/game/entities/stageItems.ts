@@ -20,6 +20,10 @@ import {
 } from '../balance';
 
 type StageId = keyof typeof ENTITY_COST_ANCHORS;
+const TIME_ENTITY_MAX_COUNT_BY_RARITY: Partial<Record<EntityRarity, number>> = {
+  rare: 10,
+  epic: 5,
+};
 
 interface EntitySpec {
   name: string;
@@ -252,6 +256,9 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     const ko = ENTITY_KO_TRANSLATIONS[spec.name];
     const nameKo = spec.nameKo ?? ko?.name;
     const descriptionKo = spec.descriptionKo ?? ko?.description;
+    const maxCount = spec.effect.type === 'time'
+      ? TIME_ENTITY_MAX_COUNT_BY_RARITY[spec.rarity] ?? ENTITY_MAX_COUNT[spec.rarity]
+      : ENTITY_MAX_COUNT[spec.rarity];
     return {
       id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
       stageId,
@@ -263,7 +270,7 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
       rarity: spec.rarity,
       baseCost: Math.ceil(threshold * ENTITY_BASE_COST_FACTOR[spec.rarity]),
       costScaling: ENTITY_COST_SCALING[spec.rarity],
-      maxCount: ENTITY_MAX_COUNT[spec.rarity],
+      maxCount,
       effect: { ...spec.effect, value: spec.effect.value * effectScale },
       visual: {
         symbol: spec.formula,

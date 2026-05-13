@@ -71,8 +71,8 @@ export const STRINGS = {
 
   // ── Tutorial / speech bubble ──────────────────────────────────
   tutorialInfoHint: { en: 'Tap here for info', ko: '여기를 눌러 정보 보기' },
-  tutMatterTimeIntro:  { en: 'Click the universe to create Matter. Time fills on its own; when both bars are ready, the next era can condense.',
-                         ko: '우주를 클릭하면 물질이 생깁니다. 시간은 자동으로 차오르고, 두 바가 모두 준비되면 다음 시대로 응축할 수 있습니다.' },
+  tutMatterTimeIntro:  { en: 'Click the universe to create Matter. Matter is shown in Q units. Time fills on its own; when both bars are ready, the next era can condense.',
+                         ko: '우주를 클릭하면 물질이 생깁니다. 물질은 Q 단위로 표시됩니다. 시간은 자동으로 차오르고, 두 바가 모두 준비되면 다음 시대로 응축할 수 있습니다.' },
   tutEntityLabIntro:    { en: 'Entity Lab turns matter into stage entities. They appear in the field and replace the old skill upgrades.',
                           ko: '엔티티 연구소는 물질을 단계별 엔티티로 바꿉니다. 화면에 등장해 기존 스킬 강화를 대체합니다.' },
   tutEntityLabOpen:     { en: 'Open Entity Lab', ko: '엔티티 연구소 열기' },

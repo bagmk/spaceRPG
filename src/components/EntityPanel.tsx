@@ -112,6 +112,17 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
     setInspectedEntityId(null);
   }, [selectedStageId]);
 
+  useEffect(() => {
+    if (!inspectedEntityId) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setInspectedEntityId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inspectedEntityId]);
+
   return (
     <div className="entity-overlay" onClick={onClose}>
       <aside
@@ -201,20 +212,20 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
             />
           ))}
         </div>
-        {inspectedEntity ? (
-          <EntityDetailCard
-            entity={inspectedEntity}
-            count={countOf(inspectedEntity)}
-            cost={getEntityCost(inspectedEntity, countOf(inspectedEntity))}
-            quanta={quanta}
-            language={language}
-            rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
-            canPurchase={selectedStageId <= currentStageId}
-            onPurchase={onPurchase}
-            onClose={() => setInspectedEntityId(null)}
-          />
-        ) : null}
       </aside>
+      {inspectedEntity ? (
+        <EntityDetailCard
+          entity={inspectedEntity}
+          count={countOf(inspectedEntity)}
+          cost={getEntityCost(inspectedEntity, countOf(inspectedEntity))}
+          quanta={quanta}
+          language={language}
+          rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
+          canPurchase={selectedStageId <= currentStageId}
+          onPurchase={onPurchase}
+          onClose={() => setInspectedEntityId(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -389,7 +400,16 @@ function EntityDetailCard({
   const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language) : '';
 
   return (
-    <div className="entity-detail-layer" onClick={onClose}>
+    <div
+      className="entity-detail-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={entityName(entity, language)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
+    >
       <article
         className={`entity-detail-card entity-detail-card--${entity.rarity}`}
         style={{ '--rarity-color': rarityColor } as CSSProperties}

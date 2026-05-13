@@ -65,42 +65,54 @@ function formatCompactMantissa(value: number): string {
   return trimCompactNumber(value.toExponential(1));
 }
 
-function formatSharedExponentPair(
-  current: number,
-  target: number,
-  suffix = '',
-  showPositiveExponentSign = false,
-): string {
-  if (!Number.isFinite(current) || !Number.isFinite(target) || target <= 0) return `0/0${suffix}`;
-  const basis = Math.max(Math.abs(current), Math.abs(target));
-  const exponent = Math.floor(Math.log10(basis));
-  const scale = Math.pow(10, exponent);
-  const exponentLabel = showPositiveExponentSign && exponent >= 0 ? `E+${exponent}` : `E${exponent}`;
-  const unitLabel = suffix ? ` ${suffix}` : '';
-  return `${formatCompactMantissa(current / scale)}/${formatCompactMantissa(target / scale)} ${exponentLabel}${unitLabel}`;
+function formatProgressCurrentMantissa(value: number): string {
+  if (!Number.isFinite(value) || value <= 0 || Math.abs(value) < 0.0001) return '0.0000';
+  return value.toFixed(4);
+}
+
+function formatProgressTargetMantissa(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0';
+  const rounded = Math.round(value);
+  if (Math.abs(value - rounded) <= Math.max(1, Math.abs(value)) * 1e-9) {
+    return String(rounded);
+  }
+  return formatCompactMantissa(value);
+}
+
+export interface ProgressReadout {
+  value: string;
+  exponent?: string;
+  unit: string;
+}
+
+function readoutToString(readout: ProgressReadout): string {
+  return `${readout.value}${readout.exponent ?? ''}${readout.unit}`;
+}
+
+export function formatProgressNumberParts(current: number, target: number): ProgressReadout {
+  if (!Number.isFinite(current) || current < 0 || !Number.isFinite(target) || target <= 0) {
+    return { value: '0/0', unit: 'Q' };
+  }
+  if (target >= 1_000) {
+    const exponent = Math.floor(Math.log10(target) / 3) * 3;
+    const scale = Math.pow(10, exponent);
+    return {
+      value: `${formatProgressCurrentMantissa(current / scale)}/${formatProgressTargetMantissa(target / scale)}`,
+      exponent: `E+${exponent}`,
+      unit: 'Q',
+    };
+  }
+  return {
+    value: `${formatProgressCurrentMantissa(current)}/${formatProgressTargetMantissa(target)}`,
+    unit: 'Q',
+  };
 }
 
 export function formatProgressNumberPair(current: number, target: number): string {
-  if (!Number.isFinite(current) || current < 0 || !Number.isFinite(target) || target <= 0) {
-    return '0/0';
-  }
-  if (target >= 1e15) {
-    return formatSharedExponentPair(current, target);
-  }
-  const scales = [
-    { value: 1e12, suffix: 'T' },
-    { value: 1e9, suffix: 'B' },
-    { value: 1e6, suffix: 'M' },
-    { value: 1e3, suffix: 'k' },
-  ];
-  const scale = scales.find((item) => target >= item.value);
-  if (scale) {
-    return `${formatCompactMantissa(current / scale.value)}/${formatCompactMantissa(target / scale.value)}${scale.suffix}`;
-  }
-  return `${Math.floor(current)}/${Math.floor(target)}`;
+  return readoutToString(formatProgressNumberParts(current, target));
 }
 
-function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suffix: string; scientific?: boolean } {
+function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suffix: string; exponent?: string; scientific?: boolean } {
   if (targetSeconds < 1e-3) return { seconds: 1, suffix: 's', scientific: true };
   if (targetSeconds < 1) return { seconds: 1e-3, suffix: 'ms' };
   if (targetSeconds < 60) return { seconds: 1, suffix: 's' };
@@ -109,25 +121,59 @@ function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suf
   if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 86_400, suffix: 'd' };
 
   const targetYears = targetSeconds / SECONDS_PER_YEAR;
-  if (targetYears < 1e6) return { seconds: SECONDS_PER_YEAR, suffix: 'yr' };
-  if (targetYears < 1e9) return { seconds: SECONDS_PER_YEAR * 1e6, suffix: 'Myr' };
-  if (targetYears < 1e12) return { seconds: SECONDS_PER_YEAR * 1e9, suffix: 'Gyr' };
-  return { seconds: SECONDS_PER_YEAR * 1e12, suffix: 'Tyr' };
+  if (targetYears >= 1_000) {
+    const exponent = Math.floor(Math.log10(targetYears) / 3) * 3;
+    return {
+      seconds: SECONDS_PER_YEAR * Math.pow(10, exponent),
+      suffix: 'yr',
+      exponent: `E+${exponent}`,
+    };
+  }
+  return { seconds: SECONDS_PER_YEAR, suffix: 'yr' };
 }
 
-export function formatCosmicTimeProgressPair(currentSeconds: number, targetSeconds: number): string {
+function formatTimeCurrentMantissa(value: number): string {
+  return formatProgressCurrentMantissa(value);
+}
+
+function formatTimeExponentPair(current: number, target: number, suffix: string): ProgressReadout {
+  const exponent = Math.floor(Math.log10(Math.abs(target)));
+  const scale = Math.pow(10, exponent);
+  const exponentLabel = exponent >= 0 ? `E+${exponent}` : `E${exponent}`;
+  return {
+    value: `${formatTimeCurrentMantissa(current / scale)}/${formatProgressTargetMantissa(target / scale)}`,
+    exponent: exponentLabel,
+    unit: suffix,
+  };
+}
+
+export function formatCosmicTimeProgressParts(currentSeconds: number, targetSeconds: number): ProgressReadout {
   if (!Number.isFinite(currentSeconds) || currentSeconds <= 0 || !Number.isFinite(targetSeconds) || targetSeconds <= 0) {
-    return '0s';
+    return { value: '0', unit: 'S' };
   }
   const unit = getCosmicTimeDisplayUnit(targetSeconds);
   const current = currentSeconds / unit.seconds;
   const target = targetSeconds / unit.seconds;
   const suffix = unit.suffix.toUpperCase();
+  if (unit.exponent) {
+    return {
+      value: `${formatTimeCurrentMantissa(current)}/${formatProgressTargetMantissa(target)}`,
+      exponent: unit.exponent,
+      unit: suffix,
+    };
+  }
   const basis = Math.max(Math.abs(current), Math.abs(target));
   if (unit.scientific || basis >= 1e4) {
-    return formatSharedExponentPair(current, target, suffix, true);
+    return formatTimeExponentPair(current, target, suffix);
   }
-  return `${formatCompactMantissa(current)}/${formatCompactMantissa(target)} ${suffix}`;
+  return {
+    value: `${formatTimeCurrentMantissa(current)}/${formatProgressTargetMantissa(target)}`,
+    unit: suffix,
+  };
+}
+
+export function formatCosmicTimeProgressPair(currentSeconds: number, targetSeconds: number): string {
+  return readoutToString(formatCosmicTimeProgressParts(currentSeconds, targetSeconds));
 }
 
 /**

@@ -43,7 +43,7 @@ describe('formatCosmicTime', () => {
 
   it('formats extremely large cosmic times in scientific notation', () => {
     expect(formatCosmicTime(1e100 * 31557600)).toBe('1e100yr');
-    expect(formatCosmicTime(STAGES[14].cosmicTimeSec)).toBe('1e28yr');
+    expect(formatCosmicTime(STAGES[14].cosmicTimeSec)).toBe('2e28yr');
   });
 
   it('formats the V7 initial cosmic time without a one-second baseline', () => {
@@ -53,12 +53,63 @@ describe('formatCosmicTime', () => {
 
 describe('compact HUD progress formatting', () => {
   it('shares the target exponent for large matter progress', () => {
-    expect(formatProgressNumberPair(8.1e18, 8.5e18)).toBe('8.1/8.5 E18');
+    expect(formatProgressNumberPair(1.2e9, 2e9)).toBe('1.2000/2E+9Q');
+    expect(formatProgressNumberPair(8.1e18, 9e18)).toBe('8.1000/9E+18Q');
+  });
+
+  it('keeps every stage matter threshold display clean after threshold rounding', () => {
+    const labels = STAGES.map((stage) => formatProgressNumberPair(0, stage.threshold));
+
+    expect(labels).toEqual([
+      '0.0000/2E+3Q',
+      '0.0000/28E+3Q',
+      '0.0000/390E+3Q',
+      '0.0000/6E+6Q',
+      '0.0000/80E+6Q',
+      '0.0000/2E+9Q',
+      '0.0000/18E+9Q',
+      '0.0000/280E+9Q',
+      '0.0000/5E+12Q',
+      '0.0000/75E+12Q',
+      '0.0000/2E+15Q',
+      '0.0000/30E+15Q',
+      '0.0000/500E+15Q',
+      '0.0000/9E+18Q',
+      '0.0000/200E+18Q',
+      '0.0000/4E+21Q',
+    ]);
   });
 
   it('shares the target exponent and cosmic unit for large time progress', () => {
     const tyr = 1e12 * 31_557_600;
-    expect(formatCosmicTimeProgressPair(4.25e14 * tyr, 7.3e14 * tyr)).toBe('4.25/7.3 E+14 TYR');
+    expect(formatCosmicTimeProgressPair(4.25e14 * tyr, 7.3e14 * tyr)).toBe('425.0000/730E+24YR');
+  });
+
+  it('keeps every stage time threshold display clean after threshold rounding', () => {
+    const startingSecond = 1e-34;
+    const labels = STAGES.map((stage, index) => formatCosmicTimeProgressPair(
+      index === 0 ? startingSecond : STAGES[index - 1].cosmicTimeSec,
+      stage.cosmicTimeSec,
+    ));
+
+    expect(labels).toEqual([
+      '0.0100/1E-32S',
+      '0.0000/1E-12S',
+      '0.0000/1E-6S',
+      '0.0000/3MIN',
+      '0.0000/300E+3YR',
+      '0.3000/100E+6YR',
+      '100.0000/200E+6YR',
+      '200.0000/600E+6YR',
+      '0.6000/1E+9YR',
+      '1.0000/10E+9YR',
+      '10.0000/14E+9YR',
+      '14.0000/19E+9YR',
+      '0.0190/100E+12YR',
+      '0.0000/800E+24YR',
+      '0.8000/20E+27YR',
+      '0.0200/2E+30YR',
+    ]);
   });
 });
 

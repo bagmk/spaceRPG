@@ -51,6 +51,28 @@ describe('stage entity definitions', () => {
     expect(ENTITY_BASE_COST_FACTOR.legendary).toBeCloseTo(3.6);
   });
 
+  it('caps rare and epic time entities lower while keeping other rarity caps', () => {
+    const rareTimeEntities = STAGE_ENTITIES.filter((entity) => (
+      entity.rarity === 'rare' && entity.effect.type === 'time'
+    ));
+    const otherRareEntities = STAGE_ENTITIES.filter((entity) => (
+      entity.rarity === 'rare' && entity.effect.type !== 'time'
+    ));
+    const epicTimeEntities = STAGE_ENTITIES.filter((entity) => (
+      entity.rarity === 'epic' && entity.effect.type === 'time'
+    ));
+    const otherEpicEntities = STAGE_ENTITIES.filter((entity) => (
+      entity.rarity === 'epic' && entity.effect.type !== 'time'
+    ));
+
+    expect(rareTimeEntities.length).toBeGreaterThan(0);
+    expect(rareTimeEntities.every((entity) => entity.maxCount === 10)).toBe(true);
+    expect(otherRareEntities.every((entity) => entity.maxCount === 15)).toBe(true);
+    expect(epicTimeEntities.length).toBeGreaterThan(0);
+    expect(epicTimeEntities.every((entity) => entity.maxCount === 5)).toBe(true);
+    expect(otherEpicEntities.every((entity) => entity.maxCount === 10)).toBe(true);
+  });
+
   it('gives stages 4-16 at least two legendary entities', () => {
     for (const stageId of STAGE_IDS.filter((id) => id >= 4)) {
       const legendaries = getEntitiesForStage(stageId).filter((e) => e.rarity === 'legendary');
