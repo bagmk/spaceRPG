@@ -51,6 +51,16 @@ export const STRINGS = {
   errorReload:   { en: 'An error occurred. Please reload the page.', ko: '오류가 발생했습니다. 페이지를 새로고침해주세요.' },
   errorReloadBtn:{ en: 'Reload', ko: '새로고침' },
 
+  // ── Offline progress modal ───────────────────────────────────
+  offlineEyebrow: { en: 'While You Were Away', ko: '자리를 비운 동안' },
+  offlineTitle:   { en: 'The universe kept moving.', ko: '우주는 계속 움직였습니다.' },
+  offlineAwayFor: { en: 'Away for', ko: '비운 시간' },
+  offlineCap:     { en: 'Offline progress is capped at 1 hour.', ko: '오프라인 진행은 최대 1시간까지만 쌓입니다.' },
+  offlineMatter:  { en: 'Matter gathered', ko: '획득한 물질' },
+  offlineTime:    { en: 'Time advanced', ko: '진행된 시간' },
+  offlineEntropy: { en: 'Entropy gained', ko: '획득한 엔트로피' },
+  offlineReturn:  { en: 'RETURN', ko: '돌아가기' },
+
   // ── Stage names ───────────────────────────────────────────────
   stageInflation:     { en: 'Inflation',          ko: '인플레이션' },
   stageBaryo:         { en: 'Baryogenesis',       ko: '바리온 생성' },

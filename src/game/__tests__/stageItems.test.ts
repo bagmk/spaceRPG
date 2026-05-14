@@ -44,33 +44,33 @@ describe('stage entity definitions', () => {
   });
 
   it('uses the tuned rarity caps and starting prices', () => {
-    expect(ENTITY_MAX_COUNT.rare).toBe(15);
-    expect(ENTITY_MAX_COUNT.epic).toBe(10);
+    expect(ENTITY_MAX_COUNT.rare).toBe(10);
+    expect(ENTITY_MAX_COUNT.epic).toBe(5);
     expect(ENTITY_BASE_COST_FACTOR.rare).toBeCloseTo(0.32);
     expect(ENTITY_BASE_COST_FACTOR.epic).toBeCloseTo(0.5);
     expect(ENTITY_BASE_COST_FACTOR.legendary).toBeCloseTo(3.6);
   });
 
-  it('caps rare and epic time entities lower while keeping other rarity caps', () => {
-    const rareTimeEntities = STAGE_ENTITIES.filter((entity) => (
-      entity.rarity === 'rare' && entity.effect.type === 'time'
-    ));
-    const otherRareEntities = STAGE_ENTITIES.filter((entity) => (
-      entity.rarity === 'rare' && entity.effect.type !== 'time'
-    ));
-    const epicTimeEntities = STAGE_ENTITIES.filter((entity) => (
-      entity.rarity === 'epic' && entity.effect.type === 'time'
-    ));
-    const otherEpicEntities = STAGE_ENTITIES.filter((entity) => (
-      entity.rarity === 'epic' && entity.effect.type !== 'time'
-    ));
+  it('caps all rare entities at ten and all epic entities at five', () => {
+    const rareEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare');
+    const epicEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic');
 
-    expect(rareTimeEntities.length).toBeGreaterThan(0);
-    expect(rareTimeEntities.every((entity) => entity.maxCount === 10)).toBe(true);
-    expect(otherRareEntities.every((entity) => entity.maxCount === 15)).toBe(true);
-    expect(epicTimeEntities.length).toBeGreaterThan(0);
-    expect(epicTimeEntities.every((entity) => entity.maxCount === 5)).toBe(true);
-    expect(otherEpicEntities.every((entity) => entity.maxCount === 10)).toBe(true);
+    expect(rareEntities.length).toBeGreaterThan(0);
+    expect(epicEntities.length).toBeGreaterThan(0);
+    expect(rareEntities.every((entity) => entity.maxCount === 10)).toBe(true);
+    expect(epicEntities.every((entity) => entity.maxCount === 5)).toBe(true);
+  });
+
+  it('rebalance-scales stage two and later entity effects', () => {
+    const stage1Click = getEntitiesForStage(1).find((entity) => entity.name === 'False Vacuum Bubble');
+    const stage2Click = getEntitiesForStage(2).find((entity) => entity.name === 'Down Quark');
+    const stage2Auto = getEntitiesForStage(2).find((entity) => entity.name === 'Up Quark');
+    const stage2Crit = getEntitiesForStage(2).find((entity) => entity.name === 'Electron');
+
+    expect(stage1Click?.effect.value).toBeCloseTo(15);
+    expect(stage2Click?.effect.value).toBeCloseTo(15 / 4);
+    expect(stage2Auto?.effect.value).toBeCloseTo(0.8 / 10);
+    expect(stage2Crit?.effect.value).toBeCloseTo(0.3 / 4);
   });
 
   it('gives stages 4-16 at least two legendary entities', () => {

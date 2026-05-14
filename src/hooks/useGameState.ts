@@ -5,10 +5,15 @@ import { TUNING } from '../game/constants';
 import {
   getCompositeBoostMultiplier,
   getAutoRate,
+  getCosmicTimeFillRate,
+  getEffectiveThreshold,
+  getEntropyFromMatterGain,
+  getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
+import { getStageStartCosmicTime } from '../game/timeFlow';
 import type { Dispatch } from 'react';
 import type { GameAction } from '../game/reducer';
 import type { GameState } from '../game/types';
@@ -46,6 +51,8 @@ export function useGameState(): UseGameStateResult {
         lastEncounterEvent: null,
         offlineElapsedMs: 0,
         offlineGained: 0,
+        offlineEntropyGained: 0,
+        offlineTimeProgressGained: 0,
         endingStartedAt: null,
       };
       if (baseState.completedRun) {
@@ -75,15 +82,39 @@ export function useGameState(): UseGameStateResult {
         ? 1
         : TUNING.OFFLINE_BASE_RATE;
       const quantaBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'quanta_', now);
+      const timeBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'time_', now);
       const gained = autoRate * awaySec * offlineMultiplier * quantaBoost;
+      const nextQuanta = safeAdd(baseState.quanta, gained);
+      const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
+      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold);
+      const stageStartCosmic = getStageStartCosmicTime(payload.stageIdx);
+      const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
+      const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);
+      const gaugeRate = getCosmicTimeFillRate(
+        payload.skills.time.level,
+        modifiers,
+        timeBoost,
+        payload.stageIdx + 1,
+      );
+      const cosmicDelta = logSpan > 0
+        ? (gaugeRate * awaySec * offlineMultiplier * logSpan * Math.LN10 * safeCosmic) / 100
+        : 0;
+      const nextCosmicClockSec = Math.min(safeCosmic + cosmicDelta, stage.cosmicTimeSec);
+      const previousTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, safeCosmic);
+      const nextTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, nextCosmicClockSec);
       const todayKey = getDayKey(new Date(now));
       const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
       return {
         ...baseState,
-        quanta: safeAdd(baseState.quanta, gained),
+        quanta: nextQuanta,
+        entropy: safeAdd(baseState.entropy, entropyGained),
+        cosmicClockSec: nextCosmicClockSec,
+        timeGauge: nextTimeGauge,
         lastSaveAt: now,
         offlineElapsedMs: awaySec * 1000,
         offlineGained: gained,
+        offlineEntropyGained: entropyGained,
+        offlineTimeProgressGained: Math.max(0, nextTimeGauge - previousTimeGauge),
         dailyCheckIns: isDailyCheckIn
           ? {
               lastDayKey: todayKey,

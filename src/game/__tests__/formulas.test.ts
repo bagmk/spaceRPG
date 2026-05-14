@@ -72,17 +72,17 @@ describe('compact HUD progress formatting', () => {
       '0.0000/5E+12Q',
       '0.0000/75E+12Q',
       '0.0000/2E+15Q',
-      '0.0000/30E+15Q',
-      '0.0000/500E+15Q',
+      '0.0000/3E+16Q',
+      '0.0000/5E+17Q',
       '0.0000/9E+18Q',
-      '0.0000/200E+18Q',
+      '0.0000/2E+20Q',
       '0.0000/4E+21Q',
     ]);
   });
 
   it('shares the target exponent and cosmic unit for large time progress', () => {
     const tyr = 1e12 * 31_557_600;
-    expect(formatCosmicTimeProgressPair(4.25e14 * tyr, 7.3e14 * tyr)).toBe('425.0000/730E+24YR');
+    expect(formatCosmicTimeProgressPair(4.25e14 * tyr, 7.3e14 * tyr)).toBe('4.2500/7.3E+26YR');
   });
 
   it('keeps every stage time threshold display clean after threshold rounding', () => {
@@ -96,7 +96,7 @@ describe('compact HUD progress formatting', () => {
       '0.0100/1E-32S',
       '0.0000/1E-12S',
       '0.0000/1E-6S',
-      '0.0000/3MIN',
+      '0.0000/180S',
       '0.0000/300E+3YR',
       '0.3000/100E+6YR',
       '100.0000/200E+6YR',
@@ -105,9 +105,9 @@ describe('compact HUD progress formatting', () => {
       '1.0000/10E+9YR',
       '10.0000/14E+9YR',
       '14.0000/19E+9YR',
-      '0.0190/100E+12YR',
-      '0.0000/800E+24YR',
-      '0.8000/20E+27YR',
+      '0.0002/1E+14YR',
+      '0.0000/8E+26YR',
+      '0.0800/2E+28YR',
       '0.0200/2E+30YR',
     ]);
   });

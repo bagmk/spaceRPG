@@ -85,6 +85,16 @@ export interface ProgressReadout {
   unit: string;
 }
 
+function getProgressExponent(target: number): number {
+  const floorExponent = Math.floor(Math.log10(target));
+  const engineeringExponent = Math.floor(floorExponent / 3) * 3;
+  const engineeringMantissa = target / Math.pow(10, engineeringExponent);
+  if (floorExponent >= 15 || (floorExponent >= 12 && engineeringMantissa >= 100)) {
+    return floorExponent;
+  }
+  return engineeringExponent;
+}
+
 function readoutToString(readout: ProgressReadout): string {
   return `${readout.value}${readout.exponent ?? ''}${readout.unit}`;
 }
@@ -94,7 +104,7 @@ export function formatProgressNumberParts(current: number, target: number): Prog
     return { value: '0/0', unit: 'Q' };
   }
   if (target >= 1_000) {
-    const exponent = Math.floor(Math.log10(target) / 3) * 3;
+    const exponent = getProgressExponent(target);
     const scale = Math.pow(10, exponent);
     return {
       value: `${formatProgressCurrentMantissa(current / scale)}/${formatProgressTargetMantissa(target / scale)}`,
@@ -114,15 +124,11 @@ export function formatProgressNumberPair(current: number, target: number): strin
 
 function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suffix: string; exponent?: string; scientific?: boolean } {
   if (targetSeconds < 1e-3) return { seconds: 1, suffix: 's', scientific: true };
-  if (targetSeconds < 1) return { seconds: 1e-3, suffix: 'ms' };
-  if (targetSeconds < 60) return { seconds: 1, suffix: 's' };
-  if (targetSeconds < 3600) return { seconds: 60, suffix: 'min' };
-  if (targetSeconds < 86_400) return { seconds: 3600, suffix: 'hr' };
-  if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 86_400, suffix: 'd' };
+  if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 1, suffix: 's', scientific: targetSeconds >= 10_000 };
 
   const targetYears = targetSeconds / SECONDS_PER_YEAR;
   if (targetYears >= 1_000) {
-    const exponent = Math.floor(Math.log10(targetYears) / 3) * 3;
+    const exponent = getProgressExponent(targetYears);
     return {
       seconds: SECONDS_PER_YEAR * Math.pow(10, exponent),
       suffix: 'yr',
@@ -351,6 +357,21 @@ export function getEntropyOnCondense(quanta: number, threshold: number): number 
   const baseLog = Math.floor(Math.log2(quanta + 1) * 3);
   const grindBonus = quanta > threshold ? Math.floor((quanta / threshold - 1) * 2) : 0;
   return baseLog + grindBonus;
+}
+
+function getEntropyPotential(quanta: number, threshold: number): number {
+  if (!Number.isFinite(quanta) || quanta <= 0) return 0;
+  const safeThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : 1;
+  const baseLog = Math.log2(quanta + 1) * 3;
+  const grindBonus = quanta > safeThreshold ? (quanta / safeThreshold - 1) * 2 : 0;
+  return baseLog + grindBonus;
+}
+
+export function getEntropyFromMatterGain(beforeQuanta: number, afterQuanta: number, threshold: number): number {
+  if (!Number.isFinite(beforeQuanta) || !Number.isFinite(afterQuanta) || afterQuanta <= beforeQuanta) {
+    return 0;
+  }
+  return Math.max(0, getEntropyPotential(afterQuanta, threshold) - getEntropyPotential(beforeQuanta, threshold));
 }
 
 export function applyAntiRunaway(raw: number): number {

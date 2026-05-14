@@ -345,7 +345,6 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
 
       {/* Right: cost + buy button */}
       <div className="entity-card__right">
-        {canPurchase && !maxed ? <div className="entity-card__cost">{formatGameNumber(cost)}</div> : null}
         <button
           className={[
             'entity-card__buy',
@@ -364,7 +363,19 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
           disabled={!canAfford}
           onClick={handlePurchase}
         >
-          {!canPurchase ? t(language, 'entityLabLocked') : maxed ? t(language, 'entityLabMax') : t(language, 'entityLabGet')}
+          {canPurchase && !maxed ? (
+            <>
+              <span className="entity-card__buy-cost">
+                <span className="entity-card__buy-symbol">{entity.formula}</span>
+                <span>{formatGameNumber(cost)}</span>
+              </span>
+              <span className="entity-card__buy-label">{t(language, 'entityLabGet')}</span>
+            </>
+          ) : (
+            <span className="entity-card__buy-label">
+              {!canPurchase ? t(language, 'entityLabLocked') : t(language, 'entityLabMax')}
+            </span>
+          )}
         </button>
       </div>
     </div>

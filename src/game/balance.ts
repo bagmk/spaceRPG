@@ -72,8 +72,8 @@ export const ENTITY_COST_SCALING: Record<EntityRarity, number> = {
 
 export const ENTITY_MAX_COUNT: Record<EntityRarity, number> = {
   common: 20,
-  rare: 15,
-  epic: 10,
+  rare: 10,
+  epic: 5,
   legendary: 2,
 };
 

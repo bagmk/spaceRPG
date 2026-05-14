@@ -34,6 +34,8 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastEncounterEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
+    offlineEntropyGained: 0,
+    offlineTimeProgressGained: 0,
     endingStartedAt: null,
     tutorialDone: payload.tutorialDone ?? false,
     cosmicHoursThisRun: payload.cosmicHoursThisRun ?? 0,
@@ -59,7 +61,13 @@ export function handleHydrate(_state: GameState, action: HydrateAction): GameSta
 }
 
 export function handleDismissOfflineModal(state: GameState): GameState {
-  return { ...state, offlineElapsedMs: 0, offlineGained: 0 };
+  return {
+    ...state,
+    offlineElapsedMs: 0,
+    offlineGained: 0,
+    offlineEntropyGained: 0,
+    offlineTimeProgressGained: 0,
+  };
 }
 
 export function handleSetTutorialDone(state: GameState): GameState {

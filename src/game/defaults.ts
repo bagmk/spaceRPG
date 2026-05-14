@@ -98,6 +98,8 @@ export function createInitialGameState(now: number): GameState {
     lastEncounterEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
+    offlineEntropyGained: 0,
+    offlineTimeProgressGained: 0,
     endingStartedAt: null,
     skillPoints: 0,
     skills: createDefaultSkills(),

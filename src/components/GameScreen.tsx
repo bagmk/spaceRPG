@@ -810,6 +810,9 @@ export function GameScreen({
         <OfflineProgressModal
           awayMs={state.offlineElapsedMs}
           gained={state.offlineGained}
+          entropyGained={state.offlineEntropyGained}
+          timeProgressGained={state.offlineTimeProgressGained}
+          language={language}
           onDismiss={() => dispatch({ type: 'DISMISS_OFFLINE_MODAL' })}
         />
       ) : null}

@@ -253,6 +253,8 @@ export interface GameState extends PersistentGameState {
   lastEncounterEvent: EncounterEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
+  offlineEntropyGained: number;
+  offlineTimeProgressGained: number;
   endingStartedAt: number | null;
 }
 

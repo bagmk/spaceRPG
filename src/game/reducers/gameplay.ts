@@ -10,6 +10,7 @@ import {
   getCritChance,
   getCritMultiplier,
   getEffectiveThreshold,
+  getEntropyFromMatterGain,
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
@@ -66,7 +67,8 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     state.pendingCondenseStageIdx === null &&
     !state.imploding &&
     state.selectedEndingId === null;
-  const progress = getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost));
+  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+  const progress = getProgress(state.quanta, effectiveThreshold);
   const baseAuto = getAutoRate(modifiers);
   const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
   const timeBoost = getCompositeBoostMultiplier(state.shopBoosts, 'time_', action.now);
@@ -95,11 +97,16 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     canAccrue && mechanic.onTick
       ? mechanic.onTick({ state, stage, now: action.now, progress01: progress })
       : null;
+  const quantaDelta = gained + (tickResult?.quantaDelta ?? 0);
+  const nextQuanta = safeAdd(state.quanta, quantaDelta);
+  const entropyFromMatter = canAccrue
+    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold)
+    : 0;
   return {
     ...state,
-    quanta: safeAdd(state.quanta, gained + (tickResult?.quantaDelta ?? 0)),
+    quanta: nextQuanta,
     timeGauge: nextTimeGauge,
-    entropy: safeAdd(state.entropy, tickResult?.entropyDelta ?? 0),
+    entropy: safeAdd(state.entropy, entropyFromMatter + (tickResult?.entropyDelta ?? 0)),
     totalTimePlayed: state.completedRun ? state.totalTimePlayed : state.totalTimePlayed + action.dt,
     combo: shouldClearCombo ? 0 : state.combo,
     imploding: shouldEndImplosion ? false : state.imploding,
