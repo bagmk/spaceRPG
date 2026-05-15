@@ -3,9 +3,10 @@ import type { CSSProperties, MouseEvent } from 'react';
 import type { PurchasedEntityEntry } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
-import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription } from '../game/entities/stageItems';
+import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
-import { formatGameNumber } from '../game/formulas';
+import { formatAutoRateValue, getCosmicTimeFillRate } from '../game/formulas';
 import { EntityGlyph } from './EntityGlyph';
 import { t, stageName, type Lang } from '../i18n';
 
@@ -19,47 +20,108 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   legendary: '#ffa500',
 };
 
+function formatEntityCost(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return "0";
+  const whole = Math.ceil(value);
+  if (whole < 1_000) return String(whole);
+  if (whole < 1_000_000) return String(Math.ceil(whole / 1_000)) + "k";
+  if (whole < 1e9) return String(Math.ceil(whole / 1e6)) + "M";
+  if (whole < 1e12) return String(Math.ceil(whole / 1e9)) + "B";
+  if (whole < 1e15) return String(Math.ceil(whole / 1e12)) + "T";
+  const exp = Math.floor(Math.log10(whole));
+  const mantissa = Math.ceil(whole / Math.pow(10, exp));
+  return String(mantissa) + "e" + String(exp);
+}
+
 function formatPct(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
+function getEntityAutoRate(entity: StageEntity, count = 1): number {
+  return Math.max(0, entity.baseCost * entity.effect.value * count / 100);
+}
+
+function getEntityTimeFillRate(entity: StageEntity, count: number, displayStageId: number): number {
+  const mods = defaultModifiers();
+  const cappedCount = Math.min(Math.max(0, count), entity.maxCount);
+  mods.timeMultMult = getMaxLegacyTimeEntityMultiplierBeforeStage(displayStageId);
+  if (cappedCount > 0) {
+    mods.timeMultMult *= 1 + (entity.effect.value * cappedCount) / 100;
+  }
+  return getCosmicTimeFillRate(0, mods, 1, displayStageId);
+}
+
+function getEffectiveTimeRatePct(
+  entity: StageEntity,
+  displayStageId: number,
+  fromCount: number,
+  toCount: number,
+): number {
+  const beforeRate = getEntityTimeFillRate(entity, fromCount, displayStageId);
+  const afterRate = getEntityTimeFillRate(entity, toCount, displayStageId);
+  if (!Number.isFinite(beforeRate) || beforeRate <= 0 || !Number.isFinite(afterRate)) return entity.effect.value;
+  return Math.max(0, (afterRate / beforeRate - 1) * 100);
+}
+
+function getNextTimeRatePct(entity: StageEntity, count: number, displayStageId: number): number {
+  const cappedCount = Math.min(Math.max(0, count), entity.maxCount);
+  const nextCount = Math.min(entity.maxCount, cappedCount + 1);
+  const fromCount = nextCount === cappedCount && cappedCount > 0 ? cappedCount - 1 : cappedCount;
+  return getEffectiveTimeRatePct(entity, displayStageId, fromCount, nextCount);
+}
+
+function getTotalTimeRatePct(entity: StageEntity, count: number, displayStageId: number): number {
+  const cappedCount = Math.min(Math.max(0, count), entity.maxCount);
+  return getEffectiveTimeRatePct(entity, displayStageId, 0, cappedCount);
+}
+
 /** Returns the per-level effect label for an entity (e.g. "+15% Click Power" or "+0.5% Crit Chance"). */
-function formatEntityEffect(entity: StageEntity, lang: Lang): string {
+function formatEntityEffect(
+  entity: StageEntity,
+  lang: Lang,
+  displayStageId = entity.stageId,
+  count = 0,
+): string {
   const { type, value, isFlat } = entity.effect;
   if (type === 'click') {
     return `+${formatPct(value)} ${t(lang, 'effectClickPower')}`;
   }
   if (type === 'auto') {
-    return `+${formatGameNumber(entity.baseCost * value / 100)}${t(lang, 'effectAutoRateUnit')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity))}${t(lang, 'effectAutoRateUnit')}`;
   }
   if (type === 'crit') {
     return isFlat
       ? `+${formatPct(value)} ${t(lang, 'effectCritChance')}`
       : `+${formatPct(value)} ${t(lang, 'effectCritMult')}`;
   }
-  if (type === 'time') return `+${formatPct(value)} ${t(lang, 'effectTimeRate')}`;
+  if (type === 'time') return `+${formatPct(getNextTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
   if (type === 'multiplier') return `+${formatPct(value)} ${t(lang, 'effectAllSources')}`;
   if (type === 'entropy') return `+${formatPct(value)} ${t(lang, 'effectEncounterBonus')}`;
   return `+${formatPct(value)} ${type}`;
 }
 
 /** Returns the cumulative effect label across all owned levels. */
-function formatEntityEffectTotal(entity: StageEntity, count: number, lang: Lang): string {
+function formatEntityEffectTotal(
+  entity: StageEntity,
+  count: number,
+  lang: Lang,
+  displayStageId = entity.stageId,
+): string {
   if (count === 0) return '';
   const { type, value, isFlat } = entity.effect;
   if (type === 'click') {
     return `+${formatPct(value * count)} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'auto') {
-    return `+${formatGameNumber(entity.baseCost * value * count / 100)}/s ${t(lang, 'effectTotal')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity, count))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'crit') {
     return isFlat
       ? `+${formatPct(value * count)} ${t(lang, 'effectCritChance')}`
       : `+${formatPct(value * count)} ${t(lang, 'effectCritMult')}`;
   }
-  if (type === 'time') return `+${formatPct(value * count)} ${t(lang, 'effectTimeRate')}`;
+  if (type === 'time') return `+${formatPct(getTotalTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
   if (type === 'multiplier') return `+${formatPct(value * count)} ${t(lang, 'effectAllSources')}`;
   if (type === 'entropy') return `+${formatPct(value * count)} ${t(lang, 'effectEncounter')}`;
   return `+${formatPct(value * count)} ${type}`;
@@ -209,6 +271,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
               onInspect={() => setInspectedEntityId(entity.id)}
               animDelay={idx * 45}
               canPurchase={selectedStageId <= currentStageId}
+              displayStageId={selectedStageId}
             />
           ))}
         </div>
@@ -222,6 +285,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
           language={language}
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
           canPurchase={selectedStageId <= currentStageId}
+          displayStageId={selectedStageId}
           onPurchase={onPurchase}
           onClose={() => setInspectedEntityId(null)}
         />
@@ -240,9 +304,10 @@ interface CardProps {
   onInspect: () => void;
   animDelay: number;
   canPurchase: boolean;
+  displayStageId: number;
 }
 
-function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase }: CardProps) {
+function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, displayStageId }: CardProps) {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const cost = getEntityCost(entity, count);
@@ -252,7 +317,7 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
   const levelProgress = showLevelProgress
     ? Math.min(100, Math.max(0, (count / entity.maxCount) * 100))
     : 0;
-  const totalEffectLabel = formatEntityEffectTotal(entity, count, language);
+  const totalEffectLabel = formatEntityEffectTotal(entity, count, language, displayStageId);
 
   useEffect(() => {
     return () => {
@@ -276,7 +341,7 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
     }, entity.rarity === 'legendary' ? 1050 : 650);
   };
 
-  const effectLabel = formatEntityEffect(entity, language);
+  const effectLabel = formatEntityEffect(entity, language, displayStageId, count);
   const displayName = entityName(entity, language);
 
   return (
@@ -366,8 +431,8 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
           {canPurchase && !maxed ? (
             <>
               <span className="entity-card__buy-cost">
-                <span className="entity-card__buy-symbol">{entity.formula}</span>
-                <span>{formatGameNumber(cost)}</span>
+                <span className="entity-card__buy-symbol" aria-hidden="true">⚛</span>
+                <span>{formatEntityCost(cost)}</span>
               </span>
               <span className="entity-card__buy-label">{t(language, 'entityLabGet')}</span>
             </>
@@ -390,6 +455,7 @@ interface DetailCardProps {
   language: Lang;
   rarityColor: string;
   canPurchase: boolean;
+  displayStageId: number;
   onPurchase: (entityId: string) => void;
   onClose: () => void;
 }
@@ -402,13 +468,14 @@ function EntityDetailCard({
   language,
   rarityColor,
   canPurchase,
+  displayStageId,
   onPurchase,
   onClose,
 }: DetailCardProps) {
   const maxed = entity.maxCount > 0 && count >= entity.maxCount;
   const canAfford = canPurchase && !maxed && quanta >= cost;
-  const effectLabel = formatEntityEffect(entity, language);
-  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language) : '';
+  const effectLabel = formatEntityEffect(entity, language, displayStageId, count);
+  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, displayStageId) : '';
 
   return (
     <div
@@ -454,7 +521,7 @@ function EntityDetailCard({
           disabled={!canAfford}
           onClick={() => onPurchase(entity.id)}
         >
-          {maxed ? t(language, 'entityLabMaxed') : canPurchase ? `${t(language, 'entityLabGet')} · ${formatGameNumber(cost)}` : t(language, 'entityLabLocked')}
+          {maxed ? t(language, 'entityLabMaxed') : canPurchase ? `${t(language, 'entityLabGet')} · ${formatEntityCost(cost)}` : t(language, 'entityLabLocked')}
         </button>
       </article>
     </div>

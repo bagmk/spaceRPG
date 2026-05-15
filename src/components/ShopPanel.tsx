@@ -176,11 +176,11 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
                   )}
                   <button
                     type="button"
-                    className="shop-boost-card__buy"
+                    className={`shop-boost-card__buy${isFree ? ' shop-boost-card__buy--free' : ''}`}
                     disabled={locked}
                     onClick={() => handleBuy(item.id)}
                   >
-                    {isFree ? t(language, 'shopClaim') : t(language, 'shopBuy')}
+                    {isFree ? t(language, 'shopFree') : t(language, 'shopBuy')}
                   </button>
                 </div>
               </article>

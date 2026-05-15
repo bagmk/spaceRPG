@@ -86,5 +86,5 @@ export interface PurchasedEntityEntry {
 
 /** Cost of the next purchase given current count. */
 export function getEntityCost(entity: StageEntity, count: number): number {
-  return Math.floor(entity.baseCost * Math.pow(entity.costScaling, count));
+  return Math.ceil(entity.baseCost * Math.pow(entity.costScaling, count));
 }

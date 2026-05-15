@@ -38,7 +38,10 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
           <div className="final-universe-tag">
             {t(language, 'finalUniverse')} <span className="final-universe-num">#{state.universeCount}</span>
           </div>
-          <div className="final-atlas-name">{state.currentUniverseSeed.atlasName}</div>
+          <div className="final-atlas-name">
+            <span>{t(language, 'finalAtlasName')}</span>
+            <strong>{state.currentUniverseSeed.atlasName}</strong>
+          </div>
         </div>
 
         {/* Quote */}

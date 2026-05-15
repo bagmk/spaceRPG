@@ -14,6 +14,8 @@ import {
   ENTITY_BASE_COST_FACTOR,
   ENTITY_COST_SCALING,
   ENTITY_MAX_COUNT,
+  ENTITY_TIME_MAX_COUNT,
+  LEGACY_TIME_ENTITY_EFFECT_FACTOR,
   ENTITY_RARITY_SIZE,
   ENTITY_RARITY_TINT,
   ENTITY_RARITY_EFFECT_SCALE,
@@ -241,7 +243,15 @@ function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
 
 function stageEffectScale(stageId: StageId, spec: EntitySpec): number {
   if (stageId < 2 || !REBALANCED_EFFECT_RARITIES.has(spec.rarity)) return 1;
-  return spec.effect.type === 'auto' ? 0.1 : 0.25;
+  if (spec.effect.type === 'auto') return 0.1;
+  return 0.25;
+}
+
+function maxCountForSpec(spec: EntitySpec): number {
+  if (spec.effect.type === 'time') {
+    return ENTITY_TIME_MAX_COUNT[spec.rarity] ?? ENTITY_MAX_COUNT[spec.rarity];
+  }
+  return ENTITY_MAX_COUNT[spec.rarity];
 }
 
 function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
@@ -258,7 +268,7 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     const ko = ENTITY_KO_TRANSLATIONS[spec.name];
     const nameKo = spec.nameKo ?? ko?.name;
     const descriptionKo = spec.descriptionKo ?? ko?.description;
-    const maxCount = ENTITY_MAX_COUNT[spec.rarity];
+    const maxCount = maxCountForSpec(spec);
     const scaledEffectValue = spec.effect.value * effectScale * stageEffectScale(stageId, spec);
     return {
       id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
@@ -430,7 +440,8 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Liquid Water':           { name: '액체 물',          description: '복잡한 화학을 가능케 하는 안정한 표면 용매.' },
   'Magnetic Field':         { name: '자기장',           description: '해로운 항성풍을 막아주는 행성 방패.' },
   'Goldilocks Zone':        { name: '골디락스 영역',    description: '표면의 물이 액체로 머무는 궤도 구역.' },
-  'Sun':                    { name: '태양',             description: '온 생물권에 빛을 보내주는 안정한 G형 별.' },
+  'Sun':                    { name: '태양',             description: '붕괴하는 성운에서 가장 먼저 태어나는 중심 별.' },
+  'Dyson Swarm':            { name: '다이슨 군집',      description: '별빛을 거두는 문명 규모의 반짝이는 구조물.' },
   'Habitable World':        { name: '생명 가능 행성',   description: '생명을 위한 모든 조건이 맞아떨어진 세계.' },
 
   // Stage 11
@@ -442,11 +453,16 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Cambrian Explosion':     { name: '캄브리아 대폭발',  description: '고대 바다에서 폭발적으로 등장한 새 몸체 설계들.' },
   'Eukaryote':              { name: '진핵생물',         description: '내부 소기관과 핵을 갖춘 복잡한 세포.' },
   'Multicellular Life':     { name: '다세포 생명',      description: '세포가 분화하고 한 몸으로 협력한다.' },
+  'First Ocean':            { name: '최초의 바다',      description: '식어 가는 하늘 아래 오래 지속되는 바다가 모인다.' },
+  'Continents Rise':        { name: '대륙의 융기',      description: '바다 위로 암석 대지가 솟아 지구의 얼굴을 바꾼다.' },
   'Artificial Satellite':   { name: '인공위성',         description: '최초의 기계가 지구를 돌며 살아 있는 행성을 측량한다.' },
   'Neuron':                 { name: '뉴런',             description: '빠른 정보 처리를 가능케 하는 신호 세포.' },
   'Deep Space Probe':       { name: '심우주 탐사선',    description: '행성 너머로 지구를 싣고 가는 작은 기계.' },
   'Homo Sapiens':           { name: '호모 사피엔스',    description: '생물학을 문화와 기계로 바꾸는 종.' },
+  'Homo Deus':              { name: '호모 데우스',      description: '인류가 자신의 생물학과 운명을 직접 조율하기 시작한다.' },
   'Space Telescope':        { name: '우주 망원경',      description: '대기 위에서 과거를 되짚는 맑은 눈.' },
+  'Spacefaring Humanity':   { name: '우주 항해 인류',   description: '행성에서 태어난 종이 여러 세계의 문명이 된다.' },
+  'Interstellar Ark':       { name: '성간 방주',        description: '지구의 생명 기록을 고향 별 너머로 실어 나른다.' },
 
   // Stage 12
   'Red Giant Envelope':     { name: '적색거성 외피',    description: '내행성을 삼킬 만큼 부풀어 오른 항성 외층.' },
@@ -677,8 +693,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
 
   // ── Stage 10: Solar System (4C + 4R + 4E + 2L) ─────────────────────────────
   ...stage(10, [
-    item('Dust Grain',       '·',     'Silicate speck that begins the long road to planets.',     'common', 'auto',  1.5),
-    item('Iron Core',        'Fe',    'Metal-rich center of a differentiated rocky world.',       'common', 'click', 15.0),
+    withAliases(
+      item('Sun',            '☀',    'Central star forming first from the collapsing nebula.',    'common', 'auto',  1.5),
+      ['s10_13_sun'],
+    ),
+    withAliases(
+      item('Dust Grain',     '·',     'Silicate speck that begins the long road to planets.',     'common', 'click', 15.0),
+      ['s10_01_dust_grain', 's10_02_iron_core'],
+    ),
     item('Planetesimal',     '○',     'Kilometer-scale body built from countless dust grains.',   'common', 'crit',  0.4, true),
     item('Water Ice',        'H₂O',   'Frozen water delivered across the disk by comets.',        'common', 'time',  2.0),
     item('Rocky Planet',     '🪨',   'Silicate planet with a stable solid surface.',             'rare',   'auto',  4.0),
@@ -689,36 +711,60 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Liquid Water',     'H₂O·', 'Stable surface solvent enabling complex chemistry.',       'epic',   'click', 35.0),
     item('Magnetic Field',   '⇌',    'Planetary shield deflecting harmful stellar wind.',        'epic',   'crit',  2.0, true),
     item('Goldilocks Zone',  '🌡',   'Orbital band where surface water stays liquid.',           'epic',   'time',  5.0),
-    item('Sun',              '☀',    'G-type star whose steady glow powers an entire biosphere.','legendary','multiplier',50.0),
+    item('Dyson Swarm',      '☀⛭',   'A glittering civilization-scale lattice drinking starlight.','legendary','multiplier',50.0),
     item('Habitable World',  '⊕',    'A world where all the conditions for life align.',         'legendary','multiplier',50.0),
   ]),
 
   // ── Stage 11: Life on Earth (4C + 4R + 4E + 2L) ────────────────────────────
   ...stage(11, [
-    item('Moon',              '🌕',     'Giant-impact debris that stabilized Earth\'s axial tilt.', 'common', 'auto',  2.0),
-    item('Lipid Membrane',    '◯',     'Boundary separating inside chemistry from outside.',     'common', 'click', 15.0),
-    item('RNA Molecule',      'RNA',    'Self-copying molecule that also acts as a catalyst.',    'common', 'crit',  0.5, true),
-    item('DNA Helix',         '⌇',     'Durable double-helix carrying genetic memory forward.',  'common', 'time',  2.0),
-    item('Prokaryote',        '〇',    'Simple cell without a nucleus, first true living thing.', 'rare',   'auto',  3.0),
-    item('Photosynthesis',    '☀→O₂', 'Light-driven chemistry releasing oxygen into the air.',  'rare',   'click', 22.0),
-    item('Cambrian Explosion','✳',     'Rapid burst of novel body plans in ancient seas.',       'rare',   'crit',  1.0, true),
-    item('Eukaryote',         '⊙',     'Complex cell with internal organelles and a nucleus.',   'rare',   'time',  2.0),
-    item('Multicellular Life','⋮',     'Cells specializing and cooperating as a single body.',   'epic',   'auto',  6.0),
     withAliases(
-      item('Artificial Satellite','🛰',  'First machines orbit Earth and map the living planet.',  'epic',   'click', 35.0),
-      ['s11_10_fish'],
+      item('Lipid Membrane',  '◯',     'Boundary separating inside chemistry from outside.',     'common', 'auto',  2.0),
+      ['s11_02_lipid_membrane'],
     ),
-    item('Neuron',            '⚡',    'Signal cell enabling rapid information processing.',     'epic',   'crit',  2.0, true),
+    withAliases(
+      item('RNA Molecule',    'RNA',    'Self-copying molecule that also acts as a catalyst.',    'common', 'crit',  0.5, true),
+      ['s11_03_rna_molecule', 's11_04_dna_helix'],
+    ),
+    withAliases(
+      item('Prokaryote',      '〇',    'Simple cell without a nucleus, first true living thing.', 'common', 'click', 15.0),
+      ['s11_05_prokaryote'],
+    ),
+    withAliases(
+      item('Cambrian Explosion','✳',   'Rapid burst of novel body plans in ancient seas.',       'common', 'time',  2.0),
+      ['s11_07_cambrian_explosion', 's11_08_eukaryote', 's11_09_multicellular_life'],
+    ),
+    withAliases(
+      item('Moon',            '🌕',    'Giant-impact debris that stabilized Earth\'s axial tilt.', 'rare',   'auto',  3.0),
+      ['s11_01_moon'],
+    ),
+    item('First Ocean',       'H₂O',   'Cooling skies gather into the first long-lived oceans.',  'rare',   'click', 22.0),
+    item('Continents Rise',   'LAND',  'Rocky land breaks through the water and reshapes Earth.', 'rare',   'crit',  1.0, true),
+    withAliases(
+      item('Photosynthesis',  '☀→O₂', 'Light-driven chemistry releasing oxygen into the air.',  'rare',   'time',  2.0),
+      ['s11_06_photosynthesis'],
+    ),
+    withAliases(
+      item('Neuron',          '⚡',    'Signal cell enabling rapid information processing.',     'epic',   'auto',  6.0),
+      ['s11_11_neuron'],
+    ),
+    withAliases(
+      item('Homo Deus',       'HD',    'Humanity begins steering its own biology and destiny.',   'epic',   'click', 35.0),
+      ['s11_13_homo_sapiens', 's11_13_intelligence'],
+    ),
+    withAliases(
+      item('Artificial Satellite','🛰', 'First machines orbit Earth and map the living planet.',  'epic',   'crit',  2.0, true),
+      ['s11_10_artificial_satellite', 's11_10_fish'],
+    ),
     withAliases(
       item('Deep Space Probe',   'VGR',  'A tiny craft carrying Earth beyond the planets.',        'epic',   'time',  5.0),
       ['s11_12_plant'],
     ),
     withAliases(
-      item('Homo Sapiens',       '🧬',   'A species that turns biology into culture and machines.', 'legendary','multiplier',50.0),
-      ['s11_13_intelligence'],
+      item('Spacefaring Humanity','🚀',  'A planet-born species becomes a civilization of worlds.', 'legendary','multiplier',50.0),
+      ['s11_14_space_telescope'],
     ),
     withAliases(
-      item('Space Telescope',    '🔭',   'A clear eye above the atmosphere looking back in time.', 'legendary','multiplier',50.0),
+      item('Interstellar Ark',   'ARK',  'A living archive carrying Earth beyond its home star.',  'legendary','multiplier',50.0),
       ['s11_14_homo_sapiens'],
     ),
   ]),
@@ -803,9 +849,9 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Relic Neutrino',           'ν∞',   'Cold neutrino drifting at near-rest through eternity.',  'common', 'time',  2.0),
     item('Cosmic Background Photon', 'CBG',  'All remaining light fading into background noise.',      'rare',   'auto',  3.0),
     item('Thermal Equilibrium',      'ΔT→0', 'Temperature differences vanish everywhere at once.',    'rare',   'click', 22.0),
-    item('Max Entropy',              'S_max','No free energy remains to run any physical process.',    'rare',   'crit',  1.5, true),
+    item('Max Entropy',              'S_max','No free energy remains to run any physical process.',    'rare',   'time',  1.5),
     item('De Sitter Vacuum',         'Λ∞',   'Dark-energy space persists as all matter fades away.',  'epic',   'auto',  8.0),
-    item('Quantum Fluctuation Final','δE∞',  'Even empty space can still fluctuate, just barely.',    'epic',   'crit',  3.0, true),
+    item('Quantum Fluctuation Final','δE∞',  'Even empty space can still fluctuate, just barely.',    'epic',   'time',  3.0),
     // Ending legendaries — each aligned to one universe fate (all multiplier)
     item('Thermal Death',            'ΔS=0', 'Maximum entropy reached; no process can ever run.',     'legendary','multiplier',50.0, false, 'heat_death'),
     item('Dark Energy Spike',        'Λ↑',   'Accelerating expansion tears apart every structure.',   'legendary','multiplier',50.0, false, 'big_rip'),
@@ -834,8 +880,24 @@ export function getPurchasedEntityCount(
   purchasedEntities: PurchasedEntityEntry[],
   entity: StageEntity,
 ): number {
-  return purchasedEntities.reduce(
+  const count = purchasedEntities.reduce(
     (sum, entry) => (entityMatchesId(entity, entry.entityId) ? sum + entry.count : sum),
     0,
   );
+  return entity.maxCount > 0 ? Math.min(count, entity.maxCount) : count;
+}
+
+export function getMaxTimeEntityMultiplierThroughStage(stageId: number): number {
+  return STAGE_ENTITIES.reduce((multiplier, entity) => {
+    if (entity.stageId > stageId || entity.effect.type !== 'time') return multiplier;
+    const stageFactor = entity.stageId === stageId ? 1 : LEGACY_TIME_ENTITY_EFFECT_FACTOR;
+    return multiplier * (1 + (entity.effect.value * stageFactor * entity.maxCount) / 100);
+  }, 1);
+}
+
+export function getMaxLegacyTimeEntityMultiplierBeforeStage(stageId: number): number {
+  return STAGE_ENTITIES.reduce((multiplier, entity) => {
+    if (entity.stageId >= stageId || entity.effect.type !== 'time') return multiplier;
+    return multiplier * (1 + (entity.effect.value * LEGACY_TIME_ENTITY_EFFECT_FACTOR * entity.maxCount) / 100);
+  }, 1);
 }

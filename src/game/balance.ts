@@ -59,7 +59,7 @@ export const ENTITY_STAGE_ACCENT: Record<number, string> = {
 export const ENTITY_BASE_COST_FACTOR: Record<EntityRarity, number> = {
   common: 0.07,
   rare: 0.32,
-  epic: 0.5,
+  epic: 1.5,
   legendary: 3.6,
 };
 
@@ -74,7 +74,13 @@ export const ENTITY_MAX_COUNT: Record<EntityRarity, number> = {
   common: 20,
   rare: 10,
   epic: 5,
-  legendary: 2,
+  legendary: 1,
+};
+
+export const ENTITY_TIME_MAX_COUNT: Partial<Record<EntityRarity, number>> = {
+  common: 20,
+  rare: 10,
+  epic: 5,
 };
 
 export const ENTITY_RARITY_SIZE: Record<EntityRarity, EntityVisual['size']> = {
@@ -108,9 +114,30 @@ export const SKILL_CLICK_POWER_BASE = 2;
 /** autoRateAdd = base^level — change exponent base here. */
 export const SKILL_AUTO_RATE_BASE = 2;
 /** Cosmic-time gauge speed multiplier per Aeon Drive level. */
-export const SKILL_TIME_RATE_BASE = 1.55;
+export const SKILL_TIME_RATE_BASE = 1.8;
 /** Hard lower bound for any stage's time-gauge duration after all boosts. */
 export const TIME_MIN_STAGE_SECONDS = 12;
+/** Previous-stage time entities keep a weaker legacy effect in later stages. */
+export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
+/** Global output debuffs for slower overall pacing. */
+export const CLICK_OUTPUT_MULTIPLIER = 1 / 3;
+export const AUTO_OUTPUT_MULTIPLIER = 0.5;
+/** Fully upgraded Stage 4+ time gauges should settle around 3-4 minutes. */
+export const TIME_MAXED_STAGE_SECONDS = 210;
+/** Fastest a fresh Stage 4+ can feel before buying that stage's time entities. */
+export const TIME_STAGE_ENTRY_MIN_SECONDS = 360;
+/** Fresh-stage minimum time grows by this much per stage until current time entities are upgraded. */
+export const TIME_STAGE_ENTRY_MIN_GROWTH = 2.5;
+/** Unupgraded time-gauge duration by stage. Stage 7+ grows geometrically from Stage 6. */
+export const TIME_STAGE_BASE_SECONDS: Record<number, number> = {
+  1: 180,
+  2: 180,
+  3: 180,
+  4: 1_800,
+  5: 10_800,
+  6: 86_400,
+};
+export const TIME_STAGE_GROWTH_AFTER_STAGE_6 = 6;
 
 export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
   click_lv5: 1.4,
@@ -157,6 +184,7 @@ export const BALANCE = {
     baseCostFactor: ENTITY_BASE_COST_FACTOR,
     costScaling: ENTITY_COST_SCALING,
     maxCount: ENTITY_MAX_COUNT,
+    timeMaxCount: ENTITY_TIME_MAX_COUNT,
     raritySize: ENTITY_RARITY_SIZE,
     rarityTint: ENTITY_RARITY_TINT,
     rarityEffectScale: ENTITY_RARITY_EFFECT_SCALE,
@@ -166,6 +194,14 @@ export const BALANCE = {
     autoRateBase: SKILL_AUTO_RATE_BASE,
     timeRateBase: SKILL_TIME_RATE_BASE,
     timeMinStageSeconds: TIME_MIN_STAGE_SECONDS,
+    legacyTimeEntityEffectFactor: LEGACY_TIME_ENTITY_EFFECT_FACTOR,
+    clickOutputMultiplier: CLICK_OUTPUT_MULTIPLIER,
+    autoOutputMultiplier: AUTO_OUTPUT_MULTIPLIER,
+    timeMaxedStageSeconds: TIME_MAXED_STAGE_SECONDS,
+    timeStageEntryMinSeconds: TIME_STAGE_ENTRY_MIN_SECONDS,
+    timeStageEntryMinGrowth: TIME_STAGE_ENTRY_MIN_GROWTH,
+    timeStageBaseSeconds: TIME_STAGE_BASE_SECONDS,
+    timeStageGrowthAfterStage6: TIME_STAGE_GROWTH_AFTER_STAGE_6,
     crossNodeMults: SKILL_CROSS_NODE_MULTS,
     totalCrossNodeCount: SKILL_TOTAL_CROSS_NODE_COUNT,
   },

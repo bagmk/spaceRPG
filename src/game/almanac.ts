@@ -200,7 +200,7 @@ export const ALMANAC: Record<number, AlmanacEntry> = {
     },
   },
   10: {
-    title: { en: 'Solar System', ko: '태양계 형성' },
+    title: { en: 'Solar System', ko: '태양계' },
     short: { en: 'Dust, rock, and ice negotiate the shapes of worlds.',
              ko: '먼지, 바위, 얼음이 세계의 형태를 협상합니다.' },
     body: { en: 'Around a young star, grains collide, stick, melt, and crash again. Over time, this messy disk sorts itself into planets, moons, asteroids, and leftovers.',

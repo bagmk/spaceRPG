@@ -1,8 +1,22 @@
 import { TUNING } from './constants';
 import { STAGES } from './stages';
-import { SKILL_TIME_RATE_BASE, TIME_MIN_STAGE_SECONDS } from './balance';
+import {
+  AUTO_OUTPUT_MULTIPLIER,
+  CLICK_OUTPUT_MULTIPLIER,
+  SKILL_TIME_RATE_BASE,
+  TIME_MAXED_STAGE_SECONDS,
+  TIME_MIN_STAGE_SECONDS,
+  TIME_STAGE_ENTRY_MIN_GROWTH,
+  TIME_STAGE_ENTRY_MIN_SECONDS,
+  TIME_STAGE_BASE_SECONDS,
+  TIME_STAGE_GROWTH_AFTER_STAGE_6,
+} from './balance';
 import type { EndingId, GameState, ShopBoost, Stage, TimedShopBoost } from './types';
 import type { Modifiers } from './skills/effects';
+import {
+  getMaxLegacyTimeEntityMultiplierBeforeStage,
+  getMaxTimeEntityMultiplierThroughStage,
+} from './entities/stageItems';
 
 const SECONDS_PER_YEAR = 31_557_600;
 
@@ -18,7 +32,22 @@ export function safeAdd(a: number, b: number): number {
 }
 
 export function getClickPower(mods: Modifiers): number {
-  return Math.max(1, (1 + mods.clickPowerAdd) * mods.clickPowerMult);
+  const rawPower = Math.max(1, (1 + mods.clickPowerAdd) * mods.clickPowerMult);
+  return 1 + (rawPower - 1) * CLICK_OUTPUT_MULTIPLIER;
+}
+
+export function getUnupgradedTimeGaugeSeconds(stageNumber: number): number {
+  const stageId = Math.max(1, Math.floor(stageNumber));
+  const tunedSeconds = TIME_STAGE_BASE_SECONDS[stageId];
+  if (tunedSeconds !== undefined) return tunedSeconds;
+  const stage6Seconds = TIME_STAGE_BASE_SECONDS[6] ?? 36_000;
+  return stage6Seconds * Math.pow(TIME_STAGE_GROWTH_AFTER_STAGE_6, stageId - 6);
+}
+
+export function getFreshStageMinimumTimeSeconds(stageNumber: number): number {
+  const stageId = Math.max(1, Math.floor(stageNumber));
+  if (stageId < 4) return TIME_MIN_STAGE_SECONDS;
+  return TIME_STAGE_ENTRY_MIN_SECONDS * Math.pow(TIME_STAGE_ENTRY_MIN_GROWTH, stageId - 4);
 }
 
 export function formatGameNumber(value: number): string {
@@ -49,6 +78,15 @@ export function formatGameNumberShort(value: number): string {
   return `${mantissa.toFixed(1)}e${exp}`;
 }
 
+export function formatAutoRateValue(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0';
+  if (value < 0.01) return '<0.01';
+  if (value < 1) return trimCompactNumber(value.toFixed(2));
+  if (value < 10) return trimCompactNumber(value.toFixed(2));
+  if (value < 100) return trimCompactNumber(value.toFixed(1));
+  return formatGameNumberShort(value);
+}
+
 function trimCompactNumber(value: string): string {
   return value
     .replace(/\.0+(?=($|E|e))/, '')
@@ -70,8 +108,9 @@ function formatProgressCurrentMantissa(value: number): string {
   return value.toFixed(4);
 }
 
-function formatProgressTargetMantissa(value: number): string {
+function formatProgressTargetMantissa(value: number, fixedSmall = false): string {
   if (!Number.isFinite(value) || value <= 0) return '0';
+  if (fixedSmall && value < 1) return value.toFixed(4);
   const rounded = Math.round(value);
   if (Math.abs(value - rounded) <= Math.max(1, Math.abs(value)) * 1e-9) {
     return String(rounded);
@@ -85,14 +124,8 @@ export interface ProgressReadout {
   unit: string;
 }
 
-function getProgressExponent(target: number): number {
-  const floorExponent = Math.floor(Math.log10(target));
-  const engineeringExponent = Math.floor(floorExponent / 3) * 3;
-  const engineeringMantissa = target / Math.pow(10, engineeringExponent);
-  if (floorExponent >= 15 || (floorExponent >= 12 && engineeringMantissa >= 100)) {
-    return floorExponent;
-  }
-  return engineeringExponent;
+function getProgressExponent(value: number): number {
+  return Math.floor(Math.log10(value));
 }
 
 function readoutToString(readout: ProgressReadout): string {
@@ -104,11 +137,21 @@ export function formatProgressNumberParts(current: number, target: number): Prog
     return { value: '0/0', unit: 'Q' };
   }
   if (target >= 1_000) {
-    const exponent = getProgressExponent(target);
+    const exponent = getProgressExponent(Math.max(current, target));
     const scale = Math.pow(10, exponent);
+    const passedTarget = current >= target;
+    const currentLabel = passedTarget
+      ? formatCompactMantissa(current / scale)
+      : formatProgressCurrentMantissa(current / scale);
     return {
-      value: `${formatProgressCurrentMantissa(current / scale)}/${formatProgressTargetMantissa(target / scale)}`,
+      value: `${currentLabel}/${passedTarget ? '-' : formatProgressTargetMantissa(target / scale, true)}`,
       exponent: `E+${exponent}`,
+      unit: 'Q',
+    };
+  }
+  if (current >= target) {
+    return {
+      value: `${formatCompactMantissa(current)}/-`,
       unit: 'Q',
     };
   }
@@ -124,7 +167,7 @@ export function formatProgressNumberPair(current: number, target: number): strin
 
 function getCosmicTimeDisplayUnit(targetSeconds: number): { seconds: number; suffix: string; exponent?: string; scientific?: boolean } {
   if (targetSeconds < 1e-3) return { seconds: 1, suffix: 's', scientific: true };
-  if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 1, suffix: 's', scientific: targetSeconds >= 10_000 };
+  if (targetSeconds < SECONDS_PER_YEAR) return { seconds: 1, suffix: 's', scientific: targetSeconds >= 100 };
 
   const targetYears = targetSeconds / SECONDS_PER_YEAR;
   if (targetYears >= 1_000) {
@@ -200,7 +243,7 @@ export function formatCosmicTimeSigFigs(seconds: number, sigFigs = 6): string {
 }
 
 export function getAutoRate(mods: Modifiers): number {
-  return Math.max(0, (0 + mods.autoRateAdd) * mods.autoRateMult);
+  return Math.max(0, (mods.autoRateAdd * mods.autoRateMult + mods.autoRateFlatAdd) * AUTO_OUTPUT_MULTIPLIER);
 }
 
 export function getCritMultiplier(critLevel: number, mods: Modifiers): number {
@@ -257,14 +300,22 @@ export function getCosmicTimeFillRate(
 ): number {
   // Stage sets the unupgraded duration; Aeon Drive and time bonuses scale that
   // baseline so late-stage level-ups still shorten the clock.
-  const baseSeconds =
-    stageNumber <= 1 ? 120 :
-    stageNumber === 2 ? Math.pow(stageNumber, 2) * 240 :
-    Math.pow(stageNumber, 2) * 600;
+  const baseSeconds = getUnupgradedTimeGaugeSeconds(stageNumber);
   const baseRate = 100 / baseSeconds;
   const levelBoost = Math.pow(SKILL_TIME_RATE_BASE, Math.max(0, aeonLevel)) * mods.apexMult;
-  const timeBoost = Math.max(0, mods.timeMultMult);
-  const maxRate = 100 / TIME_MIN_STAGE_SECONDS;
+  const rawTimeBoost = Math.max(0, mods.timeMultMult);
+  const maxEntityTimeBoost = getMaxTimeEntityMultiplierThroughStage(stageNumber);
+  const timeEntityProgress = stageNumber >= 4 && maxEntityTimeBoost > 1
+    ? clamp((rawTimeBoost - 1) / (maxEntityTimeBoost - 1), 0, 1)
+    : 1;
+  const fastestSeconds = stageNumber >= 4
+    ? baseSeconds * Math.pow(TIME_MAXED_STAGE_SECONDS / baseSeconds, timeEntityProgress)
+    : TIME_MIN_STAGE_SECONDS;
+  const requiredTimeBoost = baseSeconds / fastestSeconds;
+  const timeBoost = stageNumber >= 4 && maxEntityTimeBoost > 1
+    ? 1 + timeEntityProgress * (requiredTimeBoost - 1)
+    : rawTimeBoost;
+  const maxRate = 100 / fastestSeconds;
   return Math.min(maxRate, baseRate * levelBoost * timeBoost * boostMultiplier);
 }
 
@@ -371,7 +422,10 @@ export function getEntropyFromMatterGain(beforeQuanta: number, afterQuanta: numb
   if (!Number.isFinite(beforeQuanta) || !Number.isFinite(afterQuanta) || afterQuanta <= beforeQuanta) {
     return 0;
   }
-  return Math.max(0, getEntropyPotential(afterQuanta, threshold) - getEntropyPotential(beforeQuanta, threshold));
+  const safeThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : 1;
+  const potentialDelta = getEntropyPotential(afterQuanta, safeThreshold) - getEntropyPotential(beforeQuanta, safeThreshold);
+  const flowDelta = ((afterQuanta - beforeQuanta) / safeThreshold) * 2400;
+  return Math.max(0, potentialDelta, flowDelta);
 }
 
 export function applyAntiRunaway(raw: number): number {

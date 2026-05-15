@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { STAGES } from '../stages';
+import { STAGE_ENTITIES } from '../entities/stageItems';
 import {
+  formatAutoRateValue,
   formatCosmicTime,
   formatCosmicTimeProgressPair,
   formatProgressNumberPair,
@@ -12,12 +14,17 @@ import {
   getCritChance,
   getEchoReward,
   getTimeMultiplier,
+  getUnupgradedTimeGaugeSeconds,
   getUniverseBoost,
 } from '../formulas';
 import { getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
-import { SKILL_TIME_RATE_BASE, TIME_MIN_STAGE_SECONDS } from '../balance';
+import { SKILL_TIME_RATE_BASE, TIME_MAXED_STAGE_SECONDS } from '../balance';
+import {
+  getMaxLegacyTimeEntityMultiplierBeforeStage,
+  getMaxTimeEntityMultiplierThroughStage,
+} from '../entities/stageItems';
 
 describe('formatWhole', () => {
   it('formats small whole numbers without suffixes', () => {
@@ -51,10 +58,27 @@ describe('formatCosmicTime', () => {
   });
 });
 
+describe('formatAutoRateValue', () => {
+  it('keeps small positive auto rates visible instead of rounding to zero', () => {
+    expect(formatAutoRateValue(0.2128)).toBe('0.21');
+    expect(formatAutoRateValue(2.432)).toBe('2.43');
+    expect(formatAutoRateValue(24.32)).toBe('24.3');
+  });
+});
+
 describe('compact HUD progress formatting', () => {
   it('shares the target exponent for large matter progress', () => {
     expect(formatProgressNumberPair(1.2e9, 2e9)).toBe('1.2000/2E+9Q');
     expect(formatProgressNumberPair(8.1e18, 9e18)).toBe('8.1000/9E+18Q');
+  });
+
+  it('moves the shared matter exponent up after the threshold is far exceeded', () => {
+    expect(formatProgressNumberPair(1.234e8, 3e4)).toBe('1.234/-E+8Q');
+  });
+
+  it('replaces the matter target with a dash once the threshold is exceeded', () => {
+    expect(formatProgressNumberPair(2865, 2000)).toBe('2.865/-E+3Q');
+    expect(formatProgressNumberPair(1.234e8, 1_725)).toBe('1.234/-E+8Q');
   });
 
   it('keeps every stage matter threshold display clean after threshold rounding', () => {
@@ -62,15 +86,15 @@ describe('compact HUD progress formatting', () => {
 
     expect(labels).toEqual([
       '0.0000/2E+3Q',
-      '0.0000/28E+3Q',
-      '0.0000/390E+3Q',
+      '0.0000/3E+4Q',
+      '0.0000/4E+5Q',
       '0.0000/6E+6Q',
-      '0.0000/80E+6Q',
+      '0.0000/8E+7Q',
       '0.0000/2E+9Q',
-      '0.0000/18E+9Q',
-      '0.0000/280E+9Q',
+      '0.0000/2E+10Q',
+      '0.0000/3E+11Q',
       '0.0000/5E+12Q',
-      '0.0000/75E+12Q',
+      '0.0000/8E+13Q',
       '0.0000/2E+15Q',
       '0.0000/3E+16Q',
       '0.0000/5E+17Q',
@@ -96,15 +120,15 @@ describe('compact HUD progress formatting', () => {
       '0.0100/1E-32S',
       '0.0000/1E-12S',
       '0.0000/1E-6S',
-      '0.0000/180S',
-      '0.0000/300E+3YR',
-      '0.3000/100E+6YR',
-      '100.0000/200E+6YR',
-      '200.0000/600E+6YR',
+      '0.0000/2E+2S',
+      '0.0000/3E+5YR',
+      '0.0030/1E+8YR',
+      '1.0000/2E+8YR',
+      '2.0000/6E+8YR',
       '0.6000/1E+9YR',
-      '1.0000/10E+9YR',
-      '10.0000/14E+9YR',
-      '14.0000/19E+9YR',
+      '0.1000/1E+10YR',
+      '1.0000/2E+10YR',
+      '2.0000/2E+10YR',
       '0.0002/1E+14YR',
       '0.0000/8E+26YR',
       '0.0800/2E+28YR',
@@ -141,23 +165,111 @@ describe('scaling formulas', () => {
       progress01: 0,
       clickLevel: 5,
     });
-    expect(getClickPower(modifiers)).toBe(32);   // 2^5
-    expect(getAutoRate(modifiers)).toBe(32);      // 2^5
+    expect(getClickPower(modifiers)).toBeCloseTo(1 + (32 - 1) / 3, 10);   // baseline 1 plus globally 1/3 debuffed click bonus
+    expect(getAutoRate(modifiers)).toBe(16);      // 2^5 with global 1/2 auto debuff
     expect(getTimeMultiplier(skills.time.level, modifiers)).toBeCloseTo(Math.pow(SKILL_TIME_RATE_BASE, 5), 10);
     expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(
-      (100 / (5 ** 2 * 600)) * Math.pow(SKILL_TIME_RATE_BASE, 5),
+      100 / getUnupgradedTimeGaugeSeconds(5),
       10,
     );
   });
 
-  it('makes late-stage Aeon Drive levels reduce time without going instant', () => {
+  it('sets dramatic Stage 4+ unupgraded time budgets', () => {
+    expect(getUnupgradedTimeGaugeSeconds(4)).toBe(1_800);
+    expect(getUnupgradedTimeGaugeSeconds(5)).toBe(10_800);
+    expect(getUnupgradedTimeGaugeSeconds(6)).toBe(86_400);
+    expect(getUnupgradedTimeGaugeSeconds(7)).toBe(518_400);
+    expect(getUnupgradedTimeGaugeSeconds(16)).toBe(86_400 * Math.pow(6, 10));
+  });
+
+  it('caps fully upgraded Stage 4+ time gauges around three and a half minutes', () => {
+    const maxedTimeModifiers = { ...defaultModifiers(), timeMultMult: 1e12 };
+
+    [4, 5, 6, 10, 16].forEach((stageId) => {
+      expect(100 / getCosmicTimeFillRate(40, maxedTimeModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
+    });
+  });
+
+  it('lets maxed time entities alone pull late-stage gauges down to the target time', () => {
+    [4, 5, 6, 10, 16].forEach((stageId) => {
+      const maxedEntityModifiers = {
+        ...defaultModifiers(),
+        timeMultMult: getMaxTimeEntityMultiplierThroughStage(stageId),
+      };
+
+      expect(100 / getCosmicTimeFillRate(0, maxedEntityModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
+    });
+  });
+
+  it('keeps the next stage slower than maxed while allowing previous time investment to carry forward', () => {
+    [10, 12, 14, 16].forEach((stageId) => {
+      const unupgradedModifiers = defaultModifiers();
+      const previousStageMaxedModifiers = {
+        ...defaultModifiers(),
+        timeMultMult: getMaxLegacyTimeEntityMultiplierBeforeStage(stageId),
+      };
+      const currentStageMaxedModifiers = {
+        ...defaultModifiers(),
+        timeMultMult: getMaxTimeEntityMultiplierThroughStage(stageId),
+      };
+
+      const unupgradedSeconds = 100 / getCosmicTimeFillRate(40, unupgradedModifiers, 1, stageId);
+      const carriedSeconds = 100 / getCosmicTimeFillRate(40, previousStageMaxedModifiers, 1, stageId);
+      const maxedSeconds = 100 / getCosmicTimeFillRate(40, currentStageMaxedModifiers, 1, stageId);
+
+      expect(unupgradedSeconds).toBeCloseTo(getUnupgradedTimeGaugeSeconds(stageId), 3);
+      expect(carriedSeconds).toBeLessThan(unupgradedSeconds);
+      expect(carriedSeconds).toBeGreaterThan(maxedSeconds);
+      expect(maxedSeconds).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
+    });
+  });
+
+  it('makes every current-stage time entity purchase matter even without maxing earlier stages', () => {
+    [4, 6, 10, 12, 16].forEach((stageId) => {
+      const timeEntity = STAGE_ENTITIES.find((entity) => entity.stageId === stageId && entity.effect.type === 'time');
+      expect(timeEntity).toBeDefined();
+      if (!timeEntity) return;
+
+      const beforeModifiers = defaultModifiers();
+      const afterModifiers = {
+        ...defaultModifiers(),
+        timeMultMult: 1 + timeEntity.effect.value / 100,
+      };
+
+      expect(getCosmicTimeFillRate(0, afterModifiers, 1, stageId)).toBeGreaterThan(
+        getCosmicTimeFillRate(0, beforeModifiers, 1, stageId),
+      );
+    });
+  });
+
+  it('makes each fresh late stage slower than the last even with maxed global time level', () => {
     const modifiers = defaultModifiers();
-    const stage16Level0 = getCosmicTimeFillRate(0, modifiers, 1, 16);
-    const stage16Level10 = getCosmicTimeFillRate(10, modifiers, 1, 16);
-    const stage16Level40 = getCosmicTimeFillRate(40, modifiers, 1, 16);
-    expect(stage16Level10).toBeGreaterThan(stage16Level0);
-    expect(100 / stage16Level10).toBeLessThan(100 / stage16Level0);
-    expect(stage16Level40).toBeLessThanOrEqual(100 / TIME_MIN_STAGE_SECONDS);
+
+    expect(100 / getCosmicTimeFillRate(40, modifiers, 1, 11)).toBeGreaterThan(
+      100 / getCosmicTimeFillRate(40, modifiers, 1, 10),
+    );
+    expect(100 / getCosmicTimeFillRate(40, modifiers, 1, 16)).toBeGreaterThan(
+      100 / getCosmicTimeFillRate(40, modifiers, 1, 15),
+    );
+  });
+
+  it('does not let late-stage Aeon Drive bypass the geometric time gate without time entities', () => {
+    const modifiers = defaultModifiers();
+    const stage16Level0 = 100 / getCosmicTimeFillRate(0, modifiers, 1, 16);
+    const stage16Level40 = 100 / getCosmicTimeFillRate(40, modifiers, 1, 16);
+    expect(stage16Level0).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
+    expect(stage16Level40).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
+  });
+
+  it('preserves dramatic late-stage growth until time upgrades are heavily invested', () => {
+    const modifiers = defaultModifiers();
+    const stage10Level30Seconds = 100 / getCosmicTimeFillRate(30, modifiers, 1, 10);
+    const stage16Level30Seconds = 100 / getCosmicTimeFillRate(30, modifiers, 1, 16);
+    const stage16Level40Seconds = 100 / getCosmicTimeFillRate(40, modifiers, 1, 16);
+
+    expect(stage16Level30Seconds).toBeGreaterThan(stage10Level30Seconds * 100);
+    expect(stage16Level30Seconds).toBeGreaterThan(24 * 60 * 60);
+    expect(stage16Level40Seconds).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
   });
 
   it('caps expected crit chance at 50 percent', () => {
@@ -177,6 +289,7 @@ describe('scaling formulas', () => {
     const baseState = createInitialGameState(0);
     const base = getEndingOptions(baseState, 0);
     expect(base.find((ending) => ending.id === 'heat_death')?.unlocked).toBe(true);
+    expect(base.find((ending) => ending.id === 'heat_death')?.seen).toBe(false);
     expect(base.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(false);
     const advanced = getEndingOptions(
       {
@@ -187,5 +300,7 @@ describe('scaling formulas', () => {
       0,
     );
     expect(advanced.every((ending) => ending.unlocked)).toBe(true);
+    expect(advanced.find((ending) => ending.id === 'big_rip')?.seen).toBe(true);
+    expect(advanced.find((ending) => ending.id === 'bounce')?.seen).toBe(false);
   });
 });

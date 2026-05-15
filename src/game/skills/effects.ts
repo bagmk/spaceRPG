@@ -24,6 +24,7 @@ export interface Modifiers {
   clickVfxScale: number;
   autoRateMult: number;
   autoRateAdd: number;
+  autoRateFlatAdd: number;
   critChanceAdd: number;
   critChanceCapAdd: number;
   critMultMult: number;
@@ -56,6 +57,7 @@ export function defaultModifiers(): Modifiers {
     clickVfxScale: 1,
     autoRateMult: 1,
     autoRateAdd: 0,
+    autoRateFlatAdd: 0,
     critChanceAdd: 0,
     critChanceCapAdd: 0,
     critMultMult: 1,
@@ -135,7 +137,7 @@ export function getActiveModifiers(
   }
 
   if (purchasedEntities && purchasedEntities.length > 0) {
-    applyEntityModifiers(mods, purchasedEntities);
+    applyEntityModifiers(mods, purchasedEntities, ctx.stageId);
   }
 
   return mods;

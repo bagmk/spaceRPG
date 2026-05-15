@@ -17,14 +17,24 @@ export function EndingChooser({ options, onChoose, language }: EndingChooserProp
           {options.map((option) => (
             <button
               key={option.id}
-              className="ending-option"
+              className={`ending-option ${option.unlocked ? 'unlocked' : 'locked'} ${option.seen ? 'seen' : ''}`}
               type="button"
               disabled={!option.unlocked}
               onClick={() => onChoose(option.id)}
             >
+              <span className="ending-status">
+                {!option.unlocked
+                  ? t(language, 'endingStatusLocked')
+                  : option.seen
+                    ? t(language, 'endingStatusSeen')
+                    : t(language, 'endingStatusUnlocked')}
+              </span>
               <span className="ending-label">{option.label}</span>
               <span className="ending-description">{option.description}</span>
-              <span className="ending-requirement">{option.requirement}</span>
+              <span className="ending-requirement">
+                <span>{t(language, 'endingRequirementLabel')}</span>
+                {option.requirement}
+              </span>
             </button>
           ))}
         </div>

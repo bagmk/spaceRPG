@@ -1,6 +1,8 @@
 import { TUNING } from '../game/constants';
 import { hexToRgba } from '../game/formulas';
 import type { Mote, MoteCluster, Stage } from '../game/types';
+import type { PurchasedEntityEntry } from '../game/entities/types';
+import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import { drawSoftNode, drawStageSprite, drawThread, strokeLocalEllipse } from './stageSprites';
 
 // ── V9 animation helpers ────────────────────────────────────────────────────
@@ -150,12 +152,25 @@ interface DrawClusterArgs {
   ctx: CanvasRenderingContext2D;
   cluster: MoteCluster;
   stage: Stage;
+  purchasedEntities: PurchasedEntityEntry[];
   cx: number;
   cy: number;
   width: number;
   height: number;
   now: number;
   progress: number;
+}
+
+function linkedEntityCount(args: DrawClusterArgs, entityName: string): number {
+  const entity = getEntitiesForStage(args.stage.id).find((candidate) => candidate.name === entityName);
+  if (!entity) return 0;
+  return getPurchasedEntityCount(args.purchasedEntities, entity);
+}
+
+function linkedEntityRatio(args: DrawClusterArgs, entityName: string): number {
+  const entity = getEntitiesForStage(args.stage.id).find((candidate) => candidate.name === entityName);
+  if (!entity || entity.maxCount <= 0) return 0;
+  return Math.min(1, getPurchasedEntityCount(args.purchasedEntities, entity) / entity.maxCount);
 }
 
 export function drawCluster(args: DrawClusterArgs): void {
@@ -579,8 +594,11 @@ const V9_PLANET_WINDOWS = [
   { start: 0.91, end: 0.95 }, // Pluto
 ] as const;
 
-function drawPlanetarySystem({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
-  const sunT = rangeT(progress, 0.08, 0.24);
+function drawPlanetarySystem(args: DrawClusterArgs): void {
+  const { ctx, cluster, stage, cx, cy, progress, now } = args;
+  const sunLevel = linkedEntityCount(args, 'Sun');
+  const rockyPlanetLevel = linkedEntityCount(args, 'Rocky Planet');
+  const sunT = Math.max(rangeT(progress, 0.08, 0.24) * 0.3, Math.min(1, sunLevel / 4));
 
   // Layer 1: molecular cloud / nebula haze (0–16%)
   const hazeAlpha = easeIO(rangeT(progress, 0, 0.08)) * (1 - easeIO(rangeT(progress, 0.10, 0.22)));
@@ -650,15 +668,16 @@ function drawPlanetarySystem({ ctx, cluster, stage, cx, cy, progress, now }: Dra
   // Layer 5: proto-sun and stable sun
   if (sunT > 0) {
     const sunR = 8 + easeIO(sunT) * 24;
-    const fullSunR = Math.max(sunR, progress >= 0.24 ? 32 : sunR);
+    const fullSunR = Math.max(sunR, sunLevel >= 4 || progress >= 0.98 ? 32 : sunR);
     drawSolarSun(ctx, stage, cx, cy, fullSunR, 0.75 + easeIO(sunT) * 0.2 - progress * 0.15);
   }
 
   // Layer 6: individual planet formation and stable orbits
   SOLAR_BODIES.forEach((body, idx) => {
+    if (sunLevel <= 0) return;
+    if (idx >= rockyPlanetLevel) return;
     const win = V9_PLANET_WINDOWS[idx];
-    if (progress < win.start) return;
-    const localT = Math.min(1, (progress - win.start) / (win.end - win.start));
+    const localT = Math.max(0.18, rangeT(progress, win.start, win.end));
     if (localT < 1.0) {
       drawFormingPlanet(ctx, cx, cy, idx, localT, now);
     } else {
@@ -990,7 +1009,9 @@ function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClu
   drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
 }
 
-function drawRedGiantBloom({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
+function drawRedGiantBloom(args: DrawClusterArgs): void {
+  const { ctx, cluster, stage, cx, cy, now } = args;
+  const progress = Math.max(args.progress, linkedEntityRatio(args, 'Red Giant Envelope') * 0.88);
   // V9: gradual red giant expansion with per-planet consumption
   const giantPhase = easeIO(rangeT(progress, 0.10, 0.88));
   const giantR = 30 + giantPhase * 130;
@@ -1126,7 +1147,15 @@ function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterAr
   });
 }
 
-function drawBlackHoleScene({ ctx, cluster, stage, cx, cy, width, height, progress, now }: DrawClusterArgs): void {
+function drawBlackHoleScene(args: DrawClusterArgs): void {
+  const { ctx, cluster, stage, cx, cy, width, height, now } = args;
+  const evaporationLink = Math.min(
+    1,
+    linkedEntityRatio(args, 'Stellar BH Evaporation') * 0.62 +
+      linkedEntityRatio(args, 'Supermassive Evaporation') * 0.27 +
+      linkedEntityRatio(args, 'Final Evaporation Flash') * 0.11,
+  );
+  const progress = Math.max(args.progress, evaporationLink);
   const diskMass = cluster.motes.reduce((sum, mote) => sum + mote.mass, 0);
   const initialRadius = Math.min(width, height) * 0.3;
   const inner = initialRadius * Math.pow(1 - progress, 0.7) + 5 * Math.pow(progress, 1.5);

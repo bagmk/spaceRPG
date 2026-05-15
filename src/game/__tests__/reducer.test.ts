@@ -88,10 +88,10 @@ describe('gameReducer', () => {
   });
 
   it('fills the logarithmic cosmic clock according to Aeon Drive level', () => {
-    // Stage 1 baseline is a 120s tutorial clock before Aeon Drive scaling.
+    // Stage 1 baseline is a three-minute clock before Aeon Drive scaling.
     const state = createInitialGameState(0);
     const next = gameReducer(state, { type: 'TICK', now: 1000, dt: 1000 });
-    expect(next.timeGauge).toBeCloseTo(0.82, 1);
+    expect(next.timeGauge).toBeCloseTo(0.56, 1);
     // cosmic clock advances slightly from 1e-34
     expect(next.cosmicClockSec).toBeGreaterThan(1e-34);
     expect(next.cosmicClockSec).toBeLessThan(2e-34);
@@ -150,6 +150,21 @@ describe('gameReducer', () => {
     expect(next.entropy).toBeGreaterThan(0);
     expect(next.lastClickEvent?.entropyGained).toBeGreaterThan(0);
     expect(next.lastClickEvent?.particleName).toBeTruthy();
+  });
+
+  it('turns passive matter gain into visible entropy over time', () => {
+    const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'auto');
+    expect(entity).toBeDefined();
+    if (!entity) return;
+
+    const funded = {
+      ...createInitialGameState(0),
+      quanta: getEntityCost(entity, 0) * 10,
+    };
+    const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
+    const ticked = gameReducer(purchased, { type: 'TICK', now: 30_000, dt: 30_000 });
+
+    expect(Math.floor(ticked.entropy)).toBeGreaterThan(Math.floor(purchased.entropy));
   });
 
   it('applies purchased click entities to click gains immediately', () => {

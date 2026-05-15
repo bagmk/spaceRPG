@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { EndingId } from '../types';
-import { STAGE_ENTITIES, getEntitiesForStage } from '../entities/stageItems';
+import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, LEGACY_TIME_ENTITY_EFFECT_FACTOR } from '../balance';
+import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
 const ENDING_IDS: EndingId[] = ['heat_death', 'big_rip', 'big_crunch', 'vacuum_decay', 'bounce'];
@@ -46,19 +47,44 @@ describe('stage entity definitions', () => {
   it('uses the tuned rarity caps and starting prices', () => {
     expect(ENTITY_MAX_COUNT.rare).toBe(10);
     expect(ENTITY_MAX_COUNT.epic).toBe(5);
+    expect(ENTITY_MAX_COUNT.legendary).toBe(1);
+    expect(ENTITY_TIME_MAX_COUNT.common).toBe(20);
+    expect(ENTITY_TIME_MAX_COUNT.rare).toBe(10);
+    expect(ENTITY_TIME_MAX_COUNT.epic).toBe(5);
     expect(ENTITY_BASE_COST_FACTOR.rare).toBeCloseTo(0.32);
-    expect(ENTITY_BASE_COST_FACTOR.epic).toBeCloseTo(0.5);
+    expect(ENTITY_BASE_COST_FACTOR.epic).toBeCloseTo(1.5);
     expect(ENTITY_BASE_COST_FACTOR.legendary).toBeCloseTo(3.6);
   });
 
-  it('caps all rare entities at ten and all epic entities at five', () => {
-    const rareEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare');
-    const epicEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic');
+  it('uses the requested caps for time-speed entities', () => {
+    const commonTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'common' && entity.effect.type === 'time');
+    const rareTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare' && entity.effect.type === 'time');
+    const epicTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic' && entity.effect.type === 'time');
+
+    expect(commonTimeEntities.length).toBeGreaterThan(0);
+    expect(rareTimeEntities.length).toBeGreaterThan(0);
+    expect(epicTimeEntities.length).toBeGreaterThan(0);
+    expect(commonTimeEntities.every((entity) => entity.maxCount === 20)).toBe(true);
+    expect(rareTimeEntities.every((entity) => entity.maxCount === 10)).toBe(true);
+    expect(epicTimeEntities.every((entity) => entity.maxCount === 5)).toBe(true);
+  });
+
+  it('keeps non-time rare and epic entities at the standard caps', () => {
+    const rareEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare' && entity.effect.type !== 'time');
+    const epicEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic' && entity.effect.type !== 'time');
 
     expect(rareEntities.length).toBeGreaterThan(0);
     expect(epicEntities.length).toBeGreaterThan(0);
     expect(rareEntities.every((entity) => entity.maxCount === 10)).toBe(true);
     expect(epicEntities.every((entity) => entity.maxCount === 5)).toBe(true);
+  });
+
+  it('keeps every legendary entity at one purchase max', () => {
+    const legendaryEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'legendary');
+
+    expect(legendaryEntities.length).toBeGreaterThan(0);
+    expect(legendaryEntities.every((entity) => entity.maxCount === 1)).toBe(true);
+    expect(getPurchasedEntityCount([{ entityId: legendaryEntities[0].id, count: 2 }], legendaryEntities[0])).toBe(1);
   });
 
   it('rebalance-scales stage two and later entity effects', () => {
@@ -71,6 +97,16 @@ describe('stage entity definitions', () => {
     expect(stage2Click?.effect.value).toBeCloseTo(15 / 4);
     expect(stage2Auto?.effect.value).toBeCloseTo(0.8 / 10);
     expect(stage2Crit?.effect.value).toBeCloseTo(0.3 / 4);
+  });
+
+  it('uses one-tenth auto scaling from stage six onward', () => {
+    const stage5Auto = getEntitiesForStage(5).find((entity) => entity.name === 'Hydrogen Atom');
+    const stage6CommonAuto = getEntitiesForStage(6).find((entity) => entity.name === 'Cold Hydrogen');
+    const stage6RareAuto = getEntitiesForStage(6).find((entity) => entity.name === 'Molecular Hydrogen');
+
+    expect(stage5Auto?.effect.value).toBeCloseTo(1.5 / 10);
+    expect(stage6CommonAuto?.effect.value).toBeCloseTo(1.5 / 10);
+    expect(stage6RareAuto?.effect.value).toBeCloseTo(5 / 10);
   });
 
   it('gives stages 4-16 at least two legendary entities', () => {
@@ -87,6 +123,16 @@ describe('stage entity definitions', () => {
     for (const endingId of ENDING_IDS) {
       expect(stage16EndingEntities.filter((entity) => entity.endingId === endingId)).toHaveLength(1);
     }
+  });
+
+  it('uses Stage 16 rare and epic slots for time speed instead of crit', () => {
+    const stage16 = getEntitiesForStage(16);
+    const rareAndEpic = stage16.filter((entity) => entity.rarity === 'rare' || entity.rarity === 'epic');
+
+    expect(stage16.find((entity) => entity.name === 'Max Entropy')?.effect.type).toBe('time');
+    expect(stage16.find((entity) => entity.name === 'Quantum Fluctuation Final')?.effect.type).toBe('time');
+    expect(rareAndEpic.some((entity) => entity.effect.type === 'crit')).toBe(false);
+    expect(rareAndEpic.filter((entity) => entity.effect.type === 'time')).toHaveLength(2);
   });
 
   it('keeps every effect value positive', () => {
@@ -135,8 +181,38 @@ describe('stage entity definitions', () => {
       { entityId: timeEntity?.id ?? '', count: 1 },
     ]);
 
-    expect(mods.autoRateAdd).toBeGreaterThan(0);
+    expect(mods.autoRateFlatAdd).toBeGreaterThan(0);
     expect(mods.clickPowerMult).toBeGreaterThan(1);
     expect(mods.timeMultMult).toBeGreaterThan(1);
+  });
+
+  it('applies previous-stage time entities as weaker legacy bonuses', () => {
+    const timeEntity = getEntitiesForStage(5).find((entity) => entity.effect.type === 'time');
+    expect(timeEntity).toBeDefined();
+    if (!timeEntity) return;
+
+    const currentStageMods = defaultModifiers();
+    applyEntityModifiers(currentStageMods, [{ entityId: timeEntity.id, count: 1 }], timeEntity.stageId);
+
+    const laterStageMods = defaultModifiers();
+    applyEntityModifiers(laterStageMods, [{ entityId: timeEntity.id, count: 1 }], timeEntity.stageId + 1);
+
+    expect(currentStageMods.timeMultMult).toBeCloseTo(1 + timeEntity.effect.value / 100);
+    expect(laterStageMods.timeMultMult).toBeCloseTo(
+      1 + (timeEntity.effect.value * LEGACY_TIME_ENTITY_EFFECT_FACTOR) / 100,
+    );
+    expect(laterStageMods.timeMultMult).toBeLessThan(currentStageMods.timeMultMult);
+  });
+
+  it('keeps flat auto entity gains from being multiplied by existing auto multipliers', () => {
+    const sun = getEntitiesForStage(10).find((entity) => entity.name === 'Sun');
+    expect(sun).toBeDefined();
+    if (!sun) return;
+
+    const baseline = { ...defaultModifiers(), autoRateAdd: 1e9, autoRateMult: 48 };
+    const withSun = { ...baseline };
+    applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1 }]);
+
+    expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(525e6, 0);
   });
 });

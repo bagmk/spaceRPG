@@ -2,6 +2,7 @@
 
 import type { Modifiers } from '../skills/effects';
 import type { PurchasedEntityEntry } from './types';
+import { LEGACY_TIME_ENTITY_EFFECT_FACTOR } from '../balance';
 import { findEntityById } from './stageItems';
 
 function scaledFlatGain(baseCost: number, totalEffect: number): number {
@@ -11,6 +12,7 @@ function scaledFlatGain(baseCost: number, totalEffect: number): number {
 export function applyEntityModifiers(
   mods: Modifiers,
   purchasedEntities: PurchasedEntityEntry[],
+  currentStageId?: number,
 ): void {
   for (const entry of purchasedEntities) {
     if (entry.count <= 0) continue;
@@ -18,11 +20,12 @@ export function applyEntityModifiers(
     if (!entity) continue;
 
     const { type, value, isFlat } = entity.effect;
-    const total = value * entry.count;
+    const count = entity.maxCount > 0 ? Math.min(entry.count, entity.maxCount) : entry.count;
+    const total = value * count;
 
     switch (type) {
       case 'auto':
-        mods.autoRateAdd += scaledFlatGain(entity.baseCost, total);
+        mods.autoRateFlatAdd += scaledFlatGain(entity.baseCost, total);
         break;
       case 'click':
         mods.clickPowerMult *= 1 + total / 100;
@@ -35,7 +38,13 @@ export function applyEntityModifiers(
         }
         break;
       case 'time':
-        mods.timeMultMult *= 1 + total / 100;
+        {
+          const stageFactor =
+            currentStageId !== undefined && entity.stageId < currentStageId
+              ? LEGACY_TIME_ENTITY_EFFECT_FACTOR
+              : 1;
+          mods.timeMultMult *= 1 + (total * stageFactor) / 100;
+        }
         break;
       case 'entropy':
         // entropy entities boost encounter rewards

@@ -10,20 +10,20 @@ interface BilingualCopy { label: BilingualHint; description: BilingualHint; }
 
 const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, BilingualHint> = {
   big_crunch: {
-    en: 'Crit > 1/sec across stages 13–16.',
-    ko: '13~16단계에서 초당 치명타 > 1회.',
+    en: 'During stages 13–16, keep your manual click rate at 1+ click per second. The game checks your recent late-stage click-rate records plus the current stage rate.',
+    ko: '13~16단계에서 수동 클릭 속도를 초당 1회 이상으로 유지하세요. 최근 후반 스테이지 클릭 기록과 현재 스테이지 클릭 속도를 함께 확인합니다.',
   },
   big_rip: {
-    en: 'Own 12 Cosmic Time or all-source entities.',
-    ko: '우주 시간 또는 만능 엔티티를 12개 이상 보유.',
+    en: 'Build a time-dominant universe: reach Aeon Drive level 30 with the Time Lv.30 cross-node, or own 12+ Entity Lab upgrades whose effect is Time or All-source multiplier.',
+    ko: '시간 중심 우주를 만드세요. Aeon Drive 30레벨과 Time Lv.30 교차 노드를 보유하거나, 효과가 시간 또는 만능 배율인 엔티티 연구소 업그레이드를 12개 이상 보유해야 합니다.',
   },
   vacuum_decay: {
-    en: 'Condense near 25%, 50%, 75%, or 100% in the proton decay era.',
-    ko: '양성자 붕괴 시대에 25%, 50%, 75%, 100% 근처에서 응축.',
+    en: 'In the proton decay era, condense when the stage progress is very close to 25%, 50%, 75%, or 100%. Precision matters.',
+    ko: '양성자 붕괴 시대에서 스테이지 진행도가 25%, 50%, 75%, 100%에 매우 가까울 때 응축하세요. 정확도가 중요합니다.',
   },
   bounce: {
-    en: 'Universe count ≥ 5, with Heat Death, Big Crunch, Big Rip, and Vacuum Decay completed.',
-    ko: '우주 횟수 ≥ 5, 열적 죽음·빅 크런치·빅 립·진공 붕괴 엔딩 완료.',
+    en: 'Complete the four base endings: Heat Death, Big Crunch, Big Rip, and Vacuum Decay. Then reach universe count 5 or higher.',
+    ko: '기본 엔딩 4개인 열적 죽음, 빅 크런치, 빅 립, 진공 붕괴를 모두 완료한 뒤 우주 횟수 5 이상에 도달하세요.',
   },
 };
 
@@ -291,7 +291,9 @@ export function getEndingOptions(state: GameState, now: number, lang: Lang = 'en
     bounce: bounceUnlocked,
   };
 
-  const alwaysAvailable = lang === 'ko' ? '항상 선택 가능' : 'Always available';
+  const alwaysAvailable = lang === 'ko'
+    ? '특수 조건 없이 항상 선택할 수 있는 기본 엔딩입니다.'
+    : 'Always available as the default ending; no special condition is required.';
   const requirementMap: Record<EndingId, string> = {
     heat_death: alwaysAvailable,
     big_crunch: ENDING_HINTS.big_crunch[lang],
@@ -305,6 +307,7 @@ export function getEndingOptions(state: GameState, now: number, lang: Lang = 'en
     label: ENDING_COPY[endingId].label[lang],
     description: ENDING_COPY[endingId].description[lang],
     unlocked: unlockedMap[endingId],
+    seen: state.endingsCompleted.includes(endingId),
     requirement: requirementMap[endingId],
   }));
 }

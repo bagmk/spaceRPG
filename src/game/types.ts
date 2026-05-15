@@ -280,6 +280,7 @@ export interface EndingOption {
   label: string;
   description: string;
   unlocked: boolean;
+  seen: boolean;
   requirement: string;
 }
 

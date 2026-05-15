@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
+  formatAutoRateValue,
   formatCosmicTimeProgressParts,
-  formatGameNumberShort,
   formatProgressNumberParts,
   formatWhole,
   canCondense as canCondenseNow,
@@ -36,11 +36,7 @@ import { EntityPanel } from './EntityPanel';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { OfflineProgressModal } from './OfflineProgressModal';
 import { EndingChooser } from './EndingChooser';
-import { BigCrunchEnding } from './endings/BigCrunchEnding';
-import { BigRipEnding } from './endings/BigRipEnding';
-import { BounceEnding } from './endings/BounceEnding';
-import { HeatDeathEnding } from './endings/HeatDeathEnding';
-import { VacuumDecayEnding } from './endings/VacuumDecayEnding';
+import { EndingCredits } from './endings/EndingCredits';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
@@ -68,7 +64,7 @@ interface EncounterEntry {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'entity' | 'shop' | 'resource' | 'boost';
+  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
@@ -103,27 +99,16 @@ interface GameScreenProps {
 
 function EndingCinematic({
   endingId,
+  language,
   onComplete,
 }: {
   endingId: EndingId | null;
+  language: 'en' | 'ko';
   onComplete: () => void;
 }) {
-  if (endingId === 'big_crunch') {
-    return <BigCrunchEnding onComplete={onComplete} />;
-  }
-  if (endingId === 'big_rip') {
-    return <BigRipEnding onComplete={onComplete} />;
-  }
-  if (endingId === 'vacuum_decay') {
-    return <VacuumDecayEnding onComplete={onComplete} />;
-  }
-  if (endingId === 'heat_death') {
-    return <HeatDeathEnding onComplete={onComplete} />;
-  }
-  if (endingId === 'bounce') {
-    return <BounceEnding onComplete={onComplete} />;
-  }
-  return null;
+  return endingId === null ? null : (
+    <EndingCredits endingId={endingId} language={language} onComplete={onComplete} />
+  );
 }
 
 export function GameScreen({
@@ -148,6 +133,7 @@ export function GameScreen({
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
   const boostAnchorRef = useRef<HTMLDivElement | null>(null);
+  const fieldCenterAnchorRef = useRef<HTMLSpanElement | null>(null);
   const rawStage = STAGES[state.stageIdx];
   // Display stage can be overridden when browsing past stages in Entity Lab
   const displayRawStage = viewingStageId !== null
@@ -189,7 +175,7 @@ export function GameScreen({
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
-  const endingOptions = getEndingOptions(state, Date.now());
+  const endingOptions = getEndingOptions(state, Date.now(), language);
   const canChooseEnding =
     stage.id === STAGES.length &&
     state.pendingCondenseStageIdx === null &&
@@ -306,6 +292,14 @@ export function GameScreen({
         autoCloseMs: 6000,
       };
     }
+    if (encounterEntries.length > 0 && !state.tutorialFlags['rogue-encounter-intro']) {
+      return {
+        flagId: 'rogue-encounter-intro',
+        anchor: 'field',
+        message: t(language, 'tutRogueEncounter'),
+        autoCloseMs: 7000,
+      };
+    }
     if (canShowShop && !state.tutorialFlags['shop-visible']) {
       return {
         flagId: 'shop-visible',
@@ -338,6 +332,7 @@ export function GameScreen({
     entityPanelOpen,
     hasActiveBoost,
     hasAffordableEntity,
+    encounterEntries.length,
     language,
     ownedCurrentStageEntityCount,
     stage.id,
@@ -514,6 +509,7 @@ export function GameScreen({
       style={{ '--accent': displayStage.accent, '--core': displayStage.coreColor } as CSSProperties}
     >
       <main className="field">
+        <span className="field-center-tutorial-anchor" ref={fieldCenterAnchorRef} aria-hidden="true" />
         {import.meta.env.DEV ? (
           <div className="admin-panel">
             <button
@@ -673,7 +669,7 @@ export function GameScreen({
                     <span className="hud-meter-label">
                       <span className="hud-meter-label-text">{t(language, 'hudQuanta')}</span>
                       {autoRate > 0 && !isViewingPastStage ? (
-                        <span className="hud-auto-rate">{`+${formatGameNumberShort(autoRate)}/s`}</span>
+                        <span className="hud-auto-rate">{`+${formatAutoRateValue(autoRate)}/s`}</span>
                       ) : null}
                     </span>
                     <span className="hud-readout">
@@ -848,14 +844,18 @@ export function GameScreen({
                 ? shopAnchorRef
                 : activeTutorialBubble.anchor === 'boost'
                   ? boostAnchorRef
-                  : resourceAnchorRef
+                  : activeTutorialBubble.anchor === 'field'
+                    ? fieldCenterAnchorRef
+                    : resourceAnchorRef
           }
           position={
             activeTutorialBubble.anchor === 'resource'
               ? 'bottom'
               : activeTutorialBubble.anchor === 'entity'
                 ? 'top'
-                : 'left'
+                : activeTutorialBubble.anchor === 'field'
+                  ? 'top'
+                  : 'left'
           }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
@@ -902,6 +902,7 @@ export function GameScreen({
       {state.selectedEndingId !== null ? (
         <EndingCinematic
           endingId={state.selectedEndingId}
+          language={language}
           onComplete={() => dispatch({ type: 'COMPLETE_ENDING', now: performance.now() })}
         />
       ) : null}

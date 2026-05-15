@@ -1326,21 +1326,13 @@ export const ParticleField = memo(function ParticleField({
         ...createBurstSet(
           cx,
           cy,
-          TUNING.STAGE_TRANSITION_BURST_COUNT,
-          '#ffffff',
-          6.5,
-          stage.id,
-        ),
-        ...createBurstSet(
-          cx,
-          cy,
-          Math.floor(TUNING.STAGE_TRANSITION_BURST_COUNT * 0.75),
+          Math.floor(TUNING.STAGE_TRANSITION_BURST_COUNT * 0.28),
           stage.accent,
-          4.8,
+          3.2,
           stage.id,
         ),
       );
-      world.shockwaves.push(createShockwave('#ffffff'), createShockwave(stage.accent));
+      world.shockwaves.push(createShockwave(stage.accent));
     }
 
     if (!interactionLocked) {
@@ -1421,6 +1413,7 @@ export const ParticleField = memo(function ParticleField({
       ctx,
       cluster: world.cluster,
       stage,
+      purchasedEntities,
       cx,
       cy,
       width,
