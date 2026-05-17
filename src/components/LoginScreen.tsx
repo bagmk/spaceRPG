@@ -40,17 +40,6 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
     return null;
   }
 
-  // Still loading Firebase — show nothing (avoid flash)
-  if (status === 'loading') {
-    return (
-      <section className="login-screen">
-        <div className="login-screen__content">
-          <h1 className="login-screen__title">Cosmic Coalescence</h1>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="login-screen">
       <div className="login-screen__content">
@@ -62,7 +51,7 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
             className="login-screen__google-btn"
             type="button"
             onClick={handleGoogle}
-            disabled={signingIn || !auth}
+            disabled={signingIn || !auth || status === 'loading'}
           >
             <svg viewBox="0 0 24 24" width="20" height="20">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -73,9 +62,10 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
             <span>{ko ? 'Google로 계속하기' : 'Continue with Google'}</span>
           </button>
 
+          {status === 'loading' && <p className="login-screen__status">{ko ? '연결 중...' : 'Connecting...'}</p>}
           {signingIn && <p className="login-screen__status">{ko ? '로그인 중...' : 'Signing in...'}</p>}
           {error && <p className="login-screen__error">{error}</p>}
-          {!auth && <p className="login-screen__error">{ko ? '서버 연결 실패' : 'Server connection failed'}</p>}
+          {!auth && status !== 'loading' && <p className="login-screen__error">{ko ? '서버 연결 실패' : 'Server connection failed'}</p>}
         </div>
 
         <div className="login-screen__bottom">
