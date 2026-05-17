@@ -10023,7 +10023,7 @@ button.stat-header-item {
   top: auto !important;
   left: auto !important;
   right: max(14px, env(safe-area-inset-right)) !important;
-  bottom: max(14px, env(safe-area-inset-bottom)) !important;
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 60px)) !important;
   z-index: 26 !important;
   width: auto !important;
   min-width: 0 !important;

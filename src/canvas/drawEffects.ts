@@ -70,27 +70,34 @@ export function drawEffects({
     const indicatorY = cy + sinAngle * travel;
     const pulse = 1 + Math.sin(now / TUNING.ROGUE_INDICATOR_PULSE_MS) * 0.25;
 
+    const distance = Math.hypot(dx, dy);
+    const alpha = Math.min(0.9, Math.max(0.35, 1 - distance / (Math.max(width, height) * 1.5)));
+
     ctx.save();
     ctx.translate(indicatorX, indicatorY);
     ctx.rotate(angle);
-    ctx.fillStyle = hexToRgba(rogue.color, 0.3);
+
+    // Arrow chevron
+    const size = 8 * pulse;
+    ctx.strokeStyle = rogue.color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = alpha;
     ctx.beginPath();
-    ctx.arc(0, 0, 14 * pulse, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-size * 0.6, -size);
+    ctx.lineTo(size * 0.6, 0);
+    ctx.lineTo(-size * 0.6, size);
+    ctx.stroke();
+
+    // Soft glow dot
+    ctx.globalAlpha = alpha * 0.3;
     ctx.fillStyle = rogue.color;
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-14 * pulse, -7);
-    ctx.lineTo(-14 * pulse, 7);
-    ctx.closePath();
+    ctx.arc(0, 0, 4 * pulse, 0, Math.PI * 2);
     ctx.fill();
 
-    const distance = Math.hypot(dx, dy);
-    const intensity = Math.max(0, 1 - distance / (Math.max(width, height) * 1.2));
-    if (intensity > 0.2) {
-      ctx.fillStyle = hexToRgba(rogue.color, intensity * 0.4);
-      ctx.fillRect(-22, -1, 6, 2);
-    }
+    ctx.globalAlpha = 1;
     ctx.restore();
   });
 }
