@@ -51,6 +51,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
 import { getPrestigeMultiplier, PRESTIGE_UPGRADES, type PrestigeUpgradeId } from '../game/prestige';
+import { useBoostNotifications } from '../hooks/useBoostNotifications';
 
 interface FloatingEntry {
   id: number;
@@ -209,6 +210,7 @@ export function GameScreen({
     transitionPhase === 'bursting' ||
     state.selectedEndingId !== null ||
     canChooseEnding;
+  useBoostNotifications(state.shopBoosts, language);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [encounterEntries, setEncounterEntries] = useState<EncounterEntry[]>([]);
   const [shakeClass, setShakeClass] = useState('');
