@@ -30,8 +30,8 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
       });
   };
 
-  // If already authed or anonymous (e.g. returning user), auto-proceed
-  if (status === 'authed' || status === 'needsName' || status === 'anonymous') {
+  // If already authed (e.g. returning Google user), auto-proceed
+  if (status === 'authed' || status === 'needsName') {
     Promise.resolve().then(onContinue);
     return null;
   }
