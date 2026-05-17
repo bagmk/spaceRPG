@@ -24,6 +24,7 @@ export interface LeaderboardEntry {
   uid: string;
   displayName: string;
   peakEntropy: number;
+  totalTimePlayed?: number;
   updatedAt?: any;
 }
 
@@ -35,6 +36,7 @@ export async function pushLeaderboardEntry(
   uid: string,
   peakEntropy: number,
   profile: UserProfile | null,
+  totalTimePlayed?: number,
 ): Promise<void> {
   if (!db) return;
   if (!profile?.displayName) return;
@@ -42,12 +44,16 @@ export async function pushLeaderboardEntry(
 
   try {
     const ref = doc(db, 'leaderboard', uid);
-    await setDoc(ref, {
+    const data: Record<string, unknown> = {
       uid,
       displayName: profile.displayName,
       peakEntropy,
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    };
+    if (totalTimePlayed != null && Number.isFinite(totalTimePlayed)) {
+      data.totalTimePlayed = totalTimePlayed;
+    }
+    await setDoc(ref, data, { merge: true });
   } catch (e) {
     console.error('[leaderboard] push failed:', e);
   }

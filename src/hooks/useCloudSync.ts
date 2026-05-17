@@ -77,14 +77,14 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
   // Push leaderboard entry when peakEntropy changes (throttled to once per minute)
   const lastPushedPeak = useRef(0);
   const leaderboardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingLeaderboard = useRef<{ uid: string; peak: number; profile: typeof profile } | null>(null);
+  const pendingLeaderboard = useRef<{ uid: string; peak: number; profile: typeof profile; time: number } | null>(null);
 
   useEffect(() => {
     if (!user || user.isAnonymous) return;
     if (status !== 'authed') return;
     if (state.peakEntropy <= lastPushedPeak.current) return;
 
-    pendingLeaderboard.current = { uid: user.uid, peak: state.peakEntropy, profile };
+    pendingLeaderboard.current = { uid: user.uid, peak: state.peakEntropy, profile, time: state.totalTimePlayed };
     if (leaderboardTimer.current) return; // already scheduled
 
     leaderboardTimer.current = setTimeout(() => {
@@ -92,7 +92,7 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
       const pending = pendingLeaderboard.current;
       if (pending && pending.peak > lastPushedPeak.current) {
         lastPushedPeak.current = pending.peak;
-        pushLeaderboardEntry(pending.uid, pending.peak, pending.profile);
+        pushLeaderboardEntry(pending.uid, pending.peak, pending.profile, pending.time);
       }
       pendingLeaderboard.current = null;
     }, 60_000);

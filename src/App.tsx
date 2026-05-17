@@ -207,7 +207,6 @@ function AppInner() {
           onBuyPrestigeUpgrade={(upgradeId) => dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId })}
           onOpenAtlas={() => setRoute('atlas')}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
-          onClose={() => setRoute('intro')}
           onPrestige={() => {
             soundManagerRef.current?.unlock();
             soundManagerRef.current?.playBigBang();

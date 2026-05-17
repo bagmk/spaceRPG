@@ -79,10 +79,9 @@ interface FinalScreenProps {
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
-  onClose: () => void;
 }
 
-export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard, onClose }: FinalScreenProps) {
+export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
   const quoteIdx = (state.universeCount - 1) % FINAL_QUOTES.length;
   const quote = FINAL_QUOTES[quoteIdx];
@@ -92,7 +91,6 @@ export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade,
 
   return (
     <section className="final-screen">
-      <button type="button" className="final-close" onClick={onClose} aria-label="Close">✕</button>
       <div className="final-card">
 
         {/* Header */}

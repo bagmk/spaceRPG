@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchTopN, type LeaderboardEntry } from '../cloud/leaderboard';
-import { formatEntropyParts } from '../game/formulas';
+import { formatEntropyParts, formatDuration } from '../game/formulas';
 import { useAuth } from '../auth/AuthProvider';
 import type { Lang } from '../i18n';
 
@@ -48,8 +48,11 @@ export function Leaderboard({ language, onClose }: LeaderboardProps) {
                 >
                   <span className="leaderboard__rank">#{idx + 1}</span>
                   <span className="leaderboard__name">{entry.displayName}</span>
+                  {entry.totalTimePlayed ? (
+                    <span className="leaderboard__time">{formatDuration(entry.totalTimePlayed)}</span>
+                  ) : null}
                   <span className="leaderboard__entropy">
-                    {readout.value}<span className="hud-entropy-unit">{readout.unit}</span>
+                    {readout.value} <span className="hud-entropy-unit">{readout.unit}</span>
                   </span>
                 </div>
               );

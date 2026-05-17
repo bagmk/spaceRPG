@@ -1636,6 +1636,13 @@ button.stat-header-item {
   white-space: nowrap;
 }
 
+.leaderboard__time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(180, 190, 210, 0.45);
+  white-space: nowrap;
+}
+
 .leaderboard__entropy {
   font-family: var(--mono);
   font-size: 12px;
