@@ -137,6 +137,12 @@ function AppInner() {
     }
   }, [state.completedRun, state.lastEndingId]);
 
+  useEffect(() => {
+    if (authStatus === 'signedOut') {
+      setRoute('login');
+    }
+  }, [authStatus]);
+
   return (
     <>
       {route === 'login' ? (

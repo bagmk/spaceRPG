@@ -163,7 +163,7 @@ export function IntroScreen({
           canResume ? (
             <div className="intro-actions">
               <button
-                className="q-continue intro-button intro-secondary"
+                className="q-continue intro-button"
                 type="button"
                 onClick={() => {
                   onUnlockAudio();
@@ -171,16 +171,6 @@ export function IntroScreen({
                 }}
               >
                 {t(language, 'introResume')}
-              </button>
-              <button
-                className="q-continue intro-button"
-                type="button"
-                onClick={() => {
-                  onNewStart();
-                  beginBigBang();
-                }}
-              >
-                {t(language, 'introNewBang')}
               </button>
               {canOpenAtlas ? (
                 <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>

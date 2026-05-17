@@ -6496,6 +6496,43 @@ button.stat-header-item {
   background: rgba(180, 40, 40, 0.18);
 }
 
+.settings-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.settings-account-email {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.settings-logout-btn {
+  all: unset;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.settings-logout-btn:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* ── Settings gear button ──────────────────────────────────────────── */
 
 .settings-gear-btn {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { t, type Lang } from '../i18n';
+import { useAuth } from '../auth/AuthProvider';
 
 interface SettingsPanelProps {
   bgmMuted: boolean;
@@ -23,6 +24,7 @@ export function SettingsPanel({
   onClose,
 }: SettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const { status, profile, signOut } = useAuth();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -87,6 +89,22 @@ export function SettingsPanel({
         >
           {t(language, 'settingsReset')}
         </button>
+
+        {status !== 'anonymous' && status !== 'signedOut' ? (
+          <>
+            <div className="settings-divider" />
+            <div className="settings-account">
+              <span className="settings-account-email">{profile?.email ?? profile?.displayName ?? ''}</span>
+              <button
+                type="button"
+                className="settings-logout-btn"
+                onClick={signOut}
+              >
+                {language === 'ko' ? '로그아웃' : 'Log Out'}
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
