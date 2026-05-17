@@ -1,0 +1,114 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Deep space gradient background -->
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0b3d"/>
+      <stop offset="40%" stop-color="#0a0420"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- Outer halo (purple-blue) -->
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.55"/>
+      <stop offset="35%" stop-color="#7c3aed" stop-opacity="0.32"/>
+      <stop offset="70%" stop-color="#312e81" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Core glow (white-gold) -->
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="20%" stop-color="#fff7d6" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#fbbf24" stop-opacity="0.65"/>
+      <stop offset="85%" stop-color="#7c3aed" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Particle glow -->
+    <radialGradient id="particle" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#a78bfa" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Streak gradient for incoming particles -->
+    <linearGradient id="streak" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#fff7d6" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Distant stars -->
+  <g fill="#ffffff">
+    <circle cx="120" cy="180" r="2" opacity="0.7"/>
+    <circle cx="850" cy="140" r="1.5" opacity="0.5"/>
+    <circle cx="200" cy="820" r="2.5" opacity="0.8"/>
+    <circle cx="900" cy="780" r="1.5" opacity="0.6"/>
+    <circle cx="80" cy="500" r="1" opacity="0.4"/>
+    <circle cx="950" cy="450" r="2" opacity="0.7"/>
+    <circle cx="450" cy="90" r="1" opacity="0.5"/>
+    <circle cx="600" cy="950" r="1.5" opacity="0.6"/>
+    <circle cx="160" cy="650" r="1" opacity="0.3"/>
+    <circle cx="880" cy="280" r="1" opacity="0.4"/>
+    <circle cx="300" cy="230" r="0.8" opacity="0.5"/>
+    <circle cx="730" cy="650" r="0.8" opacity="0.4"/>
+  </g>
+
+  <!-- Outer cosmic halo -->
+  <circle cx="512" cy="512" r="460" fill="url(#halo)"/>
+
+  <!-- Coalescing particle streaks (incoming from multiple angles) -->
+  <g opacity="0.85">
+    <!-- 8 streaks rotating around center -->
+    <g transform="translate(512,512)">
+      <g transform="rotate(0)">
+        <path d="M 280 0 L 100 0" stroke="url(#streak)" stroke-width="6" stroke-linecap="round" fill="none"/>
+      </g>
+      <g transform="rotate(45)">
+        <path d="M 260 0 L 100 0" stroke="url(#streak)" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.85"/>
+      </g>
+      <g transform="rotate(90)">
+        <path d="M 290 0 L 100 0" stroke="url(#streak)" stroke-width="7" stroke-linecap="round" fill="none"/>
+      </g>
+      <g transform="rotate(135)">
+        <path d="M 250 0 L 100 0" stroke="url(#streak)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.8"/>
+      </g>
+      <g transform="rotate(180)">
+        <path d="M 285 0 L 100 0" stroke="url(#streak)" stroke-width="6" stroke-linecap="round" fill="none"/>
+      </g>
+      <g transform="rotate(225)">
+        <path d="M 260 0 L 100 0" stroke="url(#streak)" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.85"/>
+      </g>
+      <g transform="rotate(270)">
+        <path d="M 295 0 L 100 0" stroke="url(#streak)" stroke-width="6" stroke-linecap="round" fill="none"/>
+      </g>
+      <g transform="rotate(315)">
+        <path d="M 255 0 L 100 0" stroke="url(#streak)" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.8"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Mid-orbit particle dots -->
+  <g>
+    <circle cx="780" cy="512" r="14" fill="url(#particle)"/>
+    <circle cx="244" cy="512" r="12" fill="url(#particle)"/>
+    <circle cx="512" cy="780" r="13" fill="url(#particle)"/>
+    <circle cx="512" cy="244" r="13" fill="url(#particle)"/>
+    <circle cx="702" cy="322" r="10" fill="url(#particle)" opacity="0.85"/>
+    <circle cx="322" cy="702" r="10" fill="url(#particle)" opacity="0.85"/>
+    <circle cx="702" cy="702" r="10" fill="url(#particle)" opacity="0.85"/>
+    <circle cx="322" cy="322" r="10" fill="url(#particle)" opacity="0.85"/>
+  </g>
+
+  <!-- Core glow (large) -->
+  <circle cx="512" cy="512" r="220" fill="url(#core)"/>
+
+  <!-- Inner bright core -->
+  <circle cx="512" cy="512" r="58" fill="#ffffff"/>
+  <circle cx="512" cy="512" r="38" fill="#fff7d6"/>
+  <circle cx="512" cy="512" r="20" fill="#ffffff"/>
+</svg>

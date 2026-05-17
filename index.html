@@ -2,15 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cosmic Coalescence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Big Bang</title>
     <meta
       name="description"
       content="Guide a universe from quark-gluon plasma to heat death in a browser-based idle cosmic journey."
     />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#050510" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Big Bang" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
   </body>
-  </html>
+</html>
