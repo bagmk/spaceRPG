@@ -10166,7 +10166,7 @@ button.stat-header-item {
   .field > .scale-indicator,
   .field > .scale-indicator.scale-indicator {
     right: max(9px, env(safe-area-inset-right)) !important;
-    bottom: max(48px, calc(env(safe-area-inset-bottom) + 36px)) !important;
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 20px)) !important;
   }
 
   .field > .scale-indicator .scale-title {
