@@ -29,10 +29,21 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
       });
   };
 
-  // If already authed (e.g. returning user or just finished name setup), auto-proceed
-  if (status === 'authed' || status === 'needsName') {
+  // If already authed or anonymous (e.g. returning user), auto-proceed
+  if (status === 'authed' || status === 'needsName' || status === 'anonymous') {
     Promise.resolve().then(onContinue);
     return null;
+  }
+
+  // Still loading Firebase — show nothing (avoid flash)
+  if (status === 'loading') {
+    return (
+      <section className="login-screen">
+        <div className="login-screen__content">
+          <h1 className="login-screen__title">Cosmic Coalescence</h1>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -57,6 +68,14 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
           </button>
 
           {error && <p className="login-screen__error">{error}</p>}
+
+          <button
+            className="login-screen__guest-btn"
+            type="button"
+            onClick={onContinue}
+          >
+            {ko ? '게스트로 시작' : 'Play as Guest'}
+          </button>
         </div>
 
         <div className="login-screen__bottom">
