@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profile and saves — owner only
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Display name reverse index — unique enforcement
+    match /displayNames/{nameLower} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+    }
+
+    // Leaderboard — public read, owner write with validation
+    match /leaderboard/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.uid == userId
+                   && request.resource.data.displayName is string
+                   && request.resource.data.displayName.size() > 0
+                   && request.resource.data.displayName.size() <= 32
+                   && request.resource.data.peakEntropy is number
+                   && request.resource.data.peakEntropy >= 0
+                   // Monotonic increase: can only go up (peakEntropy never decreases)
+                   && (resource == null || request.resource.data.peakEntropy >= resource.data.peakEntropy);
+    }
+  }
+}

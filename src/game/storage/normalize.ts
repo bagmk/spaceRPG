@@ -1,8 +1,9 @@
 /** Data normalization helpers — convert legacy shapes to current SaveState fields. */
 
-import type { ShopBoost } from '../types';
+import type { EndingProgressFlags, ShopBoost } from '../types';
 import type { SkillState } from '../skills/types';
-import { createDefaultSkills } from '../defaults';
+import { createDefaultEndingProgressFlags, createDefaultSkills } from '../defaults';
+import { normalizeShopBoost } from '../shop/boosts';
 import { isShopBoost, isLegacyShopBoosts, isStringArray, isFiniteNumber } from './guards';
 
 function isV7CrossNodeId(nodeId: string): boolean {
@@ -96,7 +97,7 @@ export function normalizeSkillState(
 
 export function normalizeShopBoosts(value: unknown): ShopBoost[] {
   if (Array.isArray(value)) {
-    return value.filter(isShopBoost);
+    return value.filter(isShopBoost).map(normalizeShopBoost);
   }
   if (!isLegacyShopBoosts(value)) {
     return [];
@@ -105,6 +106,7 @@ export function normalizeShopBoosts(value: unknown): ShopBoost[] {
   if (value.timeMult) {
     boosts.push({
       id: `time_legacy_${value.timeMult.expiresAt}`,
+      category: 'time',
       factor: value.timeMult.factor,
       expiresAt: value.timeMult.expiresAt,
     });
@@ -112,9 +114,51 @@ export function normalizeShopBoosts(value: unknown): ShopBoost[] {
   if (value.quantaMult) {
     boosts.push({
       id: `quanta_legacy_${value.quantaMult.expiresAt}`,
+      category: 'matter',
       factor: value.quantaMult.factor,
       expiresAt: value.quantaMult.expiresAt,
     });
   }
   return boosts;
+}
+
+export function normalizeEndingProgressFlags(
+  value: unknown,
+  state?: {
+    critLevel?: number;
+    skills?: SkillState;
+  },
+): EndingProgressFlags {
+  const fallback = createDefaultEndingProgressFlags();
+  const inferredCritical =
+    (state?.critLevel ?? 0) > 0 ||
+    (state?.skills?.crit.level ?? 0) > 0 ||
+    (state?.skills?.ownedCrossNodes ?? []).some((nodeId) => nodeId.startsWith('crit_'));
+
+  if (!value || typeof value !== 'object') {
+    return {
+      ...fallback,
+      criticalUpgradedThisUniverse: inferredCritical,
+    };
+  }
+
+  const record = value as Partial<EndingProgressFlags>;
+  return {
+    bigCrunchEligible:
+      typeof record.bigCrunchEligible === 'boolean'
+        ? record.bigCrunchEligible
+        : fallback.bigCrunchEligible,
+    criticalUpgradedThisUniverse:
+      typeof record.criticalUpgradedThisUniverse === 'boolean'
+        ? record.criticalUpgradedThisUniverse || inferredCritical
+        : inferredCritical,
+    bigRipEverEligible:
+      typeof record.bigRipEverEligible === 'boolean'
+        ? record.bigRipEverEligible
+        : fallback.bigRipEverEligible,
+    vacuumDecayEligible:
+      typeof record.vacuumDecayEligible === 'boolean'
+        ? record.vacuumDecayEligible
+        : fallback.vacuumDecayEligible,
+  };
 }

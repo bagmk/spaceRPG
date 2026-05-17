@@ -13,6 +13,7 @@
     "sim:economy": "tsx scripts/economy-detail-sim.ts"
   },
   "dependencies": {
+    "firebase": "^12.13.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

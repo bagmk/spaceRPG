@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadGame } from '../storage';
 import { createInitialGameState } from '../reducer';
+import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 
 const storage = new Map<string, string>();
 
@@ -59,6 +60,8 @@ describe('save migration', () => {
     expect(migrated?.endingsCompleted).toEqual([]);
     expect(migrated?.timeGauge).toBe(0);
     expect(migrated?.shopBoosts).toEqual([]);
+    expect(migrated?.hasOfflineStorageUpgrade).toBe(false);
+    expect(migrated?.hasSeenCashShopTutorial).toBe(false);
     expect(migrated?.totalShopSpentUSD).toBe(0);
   });
 
@@ -125,5 +128,28 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated?.skills.ownedCrossNodes).toEqual([]);
+  });
+
+  it('reconstructs legacy ending flags with the simplified ending rules', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        version: 10,
+        ...createInitialGameState(100),
+        stageIdx: 3,
+        entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+        endingProgressFlags: {
+          ...createInitialGameState(100).endingProgressFlags,
+          bigCrunchEligible: true,
+        },
+      }),
+    );
+
+    const migrated = loadGame();
+    expect(migrated?.endingProgressFlags.bigCrunchEligible).toBe(false);
   });
 });

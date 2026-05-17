@@ -5,6 +5,8 @@ import {
   formatAutoRateValue,
   formatCosmicTime,
   formatCosmicTimeProgressPair,
+  formatEntropyAmount,
+  formatEntropyParts,
   formatProgressNumberPair,
   formatWhole,
   getAutoRate,
@@ -17,7 +19,7 @@ import {
   getUnupgradedTimeGaugeSeconds,
   getUniverseBoost,
 } from '../formulas';
-import { getEndingOptions } from '../multiverse';
+import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
 import { SKILL_TIME_RATE_BASE, TIME_MAXED_STAGE_SECONDS } from '../balance';
@@ -25,6 +27,7 @@ import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
 } from '../entities/stageItems';
+import { getParticleEntropyBonus } from '../particles';
 
 describe('formatWhole', () => {
   it('formats small whole numbers without suffixes', () => {
@@ -63,6 +66,27 @@ describe('formatAutoRateValue', () => {
     expect(formatAutoRateValue(0.2128)).toBe('0.21');
     expect(formatAutoRateValue(2.432)).toBe('2.43');
     expect(formatAutoRateValue(24.32)).toBe('24.3');
+  });
+});
+
+describe('formatEntropyParts', () => {
+  it('scales entropy from bytes through large byte units', () => {
+    expect(formatEntropyParts(0)).toEqual({ value: '0', unit: 'Bytes' });
+    expect(formatEntropyParts(0.5)).toEqual({ value: '512', unit: 'Bytes' });
+    expect(formatEntropyParts(1)).toEqual({ value: '1', unit: 'KB' });
+    expect(formatEntropyParts(1536)).toEqual({ value: '1.5', unit: 'MB' });
+    expect(formatEntropyAmount(1024 ** 6)).toBe('1 ZB');
+  });
+
+  it('keeps MB-scale entropy precise enough for comet pickups to be visible', () => {
+    expect(formatEntropyAmount(526_648)).toBe('514.3 MB');
+    expect(formatEntropyAmount(526_658)).toBe('514.31 MB');
+  });
+});
+
+describe('particle entropy rewards', () => {
+  it('grants entropy for comet pickups in the Solar System stage', () => {
+    expect(getParticleEntropyBonus(10, 'Comet')).toBeGreaterThan(0);
   });
 });
 
@@ -285,22 +309,77 @@ describe('scaling formulas', () => {
     expect(getEchoReward(3)).toBe(8);
   });
 
-  it('unlocks ending options according to progression', () => {
+  it('unlocks ending options from the simplified ending conditions', () => {
     const baseState = createInitialGameState(0);
     const base = getEndingOptions(baseState, 0);
     expect(base.find((ending) => ending.id === 'heat_death')?.unlocked).toBe(true);
     expect(base.find((ending) => ending.id === 'heat_death')?.seen).toBe(false);
     expect(base.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(false);
-    const advanced = getEndingOptions(
+
+    const bigCrunchReady = getEndingOptions({
+      ...baseState,
+      entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+    }, 0);
+    expect(bigCrunchReady.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(true);
+
+    const bigCrunchStage3 = getEndingOptions({
+      ...baseState,
+      stageIdx: 2,
+      entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+    }, 0);
+    expect(bigCrunchStage3.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(true);
+
+    const bigCrunchMissed = getEndingOptions({
+      ...baseState,
+      stageIdx: 3,
+      entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+    }, 0);
+    expect(bigCrunchMissed.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(false);
+
+    const completedBigCrunchOnly = getEndingOptions({
+      ...baseState,
+      stageIdx: STAGES.length - 1,
+      endingsCompleted: ['big_crunch'],
+    }, 0);
+    expect(completedBigCrunchOnly.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(false);
+
+    const allEntities = STAGE_ENTITIES.map((entity) => ({
+      entityId: entity.id,
+      count: entity.maxCount,
+    }));
+    const bigRipReady = getEndingOptions({ ...baseState, purchasedEntities: allEntities }, 0);
+    expect(bigRipReady.find((ending) => ending.id === 'big_rip')?.unlocked).toBe(true);
+
+    const finalNoCrit = getEndingOptions({
+      ...baseState,
+      stageIdx: STAGES.length - 1,
+    }, 0);
+    expect(finalNoCrit.find((ending) => ending.id === 'vacuum_decay')?.unlocked).toBe(true);
+
+    const finalWithCrit = getEndingOptions({
+      ...baseState,
+      stageIdx: STAGES.length - 1,
+      skills: { ...baseState.skills, crit: { level: 1 } },
+    }, 0);
+    expect(finalWithCrit.find((ending) => ending.id === 'vacuum_decay')?.unlocked).toBe(false);
+
+    const bounceReady = getEndingOptions(
       {
         ...baseState,
-        universeCount: 5,
-        endingsCompleted: ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'],
+        endingsCompleted: ['heat_death', 'big_crunch', 'big_rip'],
       },
       0,
     );
-    expect(advanced.every((ending) => ending.unlocked)).toBe(true);
-    expect(advanced.find((ending) => ending.id === 'big_rip')?.seen).toBe(true);
-    expect(advanced.find((ending) => ending.id === 'bounce')?.seen).toBe(false);
+    expect(bounceReady.find((ending) => ending.id === 'bounce')?.unlocked).toBe(true);
+    expect(bounceReady.find((ending) => ending.id === 'big_rip')?.seen).toBe(true);
+
+    const repeatedEnding = getEndingOptions(
+      {
+        ...baseState,
+        endingsCompleted: ['heat_death', 'heat_death', 'heat_death'],
+      },
+      0,
+    );
+    expect(repeatedEnding.find((ending) => ending.id === 'bounce')?.unlocked).toBe(false);
   });
 });

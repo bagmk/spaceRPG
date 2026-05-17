@@ -31,10 +31,7 @@ export function drawRogues(
     ctx.arc(rogue.x, rogue.y, gradientRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = rogue.color;
     drawStageSprite(ctx, rogue.stageId, rogue.x, rogue.y, rogue.r * 0.42 * pulse, rogue.color, 0.95, rogue.rotation);
-    ctx.shadowBlur = 0;
 
     if (rogue.typeKey === 'major') {
       for (let index = 0; index < 2; index += 1) {

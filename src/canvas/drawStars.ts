@@ -2,6 +2,8 @@ import { TUNING } from '../game/constants';
 import { hexToRgba } from '../game/formulas';
 import type { Stage, Star } from '../game/types';
 
+let bgGradientCache: { key: string; gradient: CanvasGradient } | null = null;
+
 export function drawStars(
   ctx: CanvasRenderingContext2D,
   stars: Star[],
@@ -13,10 +15,14 @@ export function drawStars(
   now: number,
 ): void {
   const bg = stage.background;
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, bg.gradientTop);
-  gradient.addColorStop(1, bg.gradientBottom);
-  ctx.fillStyle = gradient;
+  const cacheKey = `${bg.gradientTop}|${bg.gradientBottom}|${height}`;
+  if (!bgGradientCache || bgGradientCache.key !== cacheKey) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, bg.gradientTop);
+    gradient.addColorStop(1, bg.gradientBottom);
+    bgGradientCache = { key: cacheKey, gradient };
+  }
+  ctx.fillStyle = bgGradientCache.gradient;
   ctx.fillRect(0, 0, width, height);
 
   drawDistantElements(ctx, stage, width, height, now, coreVX, coreVY);
@@ -206,14 +212,13 @@ function drawFog(
   color: string,
   intensity: number,
 ): void {
-  for (let i = 0; i < 5; i += 1) {
-    const x = width * (0.15 + i * 0.2) + Math.sin(t * 0.2 + i) * 20;
+  for (let i = 0; i < 3; i += 1) {
+    const x = width * (0.2 + i * 0.3) + Math.sin(t * 0.2 + i) * 20;
     const y = height * (0.22 + (i % 2) * 0.28);
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, width * 0.3);
-    grad.addColorStop(0, hexToRgba(color, intensity * 0.12));
-    grad.addColorStop(1, hexToRgba(color, 0));
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = hexToRgba(color, intensity * 0.06);
+    ctx.beginPath();
+    ctx.arc(x, y, width * 0.2, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -278,19 +283,19 @@ function drawGalaxyHints(
 
 function drawNearbyStarGlow(
   ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
+  _width: number,
+  _height: number,
   t: number,
   color: string,
   intensity: number,
 ): void {
-  const x = width * 0.18;
-  const y = height * 0.24;
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, 160 + Math.sin(t) * 8);
-  grad.addColorStop(0, hexToRgba(color, intensity * 0.28));
-  grad.addColorStop(1, hexToRgba(color, 0));
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
+  const x = _width * 0.18;
+  const y = _height * 0.24;
+  const r = 140 + Math.sin(t) * 8;
+  ctx.fillStyle = hexToRgba(color, intensity * 0.12);
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawEarthOrbitHint(
@@ -321,11 +326,11 @@ function drawRedShroud(
   color: string,
   intensity: number,
 ): void {
-  const grad = ctx.createRadialGradient(width * 0.5, height * 0.5, 20, width * 0.5, height * 0.5, width * 0.48);
-  grad.addColorStop(0, hexToRgba(color, intensity * (0.22 + Math.sin(t) * 0.04)));
-  grad.addColorStop(1, hexToRgba(color, 0));
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
+  const alpha = intensity * (0.1 + Math.sin(t) * 0.02);
+  ctx.fillStyle = hexToRgba(color, alpha);
+  ctx.beginPath();
+  ctx.arc(width * 0.5, height * 0.5, width * 0.35, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawFadingField(

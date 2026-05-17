@@ -1,5 +1,6 @@
 /** Handlers: HYDRATE, DISMISS_OFFLINE_MODAL, SET_TUTORIAL_DONE, MARK_TUTORIAL_FLAG,
- *  MARK_TUTORIAL_STAGE_SEEN, AWARD_SKILL_POINTS, UNLOCK_TRACK, CLEAR_*_EVENT */
+ *  MARK_CASH_SHOP_TUTORIAL_SEEN, MARK_TUTORIAL_STAGE_SEEN, AWARD_SKILL_POINTS,
+ *  UNLOCK_TRACK, CLEAR_*_EVENT */
 
 import type { GameState, PersistentGameState } from '../types';
 import type { GameAction } from '../reducer';
@@ -11,6 +12,7 @@ import {
   createDefaultUniverseSeed,
   createDefaultSkills,
 } from '../defaults';
+import { createDefaultPrestigeUpgrades } from '../prestige';
 
 type HydrateAction = Extract<GameAction, { type: 'HYDRATE' }>;
 type AwardSkillPointsAction = Extract<GameAction, { type: 'AWARD_SKILL_POINTS' }>;
@@ -50,9 +52,13 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     currentUniverseSeed: payload.currentUniverseSeed ?? createDefaultUniverseSeed(),
     stageClicksAtStageStart: payload.stageClicksAtStageStart ?? payload.totalClicks ?? 0,
     tutorialFlags: payload.tutorialFlags ?? {},
+    hasSeenCashShopTutorial: payload.hasSeenCashShopTutorial ?? false,
     timeGauge: payload.timeGauge ?? 0,
     shopBoosts: payload.shopBoosts ?? [],
+    hasOfflineStorageUpgrade: payload.hasOfflineStorageUpgrade ?? false,
     totalShopSpentUSD: payload.totalShopSpentUSD ?? 0,
+    prestigeUpgrades: payload.prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    peakEntropy: payload.peakEntropy ?? payload.entropy ?? 0,
   };
 }
 
@@ -95,6 +101,11 @@ export function handleMarkTutorialFlag(state: GameState, action: MarkTutorialFla
     ...state,
     tutorialFlags: { ...state.tutorialFlags, [action.flagId]: true },
   };
+}
+
+export function handleMarkCashShopTutorialSeen(state: GameState): GameState {
+  if (state.hasSeenCashShopTutorial) return state;
+  return { ...state, hasSeenCashShopTutorial: true };
 }
 
 export function handleMarkTutorialStageSeen(

@@ -1,20 +1,23 @@
-/** Handlers: ADMIN_NEXT_STAGE, ADMIN_PREV_STAGE, ADMIN_SET_PROGRESS, ADMIN_RESTART_RUN, ADMIN_MAX_ENTITIES, BUY_SINGULARITY_UNLOCK */
+/** Handlers: ADMIN_NEXT_STAGE, ADMIN_PREV_STAGE, ADMIN_SET_PROGRESS, ADMIN_RESTART_RUN, ADMIN_MAX_ENTITIES, BUY_SINGULARITY_UNLOCK, BUY_PRESTIGE_UPGRADE */
 
 import { SINGULARITY_UNLOCK_LOOKUP } from '../constants';
 import { STAGES } from '../stages';
 import { getStageStartCosmicTime } from '../timeFlow';
 import { createInitialGameState, createDefaultEndingProgressFlags } from '../defaults';
+import { PRESTIGE_MAX_LEVEL, getPrestigeCost } from '../prestige';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { unlockTrackForStage, resetMechanicState, hasUnlock } from './helpers';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { entityMatchesId } from '../entities/stageItems';
+import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type AdminNextStageAction = Extract<GameAction, { type: 'ADMIN_NEXT_STAGE' }>;
 type AdminPrevStageAction = Extract<GameAction, { type: 'ADMIN_PREV_STAGE' }>;
 type AdminSetProgressAction = Extract<GameAction, { type: 'ADMIN_SET_PROGRESS' }>;
 type AdminRestartRunAction = Extract<GameAction, { type: 'ADMIN_RESTART_RUN' }>;
 type BuySingularityAction = Extract<GameAction, { type: 'BUY_SINGULARITY_UNLOCK' }>;
+type BuyPrestigeUpgradeAction = Extract<GameAction, { type: 'BUY_PRESTIGE_UPGRADE' }>;
 
 export function handleAdminNextStage(state: GameState, action: AdminNextStageAction): GameState {
   if (state.stageIdx >= STAGES.length - 1) {
@@ -116,12 +119,16 @@ export function handleAdminRestartRun(state: GameState, action: AdminRestartRunA
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: 0,
     tutorialFlags: state.tutorialFlags,
+    hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     shopBoosts: state.shopBoosts,
+    hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
     skills:
       state.universeCount > 1
         ? { ...state.skills, unlockedTracks: ['click', 'crit', 'auto', 'time'] }
         : state.skills,
+    prestigeUpgrades: state.prestigeUpgrades,
+    peakEntropy: state.peakEntropy,
   };
 }
 
@@ -137,6 +144,24 @@ export function handleBuySingularityUnlock(
     ...state,
     condensedMass: state.condensedMass - unlock.cost,
     singularityUnlocks: [...state.singularityUnlocks, action.unlockId],
+  };
+}
+
+export function handleBuyPrestigeUpgrade(
+  state: GameState,
+  action: BuyPrestigeUpgradeAction,
+): GameState {
+  const currentLevel = state.prestigeUpgrades[action.upgradeId] ?? 0;
+  if (currentLevel >= PRESTIGE_MAX_LEVEL) return state;
+  const cost = getPrestigeCost(currentLevel);
+  if (cost === null || state.entropy < cost) return state;
+  return {
+    ...state,
+    entropy: state.entropy - cost,
+    prestigeUpgrades: {
+      ...state.prestigeUpgrades,
+      [action.upgradeId]: currentLevel + 1,
+    },
   };
 }
 
@@ -159,5 +184,5 @@ export function handleAdminMaxEntities(state: GameState): GameState {
     }
   }
 
-  return { ...state, purchasedEntities: updatedEntities };
+  return withCurrentUniverseEndingProgress({ ...state, purchasedEntities: updatedEntities });
 }

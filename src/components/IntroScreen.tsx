@@ -19,6 +19,7 @@ interface IntroScreenProps {
   onUnlockAudio: () => void;
   onPlayBigBang: () => void;
   onOpenAtlas: () => void;
+  onOpenLeaderboard: () => void;
 }
 
 const INTRO_TIMES = ['10⁻⁴³ s', '10⁻³⁵ s', '10⁻⁶ s', '10⁻¹² s'] as const;
@@ -48,6 +49,7 @@ export function IntroScreen({
   onUnlockAudio,
   onPlayBigBang,
   onOpenAtlas,
+  onOpenLeaderboard,
 }: IntroScreenProps) {
   const [phase, setPhase] = useState<IntroPhase>('idle');
   const [elapsed, setElapsed] = useState(0);
@@ -181,10 +183,13 @@ export function IntroScreen({
                 {t(language, 'introNewBang')}
               </button>
               {canOpenAtlas ? (
-                <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
+                <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>
                   {t(language, 'introAtlas')}
                 </button>
               ) : null}
+              <button className="q-continue intro-button intro-secondary intro-icon-btn" type="button" onClick={onOpenLeaderboard} title={language === 'ko' ? '랭킹' : 'Ranking'}>
+                🏆
+              </button>
             </div>
           ) : (
             <div className="intro-actions">
@@ -192,10 +197,13 @@ export function IntroScreen({
                 {t(language, 'introBegin')}
               </button>
               {canOpenAtlas ? (
-                <button className="mini-button intro-secondary" type="button" onClick={onOpenAtlas}>
+                <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>
                   {t(language, 'introAtlas')}
                 </button>
               ) : null}
+              <button className="q-continue intro-button intro-secondary intro-icon-btn" type="button" onClick={onOpenLeaderboard} title={language === 'ko' ? '랭킹' : 'Ranking'}>
+                🏆
+              </button>
             </div>
           )
         ) : null}

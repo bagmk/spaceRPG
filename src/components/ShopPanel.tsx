@@ -9,7 +9,7 @@ import {
   type RewardedAdProduct,
   type ShopCatalogEntry,
 } from '../game/shop/items';
-import { completeMockPurchase } from '../game/shop/purchase';
+import { completePurchase } from '../game/shop/purchase';
 import { completeRewardedAd } from '../game/shop/adRewards';
 import {
   getActiveBoostSummary,
@@ -216,10 +216,9 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
   const handlePaid = async (product: PaidShopProduct) => {
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
-    const result = await completeMockPurchase(product);
-    if (result.success) {
-      dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: product.id, now: Date.now() });
-    }
+    await completePurchase(product);
+    // Stripe redirects the page — if we're still here, it means the checkout
+    // didn't start (no extension, or user not logged in)
     setPendingId(null);
   };
 

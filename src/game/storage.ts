@@ -1,9 +1,17 @@
 /** Public save/load API. Migration and validation logic lives in storage/. */
 
 import { STORAGE_KEYS, TUNING } from './constants';
+import { createDefaultPrestigeUpgrades } from './prestige';
 import type { GameState, PersistentGameState, SaveState } from './types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
-import { migrateV1ToV2, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, validateV5 } from './storage/migrate';
+import {
+  migrateV1ToV2,
+  migrateV2ToV3,
+  migrateV3ToV4,
+  migrateV4ToV5,
+  reconstructEndingProgressForCurrentRules,
+  validateV5,
+} from './storage/migrate';
 import { getStageStartCosmicTime } from './timeFlow';
 import { STAGES } from './stages';
 
@@ -12,13 +20,30 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
   const stageIdx = Number.isFinite(parsed.stageIdx) ? (parsed.stageIdx as number) : 0;
   const clampedIdx = Math.max(0, Math.min(stageIdx, STAGES.length - 1));
   const maxClock = STAGES[clampedIdx].cosmicTimeSec;
-  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) {
-    if ((parsed.cosmicClockSec as number) > maxClock) {
-      return { ...parsed, cosmicClockSec: maxClock };
+  const now = Date.now();
+  const repairedClock = (() => {
+    if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) {
+      return (parsed.cosmicClockSec as number) > maxClock ? maxClock : parsed.cosmicClockSec;
     }
-    return parsed;
+    return getStageStartCosmicTime(stageIdx);
+  })();
+  const repairedStageStartedAt =
+    Number.isFinite(parsed.stageStartedAt) && (parsed.stageStartedAt as number) > 1_500_000_000_000
+      ? parsed.stageStartedAt
+      : now;
+
+  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) {
+    return {
+      ...parsed,
+      cosmicClockSec: repairedClock,
+      stageStartedAt: repairedStageStartedAt,
+    };
   }
-  return { ...parsed, cosmicClockSec: getStageStartCosmicTime(stageIdx) };
+  return {
+    ...parsed,
+    cosmicClockSec: repairedClock,
+    stageStartedAt: repairedStageStartedAt,
+  };
 }
 
 const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
@@ -34,7 +59,7 @@ function isBrowser(): boolean {
 
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 9,
+    version: 13,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
@@ -76,9 +101,13 @@ export function createSaveSnapshot(state: GameState): SaveState {
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: state.stageClicksAtStageStart,
     tutorialFlags: state.tutorialFlags,
+    hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     shopBoosts: state.shopBoosts,
+    hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
     purchasedEntities: state.purchasedEntities,
+    prestigeUpgrades: state.prestigeUpgrades,
+    peakEntropy: state.peakEntropy,
   };
 }
 
@@ -149,7 +178,32 @@ export function loadGame(): PersistentGameState | null {
       return { ...migrated, purchasedEntities: [] };
     }
     if ((parsed as { version?: number }).version === 9) {
-      return validateV5(repairSave(parsed as Partial<SaveState>));
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      return migrated ? reconstructEndingProgressForCurrentRules(migrated) : null;
+    }
+    if ((parsed as { version?: number }).version === 10) {
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      return migrated ? reconstructEndingProgressForCurrentRules(migrated) : null;
+    }
+    if ((parsed as { version?: number }).version === 11) {
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      if (!migrated) return null;
+      return { ...migrated, prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades() };
+    }
+    if ((parsed as { version?: number }).version === 12) {
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      if (!migrated) return null;
+      const withPrestige = { ...migrated, prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades() };
+      return { ...withPrestige, peakEntropy: (withPrestige as any).peakEntropy ?? withPrestige.entropy ?? 0 };
+    }
+    if ((parsed as { version?: number }).version === 13) {
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      if (!migrated) return null;
+      return {
+        ...migrated,
+        prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+        peakEntropy: (migrated as any).peakEntropy ?? migrated.entropy ?? 0,
+      };
     }
     return null;
   } catch {

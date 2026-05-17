@@ -23,21 +23,21 @@ const CREDIT_VIDEO: Record<EndingId, string> = {
 
 const CREDIT_COPY: Record<EndingId, EndingCreditCopy> = {
   heat_death: {
-    title: { en: 'Heat Death', ko: '열적 죽음' },
+    title: { en: 'Heat Death', ko: '열죽음' },
     subtitle: {
       en: 'The universe spends its last gradients and enters equilibrium.',
       ko: '우주는 마지막 기울기를 모두 소모하고 평형으로 들어간다.',
     },
   },
   big_crunch: {
-    title: { en: 'Big Crunch', ko: '빅 크런치' },
+    title: { en: 'Big Crunch', ko: '대붕괴' },
     subtitle: {
       en: 'Expansion yields, and every structure falls back toward one center.',
       ko: '팽창은 굴복하고, 모든 구조는 하나의 중심으로 되돌아간다.',
     },
   },
   big_rip: {
-    title: { en: 'Big Rip', ko: '빅 립' },
+    title: { en: 'Big Rip', ko: '대찢김' },
     subtitle: {
       en: 'Acceleration outruns cohesion and tears every bound scale apart.',
       ko: '가속은 결속을 앞질러 모든 묶인 규모를 찢어낸다.',
@@ -51,7 +51,7 @@ const CREDIT_COPY: Record<EndingId, EndingCreditCopy> = {
     },
   },
   bounce: {
-    title: { en: 'Bounce', ko: '반동' },
+    title: { en: 'Bounce', ko: '반동 우주' },
     subtitle: {
       en: 'The last universe folds into the first, carrying memory forward.',
       ko: '마지막 우주는 첫 우주로 접히고, 기억을 앞으로 운반한다.',

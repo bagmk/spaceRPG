@@ -38,8 +38,10 @@ export function isEndingProgressFlags(value: unknown): value is EndingProgressFl
   return (
     !!value &&
     typeof value === 'object' &&
-    typeof (value as EndingProgressFlags).bigRipEverEligible === 'boolean' &&
     typeof (value as EndingProgressFlags).bigCrunchEligible === 'boolean' &&
+    ((value as Partial<EndingProgressFlags>).criticalUpgradedThisUniverse === undefined ||
+      typeof (value as Partial<EndingProgressFlags>).criticalUpgradedThisUniverse === 'boolean') &&
+    typeof (value as EndingProgressFlags).bigRipEverEligible === 'boolean' &&
     typeof (value as EndingProgressFlags).vacuumDecayEligible === 'boolean'
   );
 }
@@ -101,7 +103,12 @@ export function isTutorialFlags(value: unknown): value is Record<string, boolean
 export function isShopBoost(value: unknown): value is ShopBoost {
   if (!value || typeof value !== 'object') return false;
   const b = value as Record<string, unknown>;
-  return typeof b.id === 'string' && isFiniteNumber(b.factor) && isFiniteNumber(b.expiresAt);
+  return (
+    typeof b.id === 'string' &&
+    (b.category === undefined || b.category === 'time' || b.category === 'matter') &&
+    isFiniteNumber(b.factor) &&
+    isFiniteNumber(b.expiresAt)
+  );
 }
 
 export function isLegacyShopBoosts(value: unknown): value is LegacyShopBoosts {

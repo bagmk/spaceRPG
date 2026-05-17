@@ -5,6 +5,7 @@
 
 import { createInitialUniverseSeed } from './multiverse';
 import { getStageStartCosmicTime } from './timeFlow';
+import { createDefaultPrestigeUpgrades } from './prestige';
 import type {
   CondenseProgressEntry,
   DailyCheckInState,
@@ -22,8 +23,9 @@ export function createDefaultDailyCheckIns(): DailyCheckInState {
 
 export function createDefaultEndingProgressFlags(): EndingProgressFlags {
   return {
-    bigRipEverEligible: false,
     bigCrunchEligible: false,
+    criticalUpgradedThisUniverse: false,
+    bigRipEverEligible: false,
     vacuumDecayEligible: false,
   };
 }
@@ -111,8 +113,12 @@ export function createInitialGameState(now: number): GameState {
     currentUniverseSeed: createDefaultUniverseSeed(),
     stageClicksAtStageStart: 0,
     tutorialFlags: {},
+    hasSeenCashShopTutorial: false,
     shopBoosts: [],
+    hasOfflineStorageUpgrade: false,
     totalShopSpentUSD: 0,
     purchasedEntities: [],
+    prestigeUpgrades: createDefaultPrestigeUpgrades(),
+    peakEntropy: 0,
   };
 }

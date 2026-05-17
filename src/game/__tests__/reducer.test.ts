@@ -3,6 +3,7 @@ import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeFor
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntityCost } from '../entities/types';
 import { getEntitiesForStage } from '../entities/stageItems';
+import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 
@@ -62,7 +63,7 @@ describe('gameReducer', () => {
     });
     expect(next.quanta).toBe(40);
     expect(next.skillPoints).toBe(0);
-    expect(next.entropy).toBe(50);
+    expect(next.entropy).toBe(70);
   });
 
   it('requires both quanta and time gauge before condensing', () => {
@@ -271,7 +272,7 @@ describe('gameReducer', () => {
       name: 'test',
     });
     expect(massive.quanta).toBe(100);
-    expect(massive.entropy).toBe(200);
+    expect(massive.entropy).toBe(250);
   });
 
   it('condense never decreases entropy', () => {
@@ -285,6 +286,57 @@ describe('gameReducer', () => {
     };
     const next = gameReducer(state, { type: 'START_CONDENSE', now: 1000 });
     expect(next.entropy).toBeGreaterThanOrEqual(state.entropy);
+  });
+
+  it('keeps Big Crunch available if the entropy threshold is reached by Stage 3', () => {
+    const belowStageThree = {
+      ...createInitialGameState(0),
+      stageIdx: 1,
+      entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+    };
+    const marked = gameReducer(belowStageThree, { type: 'TICK', now: 1000, dt: 1000 });
+    expect(marked.endingProgressFlags.bigCrunchEligible).toBe(true);
+
+    const advanced = gameReducer(
+      {
+        ...marked,
+        pendingCondenseStageIdx: 1,
+        quanta: STAGES[1].threshold,
+        timeGauge: 100,
+        cosmicClockSec: STAGES[1].cosmicTimeSec,
+      },
+      { type: 'ADVANCE_STAGE', now: 2000 },
+    );
+    expect(advanced.stageIdx).toBe(2);
+    expect(advanced.endingProgressFlags.bigCrunchEligible).toBe(true);
+  });
+
+  it('does not unlock Big Crunch if entropy threshold is reached after Stage 3', () => {
+    const afterStageThree = {
+      ...createInitialGameState(0),
+      stageIdx: 3,
+      entropy: BIG_CRUNCH_ENTROPY_THRESHOLD_KB,
+    };
+    const marked = gameReducer(afterStageThree, { type: 'TICK', now: 1000, dt: 1000 });
+    expect(marked.endingProgressFlags.bigCrunchEligible).toBe(false);
+  });
+
+  it('tracks Critical purchases for the current universe and resets that flag on prestige', () => {
+    const purchased = gameReducer(
+      {
+        ...createInitialGameState(0),
+        quanta: 1e9,
+      },
+      { type: 'BUY_CRIT' },
+    );
+    expect(purchased.endingProgressFlags.criticalUpgradedThisUniverse).toBe(true);
+
+    const completed = gameReducer(
+      { ...purchased, selectedEndingId: 'heat_death' as const },
+      { type: 'COMPLETE_ENDING', now: 900 },
+    );
+    const next = gameReducer(completed, { type: 'PRESTIGE', now: 1000 });
+    expect(next.endingProgressFlags.criticalUpgradedThisUniverse).toBe(false);
   });
 
   it('preserves long-term currencies and ending history through ending completion and prestige', () => {
@@ -309,6 +361,6 @@ describe('gameReducer', () => {
     expect(next.condensedMass).toBeGreaterThan(0);
     expect(next.echoes).toBe(1);
     expect(next.endingsCompleted).toContain('heat_death');
-    expect(next.lastEndingId).toBe('heat_death');
+    expect(next.lastEndingId).toBeNull();
   });
 });

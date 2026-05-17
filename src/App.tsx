@@ -6,6 +6,11 @@ import { FinalScreen } from './components/FinalScreen';
 import { BigBangCinematic } from './components/BigBangCinematic';
 import { MultiverseAtlas } from './components/MultiverseAtlas';
 import { SoundManager } from './game/audio';
+import { AuthProvider, useAuth } from './auth/AuthProvider';
+import { NameSetupModal } from './components/NameSetupModal';
+import { LoginScreen } from './components/LoginScreen';
+import { useCloudSync } from './hooks/useCloudSync';
+import { Leaderboard } from './components/Leaderboard';
 import {
   clearAllStoredState,
   clearSave,
@@ -54,11 +59,13 @@ class ErrorBoundary extends Component<{ language: 'en' | 'ko'; children: ReactNo
   }
 }
 
-type Route = 'intro' | 'game' | 'final' | 'atlas';
+type Route = 'login' | 'intro' | 'game' | 'final' | 'atlas';
 
-export default function App() {
+function AppInner() {
   const { state, dispatch, hadSavedGame } = useGameState();
-  const [route, setRoute] = useState<Route>('intro');
+  const { status: authStatus } = useAuth();
+  useCloudSync({ state, dispatch });
+  const [route, setRoute] = useState<Route>('login');
   const [resumeAvailable, setResumeAvailable] = useState(hadSavedGame);
   const [bgmMuted, setBgmMuted] = useState(loadBgmMuted);
   const [sfxMuted, setSfxMuted] = useState(loadSfxMuted);
@@ -66,6 +73,7 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [bigBangRestarting, setBigBangRestarting] = useState(false);
   const [openingCinematic, setOpeningCinematic] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const soundManagerRef = useRef<SoundManager | null>(null);
 
   useEffect(() => {
@@ -131,6 +139,14 @@ export default function App() {
 
   return (
     <>
+      {route === 'login' ? (
+        <LoginScreen
+          language={language}
+          onLanguageChange={setLanguage}
+          onContinue={() => setRoute('intro')}
+        />
+      ) : null}
+
       {route === 'intro' ? (
         <IntroScreen
           canResume={resumeAvailable}
@@ -157,6 +173,7 @@ export default function App() {
             soundManagerRef.current?.playBigBang();
           }}
           onOpenAtlas={() => setRoute('atlas')}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
         />
       ) : null}
 
@@ -183,6 +200,7 @@ export default function App() {
           language={language}
           onBuyPrestigeUpgrade={(upgradeId) => dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId })}
           onOpenAtlas={() => setRoute('atlas')}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
           onPrestige={() => {
             soundManagerRef.current?.unlock();
             soundManagerRef.current?.playBigBang();
@@ -222,6 +240,14 @@ export default function App() {
         />
       ) : null}
 
+      {authStatus === 'needsName' ? (
+        <NameSetupModal language={language} onComplete={() => {}} />
+      ) : null}
+
+      {showLeaderboard ? (
+        <Leaderboard language={language} onClose={() => setShowLeaderboard(false)} />
+      ) : null}
+
       {showResetConfirm ? (
         <div className="reset-backdrop" role="dialog" aria-modal="true">
           <div className="reset-modal">
@@ -246,5 +272,13 @@ export default function App() {
         </div>
       ) : null}
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }

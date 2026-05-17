@@ -12,6 +12,7 @@ import type {
   RogueTypeKey,
   SingularityUnlockId,
 } from './types';
+import type { PrestigeUpgradeId } from './prestige';
 
 // Re-export so callers get everything they need from one import.
 export { createInitialGameState, createDefaultSkills } from './defaults';
@@ -35,7 +36,7 @@ import {
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
 import { handlePurchaseEntity } from './reducers/entities';
-import { handleBuyShopItem } from './reducers/shop';
+import { handleClaimAdReward, handleCompleteShopPurchase } from './reducers/shop';
 import {
   handleAdminNextStage,
   handleAdminPrevStage,
@@ -43,6 +44,7 @@ import {
   handleAdminRestartRun,
   handleAdminMaxEntities,
   handleBuySingularityUnlock,
+  handleBuyPrestigeUpgrade,
 } from './reducers/admin';
 import {
   handleHydrate,
@@ -51,6 +53,7 @@ import {
   handleAwardSkillPoints,
   handleUnlockTrack,
   handleMarkTutorialFlag,
+  handleMarkCashShopTutorialSeen,
   handleMarkTutorialStageSeen,
   handleClearClickEvent,
   handleClearCollisionEvent,
@@ -110,12 +113,15 @@ export type GameAction =
   | { type: 'AWARD_SKILL_POINTS'; amount: number }
   | { type: 'BUY_TRACK_LEVEL'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'BUY_CROSS_NODE'; nodeId: string }
-  | { type: 'BUY_SHOP_ITEM'; itemId: string; now: number }
+  | { type: 'COMPLETE_SHOP_PURCHASE'; itemId: string; now: number }
+  | { type: 'CLAIM_AD_REWARD'; rewardId: string; now: number }
   | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
+  | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
   | { type: 'PURCHASE_ENTITY'; entityId: string }
-  | { type: 'ADMIN_MAX_ENTITIES' };
+  | { type: 'ADMIN_MAX_ENTITIES' }
+  | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
 
 // ---------------------------------------------------------------------------
 // Serialization helpers
@@ -164,9 +170,13 @@ export function toPersistentState(state: GameState): PersistentGameState {
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: state.stageClicksAtStageStart,
     tutorialFlags: state.tutorialFlags,
+    hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     shopBoosts: state.shopBoosts,
+    hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
     purchasedEntities: state.purchasedEntities,
+    prestigeUpgrades: state.prestigeUpgrades,
+    peakEntropy: state.peakEntropy,
   };
 }
 
@@ -189,7 +199,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'PRESTIGE':              return handlePrestige(state, action);
     case 'BUY_TRACK_LEVEL':       return handleBuyTrackLevel(state, action);
     case 'BUY_CROSS_NODE':        return handleBuyCrossNode(state, action);
-    case 'BUY_SHOP_ITEM':         return handleBuyShopItem(state, action);
+    case 'COMPLETE_SHOP_PURCHASE': return handleCompleteShopPurchase(state, action);
+    case 'CLAIM_AD_REWARD':       return handleClaimAdReward(state, action);
     case 'ADMIN_NEXT_STAGE':      return handleAdminNextStage(state, action);
     case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
     case 'ADMIN_SET_PROGRESS':    return handleAdminSetProgress(state, action);
@@ -207,7 +218,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'UNLOCK_TRACK':          return handleUnlockTrack(state, action);
     case 'MARK_TUTORIAL_STAGE_SEEN': return handleMarkTutorialStageSeen(state, action);
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
+    case 'MARK_CASH_SHOP_TUTORIAL_SEEN': return handleMarkCashShopTutorialSeen(state);
     case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
+    case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;
       return exhaustiveAction;

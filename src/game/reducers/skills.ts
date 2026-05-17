@@ -1,7 +1,8 @@
 /** Handlers: BUY_TRACK_LEVEL, BUY_CROSS_NODE */
 
 import { findTree, findNode } from '../skills/definitions';
-import type { EndingId, GameState } from '../types';
+import { withCurrentUniverseEndingProgress } from '../multiverse';
+import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 
 type BuyTrackLevelAction = Extract<GameAction, { type: 'BUY_TRACK_LEVEL' }>;
@@ -19,24 +20,15 @@ export function handleBuyTrackLevel(state: GameState, action: BuyTrackLevelActio
   if (state.quanta < cost) return state;
 
   const nextSkills = { ...state.skills, [treeId]: { ...branch, level: nextLevel } };
-  const bigRipEverEligible =
-    state.endingProgressFlags.bigRipEverEligible ||
-    (treeId === 'time' && nextLevel >= 30 && nextSkills.ownedCrossNodes.includes('time_lv30'));
-  const endingsUnlocked: EndingId[] =
-    bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
-      ? [...state.endingsUnlocked, 'big_rip']
-      : state.endingsUnlocked;
 
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
     quanta: state.quanta - cost,
     clickLevel: treeId === 'click' ? nextLevel : state.clickLevel,
     autoLevel: treeId === 'auto' ? nextLevel : state.autoLevel,
     critLevel: treeId === 'crit' ? nextLevel : state.critLevel,
     skills: nextSkills,
-    endingsUnlocked,
-    endingProgressFlags: { ...state.endingProgressFlags, bigRipEverEligible },
-  };
+  });
 }
 
 export function handleBuyCrossNode(state: GameState, action: BuyCrossNodeAction): GameState {
@@ -56,20 +48,11 @@ export function handleBuyCrossNode(state: GameState, action: BuyCrossNodeAction)
     ...state.skills,
     ownedCrossNodes: [...state.skills.ownedCrossNodes, nodeId],
   };
-  const bigRipEverEligible =
-    state.endingProgressFlags.bigRipEverEligible ||
-    (nodeId === 'time_lv30' && state.skills.time.level >= 30);
-  const endingsUnlocked: EndingId[] =
-    bigRipEverEligible && !state.endingsUnlocked.includes('big_rip')
-      ? [...state.endingsUnlocked, 'big_rip']
-      : state.endingsUnlocked;
 
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
     quanta: state.quanta - nodeDef.cost,
     skillPoints: state.skillPoints - nodeDef.spCost,
     skills: nextSkills,
-    endingsUnlocked,
-    endingProgressFlags: { ...state.endingProgressFlags, bigRipEverEligible },
-  };
+  });
 }

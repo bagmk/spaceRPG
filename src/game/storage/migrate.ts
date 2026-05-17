@@ -1,7 +1,8 @@
 /** Migration chain: v1 → v2 → v3 → v4 → v5 (current), plus validateV5. */
 
 import { getStageStartCosmicTime } from '../timeFlow';
-import { createInitialUniverseSeed } from '../multiverse';
+import { createInitialUniverseSeed, getCurrentUniverseEndingProgressFlags } from '../multiverse';
+import { createDefaultPrestigeUpgrades } from '../prestige';
 import {
   createDefaultDailyCheckIns,
   createDefaultEndingProgressFlags,
@@ -26,7 +27,12 @@ import {
   isSkillState,
   isPurchasedEntityEntry,
 } from './guards';
-import { normalizeSkillState, normalizeShopBoosts, getUnlockedTracksForProgress } from './normalize';
+import {
+  normalizeEndingProgressFlags,
+  normalizeSkillState,
+  normalizeShopBoosts,
+  getUnlockedTracksForProgress,
+} from './normalize';
 
 function createDefaultSkillState() {
   return {
@@ -135,9 +141,15 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
     skillPoints: 0,
     skills: normalizeSkillState(v4.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
     endingsUnlocked: ((record.endingsUnlocked ?? v4.endingsCompleted ?? []) as unknown[]).filter(isEndingId),
-    endingProgressFlags: isEndingProgressFlags(record.endingProgressFlags)
-      ? record.endingProgressFlags
-      : createDefaultEndingProgressFlags(),
+    endingProgressFlags: normalizeEndingProgressFlags(
+      isEndingProgressFlags(record.endingProgressFlags)
+        ? record.endingProgressFlags
+        : createDefaultEndingProgressFlags(),
+      {
+        critLevel: v4.critLevel ?? 0,
+        skills: normalizeSkillState(v4.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
+      },
+    ),
     clickRateLog: Array.isArray(record.clickRateLog) ? record.clickRateLog.filter(isFiniteNumber) : [],
     condenseProgressHistory: Array.isArray(record.condenseProgressHistory)
       ? record.condenseProgressHistory.filter(isCondenseProgressEntry)
@@ -150,11 +162,15 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
       : createInitialUniverseSeed(),
     stageClicksAtStageStart: record.stageClicksAtStageStart ?? v4.totalClicks ?? 0,
     tutorialFlags: v4.universeCount && v4.universeCount > 1 ? { allDismissed: true } : {},
+    hasSeenCashShopTutorial: Boolean(record.hasSeenCashShopTutorial),
     shopBoosts: normalizeShopBoosts(record.shopBoosts),
+    hasOfflineStorageUpgrade: Boolean(record.hasOfflineStorageUpgrade),
     totalShopSpentUSD: 0,
     purchasedEntities: Array.isArray(record.purchasedEntities)
       ? record.purchasedEntities.filter(isPurchasedEntityEntry)
       : createDefaultPurchasedEntities(),
+    prestigeUpgrades: (record as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    peakEntropy: (record as any).peakEntropy ?? v4.entropy ?? 0,
   };
 }
 
@@ -204,7 +220,9 @@ export function validateV5(
     !isUniverseSeed(parsed.currentUniverseSeed) ||
     !isFiniteNumber(parsed.stageClicksAtStageStart) ||
     !isTutorialFlags(parsed.tutorialFlags) ||
+    (parsed.hasSeenCashShopTutorial !== undefined && typeof parsed.hasSeenCashShopTutorial !== 'boolean') ||
     !(Array.isArray(parsed.shopBoosts) || isLegacyShopBoosts(parsed.shopBoosts)) ||
+    (parsed.hasOfflineStorageUpgrade !== undefined && typeof parsed.hasOfflineStorageUpgrade !== 'boolean') ||
     !isFiniteNumber(parsed.totalShopSpentUSD) ||
     !(Array.isArray(parsed.purchasedEntities) && parsed.purchasedEntities.every(isPurchasedEntityEntry))
   ) {
@@ -246,15 +264,41 @@ export function validateV5(
     skillPoints: parsed.skillPoints,
     skills: normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks),
     endingsUnlocked: parsed.endingsUnlocked.filter(isEndingId) as EndingId[],
-    endingProgressFlags: parsed.endingProgressFlags,
+    endingProgressFlags: normalizeEndingProgressFlags(parsed.endingProgressFlags, {
+      critLevel: parsed.critLevel,
+      skills: normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks),
+    }),
     clickRateLog: parsed.clickRateLog,
     condenseProgressHistory: parsed.condenseProgressHistory,
     universeAtlas: parsed.universeAtlas,
     currentUniverseSeed: parsed.currentUniverseSeed,
     stageClicksAtStageStart: parsed.stageClicksAtStageStart,
     tutorialFlags: parsed.tutorialFlags,
+    hasSeenCashShopTutorial: parsed.hasSeenCashShopTutorial ?? false,
     shopBoosts: normalizeShopBoosts(parsed.shopBoosts),
+    hasOfflineStorageUpgrade: parsed.hasOfflineStorageUpgrade ?? false,
     totalShopSpentUSD: parsed.totalShopSpentUSD,
     purchasedEntities: parsed.purchasedEntities,
+    prestigeUpgrades: (parsed as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    peakEntropy: (parsed as any).peakEntropy ?? parsed.entropy ?? 0,
+  };
+}
+
+export function reconstructEndingProgressForCurrentRules(
+  state: PersistentGameState,
+): PersistentGameState {
+  const baselineFlags = createDefaultEndingProgressFlags();
+  const normalizedState = {
+    ...state,
+    endingProgressFlags: normalizeEndingProgressFlags(baselineFlags, {
+      critLevel: state.critLevel,
+      skills: state.skills,
+    }),
+  };
+
+  return {
+    ...normalizedState,
+    endingsUnlocked: state.endingsCompleted.filter(isEndingId),
+    endingProgressFlags: getCurrentUniverseEndingProgressFlags(normalizedState),
   };
 }

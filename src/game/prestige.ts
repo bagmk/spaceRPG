@@ -1,6 +1,7 @@
 /**
  * Prestige upgrade system — 5 permanent upgrades purchasable with Entropy on the final screen.
- * Each upgrade can be purchased up to 3 times, doubling its effect each time (x2 → x4 → x8).
+ * Each upgrade can be purchased up to 5 times, multiplying its effect by 1.5x each time
+ * (x1.5 → x2.25 → x3.375 → x5.0625 → x7.59).
  */
 
 import type { Lang } from '../i18n';
@@ -33,19 +34,20 @@ export function createDefaultPrestigeUpgrades(): PrestigeUpgradeLevels {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const PRESTIGE_MAX_LEVEL = 3;
+export const PRESTIGE_MAX_LEVEL = 5;
 
 /**
  * Costs in KB (the game's internal entropy unit).
- * 1 YB = 1024^7 KB = 1024^7 ≈ 1.8014e21 KB
- * 100 YB = 100 * 1024^7 KB
+ * 1 YB = 1024^7 KB ≈ 1.8014e21 KB
  */
 const KB_PER_YB = Math.pow(1024, 7);
 
-export const PRESTIGE_COSTS_KB: [number, number, number] = [
-  100 * KB_PER_YB,  // Lv1: 100 YB
-  200 * KB_PER_YB,  // Lv2: 200 YB
-  400 * KB_PER_YB,  // Lv3: 400 YB
+export const PRESTIGE_COSTS_KB: [number, number, number, number, number] = [
+  1 * KB_PER_YB,    // Lv1: 1 YB
+  5 * KB_PER_YB,    // Lv2: 5 YB
+  10 * KB_PER_YB,   // Lv3: 10 YB
+  50 * KB_PER_YB,   // Lv4: 50 YB
+  100 * KB_PER_YB,  // Lv5: 100 YB
 ];
 
 export function getPrestigeCost(currentLevel: number): number | null {
@@ -54,7 +56,7 @@ export function getPrestigeCost(currentLevel: number): number | null {
 }
 
 export function getPrestigeMultiplier(level: number): number {
-  return Math.pow(2, Math.min(level, PRESTIGE_MAX_LEVEL));
+  return Math.pow(1.5, Math.min(level, PRESTIGE_MAX_LEVEL));
 }
 
 // ---------------------------------------------------------------------------
@@ -72,40 +74,40 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
     id: 'time_warp',
     name: { en: 'Time Warp', ko: '시간 왜곡' },
     description: {
-      en: 'Double time flow in future universes.',
-      ko: '다음 우주에서 시간 흐름이 2배가 됩니다.',
+      en: '1.5x time flow in future universes.',
+      ko: '다음 우주에서 시간 흐름이 1.5배가 됩니다.',
     },
   },
   {
     id: 'matter_forge',
     name: { en: 'Matter Forge', ko: '물질 응축' },
     description: {
-      en: 'Double matter gain in future universes.',
-      ko: '다음 우주에서 물질 획득량이 2배가 됩니다.',
+      en: '1.5x matter gain in future universes.',
+      ko: '다음 우주에서 물질 획득량이 1.5배가 됩니다.',
     },
   },
   {
     id: 'critical_core',
     name: { en: 'Critical Core', ko: '크리티컬 코어' },
     description: {
-      en: 'Double critical effect in future universes.',
-      ko: '다음 우주에서 크리티컬 효과가 2배가 됩니다.',
+      en: '1.5x critical effect in future universes.',
+      ko: '다음 우주에서 크리티컬 효과가 1.5배가 됩니다.',
     },
   },
   {
     id: 'auto_engine',
     name: { en: 'Auto Engine', ko: '자동 구동' },
     description: {
-      en: 'Double auto production speed in future universes.',
-      ko: '다음 우주에서 자동 생산 속도가 2배가 됩니다.',
+      en: '1.5x auto production speed in future universes.',
+      ko: '다음 우주에서 자동 생산 속도가 1.5배가 됩니다.',
     },
   },
   {
     id: 'entropy_echo',
     name: { en: 'Entropy Echo', ko: '엔트로피 메아리' },
     description: {
-      en: 'Double entropy gain in future universes.',
-      ko: '다음 우주에서 엔트로피 획득량이 2배가 됩니다.',
+      en: '1.5x entropy gain in future universes.',
+      ko: '다음 우주에서 엔트로피 획득량이 1.5배가 됩니다.',
     },
   },
 ];
@@ -116,7 +118,7 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
 
 export function formatPrestigeCost(level: number): string {
   if (level >= PRESTIGE_MAX_LEVEL) return '';
-  const ybAmount = [100, 200, 400][level];
+  const ybAmount = [1, 5, 10, 50, 100][level];
   return `${ybAmount}YB`;
 }
 

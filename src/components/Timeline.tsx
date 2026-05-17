@@ -5,6 +5,7 @@ interface TimelineProps {
   stagePositions: { id: number; left: number; label: string }[];
   currentStageId: number;
   entropy: string;
+  entropyUnit?: string;
   comboVisible: boolean;
   comboMult: string;
   universeLabel: string | null;
@@ -21,6 +22,7 @@ export function Timeline({
   stagePositions,
   currentStageId,
   entropy,
+  entropyUnit = 'KB',
   comboVisible,
   comboMult,
   universeLabel,
@@ -51,7 +53,7 @@ export function Timeline({
       <div className="entropy-block">
         <div className="entropy-label">Entropy</div>
         <div className="entropy-value">
-          {entropy} <sub>kB</sub>
+          {entropy} <sub>{entropyUnit}</sub>
         </div>
       </div>
       <div className={`combo-block ${comboVisible ? 'active' : ''}`}>

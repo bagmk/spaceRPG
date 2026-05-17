@@ -479,13 +479,13 @@ function drawFirstStars(args: DrawClusterArgs): void {
       return;
     }
 
-    const glow = ctx.createRadialGradient(mote.x, mote.y, 0, mote.x, mote.y, mote.r * 4.5);
-    glow.addColorStop(0, hexToRgba('#fff6db', 0.9));
-    glow.addColorStop(0.35, hexToRgba(starColor, 0.8));
-    glow.addColorStop(1, hexToRgba(starColor, 0));
-    ctx.fillStyle = glow;
+    ctx.fillStyle = hexToRgba(starColor, 0.15);
     ctx.beginPath();
     ctx.arc(mote.x, mote.y, mote.r * 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hexToRgba('#fff6db', 0.55);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, mote.r * 1.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = starColor;

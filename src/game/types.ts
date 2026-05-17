@@ -202,7 +202,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry } from './entities/types';
 
 export interface SaveState {
-  version: 12;
+  version: 13;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -250,6 +250,7 @@ export interface SaveState {
   totalShopSpentUSD: number;
   purchasedEntities: PurchasedEntityEntry[];
   prestigeUpgrades: PrestigeUpgradeLevels;
+  peakEntropy: number;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

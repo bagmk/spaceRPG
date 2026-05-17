@@ -187,5 +187,6 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
     prestigeUpgrades: state.prestigeUpgrades,
+    peakEntropy: state.peakEntropy,
   };
 }

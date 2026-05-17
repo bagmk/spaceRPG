@@ -104,3 +104,31 @@ npm test -- formulas  # 특정 파일만
 ## 배포
 
 `main` 브랜치 push → GitHub Actions (`deploy.yml`) → Vite 빌드 → GitHub Pages 자동 배포.
+
+---
+
+## Firebase / 인증 / 클라우드 동기화 작업
+
+> 이 영역은 별도 플랜 문서가 있다. 이 섹션은 그 문서를 어떻게 따라가는지만 정의한다.
+
+### 작업 시작 시
+1. **반드시** `FIREBASE_INTEGRATION_PLAN.md` 를 처음부터 끝까지 읽는다.
+2. 그 문서의 `## Status` 섹션에서 `Current Phase` 를 확인한다.
+3. 해당 Phase의 `### DECISION POINT` 항목을 `AskUserQuestion` 으로 사용자에게 묻는다. **답을 받기 전엔 코드 한 줄도 쓰지 않는다.**
+4. 사용자가 답한 결정은 `## Status` 의 `Decided:` 라인에 누적 기록하고 그 변경을 커밋한다.
+
+### Phase 진행 중
+- `### 구현 단계` 의 번호를 그대로 따른다. 임의로 순서 바꾸지 마라.
+- `### 절대 하지 말 것` 의 항목은 글자 그대로 지킨다.
+- 시크릿 값(`firebaseConfig`, Stripe key, Apple `.p8` 키 등)을 받으면 즉시 `.env.local` 에 쓰고 `.gitignore` 에 `.env*.local` 패턴이 있는지 확인한다. 없으면 추가.
+- 시크릿이 실수로 커밋된 흔적이 보이면 (`git log -p` / `git status`) **즉시 작업을 멈추고** 사용자에게 알린다.
+
+### Phase 끝낼 때
+1. `### CHECKPOINT` 의 체크박스를 하나씩 사용자와 함께 검증한다.
+2. 전부 통과하면 `## Status` 의 `Last Checkpoint Passed` 를 업데이트.
+3. **다음 Phase를 사용자 컨펌 없이 시작하지 마라.** "Phase N 완료, 다음 Phase로 진행할까요?" 라고 명시적으로 묻는다.
+
+### 기존 코드 재사용 원칙
+- 세이브/마이그레이션은 `src/game/storage.ts` + `src/game/storage/migrate.ts` 의 기존 시스템을 **확장**할 뿐, 새로 만들지 마라.
+- `SaveState` 타입은 그대로 Firestore 문서 body에 dump 한다. 새 필드 추가는 기존 절차(이 파일 위의 "새 세이브 필드 추가") 그대로.
+- React 상태 관리는 변함없이 `useReducer` + Context. Firebase 데이터를 Zustand/Redux로 옮기지 마라.

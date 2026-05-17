@@ -1,5 +1,7 @@
 import type { SkillState } from './types';
 import type { PurchasedEntityEntry } from '../entities/types';
+import type { PrestigeUpgradeLevels } from '../prestige';
+import { getPrestigeMultiplier } from '../prestige';
 import { applyEntityModifiers } from '../entities/effects';
 import {
   SKILL_CLICK_POWER_BASE,
@@ -87,6 +89,7 @@ export function getActiveModifiers(
   skills: SkillState | undefined,
   ctx: ModifierContext,
   purchasedEntities?: PurchasedEntityEntry[],
+  prestigeUpgrades?: PrestigeUpgradeLevels,
 ): Modifiers {
   const mods = defaultModifiers();
 
@@ -138,6 +141,15 @@ export function getActiveModifiers(
 
   if (purchasedEntities && purchasedEntities.length > 0) {
     applyEntityModifiers(mods, purchasedEntities, ctx.stageId);
+  }
+
+  // Apply permanent prestige multipliers
+  if (prestigeUpgrades) {
+    mods.timeMultMult *= getPrestigeMultiplier(prestigeUpgrades.time_warp);
+    mods.clickPowerMult *= getPrestigeMultiplier(prestigeUpgrades.matter_forge);
+    mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.matter_forge);
+    mods.critMultMult *= getPrestigeMultiplier(prestigeUpgrades.critical_core);
+    mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.auto_engine);
   }
 
   return mods;

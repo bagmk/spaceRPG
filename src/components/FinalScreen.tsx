@@ -20,9 +20,10 @@ interface FinalScreenProps {
   onPrestige: () => void;
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
   onOpenAtlas: () => void;
+  onOpenLeaderboard: () => void;
 }
 
-export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas }: FinalScreenProps) {
+export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
   const finalStage = STAGES[STAGES.length - 1];
   const finalQuote = language === 'ko' ? finalStage.quoteKo ?? finalStage.quote : finalStage.quote;
@@ -117,6 +118,9 @@ export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade,
           </button>
           <button className="final-action-secondary" type="button" onClick={onOpenAtlas}>
             {t(language, 'finalOpenAtlas')}
+          </button>
+          <button className="final-action-icon" type="button" onClick={onOpenLeaderboard} title={language === 'ko' ? '랭킹' : 'Ranking'}>
+            🏆
           </button>
         </div>
 

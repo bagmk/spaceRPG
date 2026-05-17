@@ -3,6 +3,7 @@ import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
 import { getEntityCost } from '../entities/types';
 import { STAGES } from '../stages';
+import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
 
@@ -29,9 +30,9 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
       )
     : [...state.purchasedEntities, { entityId: action.entityId, count: 1 }];
 
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
     quanta: state.quanta - cost,
     purchasedEntities: updatedEntities,
-  };
+  });
 }

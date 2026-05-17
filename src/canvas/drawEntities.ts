@@ -18,7 +18,7 @@ const GLOW_RADIUS: Record<EntityRarity, number> = {
 };
 
 const MAX_VISIBLE_PER_ENTITY = 10;
-const MAX_TOTAL_ENTITY_DRAW = 60;
+const MAX_TOTAL_ENTITY_DRAW = 32;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 interface EntityDrawItem {
@@ -1436,9 +1436,6 @@ function drawSpacecraftBody(
   ctx.lineJoin = 'round';
   ctx.strokeStyle = hexToRgba(color, 0.75);
   ctx.fillStyle = hexToRgba(color, 0.62);
-  ctx.shadowBlur = item.rarity === 'legendary' ? 14 : 8;
-  ctx.shadowColor = item.glowColor;
-
   if (textHas(text, 'telescope', 'observatory')) {
     ctx.lineWidth = Math.max(0.9, size * 0.12);
     ctx.fillRect(-size * 0.55, -size * 0.16, size * 1.1, size * 0.32);
@@ -1818,9 +1815,6 @@ function drawEntityGlyph(
   ctx.lineWidth = Math.max(1, size * 0.12);
   ctx.strokeStyle = item.color;
   ctx.fillStyle = item.color;
-  ctx.shadowBlur = item.rarity === 'legendary' ? 16 : 8;
-  ctx.shadowColor = item.glowColor;
-
   switch (item.glyph) {
     case 'black_hole':
       ctx.save();
@@ -2151,12 +2145,13 @@ export function drawEntities(
     const { item, x, y, size, glowRadius } = position;
     const isLegend = item.rarity === 'legendary';
     drawLocalEntityEffect(ctx, position, now);
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
-    grad.addColorStop(0, hexToRgba(item.glowColor, isLegend ? 0.44 : 0.25));
-    grad.addColorStop(1, hexToRgba(item.color, 0));
-    ctx.fillStyle = grad;
+    ctx.fillStyle = hexToRgba(item.glowColor, isLegend ? 0.18 : 0.10);
     ctx.beginPath();
     ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hexToRgba(item.glowColor, isLegend ? 0.28 : 0.16);
+    ctx.beginPath();
+    ctx.arc(x, y, glowRadius * 0.5, 0, Math.PI * 2);
     ctx.fill();
 
     if (isLegend) {

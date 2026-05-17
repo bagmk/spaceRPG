@@ -1,15 +1,19 @@
 import { forwardRef, useEffect, useState } from 'react';
-import { formatWhole, getCompositeBoostMultiplier } from '../game/formulas';
-import type { ShopBoost } from '../game/types';
+import { formatWhole } from '../game/formulas';
+import { getActiveBoostSummary } from '../game/shop/boosts';
+import type { ActiveBoostSummary } from '../game/shop/boosts';
+import type { ShopBoost, ShopBoostCategory } from '../game/types';
 import { t, type Lang } from '../i18n';
 
-function formatRemaining(boosts: ShopBoost[], prefix: string, now: number, language: Lang): string {
-  const active = boosts.filter((boost) => boost.id.startsWith(prefix) && boost.expiresAt > now);
-  if (active.length === 0) return `0:00 ${t(language, 'shopLeft')}`;
-  const remainingSec = Math.max(0, Math.floor((Math.min(...active.map((boost) => boost.expiresAt)) - now) / 1000));
-  const minutes = Math.floor(remainingSec / 60);
-  const seconds = remainingSec % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')} ${t(language, 'shopLeft')}`;
+function formatRemaining(ms: number, language: Lang): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const clock = hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${clock} ${t(language, 'shopLeft')}`;
 }
 
 export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[]; language: Lang }>(
@@ -21,22 +25,22 @@ export const ActiveBoostHud = forwardRef<HTMLDivElement, { boosts: ShopBoost[]; 
       return () => window.clearInterval(intervalId);
     }, []);
 
-    const active = boosts.filter((boost) => boost.expiresAt > now);
-    if (active.length === 0) return null;
+    const summaries = (['time', 'matter'] as ShopBoostCategory[])
+      .map((category) => getActiveBoostSummary(boosts, category, now))
+      .filter((summary): summary is ActiveBoostSummary => summary !== null);
 
-    const timeCount = active.filter((boost) => boost.id.startsWith('time_')).length;
-    const quantaCount = active.filter((boost) => boost.id.startsWith('quanta_')).length;
-    const timeMult = getCompositeBoostMultiplier(active, 'time_', now);
-    const quantaMult = getCompositeBoostMultiplier(active, 'quanta_', now);
+    if (summaries.length === 0) return null;
 
     return (
       <div ref={ref} className="active-boost-hud">
-        {timeCount > 0 ? (
-          <div className="active-boost-line">{`${t(language, 'hudTime')} x${formatWhole(timeMult)} (${formatRemaining(active, 'time_', now, language)})`}</div>
-        ) : null}
-        {quantaCount > 0 ? (
-          <div className="active-boost-line">{`${t(language, 'hudQuanta')} x${formatWhole(quantaMult)} (${formatRemaining(active, 'quanta_', now, language)})`}</div>
-        ) : null}
+        {summaries.map((summary) => {
+          const label = summary.category === 'time' ? t(language, 'hudTime') : t(language, 'hudQuanta');
+          return (
+            <div key={summary.category} className="active-boost-line">
+              {`${label} x${formatWhole(summary.factor)} (${formatRemaining(summary.expiresAt - now, language)})`}
+            </div>
+          );
+        })}
       </div>
     );
   },

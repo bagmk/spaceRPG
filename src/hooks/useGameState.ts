@@ -3,7 +3,6 @@ import { gameReducer, createInitialGameState } from '../game/reducer';
 import { clearSave, loadGame, saveGame } from '../game/storage';
 import { TUNING } from '../game/constants';
 import {
-  getCompositeBoostMultiplier,
   getAutoRate,
   getCosmicTimeFillRate,
   getEffectiveThreshold,
@@ -11,7 +10,13 @@ import {
   getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
+import {
+  getOfflineRewardCapSec,
+  integrateBoostedSeconds,
+  pruneExpiredShopBoosts,
+} from '../game/shop/boosts';
 import { getActiveModifiers } from '../game/skills/effects';
+import { getPrestigeMultiplier } from '../game/prestige';
 import { STAGES } from '../game/stages';
 import { getStageStartCosmicTime } from '../game/timeFlow';
 import type { Dispatch } from 'react';
@@ -56,15 +61,18 @@ export function useGameState(): UseGameStateResult {
         endingStartedAt: null,
       };
       if (baseState.completedRun) {
-        return baseState;
+        return { ...baseState, shopBoosts: pruneExpiredShopBoosts(baseState.shopBoosts, now) };
       }
+      const offlineCapSec = getOfflineRewardCapSec(Boolean(payload.hasOfflineStorageUpgrade));
       const awaySec = Math.min(
-        TUNING.MAX_OFFLINE_SEC,
+        offlineCapSec,
         Math.max(0, (now - payload.lastSaveAt) / 1000),
       );
       if (awaySec <= 0) {
-        return baseState;
+        return { ...baseState, shopBoosts: pruneExpiredShopBoosts(baseState.shopBoosts, now) };
       }
+      const offlineStartMs = payload.lastSaveAt;
+      const offlineEndMs = payload.lastSaveAt + awaySec * 1000;
       const stage = STAGES[Math.min(payload.stageIdx, STAGES.length - 1)];
       const modifiers = getActiveModifiers(
         payload.skills,
@@ -76,28 +84,40 @@ export function useGameState(): UseGameStateResult {
           clickLevel: payload.skills.click.level,
         },
         payload.purchasedEntities ?? [],
+        payload.prestigeUpgrades,
       );
       const autoRate = getAutoRate(modifiers);
       const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')
         ? 1
         : TUNING.OFFLINE_BASE_RATE;
-      const quantaBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'quanta_', now);
-      const timeBoost = getCompositeBoostMultiplier(payload.shopBoosts, 'time_', now);
-      const gained = autoRate * awaySec * offlineMultiplier * quantaBoost;
+      const boostedTimeSec = integrateBoostedSeconds(
+        payload.shopBoosts,
+        ['time'],
+        offlineStartMs,
+        offlineEndMs,
+      );
+      const boostedMatterSec = integrateBoostedSeconds(
+        payload.shopBoosts,
+        ['time', 'matter'],
+        offlineStartMs,
+        offlineEndMs,
+      );
+      const gained = autoRate * boostedMatterSec * offlineMultiplier;
       const nextQuanta = safeAdd(baseState.quanta, gained);
       const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
-      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold);
+      const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
+      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold) * entropyEchoMult;
       const stageStartCosmic = getStageStartCosmicTime(payload.stageIdx);
       const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
       const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);
       const gaugeRate = getCosmicTimeFillRate(
         payload.skills.time.level,
         modifiers,
-        timeBoost,
+        1,
         payload.stageIdx + 1,
       );
       const cosmicDelta = logSpan > 0
-        ? (gaugeRate * awaySec * offlineMultiplier * logSpan * Math.LN10 * safeCosmic) / 100
+        ? (gaugeRate * boostedTimeSec * offlineMultiplier * logSpan * Math.LN10 * safeCosmic) / 100
         : 0;
       const nextCosmicClockSec = Math.min(safeCosmic + cosmicDelta, stage.cosmicTimeSec);
       const previousTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, safeCosmic);
@@ -115,6 +135,7 @@ export function useGameState(): UseGameStateResult {
         offlineGained: gained,
         offlineEntropyGained: entropyGained,
         offlineTimeProgressGained: Math.max(0, nextTimeGauge - previousTimeGauge),
+        shopBoosts: pruneExpiredShopBoosts(payload.shopBoosts, now),
         dailyCheckIns: isDailyCheckIn
           ? {
               lastDayKey: todayKey,
@@ -167,6 +188,8 @@ export function useGameState(): UseGameStateResult {
     state.echoes,
     state.skillPoints,
     state.shopBoosts,
+    state.hasOfflineStorageUpgrade,
+    state.hasSeenCashShopTutorial,
     state.totalShopSpentUSD,
     state.purchasedEntities,
   ]);

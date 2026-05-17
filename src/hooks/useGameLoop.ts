@@ -11,7 +11,8 @@ export function useGameLoop(callback: (now: number, dt: number) => void, active 
     if (!active) {
       return undefined;
     }
-    const TARGET_FRAME_MS = 1000 / 30; // cap at 30 fps — enough for this game
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const TARGET_FRAME_MS = 1000 / (isMobile ? 24 : 30);
     let frameId = 0;
     let last = performance.now();
     let lastErrorAt = 0;

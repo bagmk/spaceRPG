@@ -110,11 +110,13 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const entropyFromMatter = canAccrue
     ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold) * entropyEchoMult
     : 0;
+  const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
   return withCurrentUniverseEndingProgress({
     ...state,
     quanta: nextQuanta,
     timeGauge: nextTimeGauge,
-    entropy: safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult),
+    entropy: nextEntropy,
+    peakEntropy: Math.max(state.peakEntropy, nextEntropy),
     totalTimePlayed: state.completedRun ? state.totalTimePlayed : state.totalTimePlayed + action.dt,
     combo: shouldClearCombo ? 0 : state.combo,
     imploding: shouldEndImplosion ? false : state.imploding,

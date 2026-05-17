@@ -139,6 +139,14 @@ export const TIME_STAGE_BASE_SECONDS: Record<number, number> = {
 };
 export const TIME_STAGE_GROWTH_AFTER_STAGE_6 = 6;
 
+/**
+ * Exponential base for entropy growth per stage.
+ * Each stage multiplies auto-tick entropy by Math.pow(base, stageIdx).
+ * 1.0 = flat rate across all stages; 2.0 ≈ 32,768x at stage 16 vs stage 1.
+ * Pushes late-game entropy into TB territory for satisfying progression.
+ */
+export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
+
 export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
   click_lv5: 1.4,
   click_lv10: 1.8,
@@ -208,5 +216,8 @@ export const BALANCE = {
   intro: {
     genesisMs: INTRO_GENESIS_MS,
     bigBangToGameMs: INTRO_BIG_BANG_TO_GAME_MS,
+  },
+  entropy: {
+    stageGrowthBase: ENTROPY_STAGE_GROWTH_BASE,
   },
 } as const;

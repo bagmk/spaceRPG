@@ -261,7 +261,8 @@ const ENTROPY_WEIGHT_GROUPS: Array<{ names: string[]; weight: number }> = [
 export function getParticleEntropyBonus(stageId: number, particleName: string, isCrit = false): number {
   const group = ENTROPY_WEIGHT_GROUPS.find((entry) => entry.names.includes(particleName));
   const particleWeight = group?.weight ?? 1;
-  const stageWeight = Math.max(1, Math.ceil(stageId / 5));
+  const stageIdx = Math.max(0, stageId - 1);
+  const stageWeight = Math.pow(1.5, stageIdx);
   const critWeight = isCrit ? 2 : 1;
   return Math.ceil(particleWeight * stageWeight * critWeight);
 }

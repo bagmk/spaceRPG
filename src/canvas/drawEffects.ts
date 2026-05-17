@@ -73,8 +73,10 @@ export function drawEffects({
     ctx.save();
     ctx.translate(indicatorX, indicatorY);
     ctx.rotate(angle);
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = rogue.color;
+    ctx.fillStyle = hexToRgba(rogue.color, 0.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, 14 * pulse, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = rogue.color;
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -82,7 +84,6 @@ export function drawEffects({
     ctx.lineTo(-14 * pulse, 7);
     ctx.closePath();
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     const distance = Math.hypot(dx, dy);
     const intensity = Math.max(0, 1 - distance / (Math.max(width, height) * 1.2));
