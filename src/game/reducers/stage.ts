@@ -115,9 +115,10 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
 
 export function handleSelectEnding(state: GameState, action: SelectEndingAction): GameState {
   const stage = getCurrentStage(state);
+  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   if (
     stage.id !== STAGES.length ||
-    state.quanta < stage.threshold ||
+    state.quanta < effectiveThreshold ||
     state.cosmicClockSec < stage.cosmicTimeSec
   ) {
     return state;
