@@ -315,11 +315,16 @@ canvas {
   pointer-events: auto;
 }
 
-.prestige-pips {
+.hud-pips-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px 0;
+}
+
+.hud-pips-left {
   display: flex;
   gap: 4px;
-  padding: 8px 4px 0;
-  margin-top: 2px;
   flex-wrap: wrap;
 }
 
@@ -738,8 +743,7 @@ button.stat-header-item {
 .active-boost-hud {
   --boost-time: rgba(100, 220, 220, 0.85);
   --boost-matter: rgba(255, 215, 100, 0.85);
-  right: 18px;
-  top: 98px;
+  position: static;
   display: flex;
   gap: 5px;
   padding: 0;
@@ -747,6 +751,7 @@ button.stat-header-item {
   background: none;
   box-shadow: none;
   animation: none;
+  pointer-events: none;
 }
 
 .active-boost-pip {

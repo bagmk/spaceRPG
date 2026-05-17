@@ -772,16 +772,19 @@ export function GameScreen({
           ) : null}
           {(() => {
             const pu = state.prestigeUpgrades;
-            if (!pu) return null;
-            const active = (Object.keys(pu) as PrestigeUpgradeId[]).filter((id) => (pu[id] ?? 0) > 0);
-            if (active.length === 0) return null;
+            const prestigeActive = pu ? (Object.keys(pu) as PrestigeUpgradeId[]).filter((id) => (pu[id] ?? 0) > 0) : [];
+            const hasBoosts = state.shopBoosts && state.shopBoosts.length > 0;
+            if (prestigeActive.length === 0 && !hasBoosts) return null;
             return (
-              <div className="prestige-pips">
-                {active.map((id) => {
-                  const mult = getPrestigeMultiplier(pu[id] ?? 0);
-                  const label = id === 'time_warp' ? 'T' : id === 'matter_forge' ? 'M' : id === 'critical_core' ? 'C' : id === 'auto_engine' ? 'A' : 'E';
-                  return <span key={id} className={`prestige-pip prestige-pip--${id}`} title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}><span className="prestige-pip__label">{label}</span>{mult.toFixed(1)}</span>;
-                })}
+              <div className="hud-pips-row">
+                <div className="hud-pips-left">
+                  {prestigeActive.map((id) => {
+                    const mult = getPrestigeMultiplier(pu![id] ?? 0);
+                    const label = id === 'time_warp' ? 'T' : id === 'matter_forge' ? 'M' : id === 'critical_core' ? 'C' : id === 'auto_engine' ? 'A' : 'E';
+                    return <span key={id} className={`prestige-pip prestige-pip--${id}`} title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}><span className="prestige-pip__label">{label}</span>{mult.toFixed(1)}</span>;
+                  })}
+                </div>
+                <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} language={language} />
               </div>
             );
           })()}
@@ -825,7 +828,6 @@ export function GameScreen({
         <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
         <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={displayStage.id} language={language} />
-        <ActiveBoostHud ref={boostAnchorRef} boosts={state.shopBoosts} language={language} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}

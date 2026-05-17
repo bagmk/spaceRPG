@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { formatDuration, formatEntropyAmount } from '../game/formulas';
 import { formatUniverseModifier, getAnomalyLabel, getEndingLabel } from '../game/multiverse';
-import type { UniverseAtlasEntry, UniverseSeed } from '../game/types';
+import type { EndingId, UniverseAtlasEntry, UniverseSeed } from '../game/types';
+import { EndingCredits } from './endings/EndingCredits';
 import { t, type Lang } from '../i18n';
 
 interface MultiverseAtlasProps {
@@ -18,6 +20,18 @@ export function MultiverseAtlas({
   language,
   onBack,
 }: MultiverseAtlasProps) {
+  const [replayEndingId, setReplayEndingId] = useState<EndingId | null>(null);
+
+  if (replayEndingId) {
+    return (
+      <EndingCredits
+        endingId={replayEndingId}
+        language={language}
+        onComplete={() => setReplayEndingId(null)}
+      />
+    );
+  }
+
   return (
     <section className="final-screen atlas-screen">
       <div className="final-card atlas-card">
@@ -52,15 +66,16 @@ export function MultiverseAtlas({
                       <span className="atlas-entropy">{`${formatEntropyAmount(entry.entropy)} entropy`}</span>
                     ) : null}
                   </div>
-                  <div className="atlas-meta atlas-hover-hint">{t(language, 'atlasHoverHint')}</div>
-                  <div className="atlas-meta atlas-detail">
-                    <span>{`${t(language, 'atlasGravity')} ${formatUniverseModifier(entry.seed.gravityMod)}`}</span>
-                    <span>{`${t(language, 'atlasTime')} ${formatUniverseModifier(entry.seed.timeMod)}`}</span>
-                    <span>{`${t(language, 'atlasHue')} +${entry.seed.paletteShift}°`}</span>
-                    <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(entry.seed.anomaly, language)}`}</span>
+                  <div className="atlas-meta">
                     <span>{`${entry.totalClicks} ${t(language, 'atlasClicks')}`}</span>
-                    <span>{`${entry.collisions} ${t(language, 'atlasEncounters')}`}</span>
                   </div>
+                  <button
+                    type="button"
+                    className="atlas-replay-btn"
+                    onClick={() => setReplayEndingId(entry.endingId)}
+                  >
+                    {language === 'ko' ? '▶ 엔딩 다시 보기' : '▶ Replay Ending'}
+                  </button>
                 </article>
               ))
           )}

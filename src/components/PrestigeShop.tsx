@@ -52,7 +52,7 @@ export function PrestigeShop({ entropy, prestigeUpgrades, onBuy, language }: Pre
             {language === 'ko' ? '엔트로피 보유' : 'Available Entropy'}
           </span>
           <span className="prestige-shop__amount">
-            {entropyReadout.value}
+            {entropyReadout.value}{' '}
             <span className="hud-entropy-unit">{entropyReadout.unit}</span>
           </span>
         </div>
