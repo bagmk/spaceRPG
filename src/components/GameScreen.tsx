@@ -50,6 +50,7 @@ import { AlmanacOverlay } from './AlmanacOverlay';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
+import { getPrestigeMultiplier, PRESTIGE_UPGRADES, type PrestigeUpgradeId } from '../game/prestige';
 
 interface FloatingEntry {
   id: number;
@@ -206,7 +207,8 @@ export function GameScreen({
     state.pendingCondenseStageIdx !== null ||
     state.imploding ||
     transitionPhase === 'bursting' ||
-    state.selectedEndingId !== null;
+    state.selectedEndingId !== null ||
+    canChooseEnding;
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [encounterEntries, setEncounterEntries] = useState<EncounterEntry[]>([]);
   const [shakeClass, setShakeClass] = useState('');
@@ -555,7 +557,7 @@ export function GameScreen({
             >
               NEXT ▶
             </button>
-            {([0.25, 0.5, 0.75, 0.9] as const).map((pct) => (
+            {([1.0] as const).map((pct) => (
               <button
                 key={pct}
                 className="mini-button admin-button"
@@ -766,6 +768,21 @@ export function GameScreen({
               ) : null}
             </button>
           ) : null}
+          {(() => {
+            const pu = state.prestigeUpgrades;
+            if (!pu) return null;
+            const active = (Object.keys(pu) as PrestigeUpgradeId[]).filter((id) => (pu[id] ?? 0) > 0);
+            if (active.length === 0) return null;
+            return (
+              <div className="prestige-pips">
+                {active.map((id) => {
+                  const mult = getPrestigeMultiplier(pu[id] ?? 0);
+                  const icon = id === 'time_warp' ? '⏱' : id === 'matter_forge' ? '⚛' : id === 'critical_core' ? '⚡' : id === 'auto_engine' ? '⚙' : '∞';
+                  return <span key={id} className="prestige-pip" title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}>{icon}{mult.toFixed(1)}</span>;
+                })}
+              </div>
+            );
+          })()}
         </div>
         <div className="bottom-buttons">
           <div ref={shopAnchorRef}>
