@@ -13,11 +13,14 @@ export interface PurchaseResult {
  */
 export async function completePurchase(product: PaidShopProduct): Promise<PurchaseResult> {
   const user = auth.currentUser;
-  if (!user || user.isAnonymous) {
+  console.log('[purchase] attempt:', product.id, 'user:', user?.uid);
+  if (!user) {
+    console.warn('[purchase] blocked: no user');
     return { success: false };
   }
 
   try {
+    console.log('[purchase] creating checkout session...');
     await createCheckoutSession(user.uid, product.id);
     // If we reach here, the redirect hasn't happened yet (waiting for extension)
     // The page will redirect when the session URL is ready

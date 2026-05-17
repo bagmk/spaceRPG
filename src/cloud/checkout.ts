@@ -47,12 +47,14 @@ export async function createCheckoutSession(
   const cancelUrl = `${window.location.origin}${window.location.pathname}?payment=cancelled`;
 
   const sessionsRef = collection(db, 'users', uid, 'checkout_sessions');
+  console.log('[checkout] writing session doc...', { uid, priceId, successUrl });
   const docRef = await addDoc(sessionsRef, {
     price: priceId,
     success_url: successUrl,
     cancel_url: cancelUrl,
     mode: 'payment',
   });
+  console.log('[checkout] doc created:', docRef.id, '— waiting for extension to write URL...');
 
   // Watch for the extension to write back the session URL
   const unsubscribe = onSnapshot(docRef, (snap) => {
