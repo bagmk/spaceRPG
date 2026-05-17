@@ -114,14 +114,16 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
 }
 
 export function handleSelectEnding(state: GameState, action: SelectEndingAction): GameState {
-  const stage = getCurrentStage(state);
-  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
-  if (
-    stage.id !== STAGES.length ||
-    state.quanta < effectiveThreshold ||
-    state.cosmicClockSec < stage.cosmicTimeSec
-  ) {
-    return state;
+  if (!state.completedRun) {
+    const stage = getCurrentStage(state);
+    const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+    if (
+      stage.id !== STAGES.length ||
+      state.quanta < effectiveThreshold ||
+      state.cosmicClockSec < stage.cosmicTimeSec
+    ) {
+      return state;
+    }
   }
   const progressedState = withCurrentUniverseEndingProgress(state);
   const options = getEndingOptions(progressedState, action.now);
