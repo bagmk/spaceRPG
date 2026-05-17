@@ -43,6 +43,8 @@ export async function createCheckoutSession(
     return;
   }
 
+  if (!db) { console.error('[checkout] Firestore not available'); return; }
+
   const successUrl = `${window.location.origin}${window.location.pathname}?payment=success`;
   const cancelUrl = `${window.location.origin}${window.location.pathname}?payment=cancelled`;
 

@@ -1241,6 +1241,29 @@ button.stat-header-item {
   display: none;
 }
 
+.final-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.final-close:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 .intro-flash {
   position: absolute;
   inset: 0;
@@ -1606,12 +1629,20 @@ button.stat-header-item {
 
 .final-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   width: min(1000px, 100%);
   margin-top: 32px;
   padding-top: 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.final-stat-cell {
+  min-width: 0;
+  padding: 16px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .final-stats strong {
@@ -1623,18 +1654,20 @@ button.stat-header-item {
 }
 
 .final-stats strong.final-entropy-amount {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.32em;
   flex-wrap: wrap;
+  color: #ff9f43;
+  text-shadow: 0 0 12px rgba(255, 159, 67, 0.34);
 }
 
 .final-stats strong.final-entropy-amount .hud-entropy-unit {
   font-size: 0.72em;
 }
 
-.final-stats span,
+.final-stat-cell > span,
 .final-summary,
 .final-boost {
   color: var(--muted);
@@ -2204,6 +2237,22 @@ button.stat-header-item {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: #000;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.ending-credit-video::-webkit-media-controls,
+.ending-credit-video::-webkit-media-controls-enclosure,
+.ending-credit-video::-webkit-media-controls-panel,
+.ending-credit-video::-webkit-media-controls-play-button,
+.ending-credit-video::-webkit-media-controls-timeline,
+.ending-credit-video::-webkit-media-controls-current-time-display,
+.ending-credit-video::-webkit-media-controls-time-remaining-display,
+.ending-credit-video::-webkit-media-controls-mute-button,
+.ending-credit-video::-webkit-media-controls-volume-slider,
+.ending-credit-video::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .ending-credit-continue {
@@ -2386,8 +2435,10 @@ button.stat-header-item {
 .prestige-shop__header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   margin-bottom: 8px;
+  text-align: center;
 }
 
 .prestige-shop__icon {
@@ -2405,6 +2456,7 @@ button.stat-header-item {
 .prestige-shop__header-text {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
 }
 

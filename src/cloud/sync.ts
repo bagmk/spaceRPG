@@ -32,6 +32,7 @@ interface RemoteSaveDoc {
 // ---------------------------------------------------------------------------
 
 export async function pullRemoteSave(uid: string): Promise<PersistentGameState | null> {
+  if (!db) return null;
   try {
     const ref = doc(db, 'users', uid, 'saves', 'main');
     const snap = await getDoc(ref);
@@ -55,6 +56,7 @@ export async function pushRemoteSave(
   save: PersistentGameState,
   schemaVersion: number,
 ): Promise<void> {
+  if (!db) return;
   try {
     writeSeq += 1;
     const ref = doc(db, 'users', uid, 'saves', 'main');

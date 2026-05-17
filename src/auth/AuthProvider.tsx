@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const initialAuthDone = useRef(false);
 
   const refreshProfile = useCallback(async () => {
-    const currentUser = auth.currentUser;
+    const currentUser = auth?.currentUser;
     if (!currentUser) return;
     const p = await getProfile(currentUser.uid);
     setProfile(p);
@@ -65,6 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!auth) {
+      // Firebase not available — go straight to anonymous/offline mode
+      setStatus('anonymous');
+      initialAuthDone.current = true;
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Skip if a popup flow is in progress — we'll handle state after popup resolves
       if (popupInProgress.current) return;
@@ -101,10 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setStatus('loading');
         try {
-          await signInAnonymously(auth);
+          await signInAnonymously(auth!);
         } catch (e) {
           console.error('[Auth] Anonymous sign-in failed:', e);
-          setStatus('signedOut');
+          setStatus('anonymous');
         }
         initialAuthDone.current = true;
       } else {
@@ -119,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Handle redirect result on page load (after Google redirect returns)
   useEffect(() => {
+    if (!auth) return;
     getRedirectResult(auth).then(async (result) => {
       if (!result) return;
       popupInProgress.current = true;
@@ -146,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (e.code === 'auth/credential-already-in-use') {
         // Will be handled by signInWithRedirect fallback
         const provider = new GoogleAuthProvider();
-        signInWithRedirect(auth, provider);
+        signInWithRedirect(auth!, provider);
       } else {
         console.error('[Auth] Redirect result error:', e);
       }
@@ -154,11 +161,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleSignInWithGoogle = useCallback(async () => {
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     await signInWithRedirect(auth, provider);
   }, []);
 
   const handleLinkWithGoogle = useCallback(async () => {
+    if (!auth) return;
     const currentUser = auth.currentUser;
     if (!currentUser) return;
     const provider = new GoogleAuthProvider();
@@ -174,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleSignOut = useCallback(async () => {
+    if (!auth) return;
     await auth.signOut();
     setUser(null);
     setProfile(null);

@@ -12,7 +12,12 @@ export interface PurchaseResult {
  * Returns { success: false } if user is not logged in or if it fails to start.
  */
 export async function completePurchase(product: PaidShopProduct): Promise<PurchaseResult> {
-  const user = auth.currentUser;
+  if (!auth) {
+    console.warn('[purchase] blocked: auth unavailable');
+    return { success: false };
+  }
+
+  const user = auth!.currentUser;
   console.log('[purchase] attempt:', product.id, 'user:', user?.uid);
   if (!user) {
     console.warn('[purchase] blocked: no user');

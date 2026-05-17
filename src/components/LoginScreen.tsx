@@ -16,6 +16,7 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
   const ko = language === 'ko';
 
   const handleGoogle = () => {
+    if (!auth) { onContinue(); return; }
     setError(null);
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)

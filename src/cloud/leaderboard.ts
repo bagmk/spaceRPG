@@ -36,7 +36,7 @@ export async function pushLeaderboardEntry(
   peakEntropy: number,
   profile: UserProfile | null,
 ): Promise<void> {
-  // Guard: only push if user has a displayName
+  if (!db) return;
   if (!profile?.displayName) return;
   if (!Number.isFinite(peakEntropy) || peakEntropy <= 0) return;
 
@@ -58,6 +58,7 @@ export async function pushLeaderboardEntry(
 // ---------------------------------------------------------------------------
 
 export async function fetchTopN(n: number = 100): Promise<LeaderboardEntry[]> {
+  if (!db) return [];
   try {
     const q = query(
       collection(db, 'leaderboard'),

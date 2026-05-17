@@ -56,6 +56,7 @@ export function validateDisplayName(name: string): { ok: true } | { ok: false; r
 // ---------------------------------------------------------------------------
 
 export async function getProfile(uid: string): Promise<UserProfile | null> {
+  if (!db) return null;
   const snap = await getDoc(doc(db, 'users', uid, 'profile', 'main'));
   return snap.exists() ? (snap.data() as UserProfile) : null;
 }
@@ -64,6 +65,7 @@ export async function createOrUpdateProfile(
   uid: string,
   data: Partial<UserProfile>,
 ): Promise<void> {
+  if (!db) return;
   const ref = doc(db, 'users', uid, 'profile', 'main');
   await setDoc(ref, { ...data, lastLoginAt: Date.now() }, { merge: true });
 }
@@ -77,6 +79,7 @@ export type ClaimResult =
   | { ok: false; reason: 'taken' | 'invalid' };
 
 export async function claimDisplayName(uid: string, name: string): Promise<ClaimResult> {
+  if (!db) return { ok: false, reason: 'invalid' };
   const trimmed = name.trim();
   const validation = validateDisplayName(trimmed);
   if (!validation.ok) return { ok: false, reason: 'invalid' };
@@ -97,7 +100,7 @@ export async function claimDisplayName(uid: string, name: string): Promise<Claim
     const profileSnap = await tx.get(profileRef);
     const currentProfile = profileSnap.data() as UserProfile | undefined;
     if (currentProfile?.displayNameLower && currentProfile.displayNameLower !== nameLower) {
-      const oldNameRef = doc(db, 'displayNames', currentProfile.displayNameLower);
+      const oldNameRef = doc(db!, 'displayNames', currentProfile.displayNameLower);
       tx.delete(oldNameRef);
     }
 
@@ -118,6 +121,7 @@ export async function claimDisplayName(uid: string, name: string): Promise<Claim
 // ---------------------------------------------------------------------------
 
 export async function isNameAvailable(name: string): Promise<boolean> {
+  if (!db) return false;
   const trimmed = name.trim().toLowerCase();
   if (!trimmed) return false;
   const snap = await getDoc(doc(db, 'displayNames', trimmed));
