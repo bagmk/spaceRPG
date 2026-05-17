@@ -124,10 +124,10 @@ export default function App() {
   }, [language]);
 
   useEffect(() => {
-    if (state.completedRun) {
+    if (state.completedRun && state.lastEndingId !== null) {
       setRoute('final');
     }
-  }, [state.completedRun]);
+  }, [state.completedRun, state.lastEndingId]);
 
   return (
     <>
@@ -181,7 +181,7 @@ export default function App() {
         <FinalScreen
           state={state}
           language={language}
-          onUnlock={(unlockId) => dispatch({ type: 'BUY_SINGULARITY_UNLOCK', unlockId })}
+          onBuyPrestigeUpgrade={(upgradeId) => dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId })}
           onOpenAtlas={() => setRoute('atlas')}
           onPrestige={() => {
             soundManagerRef.current?.unlock();

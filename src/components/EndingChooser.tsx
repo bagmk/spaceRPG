@@ -4,13 +4,24 @@ import { t, type Lang } from '../i18n';
 interface EndingChooserProps {
   options: EndingOption[];
   onChoose: (endingId: EndingId) => void;
+  onClose?: () => void;
   language: Lang;
 }
 
-export function EndingChooser({ options, onChoose, language }: EndingChooserProps) {
+export function EndingChooser({ options, onChoose, onClose, language }: EndingChooserProps) {
   return (
     <div className="overlay-backdrop" role="dialog" aria-modal="true">
       <div className="overlay-card ending-chooser">
+        {onClose ? (
+          <button
+            type="button"
+            className="entity-panel__close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            x
+          </button>
+        ) : null}
         <div className="q-stage">{t(language, 'endingHeadline')}</div>
         <h2>{t(language, 'endingPrompt')}</h2>
         <div className="ending-options">
@@ -23,11 +34,9 @@ export function EndingChooser({ options, onChoose, language }: EndingChooserProp
               onClick={() => onChoose(option.id)}
             >
               <span className="ending-status">
-                {!option.unlocked
-                  ? t(language, 'endingStatusLocked')
-                  : option.seen
-                    ? t(language, 'endingStatusSeen')
-                    : t(language, 'endingStatusUnlocked')}
+                {option.seen
+                  ? (language === 'ko' ? '✦ 완료' : '✦ Completed')
+                  : option.unlocked ? t(language, 'endingStatusUnlocked') : t(language, 'endingStatusLocked')}
               </span>
               <span className="ending-label">{option.label}</span>
               <span className="ending-description">{option.description}</span>

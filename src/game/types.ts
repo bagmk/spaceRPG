@@ -14,6 +14,7 @@ import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst,
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from './types/events';
 import type { SkillState, SkillTreeId } from './skills/types';
 import type { PurchasedEntityEntry } from './entities/types';
+import type { PrestigeUpgradeLevels } from './prestige';
 
 // ---------------------------------------------------------------------------
 // Stage
@@ -99,6 +100,7 @@ export interface UniverseAtlasEntry {
   collisions: number;
   completedAt: number;
   seed: UniverseSeed;
+  entropy?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,8 +108,13 @@ export interface UniverseAtlasEntry {
 // ---------------------------------------------------------------------------
 
 export interface EndingProgressFlags {
-  bigRipEverEligible: boolean;
+  /** Current-universe flag: reached the Big Crunch entropy threshold before entering Stage 3. */
   bigCrunchEligible: boolean;
+  /** Current-universe flag: any Critical/Quantum Lens upgrade was purchased this universe. */
+  criticalUpgradedThisUniverse: boolean;
+  /** Legacy/current diagnostic: all Entity Lab upgrades have been maxed this universe. */
+  bigRipEverEligible: boolean;
+  /** Legacy/current diagnostic: the no-Critical Vacuum Decay path is eligible at the ending stage. */
   vacuumDecayEligible: boolean;
 }
 
@@ -125,8 +132,11 @@ export interface TimedShopBoost {
   expiresAt: number;
 }
 
+export type ShopBoostCategory = 'time' | 'matter';
+
 export interface ShopBoost {
   id: string;
+  category: ShopBoostCategory;
   factor: number;
   expiresAt: number;
 }
@@ -192,7 +202,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry } from './entities/types';
 
 export interface SaveState {
-  version: 9;
+  version: 12;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -234,9 +244,12 @@ export interface SaveState {
   currentUniverseSeed: UniverseSeed;
   stageClicksAtStageStart: number;
   tutorialFlags: Record<string, boolean>;
+  hasSeenCashShopTutorial: boolean;
   shopBoosts: ShopBoost[];
+  hasOfflineStorageUpgrade: boolean;
   totalShopSpentUSD: number;
   purchasedEntities: PurchasedEntityEntry[];
+  prestigeUpgrades: PrestigeUpgradeLevels;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

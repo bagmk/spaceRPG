@@ -10,17 +10,15 @@ import {
   getCondensedMassReward,
   getEchoReward,
 } from '../formulas';
+import { getPrestigeMultiplier } from '../prestige';
 import {
-  ALL_ENDINGS,
   generateUniverseSeed,
   getEndingOptions,
-  isBigCrunchEligible,
-  isBigRipEligible,
-  isVacuumDecayProgress,
+  withCurrentUniverseEndingProgress,
 } from '../multiverse';
 import { getSkillPointsForStageAdvance } from '../skills/definitions';
 import { createInitialGameState } from '../defaults';
-import type { EndingId, GameState } from '../types';
+import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
   getCurrentStage,
@@ -28,7 +26,6 @@ import {
   resetMechanicState,
   recordLateStageClickRate,
   buildAtlasEntry,
-  hasUnlock,
 } from './helpers';
 import { createDefaultEndingProgressFlags } from '../defaults';
 
@@ -49,21 +46,14 @@ export function handleStartCondense(state: GameState, action: StartCondenseActio
   }
   if (state.completedRun || state.pendingCondenseStageIdx !== null) return state;
   const stage = getCurrentStage(state);
-  if (stage.id === STAGES.length) return state;
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   if (!canCondense(state)) return state;
 
-  const earned = getEntropyOnCondense(state.quanta, effectiveThreshold);
+  const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
+  const earned = getEntropyOnCondense(state.quanta, effectiveThreshold) * entropyEchoMult;
   const progressAtCondense = getProgress(state.quanta, effectiveThreshold);
   const condenseEntry = { stageId: stage.id, progressAtCondense };
-  const vacuumDecayEligible =
-    state.endingProgressFlags.vacuumDecayEligible ||
-    (stage.id === 14 && isVacuumDecayProgress(progressAtCondense));
-  const endingsUnlocked: EndingId[] =
-    vacuumDecayEligible && !state.endingsUnlocked.includes('vacuum_decay')
-      ? [...state.endingsUnlocked, 'vacuum_decay']
-      : state.endingsUnlocked;
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
     entropy: state.entropy + earned,
     pendingCondenseStageIdx: state.stageIdx,
@@ -72,10 +62,8 @@ export function handleStartCondense(state: GameState, action: StartCondenseActio
     lastClick: 0,
     imploding: true,
     condenseStartedAt: action.now,
-    endingsUnlocked,
-    endingProgressFlags: { ...state.endingProgressFlags, vacuumDecayEligible },
     condenseProgressHistory: [...state.condenseProgressHistory, condenseEntry].slice(-16),
-  };
+  });
 }
 
 export function handleAdvanceStage(state: GameState, action: AdvanceStageAction): GameState {
@@ -98,14 +86,15 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
       completedRun: true,
     };
   }
-  const stage = getCurrentStage(state);
-  const nextClickRateLog = recordLateStageClickRate(state, action.now);
-  const nextStageIdx = state.stageIdx + 1;
+  const progressedState = withCurrentUniverseEndingProgress(state);
+  const stage = getCurrentStage(progressedState);
+  const nextClickRateLog = recordLateStageClickRate(progressedState, action.now);
+  const nextStageIdx = progressedState.stageIdx + 1;
   const nextStageId = nextStageIdx + 1;
   const nextCosmicClockSec = stage.cosmicTimeSec;
   const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, nextCosmicClockSec);
   const nextState = {
-    ...state,
+    ...progressedState,
     stageIdx: nextStageIdx,
     timeGauge: nextTimeGauge,
     cosmicClockSec: nextCosmicClockSec,
@@ -116,12 +105,12 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     imploding: false,
     condenseStartedAt: null,
     stageStartedAt: action.now,
-    skills: unlockTrackForStage(state.skills, nextStageId),
-    skillPoints: state.skillPoints + getSkillPointsForStageAdvance(stage.id),
+    skills: unlockTrackForStage(progressedState.skills, nextStageId),
+    skillPoints: progressedState.skillPoints + getSkillPointsForStageAdvance(stage.id),
     clickRateLog: nextClickRateLog,
-    stageClicksAtStageStart: state.totalClicks,
+    stageClicksAtStageStart: progressedState.totalClicks,
   };
-  return { ...nextState, ...resetMechanicState(nextState) };
+  return withCurrentUniverseEndingProgress({ ...nextState, ...resetMechanicState(nextState) });
 }
 
 export function handleSelectEnding(state: GameState, action: SelectEndingAction): GameState {
@@ -133,30 +122,15 @@ export function handleSelectEnding(state: GameState, action: SelectEndingAction)
   ) {
     return state;
   }
-  const options = getEndingOptions(state, action.now);
+  const progressedState = withCurrentUniverseEndingProgress(state);
+  const options = getEndingOptions(progressedState, action.now);
   const selectedOption = options.find((o) => o.id === action.endingId);
   if (!selectedOption?.unlocked) return state;
 
-  const nextClickRateLog = recordLateStageClickRate(state, action.now);
-  const bigCrunchEligible = isBigCrunchEligible(
-    { ...state, clickRateLog: nextClickRateLog },
-    action.now,
-  );
-  const endingsUnlocked = new Set(state.endingsUnlocked);
-  if (bigCrunchEligible) endingsUnlocked.add('big_crunch');
-  if (isBigRipEligible(state)) endingsUnlocked.add('big_rip');
-  if (state.endingProgressFlags.vacuumDecayEligible) endingsUnlocked.add('vacuum_decay');
   return {
-    ...state,
+    ...progressedState,
     selectedEndingId: action.endingId,
     endingStartedAt: action.now,
-    clickRateLog: nextClickRateLog,
-    endingsUnlocked: Array.from(endingsUnlocked) as EndingId[],
-    endingProgressFlags: {
-      ...state.endingProgressFlags,
-      bigCrunchEligible,
-      bigRipEverEligible: state.endingProgressFlags.bigRipEverEligible || isBigRipEligible(state),
-    },
   };
 }
 
@@ -167,10 +141,7 @@ export function handleCompleteEnding(state: GameState, action: CompleteEndingAct
   );
   const atlasEntry = buildAtlasEntry(state, action.now);
   const universeAtlas = atlasEntry ? [...state.universeAtlas, atlasEntry] : state.universeAtlas;
-  const permanentUnlocks: EndingId[] =
-    state.selectedEndingId === 'bounce' || completedEndings.includes('bounce')
-      ? ALL_ENDINGS
-      : (Array.from(new Set([...state.endingsUnlocked, state.selectedEndingId])) as EndingId[]);
+  const permanentUnlocks = Array.from(new Set([...state.endingsUnlocked, state.selectedEndingId]));
   return {
     ...state,
     completedRun: true,
@@ -202,12 +173,16 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     echoes: state.echoes,
     singularityUnlocks: state.singularityUnlocks,
     endingsCompleted: state.endingsCompleted,
-    lastEndingId: state.lastEndingId,
+    lastEndingId: null,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: createDefaultEndingProgressFlags(),
     universeAtlas: state.universeAtlas,
     currentUniverseSeed: nextSeed,
     tutorialFlags: state.tutorialFlags,
+    hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
+    hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
+    shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
+    prestigeUpgrades: state.prestigeUpgrades,
   };
 }

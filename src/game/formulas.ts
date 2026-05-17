@@ -11,7 +11,8 @@ import {
   TIME_STAGE_BASE_SECONDS,
   TIME_STAGE_GROWTH_AFTER_STAGE_6,
 } from './balance';
-import type { EndingId, GameState, ShopBoost, Stage, TimedShopBoost } from './types';
+import { getActiveShopBoostMultiplier } from './shop/boosts';
+import type { EndingId, GameState, ShopBoost, ShopBoostCategory, Stage, TimedShopBoost } from './types';
 import type { Modifiers } from './skills/effects';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
@@ -19,6 +20,13 @@ import {
 } from './entities/stageItems';
 
 const SECONDS_PER_YEAR = 31_557_600;
+const ENTROPY_BYTES_PER_UNIT = 1024;
+const ENTROPY_UNITS = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] as const;
+
+export interface EntropyReadout {
+  value: string;
+  unit: (typeof ENTROPY_UNITS)[number];
+}
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -70,12 +78,12 @@ export function formatGameNumberShort(value: number): string {
   const whole = Math.floor(value);
   if (whole < 1_000) return String(whole);
   if (whole < 1_000_000) return `${(whole / 1_000).toFixed(whole < 10_000 ? 1 : 0)}k`;
-  if (whole < 1e9) return `${(whole / 1e6).toFixed(1)}M`;
-  if (whole < 1e12) return `${(whole / 1e9).toFixed(1)}B`;
-  if (whole < 1e15) return `${(whole / 1e12).toFixed(1)}T`;
+  if (whole < 1e9) return `${Math.floor(whole / 1e6)}M`;
+  if (whole < 1e12) return `${Math.floor(whole / 1e9)}B`;
+  if (whole < 1e15) return `${Math.floor(whole / 1e12)}T`;
   const exp = Math.floor(Math.log10(whole));
   const mantissa = whole / Math.pow(10, exp);
-  return `${mantissa.toFixed(1)}e${exp}`;
+  return `${mantissa.toFixed(0)}e${exp}`;
 }
 
 export function formatAutoRateValue(value: number): string {
@@ -85,6 +93,33 @@ export function formatAutoRateValue(value: number): string {
   if (value < 10) return trimCompactNumber(value.toFixed(2));
   if (value < 100) return trimCompactNumber(value.toFixed(1));
   return formatGameNumberShort(value);
+}
+
+export function formatEntropyParts(entropyKilobytes: number): EntropyReadout {
+  const safeKilobytes = Number.isFinite(entropyKilobytes) && entropyKilobytes > 0
+    ? entropyKilobytes
+    : 0;
+  let scaled = safeKilobytes * ENTROPY_BYTES_PER_UNIT;
+  let unitIndex = 0;
+
+  while (scaled >= ENTROPY_BYTES_PER_UNIT && unitIndex < ENTROPY_UNITS.length - 1) {
+    scaled /= ENTROPY_BYTES_PER_UNIT;
+    unitIndex += 1;
+  }
+
+  const value = unitIndex === 0
+    ? String(Math.floor(scaled))
+    : trimCompactNumber(scaled.toFixed(2));
+
+  return {
+    value,
+    unit: ENTROPY_UNITS[unitIndex],
+  };
+}
+
+export function formatEntropyAmount(entropyKilobytes: number): string {
+  const readout = formatEntropyParts(entropyKilobytes);
+  return `${readout.value} ${readout.unit}`;
 }
 
 function trimCompactNumber(value: string): string {
@@ -387,9 +422,8 @@ export function getCompositeBoostMultiplier(
   idPrefix: string,
   now: number,
 ): number {
-  return (boosts ?? [])
-    .filter((boost) => boost.id.startsWith(idPrefix) && boost.expiresAt > now)
-    .reduce((acc, boost) => acc * boost.factor, 1);
+  const category: ShopBoostCategory = idPrefix.startsWith('time') ? 'time' : 'matter';
+  return getActiveShopBoostMultiplier(boosts, category, now);
 }
 
 export function canCondense(state: GameState): boolean {
@@ -397,35 +431,32 @@ export function canCondense(state: GameState): boolean {
     return false;
   }
   const stage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-  if (stage.id === STAGES.length) {
-    return false;
-  }
   const threshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   return state.quanta >= threshold && state.cosmicClockSec >= stage.cosmicTimeSec;
 }
 
-export function getEntropyOnCondense(quanta: number, threshold: number): number {
-  const baseLog = Math.floor(Math.log2(quanta + 1) * 3);
-  const grindBonus = quanta > threshold ? Math.floor((quanta / threshold - 1) * 2) : 0;
-  return baseLog + grindBonus;
-}
+/**
+ * Entropy rate: fraction of matter that converts to entropy (in KB).
+ * Entropy scales linearly with matter so it naturally follows the same
+ * exponential growth curve across stages.
+ *
+ * Stage  1 threshold   2K → ~1K KB entropy/stage  (1 MB)
+ * Stage  8 threshold 300B → ~150B KB              (150 TB)
+ * Stage 16 threshold  4Z → ~2Z KB                 (2 ZB)
+ */
+const ENTROPY_MATTER_RATE = 0.5;
+const ENTROPY_CONDENSE_RATE = 0.1;
 
-function getEntropyPotential(quanta: number, threshold: number): number {
+export function getEntropyOnCondense(quanta: number, _threshold: number): number {
   if (!Number.isFinite(quanta) || quanta <= 0) return 0;
-  const safeThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : 1;
-  const baseLog = Math.log2(quanta + 1) * 3;
-  const grindBonus = quanta > safeThreshold ? (quanta / safeThreshold - 1) * 2 : 0;
-  return baseLog + grindBonus;
+  return Math.floor(quanta * ENTROPY_CONDENSE_RATE);
 }
 
-export function getEntropyFromMatterGain(beforeQuanta: number, afterQuanta: number, threshold: number): number {
+export function getEntropyFromMatterGain(beforeQuanta: number, afterQuanta: number, _threshold: number): number {
   if (!Number.isFinite(beforeQuanta) || !Number.isFinite(afterQuanta) || afterQuanta <= beforeQuanta) {
     return 0;
   }
-  const safeThreshold = Number.isFinite(threshold) && threshold > 0 ? threshold : 1;
-  const potentialDelta = getEntropyPotential(afterQuanta, safeThreshold) - getEntropyPotential(beforeQuanta, safeThreshold);
-  const flowDelta = ((afterQuanta - beforeQuanta) / safeThreshold) * 2400;
-  return Math.max(0, potentialDelta, flowDelta);
+  return (afterQuanta - beforeQuanta) * ENTROPY_MATTER_RATE;
 }
 
 export function applyAntiRunaway(raw: number): number {

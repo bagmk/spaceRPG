@@ -5,7 +5,6 @@ import {
   safeAdd,
   getAutoRate,
   getComboMult,
-  getCompositeBoostMultiplier,
   getCosmicTimeFillRate,
   getCritChance,
   getCritMultiplier,
@@ -18,10 +17,13 @@ import {
   getAutoCost,
   getCritCost,
 } from '../formulas';
+import { getActiveShopBoostMultiplier, pruneExpiredShopBoosts } from '../shop/boosts';
 import { getStageStartCosmicTime } from '../timeFlow';
 import { getActiveModifiers } from '../skills/effects';
+import { getPrestigeMultiplier } from '../prestige';
 import { getMechanic } from '../mechanics';
 import { pickParticleName, getParticleEntropyBonus } from '../particles';
+import { withCurrentUniverseEndingProgress } from '../multiverse';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
@@ -48,6 +50,7 @@ type ReportEncounterAction = Extract<GameAction, { type: 'REPORT_ENCOUNTER' }>;
 
 export function handleTick(state: GameState, action: TickAction): GameState {
   const stage = getCurrentStage(state);
+  const activeBoosts = pruneExpiredShopBoosts(state.shopBoosts, action.now);
   const shouldEndImplosion =
     state.imploding &&
     state.condenseStartedAt !== null &&
@@ -59,34 +62,35 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities);
+  }, state.purchasedEntities, state.prestigeUpgrades);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
-    !state.completedRun &&
+    (!state.completedRun || state.lastEndingId === null) &&
     state.pendingCondenseStageIdx === null &&
     !state.imploding &&
     state.selectedEndingId === null;
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   const progress = getProgress(state.quanta, effectiveThreshold);
   const baseAuto = getAutoRate(modifiers);
-  const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
-  const timeBoost = getCompositeBoostMultiplier(state.shopBoosts, 'time_', action.now);
+  const matterBoost = getActiveShopBoostMultiplier(activeBoosts, 'matter', action.now);
+  const timeBoost = getActiveShopBoostMultiplier(activeBoosts, 'time', action.now);
+  const simulatedDtSec = (action.dt / 1000) * timeBoost;
   const stageAutoBonus =
     stage.mechanic === 'reionization'
       ? baseAuto * state.mechanicCharge * 0.5
       : stage.mechanic === 'first_stars'
         ? baseAuto * Math.min(1.5, state.mechanicCharge * 0.12)
         : 0;
-  const gained = canAccrue ? (((baseAuto + stageAutoBonus) * action.dt) / 1000) * quantaBoost : 0;
+  const gained = canAccrue ? (baseAuto + stageAutoBonus) * simulatedDtSec * matterBoost : 0;
   // Fill time gauge at gaugeRate%/s regardless of the absolute cosmic-time span.
   // This prevents mid-game stages (6+) from becoming impossible to complete.
-  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, timeBoost, state.stageIdx + 1);
+  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, 1, state.stageIdx + 1);
   const stageStartCosmic = getStageStartCosmicTime(state.stageIdx);
   const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
   const safeCosmic = Math.max(state.cosmicClockSec, stageStartCosmic);
   const cosmicDelta = canAccrue && logSpan > 0
-    ? (gaugeRate * (action.dt / 1000) * logSpan * Math.LN10 * safeCosmic) / 100
+    ? (gaugeRate * simulatedDtSec * logSpan * Math.LN10 * safeCosmic) / 100
     : 0;
   const nextCosmicClockSec = state.completedRun
     ? state.cosmicClockSec
@@ -97,28 +101,33 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     canAccrue && mechanic.onTick
       ? mechanic.onTick({ state, stage, now: action.now, progress01: progress })
       : null;
-  const quantaDelta = gained + (tickResult?.quantaDelta ?? 0);
+  const tickQuantaDelta = (tickResult?.quantaDelta ?? 0) * timeBoost * matterBoost;
+  const tickEntropyDelta = (tickResult?.entropyDelta ?? 0) * timeBoost;
+  const tickMechanicChargeDelta = (tickResult?.mechanicChargeDelta ?? 0) * timeBoost;
+  const quantaDelta = gained + tickQuantaDelta;
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
+  const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   const entropyFromMatter = canAccrue
-    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold)
+    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold) * entropyEchoMult
     : 0;
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
     quanta: nextQuanta,
     timeGauge: nextTimeGauge,
-    entropy: safeAdd(state.entropy, entropyFromMatter + (tickResult?.entropyDelta ?? 0)),
+    entropy: safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult),
     totalTimePlayed: state.completedRun ? state.totalTimePlayed : state.totalTimePlayed + action.dt,
     combo: shouldClearCombo ? 0 : state.combo,
     imploding: shouldEndImplosion ? false : state.imploding,
     cosmicClockSec: nextCosmicClockSec,
-    mechanicCharge: Math.max(0, state.mechanicCharge + (tickResult?.mechanicChargeDelta ?? 0)),
+    mechanicCharge: Math.max(0, state.mechanicCharge + tickMechanicChargeDelta),
     mechanicStep: tickResult?.mechanicStep ?? state.mechanicStep,
     mechanicTriggered: state.mechanicTriggered || Boolean(tickResult?.trigger),
-  };
+    shopBoosts: activeBoosts,
+  });
 }
 
 export function handleClick(state: GameState, action: ClickAction): GameState {
-  if (state.completedRun) { debugDroppedClick('completed run'); return state; }
+  if (state.completedRun && state.lastEndingId !== null) { debugDroppedClick('completed run'); return state; }
   if (state.pendingCondenseStageIdx !== null) { debugDroppedClick('pending condense'); return state; }
   if (state.imploding) { debugDroppedClick('imploding'); return state; }
   if (state.selectedEndingId !== null) { debugDroppedClick('ending selected'); return state; }
@@ -131,7 +140,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities);
+  }, state.purchasedEntities, state.prestigeUpgrades);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
@@ -143,17 +152,21 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
       action.randomValue < getCritChance(state.skills.crit.level, combo, modifiers));
   const critMult = isCrit ? getCritMultiplier(state.skills.crit.level, modifiers) : 1;
   const gainMultiplier = action.gainMultiplier ?? 1;
-  const quantaBoost = getCompositeBoostMultiplier(state.shopBoosts, 'quanta_', action.now);
-  const gained = Math.max(
+  const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', action.now);
+  const baseGained = Math.max(
     1,
-    (clickPower * comboMult * critMult * gainMultiplier + (action.gainFlat ?? 0)) * quantaBoost,
+    clickPower * comboMult * critMult * gainMultiplier + (action.gainFlat ?? 0),
   );
+  const boostedMechanicQuanta = (action.quantaDelta ?? 0) * matterBoost;
+  const gained = baseGained * matterBoost;
   const eventId = nextEventId(state);
-  const nextQuanta = safeAdd(state.quanta, gained + (action.quantaDelta ?? 0));
+  const nextQuanta = safeAdd(state.quanta, gained + boostedMechanicQuanta);
   const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
   const particleName = pickParticleName(stage.id, nextProgress);
-  const entropyGained = getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0);
-  return {
+  const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
+  const clickEntropy = (gained + boostedMechanicQuanta) * 0.5;
+  const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult;
+  return withCurrentUniverseEndingProgress({
     ...state,
     quanta: nextQuanta,
     entropy: safeAdd(state.entropy, entropyGained),
@@ -167,7 +180,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
     mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
     mechanicTriggered: state.mechanicTriggered || Boolean(action.trigger),
-  };
+  });
 }
 
 function isInteractionBlocked(state: GameState): boolean {
@@ -200,7 +213,7 @@ export function handleBuyCrit(state: GameState, _action: BuyCritAction): GameSta
   const stage = getCurrentStage(state);
   const cost = getCritCost(stage, state.critLevel);
   if (state.quanta < cost) return state;
-  return { ...state, quanta: state.quanta - cost, critLevel: state.critLevel + 1 };
+  return withCurrentUniverseEndingProgress({ ...state, quanta: state.quanta - cost, critLevel: state.critLevel + 1 });
 }
 
 export function handleReportCollision(state: GameState, action: ReportCollisionAction): GameState {
@@ -217,18 +230,20 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
   );
   const cappedBonus = Math.min(rawBonus * mult * modifiers.encounterBonusMult, cap);
   const tierEntropyFloor = action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
-  const entropyGained = Math.max(action.entropyBonus, tierEntropyFloor) * mult * stage.id;
+  const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', Date.now());
+  const boostedBonus = cappedBonus * matterBoost;
+  const entropyGained = boostedBonus * 0.5 + Math.max(action.entropyBonus, tierEntropyFloor) * mult;
   const eventId = nextEventId(state);
-  return {
+  return withCurrentUniverseEndingProgress({
     ...state,
-    quanta: safeAdd(state.quanta, cappedBonus),
+    quanta: safeAdd(state.quanta, boostedBonus),
     entropy: safeAdd(state.entropy, entropyGained),
     collisions: state.collisions + 1,
     eventCounter: eventId,
     lastCollisionEvent: createCollisionEvent(
-      eventId, action.x, action.y, cappedBonus, entropyGained, action.name, action.tier,
+      eventId, action.x, action.y, boostedBonus, entropyGained, action.name, action.tier,
     ),
-  };
+  });
 }
 
 export function handleReportEncounter(state: GameState, action: ReportEncounterAction): GameState {

@@ -1,32 +1,41 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
-import { formatWhole, getCompositeBoostMultiplier } from '../game/formulas';
+import { formatWhole } from '../game/formulas';
 import type { GameAction } from '../game/reducer';
-import { SHOP_ITEMS } from '../game/shop/items';
-import type { GameState, ShopBoost } from '../game/types';
-import { t, type Lang, type StringKey } from '../i18n';
+import {
+  PAID_SHOP_PRODUCTS,
+  REWARDED_AD_PRODUCTS,
+  type PaidShopProduct,
+  type RewardedAdProduct,
+  type ShopCatalogEntry,
+} from '../game/shop/items';
+import { completeMockPurchase } from '../game/shop/purchase';
+import { completeRewardedAd } from '../game/shop/adRewards';
+import {
+  getActiveBoostSummary,
+  getBoostRemainingMs,
+  isCashShopUnlocked,
+} from '../game/shop/boosts';
+import type { ActiveBoostSummary } from '../game/shop/boosts';
+import type { GameState, ShopBoostCategory } from '../game/types';
+import { t, type Lang } from '../i18n';
 
-const ITEM_VISUAL: Record<string, { icon: string; color: string }> = {
-  time_boost:      { icon: '⟳', color: '#4df0cc' },
-  cosmic_surge:    { icon: '✦', color: '#ffd766' },
-  cosmic_surge_xl: { icon: '⚡', color: '#ff9f40' },
-  time_boost_xl:   { icon: '∞', color: '#b48cf0' },
+const SECTION_COPY: Record<'free' | 'boosts' | 'permanent', Record<Lang, string>> = {
+  free: { en: 'Free Boosts', ko: '무료 부스트' },
+  boosts: { en: 'Boosts', ko: '부스트' },
+  permanent: { en: 'Permanent Upgrades', ko: '영구 업그레이드' },
 };
 
-const FREE_ITEM_ID = 'cosmic_surge';
-
-const SHOP_COPY: Record<string, { label: StringKey; description: StringKey }> = {
-  time_boost: { label: 'shopQuickTimeName', description: 'shopQuickTimeDesc' },
-  cosmic_surge: { label: 'shopCosmicSurgeName', description: 'shopCosmicSurgeDesc' },
-  time_boost_xl: { label: 'shopAeonSurgeName', description: 'shopAeonSurgeDesc' },
-  cosmic_surge_xl: { label: 'shopQuantaStormName', description: 'shopQuantaStormDesc' },
-};
-
-function formatRemaining(boosts: ShopBoost[], prefix: string, now: number): string | null {
-  const active = boosts.filter((b) => b.id.startsWith(prefix) && b.expiresAt > now);
-  if (active.length === 0) return null;
-  const sec = Math.max(0, Math.floor((Math.min(...active.map((b) => b.expiresAt)) - now) / 1000));
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+function formatRemainingMs(ms: number): string | null {
+  if (ms <= 0) return null;
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 interface ShopPanelProps {
@@ -62,10 +71,132 @@ export function ShopButton({
   );
 }
 
+function ActiveSummary({
+  boosts,
+  now,
+  language,
+}: {
+  boosts: GameState['shopBoosts'];
+  now: number;
+  language: Lang;
+}) {
+  const summaries = (['time', 'matter'] as ShopBoostCategory[])
+    .map((category) => getActiveBoostSummary(boosts, category, now))
+    .filter((summary): summary is ActiveBoostSummary => summary !== null);
+
+  if (summaries.length === 0) return null;
+
+  return (
+    <div className="shop-panel2__status">
+      <div className="shop-panel2__status-title">{t(language, 'shopActiveBoosts')}</div>
+      {summaries.map((summary) => {
+        const label = summary.category === 'time' ? t(language, 'hudTime') : t(language, 'hudQuanta');
+        const color = summary.category === 'time' ? '#4df0cc' : '#ffd766';
+        const remaining = formatRemainingMs(summary.expiresAt - now);
+        return (
+          <div
+            key={summary.category}
+            className="shop-panel2__status-row"
+            style={{ '--boost-color': color } as CSSProperties}
+          >
+            <span className="shop-panel2__status-label">
+              {language === 'ko'
+                ? `${label} x${formatWhole(summary.factor)} 활성화`
+                : `${label} x${formatWhole(summary.factor)} active`}
+            </span>
+            {remaining ? <span className="shop-panel2__status-timer">{`${remaining} ${t(language, 'shopLeft')}`}</span> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ShopCard({
+  entry,
+  language,
+  now,
+  state,
+  pending,
+  animDelay,
+  onPaid,
+  onRewardedAd,
+}: {
+  entry: ShopCatalogEntry;
+  language: Lang;
+  now: number;
+  state: GameState;
+  pending: boolean;
+  animDelay: number;
+  onPaid: (product: PaidShopProduct) => void;
+  onRewardedAd: (product: RewardedAdProduct) => void;
+}) {
+  const isPermanentOwned = entry.id === 'deep_space_storage' && state.hasOfflineStorageUpgrade;
+  const remaining = entry.effect.type === 'timed_boost'
+    ? formatRemainingMs(getBoostRemainingMs(state.shopBoosts, entry.id, now))
+    : null;
+  const isActive = Boolean(remaining) || isPermanentOwned;
+  const isReward = entry.kind === 'rewarded_ad';
+  const buttonLabel =
+    isPermanentOwned
+      ? (language === 'ko' ? '보유중' : 'Owned')
+      : isReward
+        ? entry.button[language]
+        : t(language, 'shopBuy');
+
+  return (
+    <article
+      className={[
+        'shop-boost-card',
+        isReward ? 'shop-boost-card--free' : '',
+        isActive ? 'shop-boost-card--active' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{ '--boost-color': entry.color, '--anim-delay': `${animDelay}ms` } as CSSProperties}
+    >
+      <div className="shop-boost-card__icon">{entry.icon}</div>
+      <div className="shop-boost-card__body">
+        <div className="shop-boost-card__name">{entry.name[language]}</div>
+        <div className="shop-boost-card__desc">{entry.description[language]}</div>
+        {remaining ? (
+          <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div>
+        ) : null}
+        {isPermanentOwned ? (
+          <div className="shop-boost-card__timer">{language === 'ko' ? '영구 업그레이드 보유중' : 'Permanent upgrade owned'}</div>
+        ) : null}
+      </div>
+      <div className="shop-boost-card__right">
+        <button
+          type="button"
+          className={`shop-boost-card__buy${isReward ? ' shop-boost-card__buy--free' : ''}`}
+          disabled={pending || isPermanentOwned}
+          onClick={() => {
+            if (entry.kind === 'rewarded_ad') {
+              onRewardedAd(entry);
+            } else {
+              onPaid(entry);
+            }
+          }}
+        >
+          {entry.kind === 'paid' && !isPermanentOwned ? (
+            <>
+              <span className="shop-boost-card__buy-price">{`$${entry.priceUSD.toFixed(2)}`}</span>
+              <span className="shop-boost-card__buy-label">{t(language, 'shopBuy')}</span>
+            </>
+          ) : (
+            buttonLabel
+          )}
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
-  const isTutorial = !state.tutorialFlags['shop-first-used'];
-  const activeBoosts = state.shopBoosts.filter((b) => b.expiresAt > now);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const unlocked = isCashShopUnlocked(state);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -73,150 +204,101 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
   }, []);
 
   useEffect(() => {
-    if (isTutorial) return undefined;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, isTutorial]);
+  }, [onClose]);
 
-  const handleBuy = (itemId: string) => {
-    dispatch({ type: 'BUY_SHOP_ITEM', itemId, now: Date.now() });
-    if (isTutorial) {
-      dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'shop-first-used' });
-      onClose();
+  if (!unlocked) return null;
+
+  const handlePaid = async (product: PaidShopProduct) => {
+    if (!unlocked || pendingId) return;
+    setPendingId(product.id);
+    const result = await completeMockPurchase(product);
+    if (result.success) {
+      dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: product.id, now: Date.now() });
     }
+    setPendingId(null);
+  };
+
+  const handleRewardedAd = async (product: RewardedAdProduct) => {
+    if (!unlocked || pendingId) return;
+    setPendingId(product.id);
+    const completed = await completeRewardedAd(product.id);
+    if (completed) {
+      dispatch({ type: 'CLAIM_AD_REWARD', rewardId: product.id, now: Date.now() });
+    }
+    setPendingId(null);
+  };
+
+  let globalCardIdx = 0;
+  const renderSection = (
+    section: 'free' | 'boosts' | 'permanent',
+    entries: ShopCatalogEntry[],
+  ) => {
+    const sectionCards = entries.map((entry) => {
+      const delay = globalCardIdx * 50;
+      globalCardIdx += 1;
+      return (
+        <ShopCard
+          key={entry.id}
+          entry={entry}
+          language={language}
+          now={now}
+          state={state}
+          pending={pendingId === entry.id}
+          animDelay={delay}
+          onPaid={handlePaid}
+          onRewardedAd={handleRewardedAd}
+        />
+      );
+    });
+    return (
+      <section className="shop-panel2__section" key={section}>
+        <div className="shop-panel2__section-title">{SECTION_COPY[section][language]}</div>
+        <div className="shop-panel2__section-items">
+          {sectionCards}
+        </div>
+      </section>
+    );
   };
 
   return (
-    <div
-      className={`shop-overlay${isTutorial ? ' shop-overlay--tutorial' : ''}`}
-      onClick={isTutorial ? undefined : onClose}
-      role="presentation"
-    >
+    <div className="shop-overlay" onClick={onClose} role="presentation">
       <aside
-        className={`shop-panel2${isTutorial ? ' shop-panel2--tutorial' : ''}`}
+        className="shop-panel2"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="shop-panel2__header">
           <div>
             <div className="shop-panel2__eyebrow">{t(language, 'shopEyebrow')}</div>
-            <div className="shop-panel2__title">
-              {isTutorial ? t(language, 'shopWelcomeGift') : t(language, 'shopBoosts')}
-            </div>
-            {isTutorial && (
-              <div className="shop-panel2__tutorial-hint">
-                {t(language, 'shopTutorialHint')}
-              </div>
-            )}
+            <div className="shop-panel2__title">{t(language, 'shopBoosts')}</div>
           </div>
-          {!isTutorial && (
-            <button
-              type="button"
-              className="entity-panel__close"
-              onClick={onClose}
-              aria-label={t(language, 'shopClose')}
-            >
-              ✕
-            </button>
-          )}
+          <button
+            type="button"
+            className="entity-panel__close"
+            onClick={onClose}
+            aria-label={t(language, 'shopClose')}
+          >
+            x
+          </button>
         </div>
 
-        {/* Item cards */}
         <div className="shop-panel2__items">
-          {SHOP_ITEMS.map((item, idx) => {
-            const visual = ITEM_VISUAL[item.id] ?? { icon: '◈', color: '#8090b0' };
-            const isFree = isTutorial && item.id === FREE_ITEM_ID;
-            const locked = isTutorial && item.id !== FREE_ITEM_ID;
-            const boostPrefix = item.id.startsWith('time') ? 'time_' : 'quanta_';
-            const remaining = formatRemaining(activeBoosts, boostPrefix, now);
-            const copy = SHOP_COPY[item.id];
-            const itemLabel = copy ? t(language, copy.label) : item.label;
-            const itemDescription = copy ? t(language, copy.description) : item.description;
-
-            return (
-              <article
-                key={item.id}
-                className={[
-                  'shop-boost-card',
-                  isFree ? 'shop-boost-card--free' : '',
-                  locked ? 'shop-boost-card--locked' : '',
-                  remaining ? 'shop-boost-card--active' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={
-                  {
-                    '--boost-color': visual.color,
-                    '--anim-delay': `${idx * 80}ms`,
-                  } as CSSProperties
-                }
-              >
-                <div className="shop-boost-card__icon">{visual.icon}</div>
-
-                <div className="shop-boost-card__body">
-                  <div className="shop-boost-card__name">{itemLabel}</div>
-                  <div className="shop-boost-card__desc">{itemDescription}</div>
-                  {remaining && (
-                    <div className="shop-boost-card__timer">{`⏱ ${remaining} ${t(language, 'shopLeft')}`}</div>
-                  )}
-                </div>
-
-                <div className="shop-boost-card__right">
-                  {isFree ? (
-                    <div className="shop-boost-card__free-badge">{t(language, 'shopFree')}</div>
-                  ) : (
-                    !locked && (
-                      <div className="shop-boost-card__price">{`$${item.priceUSD.toFixed(2)}`}</div>
-                    )
-                  )}
-                  <button
-                    type="button"
-                    className={`shop-boost-card__buy${isFree ? ' shop-boost-card__buy--free' : ''}`}
-                    disabled={locked}
-                    onClick={() => handleBuy(item.id)}
-                  >
-                    {isFree ? t(language, 'shopFree') : t(language, 'shopBuy')}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+          {renderSection('free', REWARDED_AD_PRODUCTS)}
+          {renderSection('boosts', PAID_SHOP_PRODUCTS.filter((item) => item.section === 'boosts'))}
+          {renderSection('permanent', PAID_SHOP_PRODUCTS.filter((item) => item.section === 'permanent'))}
         </div>
 
-        {/* Active boosts summary */}
-        {activeBoosts.length > 0 && (
-          <div className="shop-panel2__status">
-            <div className="shop-panel2__status-title">{t(language, 'shopActiveBoosts')}</div>
-            {(['time_', 'quanta_'] as const).map((prefix) => {
-              const mult = getCompositeBoostMultiplier(activeBoosts, prefix, now);
-              const rem = formatRemaining(activeBoosts, prefix, now);
-              if (mult <= 1 || !rem) return null;
-              const label = prefix === 'time_' ? t(language, 'hudTime') : t(language, 'hudQuanta');
-              const color = prefix === 'time_' ? '#4df0cc' : '#ffd766';
-              return (
-                <div
-                  key={prefix}
-                  className="shop-panel2__status-row"
-                  style={{ '--boost-color': color } as CSSProperties}
-                >
-                  <span className="shop-panel2__status-label">{`${label} ×${formatWhole(mult)}`}</span>
-                  <span className="shop-panel2__status-timer">{rem}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
 
-        {!isTutorial && (
-          <div className="shop-panel2__footer">
-            {`${t(language, 'shopTotalSpent')}: $${state.totalShopSpentUSD.toFixed(2)} (${t(language, 'shopTestMode')})`}
-          </div>
-        )}
+        <div className="shop-panel2__footer">
+          {`${t(language, 'shopTotalSpent')}: $${state.totalShopSpentUSD.toFixed(2)} (${t(language, 'shopTestMode')})`}
+        </div>
       </aside>
     </div>
   );

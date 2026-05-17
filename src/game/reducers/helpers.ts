@@ -55,7 +55,7 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities);
+  }, state.purchasedEntities, state.prestigeUpgrades);
 }
 
 export function getAdjustedClickPower(state: GameState): number {
@@ -109,6 +109,7 @@ export function buildAtlasEntry(state: GameState, now: number) {
     collisions: state.collisions,
     completedAt: now,
     seed: state.currentUniverseSeed,
+    entropy: state.entropy,
   };
 }
 

@@ -1,24 +1,36 @@
-import { getCondensedMassReward, getEchoReward, getUniverseBoost, formatDuration, formatWhole } from '../game/formulas';
+import { useState } from 'react';
+import {
+  getCondensedMassReward,
+  getEchoReward,
+  getUniverseBoost,
+  formatDuration,
+  formatEntropyParts,
+  formatWhole,
+} from '../game/formulas';
 import { STAGES } from '../game/stages';
-import type { GameState, SingularityUnlockId } from '../game/types';
-import { SingularityTree } from './SingularityTree';
+
+import type { GameState } from '../game/types';
+import type { PrestigeUpgradeId } from '../game/prestige';
+import { PrestigeShop } from './PrestigeShop';
 import { t, type Lang } from '../i18n';
 
 interface FinalScreenProps {
   state: GameState;
   language: Lang;
   onPrestige: () => void;
-  onUnlock: (unlockId: SingularityUnlockId) => void;
+  onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
   onOpenAtlas: () => void;
 }
 
-export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas }: FinalScreenProps) {
+export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas }: FinalScreenProps) {
+  const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
   const finalStage = STAGES[STAGES.length - 1];
   const finalQuote = language === 'ko' ? finalStage.quoteKo ?? finalStage.quote : finalStage.quote;
   const finalQuoteAttr = language === 'ko'
     ? finalStage.quoteAttrKo ?? finalStage.quoteAttr
     : finalStage.quoteAttr;
   const universeBoost = getUniverseBoost(state.entropy);
+  const entropyReadout = formatEntropyParts(state.entropy);
   const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
   const condensedMassReward =
     resolvedEndingId !== null
@@ -38,10 +50,6 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
           <div className="final-universe-tag">
             {t(language, 'finalUniverse')} <span className="final-universe-num">#{state.universeCount}</span>
           </div>
-          <div className="final-atlas-name">
-            <span>{t(language, 'finalAtlasName')}</span>
-            <strong>{state.currentUniverseSeed.atlasName}</strong>
-          </div>
         </div>
 
         {/* Quote */}
@@ -53,7 +61,10 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
         {/* Stats */}
         <div className="final-stats">
           <div className="final-stat-cell">
-            <strong>{formatWhole(state.entropy)}</strong>
+            <strong className="final-entropy-amount">
+              <span>{entropyReadout.value}</span>
+              <span className="hud-entropy-unit">{entropyReadout.unit}</span>
+            </strong>
             <span>{t(language, 'finalTotalEntropy')}</span>
           </div>
           <div className="final-stat-cell">
@@ -91,23 +102,40 @@ export function FinalScreen({ state, language, onPrestige, onUnlock, onOpenAtlas
           ) : null}
         </div>
 
-        {/* Singularity Tree */}
-        <SingularityTree
-          condensedMass={state.condensedMass}
-          unlocks={state.singularityUnlocks}
-          onUnlock={onUnlock}
+        {/* Prestige Shop */}
+        <PrestigeShop
+          entropy={state.entropy}
+          prestigeUpgrades={state.prestigeUpgrades}
+          onBuy={onBuyPrestigeUpgrade}
           language={language}
         />
 
         {/* Actions */}
         <div className="final-actions">
-          <button className="final-action-primary" type="button" onClick={onPrestige}>
+          <button className="final-action-primary" type="button" onClick={() => setShowPrestigeConfirm(true)}>
             {t(language, 'finalNextBigBang')}
           </button>
           <button className="final-action-secondary" type="button" onClick={onOpenAtlas}>
             {t(language, 'finalOpenAtlas')}
           </button>
         </div>
+
+        {showPrestigeConfirm ? (
+          <div className="overlay-backdrop" role="dialog" aria-modal="true" onClick={() => setShowPrestigeConfirm(false)}>
+            <div className="overlay-card prestige-confirm" onClick={(e) => e.stopPropagation()}>
+              <h2>{t(language, 'prestigeConfirmTitle')}</h2>
+              <p className="prestige-confirm__body">{t(language, 'finalPrestigeWarning')}</p>
+              <div className="prestige-confirm__actions">
+                <button className="final-action-primary" type="button" onClick={onPrestige}>
+                  {t(language, 'prestigeConfirmYes')}
+                </button>
+                <button className="final-action-secondary" type="button" onClick={() => setShowPrestigeConfirm(false)}>
+                  {t(language, 'prestigeConfirmNo')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
       </div>
     </section>

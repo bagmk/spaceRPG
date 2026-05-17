@@ -1,3 +1,5 @@
+import { formatEntropyAmount } from '../game/formulas';
+
 interface ResourcePanelProps {
   label: string;
   quanta: string;
@@ -29,11 +31,13 @@ export function ResourcePanel({
   entropyPreview,
   onCondense,
 }: ResourcePanelProps) {
+  const entropyPreviewLabel = formatEntropyAmount(entropyPreview);
+
   return (
     <section className="resource-panel">
       <div className="res-header">
         <span className="res-label">{label}</span>
-        <span className="res-rate">{`+${rate}`}</span>
+        <span className="res-rate">{rate}</span>
       </div>
       <div className="res-stack">
         <div>
@@ -61,9 +65,9 @@ export function ResourcePanel({
       </div>
       {canCondense ? (
         <>
-          <div className="condense-preview">{`Condense ready · +${entropyPreview} entropy if now`}</div>
+          <div className="condense-preview">{`Condense ready · +${entropyPreviewLabel} entropy if now`}</div>
           <button className="condense" type="button" onClick={onCondense}>
-            {`Condense → +${entropyPreview} Entropy`}
+            {`Condense → +${entropyPreviewLabel} Entropy`}
           </button>
         </>
       ) : (

@@ -1,52 +1,74 @@
-import type { EndingId, EndingOption, GameState, Stage, UniverseSeed, AnomalyType } from './types';
+import type { EndingId, EndingOption, EndingProgressFlags, GameState, Stage, UniverseSeed, AnomalyType } from './types';
 import type { Lang } from '../i18n';
-import { findEntityById } from './entities/stageItems';
+import { STAGES } from './stages';
+import { STAGE_ENTITIES, getPurchasedEntityCount } from './entities/stageItems';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
+export const BIG_CRUNCH_ENTROPY_THRESHOLD_KB = 1024 * 1024;
 
 interface BilingualHint { en: string; ko: string; }
-interface BilingualCopy { label: BilingualHint; description: BilingualHint; }
+interface EndingDefinition {
+  label: BilingualHint;
+  description: BilingualHint;
+  condition: BilingualHint;
+}
 
-const ENDING_HINTS: Record<Exclude<EndingId, 'heat_death'>, BilingualHint> = {
-  big_crunch: {
-    en: 'During stages 13–16, keep your manual click rate at 1+ click per second. The game checks your recent late-stage click-rate records plus the current stage rate.',
-    ko: '13~16단계에서 수동 클릭 속도를 초당 1회 이상으로 유지하세요. 최근 후반 스테이지 클릭 기록과 현재 스테이지 클릭 속도를 함께 확인합니다.',
-  },
-  big_rip: {
-    en: 'Build a time-dominant universe: reach Aeon Drive level 30 with the Time Lv.30 cross-node, or own 12+ Entity Lab upgrades whose effect is Time or All-source multiplier.',
-    ko: '시간 중심 우주를 만드세요. Aeon Drive 30레벨과 Time Lv.30 교차 노드를 보유하거나, 효과가 시간 또는 만능 배율인 엔티티 연구소 업그레이드를 12개 이상 보유해야 합니다.',
-  },
-  vacuum_decay: {
-    en: 'In the proton decay era, condense when the stage progress is very close to 25%, 50%, 75%, or 100%. Precision matters.',
-    ko: '양성자 붕괴 시대에서 스테이지 진행도가 25%, 50%, 75%, 100%에 매우 가까울 때 응축하세요. 정확도가 중요합니다.',
-  },
-  bounce: {
-    en: 'Complete the four base endings: Heat Death, Big Crunch, Big Rip, and Vacuum Decay. Then reach universe count 5 or higher.',
-    ko: '기본 엔딩 4개인 열적 죽음, 빅 크런치, 빅 립, 진공 붕괴를 모두 완료한 뒤 우주 횟수 5 이상에 도달하세요.',
-  },
-};
-
-const ENDING_COPY: Record<EndingId, BilingualCopy> = {
+export const ENDING_DEFINITIONS: Record<EndingId, EndingDefinition> = {
   heat_death: {
-    label:       { en: 'Heat Death',    ko: '열적 죽음' },
-    description: { en: 'The clock continues into equilibrium.',              ko: '시계는 평형 속으로 계속 흐른다.' },
+    label: { en: 'Heat Death', ko: '열죽음' },
+    description: {
+      en: 'The clock fades into equilibrium.',
+      ko: '시간은 균형 속으로 사라집니다.',
+    },
+    condition: {
+      en: 'Always available.',
+      ko: '항상 선택할 수 있습니다.',
+    },
   },
   big_crunch: {
-    label:       { en: 'Big Crunch',    ko: '빅 크런치' },
-    description: { en: 'Expansion reverses and all structure falls inward.', ko: '팽창이 역전되고 모든 구조가 안으로 붕괴한다.' },
+    label: { en: 'Big Crunch', ko: '대붕괴' },
+    description: {
+      en: 'The universe collapses under its own weight.',
+      ko: '우주는 자신의 무게를 이기지 못하고 무너집니다.',
+    },
+    condition: {
+      en: 'Reach 1GB Entropy by Stage 3.',
+      ko: '스테이지 3까지 엔트로피 1GB를 달성하세요.',
+    },
   },
   big_rip: {
-    label:       { en: 'Big Rip',       ko: '빅 립' },
-    description: { en: 'Acceleration tears apart every bound scale.',        ko: '가속이 모든 묶인 규모를 찢어낸다.' },
+    label: { en: 'Big Rip', ko: '대찢김' },
+    description: {
+      en: 'Acceleration tears every bound apart.',
+      ko: '가속이 모든 결합을 찢어냅니다.',
+    },
+    condition: {
+      en: 'Complete all Entity Lab upgrades.',
+      ko: '모든 Entity Lab 업그레이드를 완료하세요.',
+    },
   },
   vacuum_decay: {
-    label:       { en: 'Vacuum Decay',  ko: '진공 붕괴' },
-    description: { en: 'A truer vacuum expands through everything that was.', ko: '더 참된 진공이 존재했던 모든 것을 관통해 팽창한다.' },
+    label: { en: 'Vacuum Decay', ko: '진공 붕괴' },
+    description: {
+      en: 'A new vacuum spreads through everything that was.',
+      ko: '새로운 진공이 모든 것을 덮어갑니다.',
+    },
+    condition: {
+      en: 'Reach the end without upgrading Critical.',
+      ko: '크리티컬을 하나도 업그레이드하지 않고 스테이지를 클리어하세요.',
+    },
   },
   bounce: {
-    label:       { en: 'Bounce',        ko: '반동' },
-    description: { en: 'The cosmos folds inward and begins again with memory intact.', ko: '우주가 안으로 접히고, 기억을 간직한 채 다시 시작한다.' },
+    label: { en: 'Bounce', ko: '반동 우주' },
+    description: {
+      en: 'The cosmos folds inward and begins again.',
+      ko: '우주는 접히고, 기억을 품은 채 다시 시작됩니다.',
+    },
+    condition: {
+      en: 'Complete 3 different endings.',
+      ko: '서로 다른 엔딩 3개를 완료하세요.',
+    },
   },
 };
 
@@ -60,45 +82,55 @@ function pickRandomAnomaly(): AnomalyType {
   return ANOMALIES[Math.floor(Math.random() * ANOMALIES.length)] ?? 'crystalline';
 }
 
-function descriptorForGravity(gravityMod: number): string {
-  if (gravityMod >= 1.1) return 'Dense';
-  if (gravityMod <= 0.9) return 'Drifting';
-  return 'Balanced';
+interface AtlasL {
+  en: string;
+  ko: string;
 }
 
-function descriptorForTime(timeMod: number): string {
-  if (timeMod >= 1.1) return 'Swift';
-  if (timeMod <= 0.9) return 'Slow';
-  return 'Steady';
+function descriptorForGravity(gravityMod: number): AtlasL {
+  if (gravityMod >= 1.1) return { en: 'Dense', ko: '밀집' };
+  if (gravityMod <= 0.9) return { en: 'Drifting', ko: '희박' };
+  return { en: 'Balanced', ko: '균형' };
 }
 
-function descriptorForAnomaly(anomaly: AnomalyType | null): string {
+function descriptorForTime(timeMod: number): AtlasL {
+  if (timeMod >= 1.1) return { en: 'Swift', ko: '신속' };
+  if (timeMod <= 0.9) return { en: 'Slow', ko: '완만' };
+  return { en: 'Steady', ko: '안정' };
+}
+
+function descriptorForAnomaly(anomaly: AnomalyType | null): AtlasL {
   switch (anomaly) {
     case 'crystalline':
-      return 'Crystal';
+      return { en: 'Crystal', ko: '수정' };
     case 'inverted_time':
-      return 'Reverse';
+      return { en: 'Reverse', ko: '역행' };
     case 'high_energy':
-      return 'Bright';
+      return { en: 'Bright', ko: '광휘' };
     case 'dim':
-      return 'Faded';
+      return { en: 'Faded', ko: '퇴색' };
     case 'echoing':
-      return 'Echoing';
+      return { en: 'Echoing', ko: '메아리' };
     default:
-      return 'Cosmos';
+      return { en: 'Cosmos', ko: '코스모스' };
   }
 }
 
-function generateAtlasName(gravityMod: number, timeMod: number, anomaly: AnomalyType | null): string {
-  const left = descriptorForTime(timeMod);
-  const right = anomaly ? descriptorForAnomaly(anomaly) : descriptorForGravity(gravityMod);
-  if (gravityMod >= 1.1 && anomaly === 'crystalline') {
-    return 'Universe of Dense Crystal';
+export function getAtlasName(seed: UniverseSeed, lang: Lang): string {
+  if (seed.index === 1) {
+    return lang === 'ko' ? '최초의 우주' : 'First Cosmos';
   }
-  if (timeMod <= 0.9 && anomaly === null) {
-    return 'Slow Bright Universe';
+  if (seed.gravityMod >= 1.1 && seed.anomaly === 'crystalline') {
+    return lang === 'ko' ? '밀집 수정의 우주' : 'Universe of Dense Crystal';
   }
-  return `${left} ${right} Universe`;
+  if (seed.timeMod <= 0.9 && seed.anomaly === null) {
+    return lang === 'ko' ? '완만한 광휘의 우주' : 'Slow Bright Universe';
+  }
+  const left = descriptorForTime(seed.timeMod);
+  const right = seed.anomaly
+    ? descriptorForAnomaly(seed.anomaly)
+    : descriptorForGravity(seed.gravityMod);
+  return lang === 'ko' ? `${left.ko} ${right.ko} 우주` : `${left.en} ${right.en} Universe`;
 }
 
 export function createInitialUniverseSeed(): UniverseSeed {
@@ -118,14 +150,9 @@ export function generateUniverseSeed(prevIndex: number): UniverseSeed {
   const timeMod = 0.8 + Math.random() * 0.4;
   const paletteShift = Math.floor(Math.random() * 360);
   const anomaly = Math.random() < 0.05 ? pickRandomAnomaly() : null;
-  return {
-    index,
-    gravityMod,
-    timeMod,
-    paletteShift,
-    anomaly,
-    atlasName: generateAtlasName(gravityMod, timeMod, anomaly),
-  };
+  const seed: UniverseSeed = { index, gravityMod, timeMod, paletteShift, anomaly, atlasName: '' };
+  seed.atlasName = getAtlasName(seed, 'en');
+  return seed;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -212,103 +239,117 @@ export function applyUniverseToStage(stage: Stage, seed: UniverseSeed): Stage {
   };
 }
 
-export function isBigRipEligible(
-  state: Pick<GameState, 'skills' | 'endingsUnlocked' | 'endingsCompleted' | 'purchasedEntities'>,
-): boolean {
-  const timeEntityCount = state.purchasedEntities.reduce((sum, entry) => {
-    const entity = findEntityById(entry.entityId);
-    if (!entity) return sum;
-    return entity.effect.type === 'time' || entity.effect.type === 'multiplier'
-      ? sum + entry.count
-      : sum;
-  }, 0);
+function currentStageId(state: Pick<GameState, 'stageIdx'>): number {
+  return state.stageIdx + 1;
+}
 
+export function hasCriticalUpgradeInCurrentUniverse(
+  state: Pick<GameState, 'critLevel' | 'skills' | 'endingProgressFlags'>,
+): boolean {
   return (
-    state.endingsUnlocked.includes('big_rip') ||
-    state.endingsCompleted.includes('big_rip') ||
-    (state.skills.time.level >= 30 && state.skills.ownedCrossNodes.includes('time_lv30')) ||
-    timeEntityCount >= 12
+    state.endingProgressFlags.criticalUpgradedThisUniverse ||
+    state.critLevel > 0 ||
+    state.skills.crit.level > 0 ||
+    state.skills.ownedCrossNodes.some((nodeId) => nodeId.startsWith('crit_'))
   );
 }
 
-export function isVacuumDecayProgress(progress01: number): boolean {
-  return [0.25, 0.5, 0.75, 1].some((target) => Math.abs(progress01 - target) <= 0.005);
-}
-
-function getCurrentStageClickRate(state: Pick<GameState, 'stageIdx' | 'totalClicks' | 'stageClicksAtStageStart' | 'stageStartedAt'>, now: number): number | null {
-  if (state.stageIdx + 1 < 13) {
-    return null;
-  }
-  const elapsedSec = Math.max(1, (now - state.stageStartedAt) / 1000);
-  return Math.max(0, state.totalClicks - state.stageClicksAtStageStart) / elapsedSec;
-}
-
 export function isBigCrunchEligible(
-  state: Pick<GameState, 'clickRateLog' | 'stageIdx' | 'totalClicks' | 'stageClicksAtStageStart' | 'stageStartedAt' | 'endingsUnlocked' | 'endingsCompleted'>,
-  now: number,
+  state: Pick<GameState, 'stageIdx' | 'entropy' | 'endingProgressFlags'>,
 ): boolean {
-  if (state.endingsUnlocked.includes('big_crunch') || state.endingsCompleted.includes('big_crunch')) {
-    return true;
-  }
-  const currentRate = getCurrentStageClickRate(state, now);
-  const rates = [...state.clickRateLog];
-  if (currentRate !== null) {
-    rates.push(currentRate);
-  }
-  if (rates.length < 4) {
-    return false;
-  }
-  const recentRates = rates.slice(-4);
-  return recentRates.reduce((sum, rate) => sum + rate, 0) / recentRates.length >= 1;
+  return (
+    state.endingProgressFlags.bigCrunchEligible ||
+    (currentStageId(state) <= 3 && state.entropy >= BIG_CRUNCH_ENTROPY_THRESHOLD_KB)
+  );
+}
+
+export function isBigRipEligible(
+  state: Pick<GameState, 'purchasedEntities'>,
+): boolean {
+  const requiredEntities = STAGE_ENTITIES.filter((entity) => entity.maxCount > 0);
+  return (
+    requiredEntities.length > 0 &&
+    requiredEntities.every((entity) => getPurchasedEntityCount(state.purchasedEntities, entity) >= entity.maxCount)
+  );
+}
+
+export function isVacuumDecayEligible(
+  state: Pick<GameState, 'stageIdx' | 'critLevel' | 'skills' | 'endingProgressFlags'>,
+): boolean {
+  return currentStageId(state) >= STAGES.length && !hasCriticalUpgradeInCurrentUniverse(state);
+}
+
+export function getUniqueCompletedNonBounceEndingCount(
+  endingsCompleted: EndingId[],
+): number {
+  return new Set(endingsCompleted.filter((endingId) => endingId !== 'bounce')).size;
 }
 
 export function isBounceEligible(
-  state: Pick<GameState, 'universeCount' | 'endingsCompleted' | 'endingsUnlocked'>,
+  state: Pick<GameState, 'endingsCompleted'>,
 ): boolean {
-  if (state.endingsUnlocked.includes('bounce') || state.endingsCompleted.includes('bounce')) {
-    return true;
-  }
-  return state.universeCount >= 5 && BASE_ENDINGS.every((endingId) => state.endingsCompleted.includes(endingId));
+  return getUniqueCompletedNonBounceEndingCount(state.endingsCompleted) >= 3;
 }
 
-export function getEndingOptions(state: GameState, now: number, lang: Lang = 'en'): EndingOption[] {
-  const everythingUnlocked =
-    state.endingsCompleted.includes('bounce') || state.endingsUnlocked.includes('bounce');
-  const bigCrunchUnlocked = everythingUnlocked || isBigCrunchEligible(state, now);
-  const bigRipUnlocked = everythingUnlocked || isBigRipEligible(state);
-  const vacuumUnlocked =
-    everythingUnlocked ||
-    state.endingsUnlocked.includes('vacuum_decay') ||
-    state.endingsCompleted.includes('vacuum_decay') ||
-    state.endingProgressFlags.vacuumDecayEligible;
-  const bounceUnlocked = everythingUnlocked || isBounceEligible(state);
+export function getCurrentUniverseEndingProgressFlags(
+  state: Pick<GameState, 'stageIdx' | 'entropy' | 'critLevel' | 'skills' | 'endingProgressFlags' | 'purchasedEntities'>,
+): EndingProgressFlags {
+  const criticalUpgradedThisUniverse = hasCriticalUpgradeInCurrentUniverse(state);
+  const bigCrunchEligible = isBigCrunchEligible(state);
+  const bigRipEverEligible = state.endingProgressFlags.bigRipEverEligible || isBigRipEligible(state);
+  const vacuumDecayEligible =
+    !criticalUpgradedThisUniverse &&
+    (state.endingProgressFlags.vacuumDecayEligible || currentStageId(state) >= STAGES.length);
 
-  const unlockedMap: Record<EndingId, boolean> = {
-    heat_death: true,
-    big_crunch: bigCrunchUnlocked,
-    big_rip: bigRipUnlocked,
-    vacuum_decay: vacuumUnlocked,
-    bounce: bounceUnlocked,
+  return {
+    bigCrunchEligible,
+    criticalUpgradedThisUniverse,
+    bigRipEverEligible,
+    vacuumDecayEligible,
   };
+}
 
-  const alwaysAvailable = lang === 'ko'
-    ? '특수 조건 없이 항상 선택할 수 있는 기본 엔딩입니다.'
-    : 'Always available as the default ending; no special condition is required.';
-  const requirementMap: Record<EndingId, string> = {
-    heat_death: alwaysAvailable,
-    big_crunch: ENDING_HINTS.big_crunch[lang],
-    big_rip: ENDING_HINTS.big_rip[lang],
-    vacuum_decay: ENDING_HINTS.vacuum_decay[lang],
-    bounce: ENDING_HINTS.bounce[lang],
-  };
+function sameEndingProgressFlags(a: EndingProgressFlags, b: EndingProgressFlags): boolean {
+  return (
+    a.bigCrunchEligible === b.bigCrunchEligible &&
+    a.criticalUpgradedThisUniverse === b.criticalUpgradedThisUniverse &&
+    a.bigRipEverEligible === b.bigRipEverEligible &&
+    a.vacuumDecayEligible === b.vacuumDecayEligible
+  );
+}
+
+export function withCurrentUniverseEndingProgress(state: GameState): GameState {
+  const endingProgressFlags = getCurrentUniverseEndingProgressFlags(state);
+  return sameEndingProgressFlags(state.endingProgressFlags, endingProgressFlags)
+    ? state
+    : { ...state, endingProgressFlags };
+}
+
+export function isEndingAvailable(state: GameState, endingId: EndingId): boolean {
+  switch (endingId) {
+    case 'heat_death':
+      return true;
+    case 'big_crunch':
+      return isBigCrunchEligible(state);
+    case 'big_rip':
+      return state.endingProgressFlags.bigRipEverEligible || isBigRipEligible(state);
+    case 'vacuum_decay':
+      return isVacuumDecayEligible(state);
+    case 'bounce':
+      return isBounceEligible(state);
+  }
+}
+
+export function getEndingOptions(state: GameState, _now: number, lang: Lang = 'en'): EndingOption[] {
+  const progressedState = withCurrentUniverseEndingProgress(state);
 
   return ALL_ENDINGS.map((endingId) => ({
     id: endingId,
-    label: ENDING_COPY[endingId].label[lang],
-    description: ENDING_COPY[endingId].description[lang],
-    unlocked: unlockedMap[endingId],
+    label: ENDING_DEFINITIONS[endingId].label[lang],
+    description: ENDING_DEFINITIONS[endingId].description[lang],
+    unlocked: isEndingAvailable(progressedState, endingId),
     seen: state.endingsCompleted.includes(endingId),
-    requirement: requirementMap[endingId],
+    requirement: ENDING_DEFINITIONS[endingId].condition[lang],
   }));
 }
 
@@ -316,7 +357,23 @@ export function formatUniverseModifier(multiplier: number): string {
   return `${Math.round(multiplier * 100)}%`;
 }
 
-export function getAnomalyLabel(anomaly: AnomalyType | null): string {
-  if (!anomaly) return 'None';
-  return anomaly.replace('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+export function getAnomalyLabel(anomaly: AnomalyType | null, lang: Lang): string {
+  switch (anomaly) {
+    case 'crystalline':
+      return lang === 'ko' ? '수정질' : 'Crystalline';
+    case 'inverted_time':
+      return lang === 'ko' ? '역행 시간' : 'Inverted Time';
+    case 'high_energy':
+      return lang === 'ko' ? '고에너지' : 'High Energy';
+    case 'dim':
+      return lang === 'ko' ? '희미함' : 'Dim';
+    case 'echoing':
+      return lang === 'ko' ? '메아리' : 'Echoing';
+    default:
+      return lang === 'ko' ? '없음' : 'None';
+  }
+}
+
+export function getEndingLabel(endingId: EndingId, lang: Lang): string {
+  return ENDING_DEFINITIONS[endingId].label[lang];
 }

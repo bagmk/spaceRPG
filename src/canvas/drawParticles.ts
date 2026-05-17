@@ -29,19 +29,22 @@ export function drawParticles({ ctx, stage, particles, flyers, bursts }: DrawPar
   });
 
   flyers.forEach((flyer) => {
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = stage.accent;
+    const alpha = flyer.auto ? flyer.life * 0.85 : flyer.life * 0.75;
+    const r = flyer.auto ? 3.2 : 4.0;
+    ctx.fillStyle = hexToRgba(stage.accent, alpha * 0.25);
+    ctx.beginPath();
+    ctx.arc(flyer.x, flyer.y, r * 2.5, 0, Math.PI * 2);
+    ctx.fill();
     drawStageSprite(
       ctx,
       flyer.spriteId ?? stage.id,
       flyer.x,
       flyer.y,
-      flyer.auto ? 1.5 : 1.1,
+      r,
       stage.coreColor,
-      flyer.auto ? flyer.life * 0.85 : flyer.life * 0.55,
+      alpha,
       flyer.life * Math.PI * 2,
     );
-    ctx.shadowBlur = 0;
   });
 
   bursts.forEach((burst) => {

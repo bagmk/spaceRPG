@@ -4,6 +4,8 @@ import { TUNING } from '../game/constants';
 import {
   formatAutoRateValue,
   formatCosmicTimeProgressParts,
+  formatEntropyAmount,
+  formatEntropyParts,
   formatProgressNumberParts,
   formatWhole,
   canCondense as canCondenseNow,
@@ -20,6 +22,11 @@ import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
 import { getStageStartCosmicTime } from '../game/timeFlow';
+import {
+  getActiveShopBoostMultiplier,
+  getOfflineRewardCapSec,
+  isCashShopUnlocked,
+} from '../game/shop/boosts';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import type { SoundManager } from '../game/audio';
@@ -134,6 +141,7 @@ export function GameScreen({
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
   const boostAnchorRef = useRef<HTMLDivElement | null>(null);
   const fieldCenterAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const wallNow = Date.now();
   const rawStage = STAGES[state.stageIdx];
   // Display stage can be overridden when browsing past stages in Entity Lab
   const displayRawStage = viewingStageId !== null
@@ -159,13 +167,16 @@ export function GameScreen({
   const modifiers = getActiveModifiers(state.skills, {
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
-    secondsInStage: Math.max(0, (Date.now() - state.stageStartedAt) / 1000),
+    secondsInStage: Math.max(0, (wallNow - state.stageStartedAt) / 1000),
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities);
+  }, state.purchasedEntities, state.prestigeUpgrades);
   const autoRate = getAutoRate(modifiers);
-  const timeMult = getTimeMultiplier(state.skills.time.level, modifiers);
+  const shopTimeBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'time', wallNow);
+  const shopMatterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', wallNow);
+  const displayedAutoRate = autoRate * shopTimeBoost * shopMatterBoost;
+  const timeMult = getTimeMultiplier(state.skills.time.level, modifiers) * shopTimeBoost;
   const timeGauge = getTimeGaugeForCosmicClock(state.stageIdx, state.cosmicClockSec);
   const timeProgress01 = Math.min(1, timeGauge / 100);
   const displayTimeGauge = isViewingPastStage
@@ -175,13 +186,13 @@ export function GameScreen({
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
-  const endingOptions = getEndingOptions(state, Date.now(), language);
+  const endingOptions = getEndingOptions(state, wallNow, language);
+  const [endingChooserDismissed, setEndingChooserDismissed] = useState(false);
   const canChooseEnding =
-    stage.id === STAGES.length &&
-    state.pendingCondenseStageIdx === null &&
+    state.completedRun &&
     state.selectedEndingId === null &&
-    state.quanta >= effectiveThreshold &&
-    state.cosmicClockSec >= stage.cosmicTimeSec;
+    state.lastEndingId === null &&
+    !endingChooserDismissed;
   const canCondense = canCondenseNow(state);
   const condenseHint =
     progress01 >= 1 && timeProgress01 < 1
@@ -204,7 +215,7 @@ export function GameScreen({
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
-  const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers);
+  const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers, shopTimeBoost);
   const timeRemainingSeconds =
     timeProgress01 >= 1 || timeFlowRate <= 0
       ? 0
@@ -233,9 +244,11 @@ export function GameScreen({
       : cosmicClockFromGauge;
   const matterReadout = formatProgressNumberParts(displayQuanta, displayEffectiveThreshold);
   const timeReadout = formatCosmicTimeProgressParts(displayedCosmicClock, displayStage.cosmicTimeSec);
-  const canShowShop = state.universeCount > 1 || stage.id >= 6;
-  const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > Date.now());
-  const hasShopNotification = canShowShop && !state.tutorialFlags['shop-first-used'];
+  const entropyReadout = formatEntropyParts(state.entropy);
+  const entropyPreviewReadout = formatEntropyParts(entropyPreview);
+  const canShowShop = isCashShopUnlocked(state);
+  const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > wallNow);
+  const hasShopNotification = canShowShop && !state.hasSeenCashShopTutorial;
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
   const displayStageNumber = String(displayStage.id).padStart(2, '0');
   const openEntityPanel = () => {
@@ -251,7 +264,8 @@ export function GameScreen({
   const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
     return sum + getPurchasedEntityCount(state.purchasedEntities, entity);
   }, 0);
-  const showCondenseGate = isViewingPastStage || canCondense;
+  const showEndingButton = state.completedRun && state.lastEndingId === null && endingChooserDismissed;
+  const showCondenseGate = isViewingPastStage || canCondense || showEndingButton;
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
     if (entityPanelOpen || state.universeCount !== 1) {
       return null;
@@ -300,9 +314,9 @@ export function GameScreen({
         autoCloseMs: 7000,
       };
     }
-    if (canShowShop && !state.tutorialFlags['shop-visible']) {
+    if (canShowShop && !state.hasSeenCashShopTutorial) {
       return {
-        flagId: 'shop-visible',
+        flagId: 'hasSeenCashShopTutorial',
         anchor: 'shop',
         message: t(language, 'tutShop'),
         ctaLabel: t(language, 'tutShopOpen'),
@@ -337,6 +351,7 @@ export function GameScreen({
     ownedCurrentStageEntityCount,
     stage.id,
     state.shopBoosts,
+    state.hasSeenCashShopTutorial,
     state.totalClicks,
     state.tutorialFlags,
     state.universeCount,
@@ -346,7 +361,7 @@ export function GameScreen({
   useGameLoop((now, dt) => {
     logicAccumulator.current += dt;
     while (logicAccumulator.current >= TUNING.LOGIC_TICK_MS) {
-      dispatch({ type: 'TICK', now, dt: TUNING.LOGIC_TICK_MS });
+      dispatch({ type: 'TICK', now: Date.now(), dt: TUNING.LOGIC_TICK_MS });
       logicAccumulator.current -= TUNING.LOGIC_TICK_MS;
     }
     if (
@@ -372,6 +387,9 @@ export function GameScreen({
     }
   }, [progress01, soundManager, stage.mechanic]);
 
+  const clickSeqRef = useRef(0);
+  const clickSeqResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!state.lastClickEvent) {
       return undefined;
@@ -380,15 +398,14 @@ export function GameScreen({
     const emissionCount = Math.max(1, clickEmissionCount);
     const gainedLabel = formatFloatingGain(event.gained);
     const text = event.isCrit
-      ? `CRIT +${gainedLabel}`
-      : event.comboMult > 1
-        ? `+${gainedLabel} ×${formatWhole(event.comboMult)}`
-        : `+${gainedLabel}`;
+      ? `CRIT ${gainedLabel}`
+      : gainedLabel;
+
     setFloatingEntries((current) => [
       ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + emissionCount),
       ...Array.from({ length: emissionCount }, (_, index) => {
         const angle = (index / emissionCount) * Math.PI * 2 + Math.random() * 0.3;
-        const radius = emissionCount > 1 ? 12 + index * 4 : 0;
+        const radius = emissionCount > 1 ? index * 4 : 0;
         const variant: FloatingEntry['variant'] = event.isCrit ? 'crit' : 'normal';
         return {
           id: event.id * 100 + index,
@@ -397,7 +414,7 @@ export function GameScreen({
           text,
           particleName: event.particleName,
           particleDefinition: event.particleDefinition,
-          entropyGained: event.entropyGained,
+          entropyGained: undefined,
           variant,
           delayMs: index * 60,
         };
@@ -472,10 +489,15 @@ export function GameScreen({
     ) {
       return;
     }
+    // Last stage: skip transition, go straight to ending
+    if (state.stageIdx >= STAGES.length - 1) {
+      dispatch({ type: 'ADVANCE_STAGE', now: Date.now() });
+      return;
+    }
     setTransitionPhase('bursting');
     setShakeClass('shake-big');
     soundManager?.playCondenseExplosion();
-  }, [soundManager, state.imploding, state.pendingCondenseStageIdx, transitionPhase]);
+  }, [dispatch, soundManager, state.imploding, state.pendingCondenseStageIdx, state.stageIdx, transitionPhase]);
 
   useEffect(() => {
     if (transitionPhase !== 'bursting') {
@@ -556,7 +578,7 @@ export function GameScreen({
           stage={displayStage}
           actualStageId={displayStage.id}
           quanta={displayQuanta}
-          autoRate={autoRate}
+          autoRate={displayedAutoRate}
           timeMult={timeMult}
           cosmicClockSec={isViewingPastStage ? displayStage.cosmicTimeSec : state.cosmicClockSec}
           effectiveThreshold={displayEffectiveThreshold}
@@ -571,20 +593,28 @@ export function GameScreen({
           anomaly={state.currentUniverseSeed.anomaly}
           purchasedEntities={state.purchasedEntities}
           onGatherClick={(x, y, forceCrit) => {
+            const seq = clickSeqRef.current % 12;
+            clickSeqRef.current += 1;
+            if (clickSeqResetRef.current) clearTimeout(clickSeqResetRef.current);
+            clickSeqResetRef.current = setTimeout(() => { clickSeqRef.current = 0; }, 1200);
+            const spiralAngle = seq * 2.4 + Math.random() * 0.5;
+            const spiralRadius = 14 + seq * 8;
+            const ox = x + Math.cos(spiralAngle) * spiralRadius;
+            const oy = y + Math.sin(spiralAngle) * spiralRadius;
             const mechanicResult = mechanic.onClick?.({
               state,
               stage,
-              now: performance.now(),
+              now: Date.now(),
               progress01,
-              x,
-              y,
+              x: ox,
+              y: oy,
             });
             dispatch({
               type: 'CLICK',
-              now: performance.now(),
+              now: Date.now(),
               randomValue: Math.random(),
-              x,
-              y,
+              x: ox,
+              y: oy,
               forceCrit: forceCrit || mechanicResult?.forceCrit,
               gainMultiplier: mechanicResult?.gainMultiplier,
               gainFlat: mechanicResult?.gainFlat,
@@ -654,11 +684,11 @@ export function GameScreen({
                 <div className="hud-stage-title-line">
                   <span className="hud-stage-title">{displayStageLabel}</span>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
-                  <span className="hud-entropy-readout">
-                    <span>{t(language, 'hudEntropy')}</span>
-                    <strong>{formatWhole(state.entropy)}</strong>
-                    <span className="hud-entropy-unit">kB</span>
-                  </span>
+                    <span className="hud-entropy-readout">
+                      <span>{t(language, 'hudEntropy')}</span>
+                      <strong>{entropyReadout.value}</strong>
+                      <span className="hud-entropy-unit">{entropyReadout.unit}</span>
+                    </span>
                 </div>
               </div>
             </div>
@@ -668,8 +698,8 @@ export function GameScreen({
                   <div className="hud-meter-row">
                     <span className="hud-meter-label">
                       <span className="hud-meter-label-text">{t(language, 'hudQuanta')}</span>
-                      {autoRate > 0 && !isViewingPastStage ? (
-                        <span className="hud-auto-rate">{`+${formatAutoRateValue(autoRate)}/s`}</span>
+                      {displayedAutoRate > 0 && !isViewingPastStage ? (
+                        <span className="hud-auto-rate">{`${formatAutoRateValue(displayedAutoRate)}/s`}</span>
                       ) : null}
                     </span>
                     <span className="hud-readout">
@@ -707,24 +737,32 @@ export function GameScreen({
             <button
               type="button"
               className={`hud-condense ${isViewingPastStage ? 'hud-condense--completed' : ''}`}
-              disabled={isViewingPastStage || !canCondense}
+              disabled={isViewingPastStage || (!canCondense && !showEndingButton)}
               title={
                 isViewingPastStage
                   ? t(language, 'hudCondenseAlready')
-                  : canCondense
-                    ? `${t(language, 'hudCondenseFor')} ${formatWhole(entropyPreview)} ${t(language, 'hudEntropy').toLowerCase()}`
-                    : condenseHint
+                  : showEndingButton
+                    ? (language === 'ko' ? '엔딩 선택' : 'Choose Ending')
+                    : canCondense
+                      ? `${t(language, 'hudCondenseFor')} ${formatEntropyAmount(entropyPreview)} ${t(language, 'hudEntropy').toLowerCase()}`
+                      : condenseHint
               }
               onClick={() => {
-                if (!isViewingPastStage) {
-                  dispatch({ type: 'START_CONDENSE', now: performance.now() });
+                if (showEndingButton) {
+                  setEndingChooserDismissed(false);
+                } else if (!isViewingPastStage) {
+                  dispatch({ type: 'START_CONDENSE', now: Date.now() });
                   dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'condense-ready' });
                 }
               }}
             >
-              <span>{isViewingPastStage ? t(language, 'hudCompleted') : t(language, 'hudCondense')}</span>
-              {!isViewingPastStage ? (
-                <small>{`+${formatWhole(entropyPreview)} ${t(language, 'hudEntropy')} kB`}</small>
+              <span>{isViewingPastStage ? t(language, 'hudCompleted') : showEndingButton ? (language === 'ko' ? '엔딩 선택' : 'CHOOSE ENDING') : t(language, 'hudCondense')}</span>
+              {!isViewingPastStage && !showEndingButton ? (
+                <small className="entropy-inline">
+                  <span>{`+${entropyPreviewReadout.value}`}</span>
+                  <span className="hud-entropy-unit">{entropyPreviewReadout.unit}</span>
+                  <span>{t(language, 'hudEntropy')}</span>
+                </small>
               ) : null}
             </button>
           ) : null}
@@ -734,7 +772,12 @@ export function GameScreen({
             <ShopButton
               highlighted={hasShopNotification}
               disabled={!canShowShop}
-              onClick={() => setShopOpen(true)}
+              onClick={() => {
+                setShopOpen(true);
+                if (!state.hasSeenCashShopTutorial) {
+                  dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
+                }
+              }}
               label={t(language, 'hudShop')}
             />
           </div>
@@ -778,9 +821,7 @@ export function GameScreen({
             text={entry.text}
             particleName={entry.particleName}
             particleDefinition={entry.particleDefinition}
-            entropyGained={entry.entropyGained}
             variant={entry.variant}
-            stageId={stage.id}
             delayMs={entry.delayMs}
           />
         ))}
@@ -797,7 +838,7 @@ export function GameScreen({
           onContinue={() => {
             setRevealStartedAt(performance.now());
             setTransitionPhase('revealing');
-            dispatch({ type: 'ADVANCE_STAGE', now: performance.now() });
+            dispatch({ type: 'ADVANCE_STAGE', now: Date.now() });
           }}
         />
       ) : null}
@@ -805,6 +846,7 @@ export function GameScreen({
       {state.offlineElapsedMs > 0 ? (
         <OfflineProgressModal
           awayMs={state.offlineElapsedMs}
+          capMs={getOfflineRewardCapSec(state.hasOfflineStorageUpgrade) * 1000}
           gained={state.offlineGained}
           entropyGained={state.offlineEntropyGained}
           timeProgressGained={state.offlineTimeProgressGained}
@@ -863,13 +905,21 @@ export function GameScreen({
           onCta={
             activeTutorialBubble.onCta
               ? () => {
-                  dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+                  if (activeTutorialBubble.flagId === 'hasSeenCashShopTutorial') {
+                    dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
+                  } else {
+                    dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+                  }
                   activeTutorialBubble.onCta?.();
                 }
               : undefined
           }
           onDismiss={() => {
-            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+            if (activeTutorialBubble.flagId === 'hasSeenCashShopTutorial') {
+              dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
+            } else {
+              dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: activeTutorialBubble.flagId });
+            }
           }}
         />
       ) : null}
@@ -894,8 +944,9 @@ export function GameScreen({
           language={language}
           onChoose={(endingId) => {
             soundManager?.playEndingSting(endingId);
-            dispatch({ type: 'SELECT_ENDING', endingId, now: performance.now() });
+            dispatch({ type: 'SELECT_ENDING', endingId, now: Date.now() });
           }}
+          onClose={() => setEndingChooserDismissed(true)}
         />
       ) : null}
 
@@ -903,7 +954,7 @@ export function GameScreen({
         <EndingCinematic
           endingId={state.selectedEndingId}
           language={language}
-          onComplete={() => dispatch({ type: 'COMPLETE_ENDING', now: performance.now() })}
+          onComplete={() => dispatch({ type: 'COMPLETE_ENDING', now: Date.now() })}
         />
       ) : null}
     </div>

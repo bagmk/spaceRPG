@@ -1,5 +1,5 @@
-import { formatDuration } from '../game/formulas';
-import { formatUniverseModifier, getAnomalyLabel } from '../game/multiverse';
+import { formatDuration, formatEntropyAmount } from '../game/formulas';
+import { formatUniverseModifier, getAnomalyLabel, getEndingLabel } from '../game/multiverse';
 import type { UniverseAtlasEntry, UniverseSeed } from '../game/types';
 import { t, type Lang } from '../i18n';
 
@@ -27,12 +27,11 @@ export function MultiverseAtlas({
 
         <div className="atlas-current">
           <div className="atlas-current-label">{`${t(language, 'atlasCurrentSeed')} · ${t(language, 'finalUniverse')} #${currentUniverseCount}`}</div>
-          <div className="atlas-current-name">{currentSeed.atlasName}</div>
           <div className="atlas-meta">
             <span>{`${t(language, 'atlasGravity')} ${formatUniverseModifier(currentSeed.gravityMod)}`}</span>
             <span>{`${t(language, 'atlasTime')} ${formatUniverseModifier(currentSeed.timeMod)}`}</span>
             <span>{`${t(language, 'atlasHue')} +${currentSeed.paletteShift}°`}</span>
-            <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(currentSeed.anomaly)}`}</span>
+            <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(currentSeed.anomaly, language)}`}</span>
           </div>
         </div>
 
@@ -47,16 +46,18 @@ export function MultiverseAtlas({
                 <article key={`${entry.universeIndex}-${entry.completedAt}`} className="atlas-entry">
                   <div className="atlas-row">
                     <strong>{`#${entry.universeIndex}`}</strong>
-                    <span className="atlas-name">"{entry.atlasName}"</span>
-                    <span>{entry.endingId.replace('_', ' ')}</span>
+                    <span>{getEndingLabel(entry.endingId, language)}</span>
                     <span>{formatDuration(entry.durationMs)}</span>
+                    {entry.entropy != null ? (
+                      <span className="atlas-entropy">{`${formatEntropyAmount(entry.entropy)} entropy`}</span>
+                    ) : null}
                   </div>
                   <div className="atlas-meta atlas-hover-hint">{t(language, 'atlasHoverHint')}</div>
                   <div className="atlas-meta atlas-detail">
                     <span>{`${t(language, 'atlasGravity')} ${formatUniverseModifier(entry.seed.gravityMod)}`}</span>
                     <span>{`${t(language, 'atlasTime')} ${formatUniverseModifier(entry.seed.timeMod)}`}</span>
                     <span>{`${t(language, 'atlasHue')} +${entry.seed.paletteShift}°`}</span>
-                    <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(entry.seed.anomaly)}`}</span>
+                    <span>{`${t(language, 'atlasAnomaly')} ${getAnomalyLabel(entry.seed.anomaly, language)}`}</span>
                     <span>{`${entry.totalClicks} ${t(language, 'atlasClicks')}`}</span>
                     <span>{`${entry.collisions} ${t(language, 'atlasEncounters')}`}</span>
                   </div>

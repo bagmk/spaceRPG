@@ -1108,9 +1108,9 @@ export const ParticleField = memo(function ParticleField({
           ),
         ),
         lastClickEvent.isCrit ? '#ffffff' : stage.coreColor,
-        (lastClickEvent.isCrit ? 2.4 : 1.2) * clickVfxScale,
+        (lastClickEvent.isCrit ? 4.5 : 2.8) * clickVfxScale,
         stage.id,
-        lastClickEvent.isCrit ? 0.48 : 0.38,
+        lastClickEvent.isCrit ? 1.0 : 0.8,
       ),
     );
     if (stage.clusterMode === 'blackHole') {
