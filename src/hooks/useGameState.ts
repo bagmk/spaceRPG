@@ -30,8 +30,18 @@ interface UseGameStateResult {
   clearStoredRun: () => void;
 }
 
+function safeParseSave(): ReturnType<typeof loadGame> {
+  try {
+    return loadGame();
+  } catch (e) {
+    console.error('[useGameState] Failed to load save, resetting:', e);
+    clearSave();
+    return null;
+  }
+}
+
 export function useGameState(): UseGameStateResult {
-  const saved = useRef(loadGame());
+  const saved = useRef(safeParseSave());
   const hadSavedGame = saved.current !== null;
   const stateRef = useRef<GameState | null>(null);
   const getDayKey = (date: Date) => date.toISOString().slice(0, 10);
@@ -43,6 +53,7 @@ export function useGameState(): UseGameStateResult {
       if (!payload) {
         return createInitialGameState(now);
       }
+      try {
       const baseState: GameState = {
         ...createInitialGameState(now),
         ...payload,
@@ -143,6 +154,11 @@ export function useGameState(): UseGameStateResult {
             }
           : payload.dailyCheckIns,
       };
+      } catch (e) {
+        console.error('[useGameState] Corrupted save data, resetting:', e);
+        clearSave();
+        return createInitialGameState(now);
+      }
     },
   );
 
