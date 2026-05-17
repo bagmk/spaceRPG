@@ -10023,7 +10023,7 @@ button.stat-header-item {
   top: auto !important;
   left: auto !important;
   right: max(14px, env(safe-area-inset-right)) !important;
-  bottom: max(72px, calc(env(safe-area-inset-bottom) + 60px)) !important;
+  bottom: max(14px, env(safe-area-inset-bottom)) !important;
   z-index: 26 !important;
   width: auto !important;
   min-width: 0 !important;
@@ -10060,7 +10060,7 @@ button.stat-header-item {
   .field > .scale-indicator,
   .field > .scale-indicator.scale-indicator {
     right: max(9px, env(safe-area-inset-right)) !important;
-    bottom: max(9px, env(safe-area-inset-bottom)) !important;
+    bottom: max(68px, calc(env(safe-area-inset-bottom) + 54px)) !important;
   }
 
   .field > .scale-indicator .scale-title {
