@@ -12,17 +12,19 @@ export function EndingChooser({ options, onChoose, onClose, language }: EndingCh
   return (
     <div className="overlay-backdrop" role="dialog" aria-modal="true">
       <div className="overlay-card ending-chooser">
-        {onClose ? (
-          <button
-            type="button"
-            className="entity-panel__close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            x
-          </button>
-        ) : null}
-        <div className="q-stage">{t(language, 'endingHeadline')}</div>
+        <div className="ending-chooser__header">
+          <div className="q-stage">{t(language, 'endingHeadline')}</div>
+          {onClose ? (
+            <button
+              type="button"
+              className="ending-chooser__close"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
         <h2>{t(language, 'endingPrompt')}</h2>
         <div className="ending-options">
           {options.map((option) => (

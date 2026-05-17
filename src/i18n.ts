@@ -152,7 +152,7 @@ export const STRINGS = {
 
   // ── Final screen ──────────────────────────────────────────────
   finalUniverse:        { en: 'UNIVERSE',                  ko: '우주' },
-  finalTotalEntropy:    { en: 'Total entropy gained this run', ko: '이번 회차에서 얻은 총 엔트로피' },
+  finalTotalEntropy:    { en: 'Total Entropy',             ko: '총 엔트로피' },
   finalTotalClicks:     { en: 'Total clicks',              ko: '총 클릭 수' },
   finalEncounters:      { en: 'Encounters survived',       ko: '살아남은 조우' },
   finalTimeElapsed:     { en: 'Time elapsed',              ko: '경과 시간' },

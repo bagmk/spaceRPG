@@ -1265,21 +1265,57 @@ function drawLifeCanvasAmbient(
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  // Aurora bands — sweeping horizontal gradients
+  // Aurora ribbons — soft feathered strokes instead of hard rectangular strips.
   const auroraColors = ['#3affb4', '#74cfff', '#a8ff88'];
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   for (let band = 0; band < 3; band++) {
     const baseY = cy + (band - 1) * radius * 0.72 + Math.sin(now * 0.00025 + band * 2.0) * radius * 0.22;
     const hue = auroraColors[band];
     const pulse = 0.45 + Math.sin(now * 0.0007 + band * 1.4) * 0.55;
     const bandH = radius * (0.32 + Math.cos(now * 0.00032 + band) * 0.08);
-    const grad = ctx.createLinearGradient(cx - radius * 1.4, baseY, cx + radius * 1.4, baseY);
-    grad.addColorStop(0, hexToRgba(hue, 0));
-    grad.addColorStop(0.22, hexToRgba(hue, (0.025 + lifePower * 0.07) * pulse));
-    grad.addColorStop(0.5, hexToRgba(hue, (0.035 + lifePower * 0.085) * pulse));
-    grad.addColorStop(0.78, hexToRgba(hue, (0.022 + lifePower * 0.06) * pulse));
-    grad.addColorStop(1, hexToRgba(hue, 0));
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - radius * 1.45, baseY - bandH, radius * 2.9, bandH * 2);
+    const ribbonCount: number = 7;
+    const xStart = cx - radius * 1.52;
+    const xEnd = cx + radius * 1.52;
+
+    for (let layer = 0; layer < ribbonCount; layer += 1) {
+      const centered = ribbonCount === 1 ? 0 : (layer / (ribbonCount - 1)) * 2 - 1;
+      const feather = Math.pow(1 - Math.abs(centered), 1.65);
+      if (feather <= 0) continue;
+
+      const layerPhase = now * (0.00028 + layer * 0.000018) + band * 2.7 + layer * 0.91;
+      const yBase =
+        baseY +
+        centered * bandH * 0.58 +
+        Math.sin(layerPhase) * radius * 0.035;
+      const alpha = (0.014 + lifePower * 0.045) * pulse * feather;
+      const grad = ctx.createLinearGradient(xStart, yBase, xEnd, yBase);
+      grad.addColorStop(0, hexToRgba(hue, 0));
+      grad.addColorStop(0.18, hexToRgba(hue, alpha * 0.28));
+      grad.addColorStop(0.48, hexToRgba(hue, alpha));
+      grad.addColorStop(0.72, hexToRgba(hue, alpha * 0.52));
+      grad.addColorStop(1, hexToRgba(hue, 0));
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = bandH * (0.09 + feather * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(xStart, yBase + Math.sin(layerPhase - 0.8) * radius * 0.035);
+      for (let step = 1; step <= 6; step += 1) {
+        const t = step / 6;
+        const x = xStart + (xEnd - xStart) * t;
+        const prevT = (step - 0.5) / 6;
+        const controlX = xStart + (xEnd - xStart) * prevT;
+        const controlY =
+          yBase +
+          Math.sin(layerPhase + prevT * Math.PI * 3.1) * radius * (0.04 + lifePower * 0.025) +
+          Math.cos(now * 0.00017 + band + layer * 1.9 + prevT * 5) * radius * 0.018;
+        const y =
+          yBase +
+          Math.sin(layerPhase + t * Math.PI * 3.1) * radius * (0.032 + lifePower * 0.018);
+        ctx.quadraticCurveTo(controlX, controlY, x, y);
+      }
+      ctx.stroke();
+    }
   }
 
   // Large neural web spanning full canvas

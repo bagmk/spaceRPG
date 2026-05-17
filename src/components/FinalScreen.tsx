@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import {
-  getCondensedMassReward,
-  getEchoReward,
-  getUniverseBoost,
   formatDuration,
   formatEntropyParts,
   formatWhole,
@@ -21,29 +18,21 @@ interface FinalScreenProps {
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
+  onClose: () => void;
 }
 
-export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
+export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard, onClose }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
   const finalStage = STAGES[STAGES.length - 1];
   const finalQuote = language === 'ko' ? finalStage.quoteKo ?? finalStage.quote : finalStage.quote;
   const finalQuoteAttr = language === 'ko'
     ? finalStage.quoteAttrKo ?? finalStage.quoteAttr
     : finalStage.quoteAttr;
-  const universeBoost = getUniverseBoost(state.entropy);
   const entropyReadout = formatEntropyParts(state.entropy);
-  const resolvedEndingId = state.selectedEndingId ?? state.lastEndingId;
-  const condensedMassReward =
-    resolvedEndingId !== null
-      ? getCondensedMassReward(state.entropy, resolvedEndingId, state.universeCount)
-      : 0;
-  const echoReward =
-    resolvedEndingId && state.endingsCompleted.includes(resolvedEndingId)
-      ? 0
-      : getEchoReward(Math.max(0, state.endingsCompleted.length - 1));
 
   return (
     <section className="final-screen">
+      <button type="button" className="final-close" onClick={onClose} aria-label="Close">✕</button>
       <div className="final-card">
 
         {/* Header */}
@@ -73,34 +62,9 @@ export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade,
             <span>{t(language, 'finalTotalClicks')}</span>
           </div>
           <div className="final-stat-cell">
-            <strong>{formatWhole(state.collisions)}</strong>
-            <span>{t(language, 'finalEncounters')}</span>
-          </div>
-          <div className="final-stat-cell">
             <strong>{formatDuration(state.totalTimePlayed)}</strong>
             <span>{t(language, 'finalTimeElapsed')}</span>
           </div>
-        </div>
-
-        {/* Rewards */}
-        <div className="final-rewards">
-          <div className="final-reward-row">
-            <span className="final-reward-icon">◈</span>
-            <span className="final-reward-label">{t(language, 'finalPrestigeReward')}</span>
-            <span className="final-reward-value">{`+${formatWhole(universeBoost)} ${t(language, 'finalUniverseBoost')}`}</span>
-          </div>
-          <div className="final-reward-row">
-            <span className="final-reward-icon">✦</span>
-            <span className="final-reward-label">{t(language, 'finalCompletionReward')}</span>
-            <span className="final-reward-value">{`+${formatWhole(condensedMassReward)} ${t(language, 'finalCondensedMass')}`}</span>
-          </div>
-          {echoReward > 0 ? (
-            <div className="final-reward-row final-reward-row--new">
-              <span className="final-reward-icon">★</span>
-              <span className="final-reward-label">{t(language, 'finalNewEndingReward')}</span>
-              <span className="final-reward-value">{`+${formatWhole(echoReward)} ${t(language, 'finalEchoes')}`}</span>
-            </div>
-          ) : null}
         </div>
 
         {/* Prestige Shop */}

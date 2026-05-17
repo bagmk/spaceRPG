@@ -777,8 +777,8 @@ export function GameScreen({
               <div className="prestige-pips">
                 {active.map((id) => {
                   const mult = getPrestigeMultiplier(pu[id] ?? 0);
-                  const icon = id === 'time_warp' ? '⏱' : id === 'matter_forge' ? '⚛' : id === 'critical_core' ? '⚡' : id === 'auto_engine' ? '⚙' : '∞';
-                  return <span key={id} className="prestige-pip" title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}>{icon}{mult.toFixed(1)}</span>;
+                  const label = id === 'time_warp' ? 'T' : id === 'matter_forge' ? 'M' : id === 'critical_core' ? 'C' : id === 'auto_engine' ? 'A' : 'E';
+                  return <span key={id} className={`prestige-pip prestige-pip--${id}`} title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}><span className="prestige-pip__label">{label}</span>{mult.toFixed(1)}</span>;
                 })}
               </div>
             );

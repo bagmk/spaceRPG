@@ -269,7 +269,11 @@ function AppInner() {
                 type="button"
                 onClick={() => {
                   clearAllStoredState();
-                  window.location.reload();
+                  const now = Date.now();
+                  dispatch({ type: 'HYDRATE', payload: createInitialGameState(now), now });
+                  setResumeAvailable(false);
+                  setShowResetConfirm(false);
+                  setRoute('intro');
                 }}
               >
                 {t(language, 'resetConfirm')}

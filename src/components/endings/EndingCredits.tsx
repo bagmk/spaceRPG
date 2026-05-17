@@ -88,7 +88,8 @@ export function EndingCredits({ endingId, language, onComplete }: EndingCreditsP
             src={CREDIT_VIDEO[endingId]}
             autoPlay
             playsInline
-            controls
+            disablePictureInPicture
+            onContextMenu={(event) => event.preventDefault()}
             onEnded={onComplete}
             onError={() => setVideoFailed(true)}
           />
