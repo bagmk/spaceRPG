@@ -2173,7 +2173,8 @@ export function drawEntities(
     const glowR = GLOW_RADIUS[item.rarity];
     const isLegend = item.rarity === 'legendary';
     const phase = unit(item.seed, 1) * Math.PI * 2;
-    const direction = unit(item.seed, 2) > 0.5 ? 1 : -1;
+    const directionCycle = Math.sin(now * 0.00008 + phase * 2.7 + unit(item.seed, 2) * Math.PI * 2);
+    const direction = directionCycle > 0 ? 1 : -1;
     const stableIndex = (item.seed >>> 0) % 1000;
     const ageSpread = Math.sqrt(stableIndex + 1) * 11;
     const formationBreath = Math.sin(now * 0.00032 + phase) * (8 + unit(item.seed, 3) * 16);
@@ -2186,7 +2187,8 @@ export function drawEntities(
       stableIndex * GOLDEN_ANGLE +
       phase * 0.18 +
       now * raritySpeed(item.rarity) * direction +
-      Math.sin(now * 0.00021 + phase) * 0.36;
+      Math.sin(now * 0.00021 + phase) * 0.36 +
+      directionCycle * 0.4;
     const epicycleAngle = now * (0.00055 + unit(item.seed, 5) * 0.00065) + phase;
     const braidAngle = angle * (1.6 + unit(item.seed, 6) * 0.9) + now * 0.00018 * direction;
     const x =
