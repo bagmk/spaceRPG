@@ -90,7 +90,10 @@ export function handleAdminSetProgress(state: GameState, action: AdminSetProgres
   const targetCosmicSec =
     getStageStartCosmicTime(state.stageIdx) +
     (stage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
-  return { ...state, quanta: targetQuanta, cosmicClockSec: targetCosmicSec };
+  const reset = action.fraction === 0
+    ? { purchasedEntities: [], clickLevel: 0, autoLevel: 0, critLevel: 0, entropy: 0 }
+    : {};
+  return { ...state, quanta: targetQuanta, cosmicClockSec: targetCosmicSec, ...reset };
 }
 
 export function handleAdminRestartRun(state: GameState, action: AdminRestartRunAction): GameState {

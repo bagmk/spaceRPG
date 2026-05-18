@@ -77,24 +77,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (firebaseUser) {
         setUser(firebaseUser);
-        const p = await getProfile(firebaseUser.uid);
-        setProfile(p);
 
         if (firebaseUser.isAnonymous) {
           setStatus('anonymous');
         } else {
-          // Ensure profile doc exists for non-anonymous users
+          // Ensure profile doc exists + fetch in parallel
           const providers = firebaseUser.providerData.map((pd) => pd.providerId);
-          await createOrUpdateProfile(firebaseUser.uid, {
+          const profilePromise = getProfile(firebaseUser.uid);
+          const p = await profilePromise;
+          // Fire-and-forget profile update (non-blocking)
+          createOrUpdateProfile(firebaseUser.uid, {
             email: firebaseUser.email ?? null,
             photoURL: firebaseUser.photoURL ?? null,
             providers,
             createdAt: p?.createdAt ?? Date.now(),
           });
-          const updatedProfile = await getProfile(firebaseUser.uid);
-          setProfile(updatedProfile);
+          setProfile(p);
 
-          if (!updatedProfile?.displayName) {
+          if (!p?.displayName) {
             setStatus('needsName');
           } else {
             setStatus('authed');
@@ -133,15 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(result.user);
         const p = await getProfile(result.user.uid);
         const providers = result.user.providerData.map((pd) => pd.providerId);
-        await createOrUpdateProfile(result.user.uid, {
+        createOrUpdateProfile(result.user.uid, {
           email: result.user.email ?? null,
           photoURL: result.user.photoURL ?? null,
           providers,
           createdAt: p?.createdAt ?? Date.now(),
         });
-        const updatedProfile = await getProfile(result.user.uid);
-        setProfile(updatedProfile);
-        if (!updatedProfile?.displayName) {
+        setProfile(p);
+        if (!p?.displayName) {
           setStatus('needsName');
         } else {
           setStatus('authed');

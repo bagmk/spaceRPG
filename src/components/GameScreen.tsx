@@ -565,7 +565,7 @@ export function GameScreen({
             >
               NEXT ▶
             </button>
-            {([1.0] as const).map((pct) => (
+            {([0, 1.0] as const).map((pct) => (
               <button
                 key={pct}
                 className="mini-button admin-button"

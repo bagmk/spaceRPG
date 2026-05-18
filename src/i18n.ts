@@ -38,7 +38,7 @@ export const STRINGS = {
   introResume:   { en: 'RESUME',  ko: '이어하기' },
   introNewBang:  { en: 'NEW BIG BANG', ko: '새 빅뱅' },
   introAtlas:    { en: 'MULTIVERSE ATLAS', ko: '다중우주 도감' },
-  introTagline:  { en: 'From the first instant to the end of time.', ko: '첫 순간부터 시간의 끝까지.' },
+  introTagline:  { en: 'From the first instant\nto the end of time.', ko: '첫 순간부터\n시간의 끝까지.' },
   introLetThere: { en: 'Let there be light', ko: '빛이 있으라' },
   introGenesis:  { en: 'Genesis 1:3', ko: '창세기 1:3' },
 
