@@ -2234,47 +2234,60 @@ export function drawEntities(
   };
   const dyn = STAGE_DYNAMICS[stageId] ?? { gravity: 0.8, repulsion: 3.0, centerPull: 1.5, maxDisplace: 5 };
   const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
+  // Per-effectType personality: how each item type interacts
+  // gravityMult: how strongly it attracts others (auto=steady, click=punchy, crit=volatile, time=heavy, multiplier=massive)
+  // repulsionMult: how strongly it pushes others away
+  // speedMult: how much it gets displaced
+  const EFFECT_PERSONALITY: Record<string, { gravityMult: number; repulsionMult: number; speedMult: number }> = {
+    auto:       { gravityMult: 1.0, repulsionMult: 0.8, speedMult: 1.0 },  // steady orbiter
+    click:      { gravityMult: 0.7, repulsionMult: 1.4, speedMult: 1.3 },  // bouncy, energetic
+    crit:       { gravityMult: 0.5, repulsionMult: 1.8, speedMult: 1.6 },  // volatile, flies around
+    time:       { gravityMult: 1.5, repulsionMult: 0.6, speedMult: 0.7 },  // heavy, slow, pulls others in
+    multiplier: { gravityMult: 2.0, repulsionMult: 0.4, speedMult: 0.5 },  // massive anchor, barely moves
+  };
   {
     for (let i = 0; i < positions.length; i++) {
       const a = positions[i];
       const massA = RARITY_MASS[a.item.rarity] ?? 1;
-      let dx_total = 0;
-      let dy_total = 0;
+      const persA = EFFECT_PERSONALITY[a.item.effectType] ?? EFFECT_PERSONALITY.auto;
       for (let j = i + 1; j < positions.length; j++) {
         const b = positions[j];
         const massB = RARITY_MASS[b.item.rarity] ?? 1;
+        const persB = EFFECT_PERSONALITY[b.item.effectType] ?? EFFECT_PERSONALITY.auto;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const d = Math.max(4, Math.hypot(dx, dy));
         const nx = dx / d;
         const ny = dy / d;
-        // Repulsion — weaker near center
+        // Repulsion — per-item strength, weaker near center
         const minDist = a.size + b.size + 16;
         if (d < minDist) {
           const distAC = Math.hypot(a.x - cx, a.y - cy);
           const distBC = Math.hypot(b.x - cx, b.y - cy);
           const centerFade = Math.min(1, Math.min(distAC, distBC) / 60);
-          const push = ((minDist - d) / minDist) * dyn.repulsion * centerFade;
-          a.x -= nx * push / massA;
-          a.y -= ny * push / massA;
-          b.x += nx * push / massB;
-          b.y += ny * push / massB;
+          const repAvg = (persA.repulsionMult + persB.repulsionMult) * 0.5;
+          const push = ((minDist - d) / minDist) * dyn.repulsion * repAvg * centerFade;
+          a.x -= nx * push * persA.speedMult / massA;
+          a.y -= ny * push * persA.speedMult / massA;
+          b.x += nx * push * persB.speedMult / massB;
+          b.y += ny * push * persB.speedMult / massB;
         }
-        // Gravity
+        // Gravity — per-item strength
         const combinedMass = (massA + massB) * 0.5;
-        const pull = dyn.gravity * combinedMass / (d * 0.12 + 1);
-        a.x += nx * pull / massA;
-        a.y += ny * pull / massA;
-        b.x -= nx * pull / massB;
-        b.y -= ny * pull / massB;
+        const gravAvg = (persA.gravityMult + persB.gravityMult) * 0.5;
+        const pull = dyn.gravity * gravAvg * combinedMass / (d * 0.12 + 1);
+        a.x += nx * pull * persA.speedMult / massA;
+        a.y += ny * pull * persA.speedMult / massA;
+        b.x -= nx * pull * persB.speedMult / massB;
+        b.y -= ny * pull * persB.speedMult / massB;
       }
       // Center pull
       const toCenterX = cx - a.x;
       const toCenterY = cy - a.y;
       const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
       const pull = dyn.centerPull + centerDist * 0.02;
-      a.x += (toCenterX / centerDist) * pull;
-      a.y += (toCenterY / centerDist) * pull;
+      a.x += (toCenterX / centerDist) * pull * persA.speedMult;
+      a.y += (toCenterY / centerDist) * pull * persA.speedMult;
     }
   }
 
