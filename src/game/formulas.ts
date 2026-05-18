@@ -32,11 +32,16 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+// Cap to prevent Infinity propagation in long-running saves.
+export const MAX_SAFE_QUANTA = 1e300;
+
 export function safeAdd(a: number, b: number): number {
-  if (a < 1e15 && b < 1e15) {
-    return a + b;
-  }
-  return a + b;
+  // NaN = missing → 0; Infinity = overflow → clamp to the cap.
+  const aClean = Number.isNaN(a) ? 0 : Number.isFinite(a) ? Math.max(0, a) : MAX_SAFE_QUANTA;
+  const bClean = Number.isNaN(b) ? 0 : Number.isFinite(b) ? Math.max(0, b) : MAX_SAFE_QUANTA;
+  const sum = aClean + bClean;
+  if (!Number.isFinite(sum)) return MAX_SAFE_QUANTA;
+  return Math.min(MAX_SAFE_QUANTA, sum);
 }
 
 export function getClickPower(mods: Modifiers): number {

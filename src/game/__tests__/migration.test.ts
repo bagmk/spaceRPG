@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadGame } from '../storage';
+import { validateV5 } from '../storage/migrate';
 import { createInitialGameState } from '../reducer';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
+import type { SaveState } from '../types';
 
 const storage = new Map<string, string>();
 
@@ -151,5 +153,16 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated?.endingProgressFlags.bigCrunchEligible).toBe(false);
+  });
+
+  it('repairs saves with Infinity in quanta', () => {
+    const corrupted = {
+      ...createInitialGameState(100),
+      quanta: Infinity,
+      entropy: NaN,
+    } as Partial<SaveState>;
+    const repaired = validateV5(corrupted);
+    expect(repaired?.quanta).toBe(0);
+    expect(repaired?.entropy).toBe(0);
   });
 });

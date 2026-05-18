@@ -18,6 +18,8 @@ import {
   getTimeMultiplier,
   getUnupgradedTimeGaugeSeconds,
   getUniverseBoost,
+  safeAdd,
+  MAX_SAFE_QUANTA,
 } from '../formulas';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
@@ -381,5 +383,24 @@ describe('scaling formulas', () => {
       0,
     );
     expect(repeatedEnding.find((ending) => ending.id === 'bounce')?.unlocked).toBe(false);
+  });
+});
+
+describe('safeAdd', () => {
+  it('adds finite numbers normally', () => {
+    expect(safeAdd(1, 2)).toBe(3);
+  });
+  it('clamps Infinity to MAX_SAFE_QUANTA', () => {
+    expect(safeAdd(Infinity, 1)).toBe(MAX_SAFE_QUANTA);
+    expect(Number.isFinite(safeAdd(Infinity, 1))).toBe(true);
+  });
+  it('substitutes 0 when both inputs are non-finite', () => {
+    expect(safeAdd(NaN, NaN)).toBe(0);
+  });
+  it('treats NaN as missing and returns the finite side', () => {
+    expect(safeAdd(NaN, 5)).toBe(5);
+  });
+  it('caps sum that overflows to Infinity', () => {
+    expect(safeAdd(1e300, 1e300)).toBe(MAX_SAFE_QUANTA);
   });
 });

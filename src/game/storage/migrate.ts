@@ -178,6 +178,18 @@ export function validateV5(
   parsed: Partial<SaveState>,
   forceReconstructedUnlocks = false,
 ): PersistentGameState | null {
+  // Sanitize numeric fields that could carry Infinity/NaN from earlier bugs.
+  const NUMERIC_FIELDS: (keyof Pick<SaveState,
+    'quanta' | 'entropy' | 'peakEntropy' | 'condensedMass' | 'echoes'>)[] =
+    ['quanta', 'entropy', 'peakEntropy', 'condensedMass', 'echoes'];
+
+  for (const field of NUMERIC_FIELDS) {
+    const value = (parsed as any)[field];
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+      (parsed as any)[field] = 0;
+    }
+  }
+
   if (
     !isFiniteNumber(parsed.stageIdx) ||
     !isFiniteNumber(parsed.quanta) ||

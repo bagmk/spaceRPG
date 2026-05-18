@@ -32,18 +32,18 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
       ? parsed.stageStartedAt
       : now;
 
-  if (parsed.cosmicClockSec !== null && Number.isFinite(parsed.cosmicClockSec)) {
-    return {
-      ...parsed,
-      cosmicClockSec: repairedClock,
-      stageStartedAt: repairedStageStartedAt,
-    };
-  }
-  return {
+  const result: Partial<SaveState> = {
     ...parsed,
     cosmicClockSec: repairedClock,
     stageStartedAt: repairedStageStartedAt,
   };
+
+  // Final numeric sanity pass for fields that legacy bugs may have corrupted.
+  for (const field of ['quanta', 'entropy', 'peakEntropy', 'condensedMass', 'echoes'] as const) {
+    const v = (result as any)[field];
+    if (v !== undefined && (!Number.isFinite(v) || v < 0)) (result as any)[field] = 0;
+  }
+  return result;
 }
 
 const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
