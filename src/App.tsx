@@ -118,6 +118,12 @@ function AppInner() {
   }, [dispatch]);
 
   useEffect(() => {
+    const handler = () => soundManagerRef.current?.ensureRunning();
+    window.addEventListener('cc-visibility-resumed', handler);
+    return () => window.removeEventListener('cc-visibility-resumed', handler);
+  }, []);
+
+  useEffect(() => {
     soundManagerRef.current?.setBgmMuted(bgmMuted);
     saveBgmMuted(bgmMuted);
   }, [bgmMuted]);

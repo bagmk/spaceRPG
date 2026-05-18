@@ -49,11 +49,25 @@ export class SoundManager {
     if (!ctx) {
       return;
     }
+    if (this.unlocked && ctx.state === 'running') {
+      return; // skip redundant calls
+    }
     this.unlocked = true;
     void ctx.resume();
     if (this.ambient) {
       const targetGain = this.bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
       this.ambient.gain.gain.setValueAtTime(targetGain, ctx.currentTime);
+    }
+  }
+
+  // Call this when visibility returns. Safe to call multiple times.
+  ensureRunning(): void {
+    const ctx = this.context;
+    if (!ctx) {
+      return;
+    }
+    if (ctx.state === 'suspended') {
+      void ctx.resume();
     }
   }
 

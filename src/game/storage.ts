@@ -95,9 +95,9 @@ export function createSaveSnapshot(state: GameState): SaveState {
     skills: state.skills,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: state.endingProgressFlags,
-    clickRateLog: state.clickRateLog,
-    condenseProgressHistory: state.condenseProgressHistory,
-    universeAtlas: state.universeAtlas,
+    clickRateLog: state.clickRateLog.slice(-TUNING.HISTORY_CAPS.clickRateLog),
+    condenseProgressHistory: state.condenseProgressHistory.slice(-TUNING.HISTORY_CAPS.condenseProgressHistory),
+    universeAtlas: state.universeAtlas.slice(-TUNING.HISTORY_CAPS.universeAtlas),
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: state.stageClicksAtStageStart,
     tutorialFlags: state.tutorialFlags,
@@ -111,12 +111,38 @@ export function createSaveSnapshot(state: GameState): SaveState {
   };
 }
 
+export const SAVE_FAILED_EVENT = 'cc-save-failed';
+
+function trySave(state: GameState, aggressive = false): boolean {
+  try {
+    const snapshot = createSaveSnapshot(state);
+    if (aggressive) {
+      // Halve historical arrays as last-ditch trim.
+      snapshot.universeAtlas = snapshot.universeAtlas.slice(-Math.floor(TUNING.HISTORY_CAPS.universeAtlas / 2));
+      snapshot.clickRateLog = snapshot.clickRateLog.slice(-Math.floor(TUNING.HISTORY_CAPS.clickRateLog / 2));
+      snapshot.condenseProgressHistory = snapshot.condenseProgressHistory.slice(
+        -Math.floor(TUNING.HISTORY_CAPS.condenseProgressHistory / 2),
+      );
+    }
+    localStorage.setItem(STORAGE_KEYS.save, JSON.stringify(snapshot));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function saveGame(state: GameState): void {
   if (!isBrowser()) return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.save, JSON.stringify(createSaveSnapshot(state)));
-  } catch {
-    // Storage failures are non-fatal for play.
+  if (trySave(state, false)) return;
+  // First attempt failed — likely quota. Retry with aggressive trim.
+  if (trySave(state, true)) {
+    console.warn('[storage] Save succeeded after aggressive history trim.');
+    return;
+  }
+  // Both failed — notify UI.
+  console.error('[storage] Save failed twice; possible quota exhaustion.');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SAVE_FAILED_EVENT));
   }
 }
 

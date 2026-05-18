@@ -32,6 +32,10 @@ export const STRINGS = {
   quoteStage:    { en: 'STAGE',      ko: '단계' },
   quoteAttrOriginal: { en: 'Original cosmic prose', ko: '오리지널 우주 산문' },
   encounterAlert: { en: 'Encounter', ko: '조우' },
+  saveFailedQuota: {
+    en: 'Save failed: storage is full. Consider clearing old data in Settings.',
+    ko: '저장 실패: 저장 공간이 부족합니다. 설정에서 오래된 데이터 정리를 권장합니다.',
+  },
 
   // ── Intro screen ──────────────────────────────────────────────
   introBegin:    { en: 'BEGIN',   ko: '시작' },
@@ -81,6 +85,8 @@ export const STRINGS = {
 
   // ── Tutorial / speech bubble ──────────────────────────────────
   tutorialInfoHint: { en: 'Tap here for info', ko: '여기를 눌러 정보 보기' },
+  tutFirstClick:       { en: 'Tap the glowing core to begin shaping a universe.',
+                         ko: '빛나는 코어를 탭해서 우주를 빚어보세요.' },
   tutMatterTimeIntro:  { en: 'Click the universe to create Matter. Matter is shown in Q units. Time fills on its own; when both bars are ready, the next era can condense.',
                          ko: '우주를 클릭하면 물질이 생깁니다. 물질은 Q 단위로 표시됩니다. 시간은 자동으로 차오르고, 두 바가 모두 준비되면 다음 시대로 응축할 수 있습니다.' },
   tutEntityLabIntro:    { en: 'Entity Lab turns matter into stage entities. They appear in the field and replace the old skill upgrades.',

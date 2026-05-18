@@ -13,6 +13,7 @@ import type {
   SingularityUnlockId,
 } from './types';
 import type { PrestigeUpgradeId } from './prestige';
+import { TUNING } from './constants';
 
 // Re-export so callers get everything they need from one import.
 export { createInitialGameState, createDefaultSkills } from './defaults';
@@ -164,9 +165,9 @@ export function toPersistentState(state: GameState): PersistentGameState {
     skills: state.skills,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: state.endingProgressFlags,
-    clickRateLog: state.clickRateLog,
-    condenseProgressHistory: state.condenseProgressHistory,
-    universeAtlas: state.universeAtlas,
+    clickRateLog: state.clickRateLog.slice(-TUNING.HISTORY_CAPS.clickRateLog),
+    condenseProgressHistory: state.condenseProgressHistory.slice(-TUNING.HISTORY_CAPS.condenseProgressHistory),
+    universeAtlas: state.universeAtlas.slice(-TUNING.HISTORY_CAPS.universeAtlas),
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: state.stageClicksAtStageStart,
     tutorialFlags: state.tutorialFlags,

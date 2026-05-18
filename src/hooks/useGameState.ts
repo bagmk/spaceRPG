@@ -177,6 +177,10 @@ export function useGameState(): UseGameStateResult {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         persist();
+      } else if (document.visibilityState === 'visible') {
+        // AudioContext may have been suspended by the OS while backgrounded.
+        // App owns the SoundManager — emit an event to signal resume.
+        window.dispatchEvent(new CustomEvent('cc-visibility-resumed'));
       }
     };
 
@@ -192,10 +196,12 @@ export function useGameState(): UseGameStateResult {
 
   useEffect(() => {
     saveGame(state);
+    // Milestone events only — these change rarely and warrant immediate flush.
+    // High-frequency fields (quanta, timeGauge, entropy, cosmicClockSec, ...) are
+    // intentionally excluded; the 30s interval above persists them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.stageIdx,
-    state.quanta,
-    state.timeGauge,
     state.pendingCondenseStageIdx,
     state.completedRun,
     state.universeCount,
@@ -208,6 +214,11 @@ export function useGameState(): UseGameStateResult {
     state.hasSeenCashShopTutorial,
     state.totalShopSpentUSD,
     state.purchasedEntities,
+    state.endingsCompleted,
+    state.lastEndingId,
+    state.selectedEndingId,
+    state.singularityUnlocks,
+    state.prestigeUpgrades,
   ]);
 
   return {

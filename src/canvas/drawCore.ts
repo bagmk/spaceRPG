@@ -10,6 +10,7 @@ interface DrawCoreArgs {
   progress: number;
   showThresholdRing: boolean;
   now: number;
+  idlePulse: boolean;
 }
 
 export function drawCore({
@@ -20,6 +21,7 @@ export function drawCore({
   progress,
   showThresholdRing,
   now,
+  idlePulse,
 }: DrawCoreArgs): void {
   const cx = width / 2;
   const cy = height / 2;
@@ -56,5 +58,20 @@ export function drawCore({
     ctx.beginPath();
     ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  // Idle pulse ring: shown only before first click to invite interaction.
+  if (idlePulse) {
+    const pulseScale = Math.sin(now * 0.005) * 0.15 + 1.25;
+    const ringRadius = coreRadius * pulseScale;
+    const alpha = (Math.sin(now * 0.005) * 0.5 + 0.5) * 0.5 + 0.2;
+    ctx.save();
+    ctx.strokeStyle = stage.accent;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 }

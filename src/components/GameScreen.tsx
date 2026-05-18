@@ -33,7 +33,7 @@ import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
 import { EncounterAlert } from './EncounterAlert';
 import { FloatingNumber } from './FloatingNumber';
-import { ParticleField } from './ParticleField';
+import { ParticleField, type ParticleFieldHandle } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
 import { ScaleIndicator } from './ScaleIndicator';
 import { SpeechBubble } from './SpeechBubble';
@@ -220,8 +220,26 @@ export function GameScreen({
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [encounterEntries, setEncounterEntries] = useState<EncounterEntry[]>([]);
   const [shakeClass, setShakeClass] = useState('');
+  const [saveErrorVisible, setSaveErrorVisible] = useState(false);
+  useEffect(() => {
+    const handler = () => {
+      setSaveErrorVisible(true);
+      setTimeout(() => setSaveErrorVisible(false), 5000);
+    };
+    window.addEventListener('cc-save-failed', handler);
+    return () => window.removeEventListener('cc-save-failed', handler);
+  }, []);
+  useEffect(() => {
+    // First in-game pointer interaction unlocks the AudioContext — covers
+    // deeplink/Resume users who never pressed an intro button. unlock() is
+    // idempotent, so leaving the listener attached is harmless.
+    const handler = () => soundManager?.unlock();
+    window.addEventListener('pointerdown', handler);
+    return () => window.removeEventListener('pointerdown', handler);
+  }, [soundManager]);
   const logicAccumulator = useRef(0);
   const lastWhooshAt = useRef(0);
+  const particleFieldRef = useRef<ParticleFieldHandle>(null);
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
@@ -280,12 +298,15 @@ export function GameScreen({
     if (entityPanelOpen || state.universeCount !== 1) {
       return null;
     }
-    if (stage.id === 1 && state.totalClicks === 0 && !state.tutorialFlags['matter-time-intro']) {
+    if (stage.id === 1 && !state.tutorialFlags['matter-time-intro']) {
+      // Before the first click: invite interaction at the field center.
+      // After it: explain matter/time, anchored to the resource panel.
+      const beforeFirstClick = state.totalClicks === 0;
       return {
         flagId: 'matter-time-intro',
-        anchor: 'resource',
-        message: t(language, 'tutMatterTimeIntro'),
-        autoCloseMs: 9000,
+        anchor: beforeFirstClick ? 'field' : 'resource',
+        message: t(language, beforeFirstClick ? 'tutFirstClick' : 'tutMatterTimeIntro'),
+        autoCloseMs: beforeFirstClick ? 0 : 9000,
       };
     }
     if (state.tutorialFlags.allDismissed) {
@@ -381,6 +402,8 @@ export function GameScreen({
       lastWhooshAt.current = now;
       soundManager?.playTimeAccelerationWhoosh(Math.min(1, Math.log10(timeFlowRate) / 20));
     }
+    // Drive ParticleField's render in the same frame — single rAF for the app.
+    particleFieldRef.current?.tick(now, dt);
   });
 
   useEffect(() => {
@@ -540,6 +563,11 @@ export function GameScreen({
       className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''}`}
       style={{ '--accent': displayStage.accent, '--core': displayStage.coreColor } as CSSProperties}
     >
+      {saveErrorVisible ? (
+        <div className="save-error-toast" role="alert">
+          {t(language, 'saveFailedQuota')}
+        </div>
+      ) : null}
       <main className="field">
         <span className="field-center-tutorial-anchor" ref={fieldCenterAnchorRef} aria-hidden="true" />
         {import.meta.env.DEV ? (
@@ -585,6 +613,7 @@ export function GameScreen({
           </div>
         ) : null}
         <ParticleField
+          ref={particleFieldRef}
           stage={displayStage}
           actualStageId={displayStage.id}
           quanta={displayQuanta}

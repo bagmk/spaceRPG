@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from 'react';
 import { drawCluster } from '../canvas/drawCluster';
 import { drawCore } from '../canvas/drawCore';
 import { drawEffects } from '../canvas/drawEffects';
@@ -29,7 +29,6 @@ import type {
   WakeTrail,
 } from '../game/types';
 import type { PurchasedEntityEntry } from '../game/entities/types';
-import { useGameLoop } from '../hooks/useGameLoop';
 
 interface CollisionPayload {
   x: number;
@@ -66,6 +65,11 @@ interface ParticleFieldProps {
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   onEncounter: (payload: EncounterPayload) => void;
   onCollision: (payload: CollisionPayload) => void;
+}
+
+export interface ParticleFieldHandle {
+  /** Advance physics + render one frame. Driven by GameScreen's master rAF loop. */
+  tick: (now: number, dt: number) => void;
 }
 
 function randomBetween(min: number, max: number): number {
@@ -950,7 +954,7 @@ function createRogue(world: CanvasWorld, stage: Stage, width: number, height: nu
   };
 }
 
-export const ParticleField = memo(function ParticleField({
+const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(function ParticleFieldInner({
   stage,
   actualStageId,
   quanta,
@@ -971,7 +975,7 @@ export const ParticleField = memo(function ParticleField({
   onGatherClick,
   onEncounter,
   onCollision,
-}: ParticleFieldProps) {
+}: ParticleFieldProps, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<CanvasWorld | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
@@ -1027,7 +1031,9 @@ export const ParticleField = memo(function ParticleField({
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      // Cap DPR to 2: high-DPR phones (DPR 3) gain no visible quality for 2.25x
+      // GPU/memory cost in a 2D canvas particle game.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = bounds.width * dpr;
       canvas.height = bounds.height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1165,7 +1171,7 @@ export const ParticleField = memo(function ParticleField({
     }
   }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 
-  useGameLoop((now, dt) => {
+  const tickFrame = (now: number, dt: number) => {
     const canvas = canvasRef.current;
     const world = worldRef.current;
     if (!canvas || !world) {
@@ -1431,6 +1437,7 @@ export const ParticleField = memo(function ParticleField({
       progress,
       showThresholdRing: quanta >= effectiveThreshold && !interactionLocked,
       now,
+      idlePulse: totalClicks === 0,
     });
     drawCluster({
       ctx,
@@ -1484,7 +1491,13 @@ export const ParticleField = memo(function ParticleField({
       ctx.fillStyle = flare;
       ctx.fillRect(0, 0, width, height);
     }
-  });
+  };
+
+  // Latest-closure ref: tickFrame is recreated each render with fresh props;
+  // the imperative handle always invokes the newest one (no stale closures).
+  const tickRef = useRef(tickFrame);
+  tickRef.current = tickFrame;
+  useImperativeHandle(ref, () => ({ tick: (now, dt) => tickRef.current(now, dt) }), []);
 
   return (
     <div
@@ -1545,3 +1558,5 @@ export const ParticleField = memo(function ParticleField({
     </div>
   );
 });
+
+export const ParticleField = memo(ParticleFieldInner);

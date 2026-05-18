@@ -66,6 +66,14 @@ select {
   font: inherit;
 }
 
+button,
+[role="button"],
+.mini-button,
+.q-continue {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .app-shell,
 .field,
 .timeline,
@@ -96,7 +104,8 @@ canvas {
 
 .app-shell {
   position: relative;
-  height: 100vh;
+  height: 100vh; /* fallback for browsers without dvh support */
+  height: 100dvh;
   display: block;
   z-index: 1;
 }
@@ -283,7 +292,8 @@ canvas {
 .field {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  height: 100vh; /* fallback for browsers without dvh support */
+  height: 100dvh;
   overflow: hidden;
   background: #050505;
 }
@@ -638,7 +648,10 @@ button.stat-header-item {
 
 .game-canvas-hitbox {
   cursor: crosshair;
-  touch-action: manipulation;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .intro-canvas {
@@ -1267,7 +1280,8 @@ button.stat-header-item {
   display: grid;
   place-items: center;
   width: 100%;
-  height: 100vh;
+  height: 100vh; /* fallback for browsers without dvh support */
+  height: 100dvh;
   z-index: 2;
 }
 
@@ -3124,7 +3138,7 @@ button.stat-header-item {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-height: 40px;
+  min-height: 44px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -3683,6 +3697,7 @@ button.stat-header-item {
   .intro-screen,
   .final-screen {
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .timeline,
@@ -3784,6 +3799,24 @@ button.stat-header-item {
 }
 
 /* ── Stage Log Toast ─────────────────────────────────────────── */
+.save-error-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 190;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  padding: 11px 16px;
+  background: rgba(40, 8, 8, 0.95);
+  border: 1px solid rgba(255, 90, 90, 0.55);
+  color: #ffd8d8;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+  border-radius: 4px;
+}
+
 .stage-log-toast {
   position: fixed;
   bottom: 72px;
@@ -3830,6 +3863,7 @@ button.stat-header-item {
 .almanac-overlay {
   width: min(900px, calc(100vw - 32px));
   max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
@@ -5931,7 +5965,7 @@ button.stat-header-item {
   }
 
   .entity-card__buy {
-    min-width: 42px;
+    min-width: 44px;
     height: 26px;
     font-size: 9px;
   }
@@ -7224,7 +7258,7 @@ button.stat-header-item {
 
 .entity-rarity-tab {
   min-width: 0;
-  min-height: 42px;
+  min-height: 44px;
   display: grid;
   justify-items: center;
   gap: 3px;
@@ -9034,7 +9068,7 @@ button.stat-header-item {
   }
 
   .hud-meter {
-    min-height: 42px;
+    min-height: 44px;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto 7px;
     gap: 5px 8px;
@@ -9252,7 +9286,7 @@ button.stat-header-item {
   }
 
   .hud-condense {
-    min-height: 42px;
+    min-height: 44px;
     border-radius: 9px;
   }
 

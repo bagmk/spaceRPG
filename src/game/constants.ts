@@ -193,6 +193,14 @@ export const TUNING = {
   ACTIVE_PLAY_FRACTION: 0.3,
   IDLE_PLAY_FRACTION: 0.7,
   MOBILE_MAX_CPS: 10,
+
+  // Cap historical arrays in serialized save to prevent localStorage quota overflow.
+  // In-memory state can hold more — these caps only apply when writing to disk.
+  HISTORY_CAPS: {
+    universeAtlas: 100,
+    clickRateLog: 200,
+    condenseProgressHistory: 200,
+  },
 } as const;
 
 export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
