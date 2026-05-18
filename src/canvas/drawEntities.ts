@@ -2171,16 +2171,16 @@ export function drawEntities(
         const nx = dx / d;
         const ny = dy / d;
         // Repulsion when close
-        const minDist = a.size + b.size + 12;
+        const minDist = a.size + b.size + 16;
         if (d < minDist) {
-          const push = ((minDist - d) / minDist) * 3.5;
+          const push = ((minDist - d) / minDist) * 5.5;
           a.x -= nx * push;
           a.y -= ny * push;
           b.x += nx * push;
           b.y += ny * push;
         }
         // Gentle gravity pull between entities
-        const pull = 0.8 / (d * 0.15 + 1);
+        const pull = 1.4 / (d * 0.12 + 1);
         a.x += nx * pull;
         a.y += ny * pull;
         b.x -= nx * pull;
@@ -2190,8 +2190,8 @@ export function drawEntities(
       const toCenterX = cx - a.x;
       const toCenterY = cy - a.y;
       const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
-      a.x += (toCenterX / centerDist) * 1.2;
-      a.y += (toCenterY / centerDist) * 1.2;
+      a.x += (toCenterX / centerDist) * 1.8;
+      a.y += (toCenterY / centerDist) * 1.8;
     }
   }
 
