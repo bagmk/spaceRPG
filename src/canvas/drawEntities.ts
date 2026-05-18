@@ -2179,8 +2179,8 @@ export function drawEntities(
     const formationBreath = Math.sin(now * 0.00032 + phase) * (8 + unit(item.seed, 3) * 16);
     const localWander = 7 + unit(item.seed, 4) * (isLegend ? 24 : 15);
     const radius = Math.min(
-      218,
-      58 + ageSpread + rarityRadiusOffset(item.rarity) + formationBreath + item.copyIndex * 1.7,
+      150,
+      38 + ageSpread * 0.7 + rarityRadiusOffset(item.rarity) + formationBreath + item.copyIndex * 1.7,
     );
     const angle =
       stableIndex * GOLDEN_ANGLE +
@@ -2247,8 +2247,9 @@ export function drawEntities(
       const toCenterX = cx - a.x;
       const toCenterY = cy - a.y;
       const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
-      a.x += (toCenterX / centerDist) * 1.8;
-      a.y += (toCenterY / centerDist) * 1.8;
+      const centerPull = 2.8 + centerDist * 0.02;
+      a.x += (toCenterX / centerDist) * centerPull;
+      a.y += (toCenterY / centerDist) * centerPull;
     }
   }
 
