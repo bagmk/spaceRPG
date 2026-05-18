@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchTopN, type LeaderboardEntry, type LeaderboardTab } from '../cloud/leaderboard';
 import { formatEntropyParts, formatDuration, formatWhole } from '../game/formulas';
 import { useAuth } from '../auth/AuthProvider';
 import type { Lang } from '../i18n';
+
+// Module-level cache so data persists across open/close
+const _cache: Partial<Record<LeaderboardTab, { data: LeaderboardEntry[]; fetchedAt: number }>> = {};
+const CACHE_TTL_MS = 60_000; // 1 minute
 
 interface LeaderboardProps {
   language: Lang;
@@ -38,11 +42,28 @@ export function Leaderboard({ language, onClose }: LeaderboardProps) {
   const [loading, setLoading] = useState(true);
   const ko = language === 'ko';
 
+  const fetchingRef = useRef(false);
   useEffect(() => {
-    setLoading(true);
+    const cached = _cache[tab];
+    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+      setEntries(cached.data);
+      setLoading(false);
+      return;
+    }
+    // Show stale cache while refreshing
+    if (cached) {
+      setEntries(cached.data);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     fetchTopN(100, tab).then((data) => {
+      _cache[tab] = { data, fetchedAt: Date.now() };
       setEntries(data);
       setLoading(false);
+      fetchingRef.current = false;
     });
   }, [tab]);
 
