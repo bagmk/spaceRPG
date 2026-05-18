@@ -852,6 +852,7 @@ button.stat-header-item {
 
 .float-amount {
   display: inline-block;
+  white-space: nowrap;
 }
 
 .float-particle {
@@ -859,6 +860,7 @@ button.stat-header-item {
   opacity: 0.78;
   font-style: italic;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .float-entropy {
