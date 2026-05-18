@@ -2239,11 +2239,11 @@ export function drawEntities(
   // repulsionMult: how strongly it pushes others away
   // speedMult: how much it gets displaced
   const EFFECT_PERSONALITY: Record<string, { gravityMult: number; repulsionMult: number; speedMult: number }> = {
-    auto:       { gravityMult: 1.0, repulsionMult: 2.4, speedMult: 1.0 },  // steady orbiter
-    click:      { gravityMult: 0.7, repulsionMult: 4.2, speedMult: 1.3 },  // bouncy, energetic
-    crit:       { gravityMult: 0.5, repulsionMult: 5.4, speedMult: 1.6 },  // volatile, flies around
-    time:       { gravityMult: 1.5, repulsionMult: 1.8, speedMult: 0.7 },  // heavy, slow, pulls others in
-    multiplier: { gravityMult: 2.0, repulsionMult: 1.2, speedMult: 0.5 },  // massive anchor, barely moves
+    auto:       { gravityMult: 1.0, repulsionMult: 0.8, speedMult: 1.0 },  // steady orbiter
+    click:      { gravityMult: 0.7, repulsionMult: 1.4, speedMult: 1.3 },  // bouncy, energetic
+    crit:       { gravityMult: 0.5, repulsionMult: 1.8, speedMult: 1.6 },  // volatile, flies around
+    time:       { gravityMult: 1.5, repulsionMult: 0.6, speedMult: 0.7 },  // heavy, slow, pulls others in
+    multiplier: { gravityMult: 2.0, repulsionMult: 0.4, speedMult: 0.5 },  // massive anchor, barely moves
   };
   {
     for (let i = 0; i < positions.length; i++) {
