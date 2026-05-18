@@ -2212,12 +2212,34 @@ export function drawEntities(
     };
   });
 
-  // Stage 1-2: apply push-pull between entity particles (strength varies by rarity)
+  // Per-stage entity physics: gravity, repulsion, center pull, max displacement
+  interface StageDynamics { gravity: number; repulsion: number; centerPull: number; maxDisplace: number }
+  const STAGE_DYNAMICS: Record<number, StageDynamics> = {
+    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 2.8, maxDisplace: 8 },  // inflation — chaotic
+    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 2.5, maxDisplace: 7 },  // baryogenesis
+    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 2.2, maxDisplace: 6 },  // QGP
+    4:  { gravity: 0.9, repulsion: 3.5, centerPull: 2.0, maxDisplace: 6 },  // nucleosynthesis
+    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 1.8, maxDisplace: 5 },  // recombination
+    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 1.5, maxDisplace: 5 },  // dark age — calm
+    7:  { gravity: 0.9, repulsion: 3.2, centerPull: 1.8, maxDisplace: 6 },  // first stars
+    8:  { gravity: 1.0, repulsion: 3.5, centerPull: 2.0, maxDisplace: 6 },  // reionization
+    9:  { gravity: 1.1, repulsion: 3.0, centerPull: 2.2, maxDisplace: 7 },  // galaxy — swirling
+    10: { gravity: 0.7, repulsion: 2.8, centerPull: 1.6, maxDisplace: 5 },  // planetary — gentle orbits
+    11: { gravity: 0.5, repulsion: 2.0, centerPull: 1.2, maxDisplace: 4 },  // life — delicate
+    12: { gravity: 1.3, repulsion: 4.0, centerPull: 2.4, maxDisplace: 7 },  // red giant — expanding
+    13: { gravity: 0.8, repulsion: 3.0, centerPull: 1.8, maxDisplace: 5 },  // remnant
+    14: { gravity: 0.6, repulsion: 2.5, centerPull: 1.5, maxDisplace: 4 },  // degenerate — slow
+    15: { gravity: 1.5, repulsion: 4.5, centerPull: 3.0, maxDisplace: 8 },  // black hole — intense
+    16: { gravity: 0.3, repulsion: 1.5, centerPull: 0.8, maxDisplace: 3 },  // heat death — drifting
+  };
+  const dyn = STAGE_DYNAMICS[stageId] ?? { gravity: 0.8, repulsion: 3.0, centerPull: 1.5, maxDisplace: 5 };
   const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
-  if (stageId <= 2) {
+  {
     for (let i = 0; i < positions.length; i++) {
       const a = positions[i];
       const massA = RARITY_MASS[a.item.rarity] ?? 1;
+      let dx_total = 0;
+      let dy_total = 0;
       for (let j = i + 1; j < positions.length; j++) {
         const b = positions[j];
         const massB = RARITY_MASS[b.item.rarity] ?? 1;
@@ -2226,34 +2248,33 @@ export function drawEntities(
         const d = Math.max(4, Math.hypot(dx, dy));
         const nx = dx / d;
         const ny = dy / d;
-        // Repulsion between entities (stronger), but weaker near center
+        // Repulsion — weaker near center
         const minDist = a.size + b.size + 16;
         if (d < minDist) {
-          const distAFromCenter = Math.hypot(a.x - cx, a.y - cy);
-          const distBFromCenter = Math.hypot(b.x - cx, b.y - cy);
-          const nearCenter = Math.min(distAFromCenter, distBFromCenter);
-          const centerFade = Math.min(1, nearCenter / 60); // 0 at center, 1 far away
-          const pushBase = ((minDist - d) / minDist) * 5.0 * centerFade;
-          a.x -= nx * pushBase / massA;
-          a.y -= ny * pushBase / massA;
-          b.x += nx * pushBase / massB;
-          b.y += ny * pushBase / massB;
+          const distAC = Math.hypot(a.x - cx, a.y - cy);
+          const distBC = Math.hypot(b.x - cx, b.y - cy);
+          const centerFade = Math.min(1, Math.min(distAC, distBC) / 60);
+          const push = ((minDist - d) / minDist) * dyn.repulsion * centerFade;
+          a.x -= nx * push / massA;
+          a.y -= ny * push / massA;
+          b.x += nx * push / massB;
+          b.y += ny * push / massB;
         }
-        // Gravity pull (scales with combined mass)
+        // Gravity
         const combinedMass = (massA + massB) * 0.5;
-        const pull = 1.4 * combinedMass / (d * 0.12 + 1);
+        const pull = dyn.gravity * combinedMass / (d * 0.12 + 1);
         a.x += nx * pull / massA;
         a.y += ny * pull / massA;
         b.x -= nx * pull / massB;
         b.y -= ny * pull / massB;
       }
-      // Pull toward center
+      // Center pull
       const toCenterX = cx - a.x;
       const toCenterY = cy - a.y;
       const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
-      const centerPull = 2.8 + centerDist * 0.02;
-      a.x += (toCenterX / centerDist) * centerPull;
-      a.y += (toCenterY / centerDist) * centerPull;
+      const pull = dyn.centerPull + centerDist * 0.02;
+      a.x += (toCenterX / centerDist) * pull;
+      a.y += (toCenterY / centerDist) * pull;
     }
   }
 
