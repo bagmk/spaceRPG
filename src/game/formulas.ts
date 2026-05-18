@@ -78,20 +78,20 @@ export function formatGameNumberShort(value: number): string {
   const whole = Math.floor(value);
   if (whole < 1_000) return String(whole);
   if (whole < 1_000_000) return `${(whole / 1_000).toFixed(whole < 10_000 ? 1 : 0)}k`;
-  if (whole < 1e9) return `${Math.floor(whole / 1e6)}M`;
-  if (whole < 1e12) return `${Math.floor(whole / 1e9)}B`;
-  if (whole < 1e15) return `${Math.floor(whole / 1e12)}T`;
+  if (whole < 1e9) return `${(whole / 1e6).toFixed(1)}M`;
+  if (whole < 1e12) return `${(whole / 1e9).toFixed(1)}B`;
+  if (whole < 1e15) return `${(whole / 1e12).toFixed(1)}T`;
   const exp = Math.floor(Math.log10(whole));
   const mantissa = whole / Math.pow(10, exp);
-  return `${mantissa.toFixed(0)}e${exp}`;
+  return `${mantissa.toFixed(1)}e${exp}`;
 }
 
 export function formatAutoRateValue(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return '0';
   if (value < 0.01) return '<0.01';
   if (value < 1) return trimCompactNumber(value.toFixed(2));
-  if (value < 10) return trimCompactNumber(value.toFixed(2));
-  if (value < 100) return trimCompactNumber(value.toFixed(1));
+  if (value < 10) return trimCompactNumber(value.toFixed(1));
+  if (value < 1000) return trimCompactNumber(value.toFixed(1));
   return formatGameNumberShort(value);
 }
 

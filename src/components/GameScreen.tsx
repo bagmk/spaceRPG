@@ -175,9 +175,15 @@ export function GameScreen({
     clickLevel: state.skills.click.level,
   }, state.purchasedEntities, state.prestigeUpgrades);
   const autoRate = getAutoRate(modifiers);
+  const stageAutoBonus =
+    stage.mechanic === 'reionization'
+      ? autoRate * state.mechanicCharge * 0.5
+      : stage.mechanic === 'first_stars'
+        ? autoRate * Math.min(1.5, state.mechanicCharge * 0.12)
+        : 0;
   const shopTimeBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'time', wallNow);
   const shopMatterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', wallNow);
-  const displayedAutoRate = autoRate * shopTimeBoost * shopMatterBoost;
+  const displayedAutoRate = (autoRate + stageAutoBonus) * shopTimeBoost * shopMatterBoost;
   const timeMult = getTimeMultiplier(state.skills.time.level, modifiers) * shopTimeBoost;
   const timeGauge = getTimeGaugeForCosmicClock(state.stageIdx, state.cosmicClockSec);
   const timeProgress01 = Math.min(1, timeGauge / 100);
