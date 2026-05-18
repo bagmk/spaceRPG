@@ -641,6 +641,7 @@ function stepClusterPhysics(
     applyAnchorForce(mote, stage, cx, cy, cluster.physicalRadius, dtScale);
     applyMoteWander(mote, stage, cx, cy, now, dtScale);
     const neighbors = world.moteNeighborCache.get(mote.id) ?? [];
+    const isInflation = stage.clusterMode === 'inflation';
     neighbors.forEach((neighborId) => {
       const neighbor = moteById.get(neighborId);
       if (!neighbor) {
@@ -650,13 +651,15 @@ function stepClusterPhysics(
       const dy = neighbor.y - mote.y;
       const d = Math.max(1, Math.hypot(dx, dy));
       const preferredDistance = mote.r + neighbor.r + TUNING.MOTE_REPULSION_DISTANCE;
+      const repulsionMult = isInflation ? 3.0 : 1.0;
       if (d < preferredDistance) {
-        const pressure = ((preferredDistance - d) / preferredDistance) * TUNING.MOTE_REPULSION_STRENGTH * dtScale;
+        const pressure = ((preferredDistance - d) / preferredDistance) * TUNING.MOTE_REPULSION_STRENGTH * repulsionMult * dtScale;
         mote.vx -= (dx / d) * pressure;
         mote.vy -= (dy / d) * pressure;
       }
       const dSq = d * d + 25;
-      const force = (TUNING.MOTE_PEER_GRAVITY * neighbor.mass * dtScale) / dSq;
+      const peerGravityMult = isInflation ? 2.5 : 1.0;
+      const force = (TUNING.MOTE_PEER_GRAVITY * peerGravityMult * neighbor.mass * dtScale) / dSq;
       mote.vx += dx * force;
       mote.vy += dy * force;
     });
@@ -707,7 +710,19 @@ function applyAnchorForce(
   const ny = dy / dist;
 
   switch (stage.clusterMode) {
-    case 'inflation':
+    case 'inflation': {
+      // Stage 1: stronger pull toward center + orbital spin + bouncy repulsion
+      const targetR = clusterRadius * Math.pow(mote.hue, 1.75) * 0.7;
+      const radial = (dist - targetR) / Math.max(targetR, 16);
+      const gravity = TUNING.MOTE_ANCHOR_GRAVITY * 1.4;
+      mote.vx += nx * radial * gravity * dtScale;
+      mote.vy += ny * radial * gravity * dtScale;
+      // Orbital tangential force — swirl around center
+      const spin = 0.35 * (30 / (dist + 10));
+      mote.vx += -ny * spin * dtScale;
+      mote.vy += nx * spin * dtScale;
+      break;
+    }
     case 'baryogenesis':
     case 'qgPlasma':
     case 'nucleosynthesis':
