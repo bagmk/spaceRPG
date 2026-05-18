@@ -160,21 +160,35 @@ export function IntroScreen({
           />
           <div className="intro-ticker">{phase === 'expanding' ? INTRO_TIMES[tickerIndex] : ''}</div>
           <p className="intro-tagline">{t(language, 'introTagline')}</p>
-        </div>
-        {phase === 'idle' ? (
-          canResume ? (
-            <div className="intro-actions">
-              <button
-                className="q-continue intro-button intro-primary"
-                type="button"
-                onClick={() => {
-                  onUnlockAudio();
-                  onResume();
-                }}
-              >
-                {t(language, 'introResume')}
-              </button>
-              <div className="intro-actions-row">
+          {phase === 'idle' ? (
+            canResume ? (
+              <div className="intro-actions">
+                <button
+                  className="q-continue intro-button intro-primary"
+                  type="button"
+                  onClick={() => {
+                    onUnlockAudio();
+                    onResume();
+                  }}
+                >
+                  {t(language, 'introResume')}
+                </button>
+                <div className="intro-actions-row">
+                  {canOpenAtlas ? (
+                    <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>
+                      {t(language, 'introAtlas')}
+                    </button>
+                  ) : null}
+                  <button className="q-continue intro-button intro-secondary intro-icon-btn" type="button" onClick={onOpenLeaderboard} title={language === 'ko' ? '랭킹' : 'Ranking'}>
+                    🏆
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="intro-actions">
+                <button className="q-continue intro-button" type="button" onClick={beginBigBang}>
+                  {t(language, 'introBegin')}
+                </button>
                 {canOpenAtlas ? (
                   <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>
                     {t(language, 'introAtlas')}
@@ -184,23 +198,9 @@ export function IntroScreen({
                   🏆
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="intro-actions">
-              <button className="q-continue intro-button" type="button" onClick={beginBigBang}>
-                {t(language, 'introBegin')}
-              </button>
-              {canOpenAtlas ? (
-                <button className="q-continue intro-button intro-secondary" type="button" onClick={onOpenAtlas}>
-                  {t(language, 'introAtlas')}
-                </button>
-              ) : null}
-              <button className="q-continue intro-button intro-secondary intro-icon-btn" type="button" onClick={onOpenLeaderboard} title={language === 'ko' ? '랭킹' : 'Ranking'}>
-                🏆
-              </button>
-            </div>
-          )
-        ) : null}
+            )
+          ) : null}
+        </div>
       </div>
     </section>
   );
