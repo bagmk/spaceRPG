@@ -1092,6 +1092,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       return;
     }
     lastClickId.current = lastClickEvent.id;
+    if (lastClickEvent.isCrit && 'vibrate' in navigator) {
+      try { navigator.vibrate(35); } catch {}
+    }
     const { width, height } = sizeRef.current;
     const cx = width / 2;
     const cy = height / 2;

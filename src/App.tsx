@@ -137,6 +137,13 @@ function AppInner() {
     saveLanguage(language);
   }, [language]);
 
+  // Update resumeAvailable when cloud save arrives via HYDRATE
+  useEffect(() => {
+    if (state.totalClicks > 0 || state.stageIdx > 0) {
+      setResumeAvailable(true);
+    }
+  }, [state.totalClicks, state.stageIdx]);
+
   useEffect(() => {
     if (state.completedRun && state.lastEndingId !== null) {
       setRoute('final');
@@ -144,7 +151,7 @@ function AppInner() {
   }, [state.completedRun, state.lastEndingId]);
 
   useEffect(() => {
-    if (authStatus === 'signedOut' || authStatus === 'anonymous') {
+    if (authStatus === 'signedOut') {
       setRoute('login');
     }
   }, [authStatus]);

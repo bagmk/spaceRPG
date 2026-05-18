@@ -75,35 +75,48 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     state.peakEntropy,
   ]);
 
-  // Push leaderboard entry when peakEntropy changes (throttled to once per minute)
-  const lastPushedPeak = useRef(0);
+  // Push leaderboard entry on milestone changes (throttled to once per minute)
   const leaderboardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingLeaderboard = useRef<{ uid: string; peak: number; profile: typeof profile; time: number; clicks: number; universes: number } | null>(null);
+  const pendingLeaderboard = useRef<{ uid: string; profile: typeof profile; stats: { peakEntropy: number; totalTimePlayed: number; totalClicks: number; universeCount: number } } | null>(null);
 
   useEffect(() => {
     if (!user || user.isAnonymous) return;
     if (status !== 'authed') return;
-    if (state.peakEntropy <= lastPushedPeak.current) return;
 
-    pendingLeaderboard.current = { uid: user.uid, peak: state.peakEntropy, profile, time: state.totalTimePlayed, clicks: state.totalClicks, universes: state.universeCount };
-    if (leaderboardTimer.current) return; // already scheduled
+    pendingLeaderboard.current = {
+      uid: user.uid,
+      profile,
+      stats: { peakEntropy: state.peakEntropy, totalTimePlayed: state.totalTimePlayed, totalClicks: state.totalClicks, universeCount: state.universeCount },
+    };
+    if (leaderboardTimer.current) return;
 
     leaderboardTimer.current = setTimeout(() => {
       leaderboardTimer.current = null;
       const pending = pendingLeaderboard.current;
-      if (pending && pending.peak > lastPushedPeak.current) {
-        lastPushedPeak.current = pending.peak;
-        pushLeaderboardEntry(pending.uid, { peakEntropy: pending.peak, totalTimePlayed: pending.time, totalClicks: pending.clicks, universeCount: pending.universes }, pending.profile);
+      if (pending) {
+        pushLeaderboardEntry(pending.uid, pending.stats, pending.profile);
       }
       pendingLeaderboard.current = null;
     }, 60_000);
-  }, [user, status, state.peakEntropy, profile]);
+  }, [user, status, state.peakEntropy, state.stageIdx, profile]);
 
   // Flush on page hide/unload
   useEffect(() => {
     if (!user || user.isAnonymous) return;
 
-    const flush = () => flushPendingPush();
+    const flush = () => {
+      flushPendingPush();
+      // Also flush pending leaderboard
+      if (leaderboardTimer.current) {
+        clearTimeout(leaderboardTimer.current);
+        leaderboardTimer.current = null;
+      }
+      const pending = pendingLeaderboard.current;
+      if (pending) {
+        pushLeaderboardEntry(pending.uid, pending.stats, pending.profile);
+        pendingLeaderboard.current = null;
+      }
+    };
     window.addEventListener('beforeunload', flush);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flush();

@@ -9,7 +9,6 @@ import {
 } from 'react';
 import {
   onAuthStateChanged,
-  signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
@@ -76,48 +75,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (popupInProgress.current) return;
 
       if (firebaseUser) {
-        setUser(firebaseUser);
-
         if (firebaseUser.isAnonymous) {
-          setStatus('anonymous');
-        } else {
-          // Ensure profile doc exists + fetch in parallel
-          const providers = firebaseUser.providerData.map((pd) => pd.providerId);
-          const profilePromise = getProfile(firebaseUser.uid);
-          const p = await profilePromise;
-          // Fire-and-forget profile update (non-blocking)
-          createOrUpdateProfile(firebaseUser.uid, {
-            email: firebaseUser.email ?? null,
-            photoURL: firebaseUser.photoURL ?? null,
-            providers,
-            createdAt: p?.createdAt ?? Date.now(),
-          });
-          setProfile(p);
-
-          if (!p?.displayName) {
-            setStatus('needsName');
-          } else {
-            setStatus('authed');
-          }
+          // Ignore anonymous users — sign them out silently
+          await auth!.signOut();
+          return;
         }
-        initialAuthDone.current = true;
-      } else if (!initialAuthDone.current) {
-        // First load, no user — auto sign in anonymously
-        setUser(null);
-        setProfile(null);
-        setStatus('loading');
-        try {
-          await signInAnonymously(auth!);
-        } catch (e) {
-          console.error('[Auth] Anonymous sign-in failed:', e);
-          setStatus('anonymous');
+        setUser(firebaseUser);
+        const providers = firebaseUser.providerData.map((pd) => pd.providerId);
+        const p = await getProfile(firebaseUser.uid);
+        createOrUpdateProfile(firebaseUser.uid, {
+          email: firebaseUser.email ?? null,
+          photoURL: firebaseUser.photoURL ?? null,
+          providers,
+          createdAt: p?.createdAt ?? Date.now(),
+        });
+        setProfile(p);
+
+        if (!p?.displayName) {
+          setStatus('needsName');
+        } else {
+          setStatus('authed');
         }
         initialAuthDone.current = true;
       } else {
-        // User signed out explicitly
+        // No user — show login screen
         setUser(null);
         setProfile(null);
         setStatus('signedOut');
+        initialAuthDone.current = true;
       }
     });
     return unsubscribe;

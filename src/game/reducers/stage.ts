@@ -174,6 +174,9 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     cumulativeBoost: state.cumulativeBoost,
     condensedMass: state.condensedMass,
     echoes: state.echoes,
+    totalClicks: state.totalClicks,
+    totalTimePlayed: state.totalTimePlayed,
+    peakEntropy: state.peakEntropy,
     singularityUnlocks: state.singularityUnlocks,
     endingsCompleted: state.endingsCompleted,
     lastEndingId: null,
@@ -187,6 +190,5 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
     prestigeUpgrades: state.prestigeUpgrades,
-    peakEntropy: state.peakEntropy,
   };
 }

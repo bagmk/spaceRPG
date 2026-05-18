@@ -1,6 +1,6 @@
 /**
  * Leaderboard — multi-category ranking.
- * Only authenticated users with displayName are eligible.
+ * One entry per user with cumulative stats across all universes.
  */
 
 import {
@@ -94,12 +94,21 @@ export async function fetchTopN(n: number = 100, tab: LeaderboardTab = 'entropy'
       limit(n),
     );
     const snap = await getDocs(q);
-    return snap.docs
+    const all = snap.docs
       .map((d) => d.data() as LeaderboardEntry)
       .filter((e) => {
         const val = (e as any)[field];
         return val != null && val > 0;
       });
+    // Deduplicate by uid — keep the entry with the highest value for this tab
+    const bestByUid = new Map<string, LeaderboardEntry>();
+    for (const entry of all) {
+      const existing = bestByUid.get(entry.uid);
+      if (!existing || ((entry as any)[field] ?? 0) > ((existing as any)[field] ?? 0)) {
+        bestByUid.set(entry.uid, entry);
+      }
+    }
+    return Array.from(bestByUid.values()).sort((a, b) => ((b as any)[field] ?? 0) - ((a as any)[field] ?? 0));
   } catch (e) {
     console.error('[leaderboard] fetchTopN failed:', e);
     return [];
