@@ -676,6 +676,14 @@ function stepClusterPhysics(
     mote.age += dt;
     mote.orbitAngle = Math.atan2(mote.y - cy, mote.x - cx);
   });
+
+  // Remove motes that exceeded their lifetime (click to replenish)
+  const lifetime = TUNING.MOTE_LIFETIME_MS;
+  for (let i = motes.length - 1; i >= 0; i--) {
+    if (motes[i].age > lifetime) {
+      motes.splice(i, 1);
+    }
+  }
 }
 
 function refreshNeighborCache(motes: Mote[], cache: Map<number, number[]>): void {
