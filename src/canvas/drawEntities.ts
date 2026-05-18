@@ -2040,25 +2040,56 @@ function drawEntityGlyph(
       fillCircle(ctx, 0, 0, size * 0.28);
       break;
     case 'quantum': {
-      // Space dimple — concave grid-like distortion that breathes in and out
-      const dimple = 0.6 + Math.sin(spin * 1.8) * 0.35;
-      const r = size * 0.95;
-      // Outer ring
-      ctx.strokeStyle = hexToRgba(item.color, 0.5);
-      ctx.lineWidth = 0.8;
-      strokeCircle(ctx, 0, 0, r);
-      // Concentric dimple rings that contract/expand
-      for (let ring = 1; ring <= 3; ring++) {
-        const ringR = r * (ring / 4) * dimple;
-        ctx.strokeStyle = hexToRgba(item.color, 0.25 + ring * 0.08);
-        ctx.lineWidth = 0.5;
+      // Space warp — curved grid lines bending inward like gravitational lensing
+      const r = size * 1.6;
+      const breathe = 0.7 + Math.sin(spin * 1.2) * 0.3;
+      const warpStrength = r * 0.35 * breathe;
+      const gridLines = 5;
+      ctx.lineWidth = 0.5;
+      ctx.lineCap = 'round';
+
+      // Horizontal warped lines
+      for (let i = 0; i < gridLines; i++) {
+        const t = (i / (gridLines - 1)) * 2 - 1; // -1 to 1
+        const yBase = t * r * 0.8;
+        const alpha = 0.12 + (1 - Math.abs(t)) * 0.18;
+        ctx.strokeStyle = hexToRgba(item.color, alpha);
         ctx.beginPath();
-        ctx.ellipse(0, 0, ringR, ringR * (0.5 + dimple * 0.3), spin * 0.3, 0, Math.PI * 2);
+        for (let s = -1; s <= 1; s += 0.05) {
+          const xPos = s * r;
+          const distFromCenter = Math.hypot(s, t);
+          const warp = Math.exp(-distFromCenter * distFromCenter * 2.5) * warpStrength;
+          const yWarped = yBase + warp * Math.sign(yBase || 0.01);
+          if (s === -1) ctx.moveTo(xPos, yWarped);
+          else ctx.lineTo(xPos, yWarped);
+        }
         ctx.stroke();
       }
-      // Center glow
-      ctx.fillStyle = hexToRgba(item.color, 0.5 * pulse);
-      fillCircle(ctx, 0, 0, size * 0.18 * pulse);
+
+      // Vertical warped lines
+      for (let i = 0; i < gridLines; i++) {
+        const t = (i / (gridLines - 1)) * 2 - 1;
+        const xBase = t * r * 0.8;
+        const alpha = 0.12 + (1 - Math.abs(t)) * 0.18;
+        ctx.strokeStyle = hexToRgba(item.color, alpha);
+        ctx.beginPath();
+        for (let s = -1; s <= 1; s += 0.05) {
+          const yPos = s * r;
+          const distFromCenter = Math.hypot(t, s);
+          const warp = Math.exp(-distFromCenter * distFromCenter * 2.5) * warpStrength;
+          const xWarped = xBase + warp * Math.sign(xBase || 0.01);
+          if (s === -1) ctx.moveTo(xWarped, yPos);
+          else ctx.lineTo(xWarped, yPos);
+        }
+        ctx.stroke();
+      }
+
+      // Subtle center glow
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.4);
+      grad.addColorStop(0, hexToRgba(item.color, 0.15 * pulse));
+      grad.addColorStop(1, hexToRgba(item.color, 0));
+      ctx.fillStyle = grad;
+      fillCircle(ctx, 0, 0, r * 0.4);
       break;
     }
     case 'particle':
@@ -2143,7 +2174,8 @@ export function drawEntities(
     const isLegend = item.rarity === 'legendary';
     const phase = unit(item.seed, 1) * Math.PI * 2;
     const direction = unit(item.seed, 2) > 0.5 ? 1 : -1;
-    const ageSpread = Math.sqrt(item.orderIndex + 1) * 11;
+    const stableIndex = (item.seed >>> 0) % 1000;
+    const ageSpread = Math.sqrt(stableIndex + 1) * 11;
     const formationBreath = Math.sin(now * 0.00032 + phase) * (8 + unit(item.seed, 3) * 16);
     const localWander = 7 + unit(item.seed, 4) * (isLegend ? 24 : 15);
     const radius = Math.min(
@@ -2151,7 +2183,7 @@ export function drawEntities(
       58 + ageSpread + rarityRadiusOffset(item.rarity) + formationBreath + item.copyIndex * 1.7,
     );
     const angle =
-      item.orderIndex * GOLDEN_ANGLE +
+      stableIndex * GOLDEN_ANGLE +
       phase * 0.18 +
       now * raritySpeed(item.rarity) * direction +
       Math.sin(now * 0.00021 + phase) * 0.36;
