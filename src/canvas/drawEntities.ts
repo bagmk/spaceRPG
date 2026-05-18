@@ -3,6 +3,10 @@ import { TUNING } from '../game/constants';
 import type { EntityEffectType, EntityGlyph, EntityRarity, PurchasedEntityEntry, StageEntity } from '../game/entities/types';
 import { findEntityById } from '../game/entities/stageItems';
 
+// Persistent velocity cache for entity n-body simulation
+const _entityBodyCache = new Map<string, { x: number; y: number; vx: number; vy: number; lastSeen: number }>();
+function _getEntityBodyCache() { return _entityBodyCache; }
+
 const ICON_SIZE: Record<EntityRarity, number> = {
   common: 7,
   rare: 9,
@@ -193,6 +197,46 @@ function drawBlackHoleLens(
   ctx.restore();
 }
 
+// Global quasar jets (center) — stable beam with gentle sway
+function drawQuasarJetsGlobal(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string,
+  now: number,
+  strength: number,
+): void {
+  const angle = now * 0.00015 + strength * 0.7 + Math.sin(now * 0.0004) * 0.12;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const dir of [-1, 1]) {
+    const beam = ctx.createLinearGradient(0, 0, dir * radius, 0);
+    beam.addColorStop(0, hexToRgba('#ffffff', 0.12 + strength * 0.15));
+    beam.addColorStop(0.25, hexToRgba(color, 0.1 + strength * 0.12));
+    beam.addColorStop(0.6, hexToRgba(color, 0.03 + strength * 0.04));
+    beam.addColorStop(1, hexToRgba(color, 0));
+    ctx.strokeStyle = beam;
+    ctx.lineWidth = 2 + strength * 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(dir * radius * 0.1, 0);
+    ctx.lineTo(dir * radius, 0);
+    ctx.stroke();
+    // Soft glow
+    ctx.lineWidth = (2 + strength * 4) * 3;
+    ctx.globalAlpha = 0.12;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = hexToRgba('#ffffff', 0.4 + strength * 0.2);
+  fillCircle(ctx, 0, 0, 2 + strength * 4);
+  ctx.restore();
+}
+
+// Per-entity quasar jets — wiggly, animated
 function drawQuasarJets(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -202,25 +246,40 @@ function drawQuasarJets(
   now: number,
   strength: number,
 ): void {
-  const angle = now * 0.00011 + strength * 0.7;
+  const baseAngle = now * 0.0004 + strength * 0.7;
+  const wobble = Math.sin(now * 0.001) * 0.35 + Math.sin(now * 0.0017) * 0.2;
+  const angle = baseAngle + wobble;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
   ctx.globalCompositeOperation = 'lighter';
+  const segments = 14;
   for (const dir of [-1, 1]) {
+    const widthBase = 1.2 + strength * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(dir * radius * 0.1, 0);
+    for (let s = 1; s <= segments; s++) {
+      const t = s / segments;
+      const xPos = dir * radius * (0.1 + t * 0.9);
+      const wiggle = Math.sin(now * 0.003 + t * 9 + dir * 3) * radius * 0.06 * t;
+      ctx.lineTo(xPos, wiggle);
+    }
     const beam = ctx.createLinearGradient(0, 0, dir * radius, 0);
-    beam.addColorStop(0, hexToRgba('#ffffff', 0.15 + strength * 0.2));
-    beam.addColorStop(0.35, hexToRgba(color, 0.12 + strength * 0.16));
+    beam.addColorStop(0, hexToRgba('#ffffff', 0.1 + strength * 0.12));
+    beam.addColorStop(0.2, hexToRgba(color, 0.08 + strength * 0.1));
+    beam.addColorStop(0.6, hexToRgba(color, 0.03 + strength * 0.04));
     beam.addColorStop(1, hexToRgba(color, 0));
     ctx.strokeStyle = beam;
-    ctx.lineWidth = 2 + strength * 5;
-    ctx.beginPath();
-    ctx.moveTo(dir * radius * 0.12, 0);
-    ctx.lineTo(dir * radius, Math.sin(now * 0.003) * radius * 0.03);
+    ctx.lineWidth = widthBase;
+    ctx.lineCap = 'round';
     ctx.stroke();
+    ctx.lineWidth = widthBase * 2.5;
+    ctx.globalAlpha = 0.1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = hexToRgba('#ffffff', 0.45 + strength * 0.25);
-  fillCircle(ctx, 0, 0, 2 + strength * 4);
+  ctx.fillStyle = hexToRgba('#ffffff', 0.3 + strength * 0.15);
+  fillCircle(ctx, 0, 0, 1.5 + strength * 2.5);
   ctx.restore();
 }
 
@@ -984,7 +1043,7 @@ function drawGlobalEntityFields(
       drawCosmicWebField(ctx, cx, cy, radius * 1.1, col, now, strength, idLen);
     }
     if (textHas(text, 'quasar', 'active galactic nucleus', 'agn')) {
-      drawQuasarJets(ctx, cx, cy, radius * 1.2, col, now, strength);
+      drawQuasarJetsGlobal(ctx, cx, cy, radius * 1.2, col, now, strength);
     }
     // ── Stage 10: Solar system — disk + water ripples
     if (textHas(text, 'planet', 'moon', 'comet', 'asteroid', 'disk', 'core', 'zone', 'habitable', 'goldilocks')) {
@@ -2168,141 +2227,160 @@ export function drawEntities(
     return;
   }
 
-  const positions: EntityPosition[] = items.map((item) => {
+  // ── N-body physics simulation for entity particles ──────────────────────
+  // Persistent velocity state across frames
+  interface EntityBody { x: number; y: number; vx: number; vy: number; lastSeen: number }
+  const bodyCache = _getEntityBodyCache();
+
+  interface StageDynamics { gravity: number; repulsion: number; centerPull: number; dampening: number; maxSpeed: number }
+  const STAGE_DYNAMICS: Record<number, StageDynamics> = {
+    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 0.0015, dampening: 1.0, maxSpeed: 5.0 },
+    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 0.0012, dampening: 1.0, maxSpeed: 4.5 },
+    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 4.0 },
+    4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.8 },
+    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.5 },
+    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 1.0, maxSpeed: 3.0 },
+    7:  { gravity: 0.9, repulsion: 3.2, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.8 },
+    8:  { gravity: 1.0, repulsion: 3.5, centerPull: 0.001, dampening: 1.0, maxSpeed: 4.0 },
+    9:  { gravity: 1.1, repulsion: 3.0, centerPull: 0.0012, dampening: 1.0, maxSpeed: 4.5 },
+    10: { gravity: 0.7, repulsion: 2.8, centerPull: 0.0009, dampening: 1.0, maxSpeed: 3.2 },
+    11: { gravity: 0.5, repulsion: 2.0, centerPull: 0.0006, dampening: 1.0, maxSpeed: 2.5 },
+    12: { gravity: 1.3, repulsion: 4.0, centerPull: 0.0014, dampening: 1.0, maxSpeed: 4.5 },
+    13: { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.5 },
+    14: { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 1.0, maxSpeed: 3.0 },
+    15: { gravity: 1.5, repulsion: 4.5, centerPull: 0.0018, dampening: 1.0, maxSpeed: 5.5 },
+    16: { gravity: 0.3, repulsion: 1.5, centerPull: 0.0004, dampening: 1.0, maxSpeed: 2.0 },
+  };
+  const dyn = STAGE_DYNAMICS[stageId] ?? { gravity: 0.8, repulsion: 3.0, centerPull: 0.008, dampening: 0.97, maxSpeed: 1.5 };
+  const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
+  const EFFECT_PERSONALITY: Record<string, { gravityMult: number; repulsionMult: number; speedMult: number }> = {
+    auto:       { gravityMult: 1.0, repulsionMult: 0.8, speedMult: 1.0 },
+    click:      { gravityMult: 0.7, repulsionMult: 1.4, speedMult: 1.3 },
+    crit:       { gravityMult: 0.5, repulsionMult: 1.8, speedMult: 1.6 },
+    time:       { gravityMult: 1.5, repulsionMult: 0.6, speedMult: 0.7 },
+    multiplier: { gravityMult: 2.0, repulsionMult: 0.4, speedMult: 0.5 },
+  };
+
+  // Init or retrieve body state for each entity
+  const bodies: { pos: EntityPosition; body: EntityBody; mass: number; pers: typeof EFFECT_PERSONALITY.auto }[] = [];
+  for (const item of items) {
+    const key = `${stageId}:${item.id}:${item.copyIndex}`;
+    let body = bodyCache.get(key);
+    if (!body) {
+      const phase = unit(item.seed, 1) * Math.PI * 2;
+      const r = 80 + unit(item.seed, 3) * 120;
+      const tangentSpeed = 1.5 + unit(item.seed, 5) * 1.5;
+      body = {
+        x: cx + Math.cos(phase) * r,
+        y: cy + Math.sin(phase) * r,
+        vx: -Math.sin(phase) * tangentSpeed,
+        vy: Math.cos(phase) * tangentSpeed,
+        lastSeen: now,
+      };
+      bodyCache.set(key, body);
+    }
+    body.lastSeen = now;
     const iconSize = ICON_SIZE[item.rarity];
     const glowR = GLOW_RADIUS[item.rarity];
-    const isLegend = item.rarity === 'legendary';
-    const phase = unit(item.seed, 1) * Math.PI * 2;
-    const directionCycle = Math.sin(now * 0.00008 + phase * 2.7 + unit(item.seed, 2) * Math.PI * 2);
-    const direction = directionCycle > 0 ? 1 : -1;
-    const stableIndex = (item.seed >>> 0) % 1000;
-    const ageSpread = Math.sqrt(stableIndex + 1) * 11;
-    const formationBreath = Math.sin(now * 0.00032 + phase) * (8 + unit(item.seed, 3) * 16);
-    const localWander = 7 + unit(item.seed, 4) * (isLegend ? 24 : 15);
-    const radius = Math.min(
-      150,
-      38 + ageSpread * 0.7 + rarityRadiusOffset(item.rarity) + formationBreath + item.copyIndex * 1.7,
-    );
-    const angle =
-      stableIndex * GOLDEN_ANGLE +
-      phase * 0.18 +
-      now * raritySpeed(item.rarity) * direction +
-      Math.sin(now * 0.00021 + phase) * 0.36 +
-      directionCycle * 0.4;
-    const epicycleAngle = now * (0.00055 + unit(item.seed, 5) * 0.00065) + phase;
-    const braidAngle = angle * (1.6 + unit(item.seed, 6) * 0.9) + now * 0.00018 * direction;
-    const x =
-      cx +
-      Math.cos(angle) * radius +
-      Math.cos(epicycleAngle) * localWander +
-      Math.cos(braidAngle) * (4 + unit(item.seed, 7) * 10);
-    const y =
-      cy +
-      Math.sin(angle) * (radius * (0.82 + unit(item.seed, 8) * 0.22)) +
-      Math.sin(epicycleAngle * 1.13) * localWander +
-      Math.sin(braidAngle) * (5 + unit(item.seed, 9) * 9);
-    const pulse = isLegend
-      ? 1 + Math.sin(now * 0.0016 + phase) * 0.2
-      : 1 + Math.sin(now * 0.0011 + phase) * 0.06;
-
-    return {
-      item,
-      x,
-      y,
-      size: iconSize * pulse,
-      glowRadius: glowR * pulse,
-    };
-  });
-
-  // Per-stage entity physics: gravity, repulsion, center pull, max displacement
-  interface StageDynamics { gravity: number; repulsion: number; centerPull: number; maxDisplace: number }
-  const STAGE_DYNAMICS: Record<number, StageDynamics> = {
-    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 2.8, maxDisplace: 8 },  // inflation — chaotic
-    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 2.5, maxDisplace: 7 },  // baryogenesis
-    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 2.2, maxDisplace: 6 },  // QGP
-    4:  { gravity: 0.9, repulsion: 3.5, centerPull: 2.0, maxDisplace: 6 },  // nucleosynthesis
-    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 1.8, maxDisplace: 5 },  // recombination
-    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 1.5, maxDisplace: 5 },  // dark age — calm
-    7:  { gravity: 0.9, repulsion: 3.2, centerPull: 1.8, maxDisplace: 6 },  // first stars
-    8:  { gravity: 1.0, repulsion: 3.5, centerPull: 2.0, maxDisplace: 6 },  // reionization
-    9:  { gravity: 1.1, repulsion: 3.0, centerPull: 2.2, maxDisplace: 7 },  // galaxy — swirling
-    10: { gravity: 0.7, repulsion: 2.8, centerPull: 1.6, maxDisplace: 5 },  // planetary — gentle orbits
-    11: { gravity: 0.5, repulsion: 2.0, centerPull: 1.2, maxDisplace: 4 },  // life — delicate
-    12: { gravity: 1.3, repulsion: 4.0, centerPull: 2.4, maxDisplace: 7 },  // red giant — expanding
-    13: { gravity: 0.8, repulsion: 3.0, centerPull: 1.8, maxDisplace: 5 },  // remnant
-    14: { gravity: 0.6, repulsion: 2.5, centerPull: 1.5, maxDisplace: 4 },  // degenerate — slow
-    15: { gravity: 1.5, repulsion: 4.5, centerPull: 3.0, maxDisplace: 8 },  // black hole — intense
-    16: { gravity: 0.3, repulsion: 1.5, centerPull: 0.8, maxDisplace: 3 },  // heat death — drifting
-  };
-  const dyn = STAGE_DYNAMICS[stageId] ?? { gravity: 0.8, repulsion: 3.0, centerPull: 1.5, maxDisplace: 5 };
-  const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
-  // Per-effectType personality: how each item type interacts
-  // gravityMult: how strongly it attracts others (auto=steady, click=punchy, crit=volatile, time=heavy, multiplier=massive)
-  // repulsionMult: how strongly it pushes others away
-  // speedMult: how much it gets displaced
-  const EFFECT_PERSONALITY: Record<string, { gravityMult: number; repulsionMult: number; speedMult: number }> = {
-    auto:       { gravityMult: 1.0, repulsionMult: 0.8, speedMult: 1.0 },  // steady orbiter
-    click:      { gravityMult: 0.7, repulsionMult: 1.4, speedMult: 1.3 },  // bouncy, energetic
-    crit:       { gravityMult: 0.5, repulsionMult: 1.8, speedMult: 1.6 },  // volatile, flies around
-    time:       { gravityMult: 1.5, repulsionMult: 0.6, speedMult: 0.7 },  // heavy, slow, pulls others in
-    multiplier: { gravityMult: 2.0, repulsionMult: 0.4, speedMult: 0.5 },  // massive anchor, barely moves
-  };
-  {
-    for (let i = 0; i < positions.length; i++) {
-      const a = positions[i];
-      const massA = RARITY_MASS[a.item.rarity] ?? 1;
-      const persA = EFFECT_PERSONALITY[a.item.effectType] ?? EFFECT_PERSONALITY.auto;
-      for (let j = i + 1; j < positions.length; j++) {
-        const b = positions[j];
-        const massB = RARITY_MASS[b.item.rarity] ?? 1;
-        const persB = EFFECT_PERSONALITY[b.item.effectType] ?? EFFECT_PERSONALITY.auto;
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const d = Math.max(4, Math.hypot(dx, dy));
-        const nx = dx / d;
-        const ny = dy / d;
-        // Repulsion — per-item strength, weaker near center
-        const minDist = a.size + b.size + 16;
-        if (d < minDist) {
-          const distAC = Math.hypot(a.x - cx, a.y - cy);
-          const distBC = Math.hypot(b.x - cx, b.y - cy);
-          const centerFade = Math.min(1, Math.min(distAC, distBC) / 60);
-          const repAvg = (persA.repulsionMult + persB.repulsionMult) * 0.5;
-          const push = ((minDist - d) / minDist) * dyn.repulsion * repAvg * centerFade;
-          a.x -= nx * push * persA.speedMult / massA;
-          a.y -= ny * push * persA.speedMult / massA;
-          b.x += nx * push * persB.speedMult / massB;
-          b.y += ny * push * persB.speedMult / massB;
-        }
-        // Gravity — per-item strength
-        const combinedMass = (massA + massB) * 0.5;
-        const gravAvg = (persA.gravityMult + persB.gravityMult) * 0.5;
-        const pull = dyn.gravity * gravAvg * combinedMass / (d * 0.12 + 1);
-        a.x += nx * pull * persA.speedMult / massA;
-        a.y += ny * pull * persA.speedMult / massA;
-        b.x -= nx * pull * persB.speedMult / massB;
-        b.y -= ny * pull * persB.speedMult / massB;
-      }
-      // Center pull
-      const toCenterX = cx - a.x;
-      const toCenterY = cy - a.y;
-      const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
-      const pull = dyn.centerPull + centerDist * 0.02;
-      a.x += (toCenterX / centerDist) * pull * persA.speedMult;
-      a.y += (toCenterY / centerDist) * pull * persA.speedMult;
-    }
+    const pulse = item.rarity === 'legendary'
+      ? 1 + Math.sin(now * 0.0016 + unit(item.seed, 1)) * 0.2
+      : 1 + Math.sin(now * 0.0011 + unit(item.seed, 1)) * 0.06;
+    const pos: EntityPosition = { item, x: body.x, y: body.y, size: iconSize * pulse, glowRadius: glowR * pulse };
+    bodies.push({ pos, body, mass: RARITY_MASS[item.rarity] ?? 1, pers: EFFECT_PERSONALITY[item.effectType] ?? EFFECT_PERSONALITY.auto });
   }
+
+  // Physics step
+  for (let i = 0; i < bodies.length; i++) {
+    const a = bodies[i];
+    for (let j = i + 1; j < bodies.length; j++) {
+      const b = bodies[j];
+      const dx = b.body.x - a.body.x;
+      const dy = b.body.y - a.body.y;
+      const d = Math.max(4, Math.hypot(dx, dy));
+      const nx = dx / d;
+      const ny = dy / d;
+
+      // Gravity pull between entities
+      const gravAvg = (a.pers.gravityMult + b.pers.gravityMult) * 0.5;
+      const gForce = dyn.gravity * gravAvg * (a.mass + b.mass) * 0.5 / (d * d + 400);
+      a.body.vx += nx * gForce * a.pers.speedMult / a.mass;
+      a.body.vy += ny * gForce * a.pers.speedMult / a.mass;
+      b.body.vx -= nx * gForce * b.pers.speedMult / b.mass;
+      b.body.vy -= ny * gForce * b.pers.speedMult / b.mass;
+
+      // Repulsion when close
+      const minDist = a.pos.size + b.pos.size + 18;
+      if (d < minDist) {
+        const distAC = Math.hypot(a.body.x - cx, a.body.y - cy);
+        const distBC = Math.hypot(b.body.x - cx, b.body.y - cy);
+        const centerFade = Math.min(1, Math.min(distAC, distBC) / 50);
+        const repAvg = (a.pers.repulsionMult + b.pers.repulsionMult) * 0.5;
+        const push = ((minDist - d) / minDist) * dyn.repulsion * repAvg * 0.08 * centerFade;
+        a.body.vx -= nx * push * a.pers.speedMult / a.mass;
+        a.body.vy -= ny * push * a.pers.speedMult / a.mass;
+        b.body.vx += nx * push * b.pers.speedMult / b.mass;
+        b.body.vy += ny * push * b.pers.speedMult / b.mass;
+      }
+    }
+
+    // Center gravity + center repulsion (push away if too close)
+    const toCx = cx - a.body.x;
+    const toCy = cy - a.body.y;
+    const cDist = Math.hypot(toCx, toCy) + 1;
+    const ncx = toCx / cDist;
+    const ncy = toCy / cDist;
+    // Pull toward center (gentle, scales with distance)
+    a.body.vx += ncx * dyn.centerPull * cDist * 0.3 * a.pers.speedMult;
+    a.body.vy += ncy * dyn.centerPull * cDist * 0.3 * a.pers.speedMult;
+    // Push away from center if too close (keeps entities from collapsing)
+    const minCenterDist = 55;
+    if (cDist < minCenterDist) {
+      const centerPush = ((minCenterDist - cDist) / minCenterDist) * 0.6;
+      a.body.vx -= ncx * centerPush;
+      a.body.vy -= ncy * centerPush;
+    }
+
+    // Dampening
+    a.body.vx *= dyn.dampening;
+    a.body.vy *= dyn.dampening;
+
+    // Speed cap
+    const speed = Math.hypot(a.body.vx, a.body.vy);
+    const maxSpd = dyn.maxSpeed * a.pers.speedMult;
+    if (speed > maxSpd) {
+      a.body.vx = (a.body.vx / speed) * maxSpd;
+      a.body.vy = (a.body.vy / speed) * maxSpd;
+    }
+
+    // Integrate position
+    a.body.x += a.body.vx;
+    a.body.y += a.body.vy;
+    a.pos.x = a.body.x;
+    a.pos.y = a.body.y;
+  }
+
+  // Prune stale entries (entities sold/removed)
+  for (const [key, body] of bodyCache) {
+    if (now - body.lastSeen > 2000) bodyCache.delete(key);
+  }
+
+  const positions = bodies.map((b) => b.pos);
 
   ctx.save();
   drawGlobalEntityFields(ctx, cx, cy, activeEntities, now);
 
-  ctx.lineWidth = 0.7;
+  ctx.lineWidth = 0.8;
   for (let index = 1; index < positions.length; index += 1) {
     const current = positions[index];
     const previous = positions[index - 1];
     const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
     if (distance > 170) continue;
-    ctx.strokeStyle = hexToRgba(current.item.glowColor, Math.max(0.035, 0.13 - distance / 1800));
+    const alpha = Math.max(0.04, 0.15 - distance / 1400);
+    const grad = ctx.createLinearGradient(previous.x, previous.y, current.x, current.y);
+    grad.addColorStop(0, hexToRgba(previous.item.glowColor, alpha));
+    grad.addColorStop(0.5, hexToRgba(current.item.glowColor, alpha * 0.3));
+    grad.addColorStop(1, hexToRgba(current.item.glowColor, alpha));
+    ctx.strokeStyle = grad;
     ctx.beginPath();
     ctx.moveTo(previous.x, previous.y);
     const midX = (previous.x + current.x) / 2 + Math.sin(now * 0.0004 + current.item.seed) * 8;
