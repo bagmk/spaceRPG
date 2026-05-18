@@ -2159,6 +2159,42 @@ export function drawEntities(
     };
   });
 
+  // Stage 1: apply push-pull between entity particles
+  if (stageId <= 2) {
+    for (let i = 0; i < positions.length; i++) {
+      const a = positions[i];
+      for (let j = i + 1; j < positions.length; j++) {
+        const b = positions[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.max(4, Math.hypot(dx, dy));
+        const nx = dx / d;
+        const ny = dy / d;
+        // Repulsion when close
+        const minDist = a.size + b.size + 12;
+        if (d < minDist) {
+          const push = ((minDist - d) / minDist) * 3.5;
+          a.x -= nx * push;
+          a.y -= ny * push;
+          b.x += nx * push;
+          b.y += ny * push;
+        }
+        // Gentle gravity pull between entities
+        const pull = 0.8 / (d * 0.15 + 1);
+        a.x += nx * pull;
+        a.y += ny * pull;
+        b.x -= nx * pull;
+        b.y -= ny * pull;
+      }
+      // Pull toward center
+      const toCenterX = cx - a.x;
+      const toCenterY = cy - a.y;
+      const centerDist = Math.hypot(toCenterX, toCenterY) + 1;
+      a.x += (toCenterX / centerDist) * 1.2;
+      a.y += (toCenterY / centerDist) * 1.2;
+    }
+  }
+
   ctx.save();
   drawGlobalEntityFields(ctx, cx, cy, activeEntities, now);
 
