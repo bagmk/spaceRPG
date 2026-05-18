@@ -161,7 +161,7 @@ function AppInner() {
 
       {route === 'intro' ? (
         <IntroScreen
-          canResume={resumeAvailable}
+          canResume={resumeAvailable && (state.totalClicks > 0 || state.stageIdx > 0)}
           canOpenAtlas={state.universeAtlas.length > 0}
           language={language}
           onResume={() => {

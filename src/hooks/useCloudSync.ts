@@ -38,15 +38,16 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
       const remote = await pullRemoteSave(user.uid);
       if (!remote) return; // No remote save — local is the source of truth
 
-      // Last-write-wins: compare lastSaveAt
-      const localSaveAt = stateRef.current.lastSaveAt ?? 0;
+      const local = stateRef.current;
+      const localIsEmpty = local.totalClicks === 0 && local.stageIdx === 0;
+      const localSaveAt = local.lastSaveAt ?? 0;
       const remoteSaveAt = remote.lastSaveAt ?? 0;
 
-      if (remoteSaveAt > localSaveAt) {
-        // Remote is newer — hydrate from remote
+      if (localIsEmpty || remoteSaveAt > localSaveAt) {
+        // Remote is newer or local is fresh/empty — hydrate from remote
         dispatch({ type: 'HYDRATE', payload: remote, now: Date.now() });
       }
-      // Otherwise local is newer or same — keep local, it'll push on next save
+      // Otherwise local is newer — keep local, it'll push on next save
     })();
   }, [status, user, dispatch]);
 
@@ -77,14 +78,14 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
   // Push leaderboard entry when peakEntropy changes (throttled to once per minute)
   const lastPushedPeak = useRef(0);
   const leaderboardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingLeaderboard = useRef<{ uid: string; peak: number; profile: typeof profile; time: number } | null>(null);
+  const pendingLeaderboard = useRef<{ uid: string; peak: number; profile: typeof profile; time: number; clicks: number; universes: number } | null>(null);
 
   useEffect(() => {
     if (!user || user.isAnonymous) return;
     if (status !== 'authed') return;
     if (state.peakEntropy <= lastPushedPeak.current) return;
 
-    pendingLeaderboard.current = { uid: user.uid, peak: state.peakEntropy, profile, time: state.totalTimePlayed };
+    pendingLeaderboard.current = { uid: user.uid, peak: state.peakEntropy, profile, time: state.totalTimePlayed, clicks: state.totalClicks, universes: state.universeCount };
     if (leaderboardTimer.current) return; // already scheduled
 
     leaderboardTimer.current = setTimeout(() => {
@@ -92,7 +93,7 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
       const pending = pendingLeaderboard.current;
       if (pending && pending.peak > lastPushedPeak.current) {
         lastPushedPeak.current = pending.peak;
-        pushLeaderboardEntry(pending.uid, pending.peak, pending.profile, pending.time);
+        pushLeaderboardEntry(pending.uid, { peakEntropy: pending.peak, totalTimePlayed: pending.time, totalClicks: pending.clicks, universeCount: pending.universes }, pending.profile);
       }
       pendingLeaderboard.current = null;
     }, 60_000);

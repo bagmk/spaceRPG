@@ -1,5 +1,5 @@
 /**
- * Leaderboard — peakEntropy ranking.
+ * Leaderboard — multi-category ranking.
  * Only authenticated users with displayName are eligible.
  */
 
@@ -25,8 +25,12 @@ export interface LeaderboardEntry {
   displayName: string;
   peakEntropy: number;
   totalTimePlayed?: number;
+  totalClicks?: number;
+  universeCount?: number;
   updatedAt?: any;
 }
+
+export type LeaderboardTab = 'entropy' | 'time' | 'clicks' | 'multiverse';
 
 // ---------------------------------------------------------------------------
 // Push
@@ -34,24 +38,34 @@ export interface LeaderboardEntry {
 
 export async function pushLeaderboardEntry(
   uid: string,
-  peakEntropy: number,
+  stats: {
+    peakEntropy: number;
+    totalTimePlayed?: number;
+    totalClicks?: number;
+    universeCount?: number;
+  },
   profile: UserProfile | null,
-  totalTimePlayed?: number,
 ): Promise<void> {
   if (!db) return;
   if (!profile?.displayName) return;
-  if (!Number.isFinite(peakEntropy) || peakEntropy <= 0) return;
+  if (!Number.isFinite(stats.peakEntropy) || stats.peakEntropy <= 0) return;
 
   try {
     const ref = doc(db, 'leaderboard', uid);
     const data: Record<string, unknown> = {
       uid,
       displayName: profile.displayName,
-      peakEntropy,
+      peakEntropy: stats.peakEntropy,
       updatedAt: serverTimestamp(),
     };
-    if (totalTimePlayed != null && Number.isFinite(totalTimePlayed)) {
-      data.totalTimePlayed = totalTimePlayed;
+    if (stats.totalTimePlayed != null && Number.isFinite(stats.totalTimePlayed)) {
+      data.totalTimePlayed = stats.totalTimePlayed;
+    }
+    if (stats.totalClicks != null && Number.isFinite(stats.totalClicks)) {
+      data.totalClicks = stats.totalClicks;
+    }
+    if (stats.universeCount != null && Number.isFinite(stats.universeCount)) {
+      data.universeCount = stats.universeCount;
     }
     await setDoc(ref, data, { merge: true });
   } catch (e) {
@@ -63,16 +77,29 @@ export async function pushLeaderboardEntry(
 // Fetch
 // ---------------------------------------------------------------------------
 
-export async function fetchTopN(n: number = 100): Promise<LeaderboardEntry[]> {
+const TAB_SORT_FIELD: Record<LeaderboardTab, string> = {
+  entropy: 'peakEntropy',
+  time: 'totalTimePlayed',
+  clicks: 'totalClicks',
+  multiverse: 'universeCount',
+};
+
+export async function fetchTopN(n: number = 100, tab: LeaderboardTab = 'entropy'): Promise<LeaderboardEntry[]> {
   if (!db) return [];
   try {
+    const field = TAB_SORT_FIELD[tab];
     const q = query(
       collection(db, 'leaderboard'),
-      orderBy('peakEntropy', 'desc'),
+      orderBy(field, 'desc'),
       limit(n),
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => d.data() as LeaderboardEntry);
+    return snap.docs
+      .map((d) => d.data() as LeaderboardEntry)
+      .filter((e) => {
+        const val = (e as any)[field];
+        return val != null && val > 0;
+      });
   } catch (e) {
     console.error('[leaderboard] fetchTopN failed:', e);
     return [];

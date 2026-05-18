@@ -246,11 +246,27 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
           </div>
         </div>
 
-        {/* Cleared stage banner */}
+        {/* Cleared stage banner + back button */}
         {selectedStage && selectedStage.id < currentStageId && (
           <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
             <span className="entity-panel__cleared-paw">✓</span>
             <span>{`${t(language, 'entityLabStageLabel')} ${selectedStage.id} ${t(language, 'entityLabStageCleared')}`}</span>
+            <button
+              type="button"
+              className="entity-panel__back-btn"
+              onClick={() => { setSelectedStageId(currentStageId); onStageSelect?.(currentStageId); }}
+            >
+              {language === 'ko' ? `단계 ${currentStageId}로 ▶` : `Stage ${currentStageId} ▶`}
+            </button>
+          </div>
+        )}
+
+        {/* Hint: past stages are upgradeable */}
+        {currentStageId >= 3 && selectedStageId === currentStageId && (
+          <div className="entity-panel__hint">
+            {language === 'ko'
+              ? '💡 이전 스테이지의 엔티티도 업그레이드할 수 있습니다!'
+              : '💡 You can still upgrade entities from previous stages!'}
           </div>
         )}
 

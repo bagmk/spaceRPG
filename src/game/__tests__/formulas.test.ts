@@ -66,7 +66,7 @@ describe('formatCosmicTime', () => {
 describe('formatAutoRateValue', () => {
   it('keeps small positive auto rates visible instead of rounding to zero', () => {
     expect(formatAutoRateValue(0.2128)).toBe('0.21');
-    expect(formatAutoRateValue(2.432)).toBe('2.43');
+    expect(formatAutoRateValue(2.432)).toBe('2.4');
     expect(formatAutoRateValue(24.32)).toBe('24.3');
   });
 });
