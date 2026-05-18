@@ -174,10 +174,17 @@ export function useGameState(): UseGameStateResult {
       persist();
     }, TUNING.AUTOSAVE_INTERVAL_MS);
 
+    let hiddenAt: number | null = null;
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
         persist();
       } else if (document.visibilityState === 'visible') {
+        if (hiddenAt !== null) {
+          // Give active boosts back the time spent backgrounded.
+          dispatch({ type: 'RESUME_BOOSTS', hiddenMs: Date.now() - hiddenAt });
+          hiddenAt = null;
+        }
         // AudioContext may have been suspended by the OS while backgrounded.
         // App owns the SoundManager — emit an event to signal resume.
         window.dispatchEvent(new CustomEvent('cc-visibility-resumed'));

@@ -1,12 +1,13 @@
-/** Handlers: COMPLETE_SHOP_PURCHASE, CLAIM_AD_REWARD */
+/** Handlers: COMPLETE_SHOP_PURCHASE, CLAIM_AD_REWARD, RESUME_BOOSTS */
 
-import { applyTimedShopBoost, isCashShopUnlocked } from '../shop/boosts';
+import { applyTimedShopBoost, isCashShopUnlocked, shiftBoostExpiry } from '../shop/boosts';
 import { findPaidShopProduct, findRewardedAdProduct } from '../shop/items';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 
 type CompleteShopPurchaseAction = Extract<GameAction, { type: 'COMPLETE_SHOP_PURCHASE' }>;
 type ClaimAdRewardAction = Extract<GameAction, { type: 'CLAIM_AD_REWARD' }>;
+type ResumeBoostsAction = Extract<GameAction, { type: 'RESUME_BOOSTS' }>;
 
 export function handleCompleteShopPurchase(
   state: GameState,
@@ -57,4 +58,13 @@ export function handleClaimAdReward(state: GameState, action: ClaimAdRewardActio
     },
     action.now,
   );
+}
+
+/**
+ * Returning from the background: push boost expiry forward by the time spent
+ * hidden so backgrounded time does not drain active boosts.
+ */
+export function handleResumeBoosts(state: GameState, action: ResumeBoostsAction): GameState {
+  if (action.hiddenMs <= 0 || state.shopBoosts.length === 0) return state;
+  return { ...state, shopBoosts: shiftBoostExpiry(state.shopBoosts, action.hiddenMs) };
 }

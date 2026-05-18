@@ -37,7 +37,7 @@ import {
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
 import { handlePurchaseEntity } from './reducers/entities';
-import { handleClaimAdReward, handleCompleteShopPurchase } from './reducers/shop';
+import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
   handleAdminPrevStage,
@@ -116,6 +116,7 @@ export type GameAction =
   | { type: 'BUY_CROSS_NODE'; nodeId: string }
   | { type: 'COMPLETE_SHOP_PURCHASE'; itemId: string; now: number }
   | { type: 'CLAIM_AD_REWARD'; rewardId: string; now: number }
+  | { type: 'RESUME_BOOSTS'; hiddenMs: number }
   | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
@@ -202,6 +203,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'BUY_CROSS_NODE':        return handleBuyCrossNode(state, action);
     case 'COMPLETE_SHOP_PURCHASE': return handleCompleteShopPurchase(state, action);
     case 'CLAIM_AD_REWARD':       return handleClaimAdReward(state, action);
+    case 'RESUME_BOOSTS':         return handleResumeBoosts(state, action);
     case 'ADMIN_NEXT_STAGE':      return handleAdminNextStage(state, action);
     case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
     case 'ADMIN_SET_PROGRESS':    return handleAdminSetProgress(state, action);

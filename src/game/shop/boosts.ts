@@ -36,6 +36,17 @@ export function pruneExpiredShopBoosts(boosts: ShopBoost[] | undefined, now: num
     .filter((boost) => boost.expiresAt > now);
 }
 
+/**
+ * Shift every boost's wall-clock expiry forward by deltaMs. Called when the
+ * game returns from the background so time spent backgrounded does not drain
+ * active boosts — they effectively count down only while the game is visible.
+ */
+export function shiftBoostExpiry(boosts: ShopBoost[] | undefined, deltaMs: number): ShopBoost[] {
+  const list = (boosts ?? []).map(normalizeShopBoost);
+  if (deltaMs <= 0) return list;
+  return list.map((boost) => ({ ...boost, expiresAt: boost.expiresAt + deltaMs }));
+}
+
 export function applyTimedShopBoost(
   state: GameState,
   boost: {

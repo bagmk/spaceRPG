@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getActiveShopBoostMultiplier, getOfflineRewardCapSec } from '../shop/boosts';
+import { getActiveShopBoostMultiplier, getOfflineRewardCapSec, shiftBoostExpiry } from '../shop/boosts';
 import { createInitialGameState, gameReducer } from '../reducer';
 
 describe('cash shop boosts', () => {
@@ -108,5 +108,28 @@ describe('cash shop boosts', () => {
     expect(getOfflineRewardCapSec(false)).toBe(60 * 60);
     expect(getOfflineRewardCapSec(first.hasOfflineStorageUpgrade)).toBe(8 * 60 * 60);
     expect(second.totalShopSpentUSD).toBe(2.99);
+  });
+});
+
+describe('boost background pause (active-time)', () => {
+  it('shiftBoostExpiry preserves remaining boost time across a background gap', () => {
+    const now = 1_000_000;
+    const boosts = [{ id: 'time_2x', category: 'time' as const, factor: 2, expiresAt: now + 30_000 }];
+    // 60s spent backgrounded — expiry is pushed forward by the same amount.
+    const resumed = shiftBoostExpiry(boosts, 60_000);
+    expect(getActiveShopBoostMultiplier(resumed, 'time', now + 60_000)).toBe(2);
+    expect(getActiveShopBoostMultiplier(resumed, 'time', now + 90_001)).toBe(1);
+  });
+
+  it('RESUME_BOOSTS shifts active boosts by the hidden duration', () => {
+    const stageThree = { ...createInitialGameState(0), stageIdx: 2 };
+    const withBoost = gameReducer(stageThree, {
+      type: 'COMPLETE_SHOP_PURCHASE',
+      itemId: 'temporal_drive',
+      now: 10_000,
+    });
+    const expiryBefore = withBoost.shopBoosts[0].expiresAt;
+    const resumed = gameReducer(withBoost, { type: 'RESUME_BOOSTS', hiddenMs: 45_000 });
+    expect(resumed.shopBoosts[0].expiresAt).toBe(expiryBefore + 45_000);
   });
 });
