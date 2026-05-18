@@ -2226,10 +2226,14 @@ export function drawEntities(
         const d = Math.max(4, Math.hypot(dx, dy));
         const nx = dx / d;
         const ny = dy / d;
-        // Repulsion when close (heavier = harder to push)
-        const minDist = a.size + b.size + 8;
+        // Repulsion between entities (stronger), but weaker near center
+        const minDist = a.size + b.size + 16;
         if (d < minDist) {
-          const pushBase = ((minDist - d) / minDist) * 2.5;
+          const distAFromCenter = Math.hypot(a.x - cx, a.y - cy);
+          const distBFromCenter = Math.hypot(b.x - cx, b.y - cy);
+          const nearCenter = Math.min(distAFromCenter, distBFromCenter);
+          const centerFade = Math.min(1, nearCenter / 60); // 0 at center, 1 far away
+          const pushBase = ((minDist - d) / minDist) * 5.0 * centerFade;
           a.x -= nx * pushBase / massA;
           a.y -= ny * pushBase / massA;
           b.x += nx * pushBase / massB;
