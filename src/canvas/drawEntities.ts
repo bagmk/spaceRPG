@@ -2227,9 +2227,9 @@ export function drawEntities(
         const nx = dx / d;
         const ny = dy / d;
         // Repulsion when close (heavier = harder to push)
-        const minDist = a.size + b.size + 16;
+        const minDist = a.size + b.size + 8;
         if (d < minDist) {
-          const pushBase = ((minDist - d) / minDist) * 5.5;
+          const pushBase = ((minDist - d) / minDist) * 2.5;
           a.x -= nx * pushBase / massA;
           a.y -= ny * pushBase / massA;
           b.x += nx * pushBase / massB;
