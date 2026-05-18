@@ -236,7 +236,9 @@ function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
     return 'field';
   }
   if (name.includes('antiquark') || name.includes('antimatter')) return 'antiparticle';
-  if (stageId <= 3 || name.includes('quantum') || name.includes('fluctuation')) return 'quantum';
+  if (name.includes('inflaton') || name.includes('surge')) return 'field';
+  if (name.includes('fluctuation') || name.includes('quantum')) return 'quantum';
+  if (stageId <= 3) return 'quantum';
 
   return 'particle';
 }

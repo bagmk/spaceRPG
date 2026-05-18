@@ -2039,7 +2039,28 @@ function drawEntityGlyph(
       ctx.stroke();
       fillCircle(ctx, 0, 0, size * 0.28);
       break;
-    case 'quantum':
+    case 'quantum': {
+      // Space dimple — concave grid-like distortion that breathes in and out
+      const dimple = 0.6 + Math.sin(spin * 1.8) * 0.35;
+      const r = size * 0.95;
+      // Outer ring
+      ctx.strokeStyle = hexToRgba(item.color, 0.5);
+      ctx.lineWidth = 0.8;
+      strokeCircle(ctx, 0, 0, r);
+      // Concentric dimple rings that contract/expand
+      for (let ring = 1; ring <= 3; ring++) {
+        const ringR = r * (ring / 4) * dimple;
+        ctx.strokeStyle = hexToRgba(item.color, 0.25 + ring * 0.08);
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ringR, ringR * (0.5 + dimple * 0.3), spin * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // Center glow
+      ctx.fillStyle = hexToRgba(item.color, 0.5 * pulse);
+      fillCircle(ctx, 0, 0, size * 0.18 * pulse);
+      break;
+    }
     case 'particle':
     default:
       strokeCircle(ctx, 0, 0, size * 0.9);
@@ -2159,32 +2180,36 @@ export function drawEntities(
     };
   });
 
-  // Stage 1: apply push-pull between entity particles
+  // Stage 1-2: apply push-pull between entity particles (strength varies by rarity)
+  const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
   if (stageId <= 2) {
     for (let i = 0; i < positions.length; i++) {
       const a = positions[i];
+      const massA = RARITY_MASS[a.item.rarity] ?? 1;
       for (let j = i + 1; j < positions.length; j++) {
         const b = positions[j];
+        const massB = RARITY_MASS[b.item.rarity] ?? 1;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const d = Math.max(4, Math.hypot(dx, dy));
         const nx = dx / d;
         const ny = dy / d;
-        // Repulsion when close
+        // Repulsion when close (heavier = harder to push)
         const minDist = a.size + b.size + 16;
         if (d < minDist) {
-          const push = ((minDist - d) / minDist) * 5.5;
-          a.x -= nx * push;
-          a.y -= ny * push;
-          b.x += nx * push;
-          b.y += ny * push;
+          const pushBase = ((minDist - d) / minDist) * 5.5;
+          a.x -= nx * pushBase / massA;
+          a.y -= ny * pushBase / massA;
+          b.x += nx * pushBase / massB;
+          b.y += ny * pushBase / massB;
         }
-        // Gentle gravity pull between entities
-        const pull = 1.4 / (d * 0.12 + 1);
-        a.x += nx * pull;
-        a.y += ny * pull;
-        b.x -= nx * pull;
-        b.y -= ny * pull;
+        // Gravity pull (scales with combined mass)
+        const combinedMass = (massA + massB) * 0.5;
+        const pull = 1.4 * combinedMass / (d * 0.12 + 1);
+        a.x += nx * pull / massA;
+        a.y += ny * pull / massA;
+        b.x -= nx * pull / massB;
+        b.y -= ny * pull / massB;
       }
       // Pull toward center
       const toCenterX = cx - a.x;
