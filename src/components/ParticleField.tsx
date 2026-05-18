@@ -651,14 +651,14 @@ function stepClusterPhysics(
       const dy = neighbor.y - mote.y;
       const d = Math.max(1, Math.hypot(dx, dy));
       const preferredDistance = mote.r + neighbor.r + TUNING.MOTE_REPULSION_DISTANCE;
-      const repulsionMult = isInflation ? 3.0 : 1.0;
+      const repulsionMult = isInflation ? 4.0 : 1.0;
       if (d < preferredDistance) {
         const pressure = ((preferredDistance - d) / preferredDistance) * TUNING.MOTE_REPULSION_STRENGTH * repulsionMult * dtScale;
         mote.vx -= (dx / d) * pressure;
         mote.vy -= (dy / d) * pressure;
       }
       const dSq = d * d + 25;
-      const peerGravityMult = isInflation ? 2.5 : 1.0;
+      const peerGravityMult = isInflation ? 3.5 : 1.0;
       const force = (TUNING.MOTE_PEER_GRAVITY * peerGravityMult * neighbor.mass * dtScale) / dSq;
       mote.vx += dx * force;
       mote.vy += dy * force;
@@ -714,11 +714,11 @@ function applyAnchorForce(
       // Stage 1: stronger pull toward center + orbital spin + bouncy repulsion
       const targetR = clusterRadius * Math.pow(mote.hue, 1.75) * 0.7;
       const radial = (dist - targetR) / Math.max(targetR, 16);
-      const gravity = TUNING.MOTE_ANCHOR_GRAVITY * 1.4;
+      const gravity = TUNING.MOTE_ANCHOR_GRAVITY * 1.6;
       mote.vx += nx * radial * gravity * dtScale;
       mote.vy += ny * radial * gravity * dtScale;
       // Orbital tangential force — swirl around center
-      const spin = 0.35 * (30 / (dist + 10));
+      const spin = 0.55 * (35 / (dist + 8));
       mote.vx += -ny * spin * dtScale;
       mote.vy += nx * spin * dtScale;
       break;
