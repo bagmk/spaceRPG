@@ -1,8 +1,8 @@
 /**
  * Cloud sync hook — syncs game state to Firestore for authenticated (non-anonymous) users.
  * - On auth: pull remote save, hydrate if newer (last-write-wins)
- * - On state change: debounced push to Firestore (5s)
- * - On page hide / unload: flush pending push
+ * - While active: push the latest state to Firestore every 30s
+ * - On page hide / unload: flush the latest state
  */
 
 import { useEffect, useRef } from 'react';
@@ -15,10 +15,18 @@ import type { GameAction } from '../game/reducer';
 import type { Dispatch } from 'react';
 
 const SAVE_VERSION = 12;
+const CLOUD_SAVE_INTERVAL_MS = 30_000;
 
 interface UseCloudSyncOptions {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+}
+
+function toCloudSave(state: GameState): ReturnType<typeof toPersistentState> {
+  return {
+    ...toPersistentState(state),
+    lastSaveAt: Date.now(),
+  };
 }
 
 export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
@@ -56,7 +64,7 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     if (!user || user.isAnonymous) return;
     if (status !== 'authed') return;
 
-    const persistent = toPersistentState(state);
+    const persistent = toCloudSave(state);
     debouncedPush(user.uid, persistent, SAVE_VERSION);
   }, [
     user,
@@ -75,7 +83,21 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     state.peakEntropy,
   ]);
 
-  // Push leaderboard entry on milestone changes (throttled to once per minute)
+  // Periodic cloud save for high-frequency progress such as matter/time/clicks.
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+    if (status !== 'authed') return;
+
+    const pushCurrentState = () => {
+      debouncedPush(user.uid, toCloudSave(stateRef.current), SAVE_VERSION);
+      flushPendingPush();
+    };
+
+    const intervalId = window.setInterval(pushCurrentState, CLOUD_SAVE_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [user, status]);
+
+  // Push leaderboard entry on milestone changes
   const leaderboardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingLeaderboard = useRef<{ uid: string; profile: typeof profile; stats: { peakEntropy: number; totalTimePlayed: number; totalClicks: number; universeCount: number } } | null>(null);
 
@@ -83,13 +105,21 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     if (!user || user.isAnonymous) return;
     if (status !== 'authed') return;
 
-    pendingLeaderboard.current = {
-      uid: user.uid,
-      profile,
-      stats: { peakEntropy: state.peakEntropy, totalTimePlayed: state.totalTimePlayed, totalClicks: state.totalClicks, universeCount: state.universeCount },
-    };
-    if (leaderboardTimer.current) return;
+    const stats = { peakEntropy: state.peakEntropy, totalTimePlayed: state.totalTimePlayed, totalClicks: state.totalClicks, universeCount: state.universeCount };
+    pendingLeaderboard.current = { uid: user.uid, profile, stats };
 
+    // Push immediately when a run completes
+    if (state.completedRun) {
+      if (leaderboardTimer.current) {
+        clearTimeout(leaderboardTimer.current);
+        leaderboardTimer.current = null;
+      }
+      pushLeaderboardEntry(user.uid, stats, profile);
+      pendingLeaderboard.current = null;
+      return;
+    }
+
+    if (leaderboardTimer.current) return;
     leaderboardTimer.current = setTimeout(() => {
       leaderboardTimer.current = null;
       const pending = pendingLeaderboard.current;
@@ -97,16 +127,14 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
         pushLeaderboardEntry(pending.uid, pending.stats, pending.profile);
       }
       pendingLeaderboard.current = null;
-    }, 60_000);
-  }, [user, status, state.peakEntropy, state.stageIdx, profile]);
+    }, 30_000);
+  }, [user, status, state.peakEntropy, state.stageIdx, state.completedRun, profile]);
 
-  // Flush on page hide/unload
+  // Flush the latest state on page hide/unload.
   useEffect(() => {
     if (!user || user.isAnonymous) return;
 
-    const flush = () => {
-      flushPendingPush();
-      // Also flush pending leaderboard
+    const flushLeaderboard = () => {
       if (leaderboardTimer.current) {
         clearTimeout(leaderboardTimer.current);
         leaderboardTimer.current = null;
@@ -117,13 +145,29 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
         pendingLeaderboard.current = null;
       }
     };
+
+    const flush = () => {
+      if (status === 'authed') {
+        debouncedPush(user.uid, toCloudSave(stateRef.current), SAVE_VERSION);
+      }
+      flushPendingPush();
+      flushLeaderboard();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flush();
+      }
+    };
+
     window.addEventListener('beforeunload', flush);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flush();
-    });
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user]);
+  }, [user, status]);
 }
