@@ -9,12 +9,10 @@ import {
 } from 'react';
 import {
   onAuthStateChanged,
+  signInAnonymously,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
   linkWithPopup,
-  linkWithRedirect,
   type User,
 } from 'firebase/auth';
 import { auth } from '../cloud/firebase';
@@ -108,61 +106,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Handle redirect result on page load (after Google redirect returns)
-  useEffect(() => {
-    if (!auth) return;
-    getRedirectResult(auth).then(async (result) => {
-      if (!result) return;
-      popupInProgress.current = true;
-      try {
-        setUser(result.user);
-        const p = await getProfile(result.user.uid);
-        const providers = result.user.providerData.map((pd) => pd.providerId);
-        createOrUpdateProfile(result.user.uid, {
-          email: result.user.email ?? null,
-          photoURL: result.user.photoURL ?? null,
-          providers,
-          createdAt: p?.createdAt ?? Date.now(),
-        });
-        setProfile(p);
-        if (!p?.displayName) {
-          setStatus('needsName');
-        } else {
-          setStatus('authed');
-        }
-      } finally {
-        popupInProgress.current = false;
-      }
-    }).catch((e: any) => {
-      if (e.code === 'auth/credential-already-in-use') {
-        // Will be handled by signInWithRedirect fallback
-        const provider = new GoogleAuthProvider();
-        signInWithRedirect(auth!, provider);
-      } else {
-        console.error('[Auth] Redirect result error:', e);
-      }
-    });
-  }, []);
-
   const handleSignInWithGoogle = useCallback(async () => {
     if (!auth) return;
+    popupInProgress.current = true;
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      setUser(result.user);
+      const p = await getProfile(result.user.uid);
+      const providers = result.user.providerData.map((pd) => pd.providerId);
+      await createOrUpdateProfile(result.user.uid, {
+        email: result.user.email ?? null,
+        photoURL: result.user.photoURL ?? null,
+        providers,
+        createdAt: p?.createdAt ?? Date.now(),
+      });
+      const updatedProfile = await getProfile(result.user.uid);
+      setProfile(updatedProfile);
+      setStatus(!updatedProfile?.displayName ? 'needsName' : 'authed');
+    } catch (e: any) {
+      if (e.code !== 'auth/popup-closed-by-user') {
+        console.error('[Auth] Google sign-in error:', e);
+      }
+    } finally {
+      popupInProgress.current = false;
+    }
   }, []);
 
   const handleLinkWithGoogle = useCallback(async () => {
     if (!auth) return;
     const currentUser = auth.currentUser;
     if (!currentUser) return;
+    popupInProgress.current = true;
     const provider = new GoogleAuthProvider();
     try {
-      await linkWithRedirect(currentUser, provider);
+      await linkWithPopup(currentUser, provider);
     } catch (e: any) {
       if (e.code === 'auth/credential-already-in-use') {
-        await signInWithRedirect(auth, provider);
-      } else {
+        await signInWithPopup(auth, provider);
+      } else if (e.code !== 'auth/popup-closed-by-user') {
         console.error('[Auth] Link error:', e);
       }
+    } finally {
+      popupInProgress.current = false;
     }
   }, []);
 
