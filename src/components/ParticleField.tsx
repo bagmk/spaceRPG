@@ -1112,10 +1112,10 @@ function applyPointerAttractionToRogue(
   const falloff = 1 - distance / attractionRadius;
   const orbitRadius = field.radius * 0.44;
   const closeT = distance < orbitRadius ? 1 - distance / orbitRadius : 0;
-  const closeGrip = distance < field.radius * 0.42 ? 1.06 : 1;
+  const closeGrip = distance < field.radius * 0.42 ? 1.03 : 1;
   const inwardBrake = closeT > 0 ? Math.max(0.22, 1 - closeT * 0.74) : 1;
   const easedPull = Math.pow(falloff, 2.25);
-  const pull = field.strength * (0.035 + easedPull * 0.92) * closeGrip * inwardBrake * dtScale;
+  const pull = field.strength * (0.025 + easedPull * 0.78) * closeGrip * inwardBrake * dtScale;
   rogue.vx += nx * pull;
   rogue.vy += ny * pull;
 
@@ -1128,10 +1128,7 @@ function applyPointerAttractionToRogue(
   }
 
   const speed = Math.hypot(rogue.vx, rogue.vy);
-  const maxSpeed =
-    rogue.typeKey === 'massive' ? 4.8 :
-    rogue.typeKey === 'major' ? 5.6 :
-    6.4;
+  const maxSpeed = 1;
   if (speed > maxSpeed) {
     rogue.vx = (rogue.vx / speed) * maxSpeed;
     rogue.vy = (rogue.vy / speed) * maxSpeed;
