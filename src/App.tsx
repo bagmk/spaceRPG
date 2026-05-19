@@ -209,6 +209,7 @@ function AppInner() {
             onToggleSfx={() => setSfxMuted((v) => !v)}
             onToggleLanguage={() => setLanguage((v) => (v === 'en' ? 'ko' : 'en'))}
             onRequestReset={() => setShowResetConfirm(true)}
+            onOpenLeaderboard={() => setShowLeaderboard(true)}
           />
         </ErrorBoundary>
       ) : null}

@@ -10,6 +10,7 @@ interface SettingsPanelProps {
   onToggleSfx: () => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
+  onOpenLeaderboard?: () => void;
   onClose: () => void;
 }
 
@@ -21,6 +22,7 @@ export function SettingsPanel({
   onToggleSfx,
   onToggleLanguage,
   onRequestReset,
+  onOpenLeaderboard,
   onClose,
 }: SettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -79,6 +81,19 @@ export function SettingsPanel({
             {language === 'en' ? '🇺🇸 EN' : '🇰🇷 KO'}
           </button>
         </div>
+
+        {onOpenLeaderboard ? (
+          <div className="settings-row">
+            <span className="settings-label">{language === 'ko' ? '랭킹' : 'Ranking'}</span>
+            <button
+              type="button"
+              className="settings-toggle"
+              onClick={() => { onClose(); onOpenLeaderboard(); }}
+            >
+              🏆
+            </button>
+          </div>
+        ) : null}
 
         <div className="settings-divider" />
 

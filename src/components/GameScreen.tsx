@@ -104,6 +104,7 @@ interface GameScreenProps {
   onToggleSfx: () => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
+  onOpenLeaderboard?: () => void;
 }
 
 function EndingCinematic({
@@ -131,6 +132,7 @@ export function GameScreen({
   onToggleSfx,
   onToggleLanguage,
   onRequestReset,
+  onOpenLeaderboard,
 }: GameScreenProps) {
   const [shopOpen, setShopOpen] = useState(false);
   const [entityPanelOpen, setEntityPanelOpen] = useState(false);
@@ -929,6 +931,7 @@ export function GameScreen({
           onToggleSfx={onToggleSfx}
           onToggleLanguage={onToggleLanguage}
           onRequestReset={() => { setSettingsOpen(false); onRequestReset(); }}
+          onOpenLeaderboard={onOpenLeaderboard}
           onClose={() => setSettingsOpen(false)}
         />
       ) : null}
