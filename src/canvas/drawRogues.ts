@@ -3,18 +3,48 @@ import { formatEncounterDistance } from '../game/encounters';
 import type { Rogue } from '../game/types';
 import { drawStageSprite } from './stageSprites';
 
+interface PointerPressureVisualField {
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+}
+
+const ROGUE_POINTER_ATTRACTION_RADIUS_MULT = 1.35;
+
 export function drawRogues(
   ctx: CanvasRenderingContext2D,
   rogues: Rogue[],
   width: number,
   height: number,
   now: number,
+  pointerPressure?: PointerPressureVisualField | null,
 ): void {
   rogues.forEach((rogue) => {
     const onScreen =
       rogue.x > -50 && rogue.x < width + 50 && rogue.y > -50 && rogue.y < height + 50;
     if (!onScreen) {
       return;
+    }
+
+    if (pointerPressure) {
+      const attractionRadius = pointerPressure.radius * ROGUE_POINTER_ATTRACTION_RADIUS_MULT;
+      const dx = pointerPressure.x - rogue.x;
+      const dy = pointerPressure.y - rogue.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < attractionRadius) {
+        const pull = Math.pow(1 - distance / attractionRadius, 2);
+        ctx.strokeStyle = hexToRgba(rogue.color, Math.min(0.42, pull * pointerPressure.strength * 0.18));
+        ctx.lineWidth = 0.8 + pull * 1.8;
+        ctx.setLineDash([3 + pull * 5, 7]);
+        ctx.beginPath();
+        ctx.moveTo(pointerPressure.x, pointerPressure.y);
+        const midX = (pointerPressure.x + rogue.x) / 2 + Math.sin(now / 260 + rogue.id) * 12 * pull;
+        const midY = (pointerPressure.y + rogue.y) / 2 + Math.cos(now / 300 + rogue.id) * 12 * pull;
+        ctx.quadraticCurveTo(midX, midY, rogue.x, rogue.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
 
     const pulse = 1 + Math.sin(now / 350 + rogue.rotation * 5) * 0.15;

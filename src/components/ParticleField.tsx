@@ -954,6 +954,190 @@ function createRogue(world: CanvasWorld, stage: Stage, width: number, height: nu
   };
 }
 
+interface PointerPressureSource {
+  x: number;
+  y: number;
+  lastX: number;
+  lastY: number;
+  updatedAt: number;
+  active: boolean;
+  intensity: number;
+  pointerType: string;
+}
+
+interface PointerPressureField {
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+}
+
+const POINTER_PRESSURE_LINGER_MS = 380;
+const POINTER_PRESSURE_MOUSE_RADIUS = 145;
+const POINTER_PRESSURE_TOUCH_RADIUS = 122;
+const POINTER_ROGUE_ATTRACTION_RADIUS_MULT = 1.35;
+
+function getPointerPressureField(source: PointerPressureSource | null, now: number): PointerPressureField | null {
+  if (!source) return null;
+  const ageMs = Math.max(0, now - source.updatedAt);
+  const fade = source.active ? 1 : Math.max(0, 1 - ageMs / POINTER_PRESSURE_LINGER_MS);
+  if (fade <= 0) return null;
+  const touchSized = source.pointerType === 'touch' || source.pointerType === 'pen';
+  return {
+    x: source.x,
+    y: source.y,
+    radius: touchSized ? POINTER_PRESSURE_TOUCH_RADIUS : POINTER_PRESSURE_MOUSE_RADIUS,
+    strength: source.intensity * fade,
+  };
+}
+
+function pressureDirection(dx: number, dy: number, fallbackAngle: number): { nx: number; ny: number; distance: number } {
+  const distance = Math.hypot(dx, dy);
+  if (distance > 0.001) {
+    return { nx: dx / distance, ny: dy / distance, distance };
+  }
+  return { nx: Math.cos(fallbackAngle), ny: Math.sin(fallbackAngle), distance: 0 };
+}
+
+function applyPointerPressureToAmbientParticle(
+  particle: AmbientParticle,
+  field: PointerPressureField,
+  dtScale: number,
+): void {
+  const { nx, ny, distance } = pressureDirection(
+    particle.x - field.x,
+    particle.y - field.y,
+    particle.phase,
+  );
+  if (distance > field.radius) return;
+  const falloff = 1 - distance / field.radius;
+  const push = field.strength * (falloff * falloff) * 5.1 * dtScale;
+  const curl = field.strength * falloff * 0.38 * dtScale;
+  particle.vx += nx * push - ny * curl;
+  particle.vy += ny * push + nx * curl;
+}
+
+function applyPointerPressureToMote(
+  mote: Mote,
+  stage: Stage,
+  field: PointerPressureField,
+  dtScale: number,
+): void {
+  if (stage.clusterMode === 'lifeSurface') return;
+  const radius = field.radius * 0.82;
+  const { nx, ny, distance } = pressureDirection(
+    mote.x - field.x,
+    mote.y - field.y,
+    mote.id * 1.73,
+  );
+  if (distance > radius) return;
+  const falloff = 1 - distance / radius;
+  const push = field.strength * (falloff * falloff) * 2.6 * dtScale;
+  const curl = field.strength * falloff * 0.24 * dtScale;
+  mote.vx += nx * push - ny * curl;
+  mote.vy += ny * push + nx * curl;
+
+  const speed = Math.hypot(mote.vx, mote.vy);
+  const maxSpeed = TUNING.MOTE_MAX_SPEED * 1.55;
+  if (speed > maxSpeed) {
+    mote.vx = (mote.vx / speed) * maxSpeed;
+    mote.vy = (mote.vy / speed) * maxSpeed;
+  }
+}
+
+function applyPointerPressureImpulse(
+  world: CanvasWorld,
+  stage: Stage,
+  x: number,
+  y: number,
+  pointerType: string,
+  strengthMultiplier: number,
+): void {
+  const touchSized = pointerType === 'touch' || pointerType === 'pen';
+  const field: PointerPressureField = {
+    x,
+    y,
+    radius: (touchSized ? POINTER_PRESSURE_TOUCH_RADIUS : POINTER_PRESSURE_MOUSE_RADIUS) * 0.95,
+    strength: 1.35 * strengthMultiplier,
+  };
+
+  world.particles.forEach((particle) => {
+    const { nx, ny, distance } = pressureDirection(
+      particle.x - field.x,
+      particle.y - field.y,
+      particle.phase,
+    );
+    if (distance > field.radius) return;
+    const falloff = 1 - distance / field.radius;
+    const impulse = field.strength * falloff * falloff;
+    particle.x += nx * impulse * 3;
+    particle.y += ny * impulse * 3;
+    particle.vx += nx * impulse * 6 - ny * impulse * 0.8;
+    particle.vy += ny * impulse * 6 + nx * impulse * 0.8;
+  });
+
+  if (stage.clusterMode === 'lifeSurface') return;
+
+  world.cluster.motes.forEach((mote) => {
+    const moteRadius = field.radius;
+    const { nx, ny, distance } = pressureDirection(
+      mote.x - field.x,
+      mote.y - field.y,
+      mote.id * 1.73,
+    );
+    if (distance > moteRadius) return;
+    const falloff = 1 - distance / moteRadius;
+    const impulse = field.strength * falloff * falloff;
+    mote.x += nx * impulse * 1.5;
+    mote.y += ny * impulse * 1.5;
+    mote.vx += nx * impulse * 3 - ny * impulse * 0.45;
+    mote.vy += ny * impulse * 3 + nx * impulse * 0.45;
+  });
+}
+
+function applyPointerAttractionToRogue(
+  rogue: Rogue,
+  field: PointerPressureField,
+  dtScale: number,
+): void {
+  const attractionRadius = field.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
+  const dx = field.x - rogue.x;
+  const dy = field.y - rogue.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance > attractionRadius) return;
+
+  const fallbackAngle = rogue.id * 0.73;
+  const nx = distance > 0.001 ? dx / distance : Math.cos(fallbackAngle);
+  const ny = distance > 0.001 ? dy / distance : Math.sin(fallbackAngle);
+  const falloff = 1 - distance / attractionRadius;
+  const orbitRadius = field.radius * 0.44;
+  const closeT = distance < orbitRadius ? 1 - distance / orbitRadius : 0;
+  const closeGrip = distance < field.radius * 0.42 ? 1.06 : 1;
+  const inwardBrake = closeT > 0 ? Math.max(0.22, 1 - closeT * 0.74) : 1;
+  const easedPull = Math.pow(falloff, 2.25);
+  const pull = field.strength * (0.035 + easedPull * 0.92) * closeGrip * inwardBrake * dtScale;
+  rogue.vx += nx * pull;
+  rogue.vy += ny * pull;
+
+  if (closeT > 0) {
+    const spinDirection = rogue.id % 2 === 0 ? 1 : -1;
+    const repel = field.strength * closeT * closeT * 0.68 * dtScale;
+    const orbit = field.strength * (0.1 + closeT * 0.42) * dtScale;
+    rogue.vx += -nx * repel + -ny * orbit * spinDirection;
+    rogue.vy += -ny * repel + nx * orbit * spinDirection;
+  }
+
+  const speed = Math.hypot(rogue.vx, rogue.vy);
+  const maxSpeed =
+    rogue.typeKey === 'massive' ? 4.8 :
+    rogue.typeKey === 'major' ? 5.6 :
+    6.4;
+  if (speed > maxSpeed) {
+    rogue.vx = (rogue.vx / speed) * maxSpeed;
+    rogue.vy = (rogue.vy / speed) * maxSpeed;
+  }
+}
+
 const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(function ParticleFieldInner({
   stage,
   actualStageId,
@@ -983,6 +1167,41 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   const lastClickId = useRef<number | null>(null);
   const transitionExplosionAt = useRef<number | null>(null);
   const dragPointerId = useRef<number | null>(null);
+  const pointerPressureRef = useRef<PointerPressureSource | null>(null);
+
+  const updatePointerPressure = (
+    x: number,
+    y: number,
+    pointerType: string,
+    strengthMultiplier: number,
+  ) => {
+    const now = performance.now();
+    const previous = pointerPressureRef.current;
+    const elapsedMs = previous ? Math.max(1, now - previous.updatedAt) : 16;
+    const moveSpeed = previous ? Math.hypot(x - previous.x, y - previous.y) / elapsedMs : 0;
+    const intensity = Math.min(1.55, Math.max(0.55, strengthMultiplier * (0.72 + moveSpeed * 0.2)));
+    pointerPressureRef.current = {
+      x,
+      y,
+      lastX: previous?.x ?? x,
+      lastY: previous?.y ?? y,
+      updatedAt: now,
+      active: true,
+      intensity,
+      pointerType,
+    };
+  };
+
+  const releasePointerPressure = () => {
+    const previous = pointerPressureRef.current;
+    if (!previous) return;
+    pointerPressureRef.current = {
+      ...previous,
+      active: false,
+      updatedAt: performance.now(),
+      intensity: previous.intensity * 0.62,
+    };
+  };
 
   const applySteerNudge = (
     rect: DOMRect,
@@ -1018,6 +1237,12 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       transitionExplosionAt.current = null;
     }
   }, [stageTransitionStartedAt]);
+
+  useEffect(() => {
+    if (!interactionLocked) return;
+    dragPointerId.current = null;
+    releasePointerPressure();
+  }, [interactionLocked]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1191,6 +1416,11 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     }
     const motionScale = anomaly === 'high_energy' ? 1.5 : 1;
     const frameDt = dt * motionScale;
+    const physicsDtScale = Math.min(2.2, Math.max(0.3, frameDt / 16.67));
+    const pointerPressure = getPointerPressureField(pointerPressureRef.current, now);
+    if (!pointerPressure && pointerPressureRef.current && !pointerPressureRef.current.active) {
+      pointerPressureRef.current = null;
+    }
     const progress = getProgress(quanta, effectiveThreshold);
     // V9: visual progress requires BOTH quanta and cosmic time to advance
     const quantaProgress = progress;
@@ -1277,6 +1507,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       const force = gravity / (softenedDistance * 0.3 + 8);
       particle.vx += (dx / distance) * force;
       particle.vy += (dy / distance) * force;
+      if (pointerPressure) {
+        applyPointerPressureToAmbientParticle(particle, pointerPressure, physicsDtScale);
+      }
       particle.vx *= dampening;
       particle.vy *= dampening;
       const particleSpeed = Math.hypot(particle.vx, particle.vy);
@@ -1312,6 +1545,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     }
 
     stepClusterPhysics(world, stage, cx, cy, frameDt, now, progress);
+    if (pointerPressure) {
+      world.cluster.motes.forEach((mote) => applyPointerPressureToMote(mote, stage, pointerPressure, physicsDtScale));
+    }
 
     world.flyers = world.flyers.filter((flyer) => {
       const speed = flyer.auto ? 0.0011 : 0.0015;
@@ -1381,6 +1617,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
 
     const nextRogues: Rogue[] = [];
     world.rogues.forEach((rogue) => {
+      if (pointerPressure) {
+        applyPointerAttractionToRogue(rogue, pointerPressure, physicsDtScale);
+      }
       rogue.x += rogue.vx - world.coreVX;
       rogue.y += rogue.vy - world.coreVY;
       rogue.age += frameDt;
@@ -1453,6 +1692,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       height,
       now,
       progress: visualProgress,
+      pointerPressure,
     });
     drawParticles({
       ctx,
@@ -1461,8 +1701,8 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       flyers: world.flyers,
       bursts: world.bursts,
     });
-    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now);
-    drawRogues(ctx, world.rogues, width, height, now);
+    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now, pointerPressure);
+    drawRogues(ctx, world.rogues, width, height, now, pointerPressure);
     drawEffects({
       ctx,
       width,
@@ -1514,25 +1754,49 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         event.currentTarget.setPointerCapture(event.pointerId);
         const rect = event.currentTarget.getBoundingClientRect();
         const { x, y, hitRogue } = applySteerNudge(rect, event.clientX, event.clientY);
+        const pressureStrength = event.pointerType === 'touch' ? 1.0 : 1.05;
+        updatePointerPressure(x, y, event.pointerType, pressureStrength);
+        applyPointerPressureImpulse(worldRef.current, stage, x, y, event.pointerType, pressureStrength);
         if (event.button !== 1) {
           onGatherClick(x, y, hitRogue);
         }
       }}
       onPointerMove={(event) => {
-        if (
-          interactionLocked ||
-          dragPointerId.current !== event.pointerId ||
-          event.buttons === 0
-        ) {
+        if (interactionLocked || !worldRef.current) {
+          return;
+        }
+        const rect = event.currentTarget.getBoundingClientRect();
+        const isMouseHover = event.pointerType === 'mouse' && event.buttons === 0;
+        if (isMouseHover) {
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          updatePointerPressure(x, y, event.pointerType, 0.72);
+          return;
+        }
+        if (dragPointerId.current !== event.pointerId) {
           return;
         }
         event.preventDefault();
+        const strength = (event.buttons & 4) !== 0 ? 0.95 : 0.78;
+        const { x, y } = applySteerNudge(rect, event.clientX, event.clientY, strength);
+        updatePointerPressure(x, y, event.pointerType, strength);
+      }}
+      onPointerEnter={(event) => {
+        if (interactionLocked || event.pointerType !== 'mouse') {
+          return;
+        }
         const rect = event.currentTarget.getBoundingClientRect();
-        applySteerNudge(rect, event.clientX, event.clientY, event.button === 1 ? 1.25 : 0.55);
+        updatePointerPressure(event.clientX - rect.left, event.clientY - rect.top, event.pointerType, 0.72);
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === 'mouse') {
+          releasePointerPressure();
+        }
       }}
       onPointerUp={(event) => {
         if (dragPointerId.current === event.pointerId) {
           dragPointerId.current = null;
+          releasePointerPressure();
         }
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1541,6 +1805,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       onPointerCancel={(event) => {
         if (dragPointerId.current === event.pointerId) {
           dragPointerId.current = null;
+          releasePointerPressure();
         }
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);

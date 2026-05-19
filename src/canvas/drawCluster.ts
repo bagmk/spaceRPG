@@ -159,6 +159,36 @@ interface DrawClusterArgs {
   height: number;
   now: number;
   progress: number;
+  pointerPressure?: PointerPressureVisualField | null;
+}
+
+interface PointerPressureVisualField {
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+}
+
+function applyPointerVisualDisplacement(
+  x: number,
+  y: number,
+  field: PointerPressureVisualField | null | undefined,
+  amount = 12,
+): { x: number; y: number; falloff: number } {
+  if (!field || field.strength <= 0) return { x, y, falloff: 0 };
+  const dx = x - field.x;
+  const dy = y - field.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance > field.radius) return { x, y, falloff: 0 };
+  const nx = distance > 0.001 ? dx / distance : 1;
+  const ny = distance > 0.001 ? dy / distance : 0;
+  const falloff = Math.pow(1 - distance / field.radius, 2);
+  const offset = amount * field.strength * falloff;
+  return {
+    x: x + nx * offset,
+    y: y + ny * offset,
+    falloff,
+  };
 }
 
 function linkedEntityCount(args: DrawClusterArgs, entityName: string): number {
@@ -230,7 +260,7 @@ export function drawCluster(args: DrawClusterArgs): void {
   }
 }
 
-function drawGenericMotes({ ctx, cluster, stage, cx, cy, now, progress }: DrawClusterArgs): void {
+function drawGenericMotes({ ctx, cluster, stage, cx, cy, now, progress, pointerPressure }: DrawClusterArgs): void {
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius, stage.accent, 0.09 + progress * 0.06);
   for (let ring = 1; ring <= 3; ring += 1) {
     ctx.strokeStyle = hexToRgba(stage.accent, (0.055 + progress * 0.03) / ring);
@@ -241,11 +271,12 @@ function drawGenericMotes({ ctx, cluster, stage, cx, cy, now, progress }: DrawCl
   }
   cluster.motes.forEach((mote) => {
     const ageAlpha = Math.min(1, mote.age / 320);
+    const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 12);
     drawStageSprite(
       ctx,
       stage.id,
-      mote.x,
-      mote.y,
+      pushed.x,
+      pushed.y,
       mote.r * 1.16,
       mote.color,
       0.86 * ageAlpha,
@@ -256,7 +287,7 @@ function drawGenericMotes({ ctx, cluster, stage, cx, cy, now, progress }: DrawCl
 
 // --- New per-mode drawers (concise, reuse primitives) ---
 function drawInflation(args: DrawClusterArgs): void {
-  const { ctx, cluster, stage, cx, cy, now, progress } = args;
+  const { ctx, cluster, stage, cx, cy, now, progress, pointerPressure } = args;
   const t = now / 1000;
   // Bright initial flash and many outward shards
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * (1 + progress * 0.28), stage.accent, 0.18 + progress * 0.06);
@@ -295,24 +326,26 @@ function drawInflation(args: DrawClusterArgs): void {
   cluster.motes.forEach((mote, idx) => {
     const ageAlpha = Math.min(1, mote.age / 200);
     const wobble = Math.sin(t * 12 + idx) * 0.9;
-    drawStageSprite(ctx, stage.id, mote.x + wobble, mote.y + wobble, mote.r * (1.6 + progress * 0.8), mote.color, 0.96 * ageAlpha, t + mote.hue * Math.PI);
+    const pushed = applyPointerVisualDisplacement(mote.x + wobble, mote.y + wobble, pointerPressure, 13);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.6 + progress * 0.8), mote.color, 0.96 * ageAlpha, t + mote.hue * Math.PI);
   });
 }
 
 function drawBaryogenesis(args: DrawClusterArgs): void {
-  const { ctx, cluster, stage, cx, cy, now, progress } = args;
+  const { ctx, cluster, stage, cx, cy, now, progress, pointerPressure } = args;
   const t = now / 1000;
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.98, stage.accent, 0.1 + progress * 0.04);
 
   // motes render with a small charge overlay (±) via sprite rotation
   cluster.motes.forEach((mote, idx) => {
     const flicker = 0.6 + Math.sin(t * 8 + idx) * 0.2;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * (1.02 + flicker * 0.18), mote.color, 0.78 + progress * 0.12, mote.age / 180 + idx);
+    const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 12);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.02 + flicker * 0.18), mote.color, 0.78 + progress * 0.12, mote.age / 180 + idx);
   });
 }
 
 function drawQGPlasma(args: DrawClusterArgs): void {
-  const { ctx, cluster, stage, cx, cy, now } = args;
+  const { ctx, cluster, stage, cx, cy, now, pointerPressure } = args;
   const t = now / 1000;
   // additive blending for plasma soup
   ctx.save();
@@ -321,13 +354,14 @@ function drawQGPlasma(args: DrawClusterArgs): void {
 
   for (let i = 0; i < cluster.motes.length; i += 1) {
     const mote = cluster.motes[i];
+    const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
     const pulse = 0.5 + Math.abs(Math.sin(t * (3 + (i % 5)))) * 0.6;
     const r = Math.max(1.4, mote.r * (1.2 + pulse * 0.45));
     ctx.fillStyle = hexToRgba(mote.color, 0.12 + pulse * 0.32);
     ctx.beginPath();
-    ctx.arc(mote.x, mote.y, r * 2.6, 0, Math.PI * 2);
+    ctx.arc(pushed.x, pushed.y, r * 2.6, 0, Math.PI * 2);
     ctx.fill();
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, r, mote.color, 0.78 * pulse, mote.hue * Math.PI * 2 + t * 0.2);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, r, mote.color, 0.78 * pulse, mote.hue * Math.PI * 2 + t * 0.2);
   }
 
   // faint turbulence threads
@@ -525,7 +559,7 @@ function drawReionization(args: DrawClusterArgs): void {
   });
 }
 
-function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress }: DrawClusterArgs): void {
+function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress, pointerPressure }: DrawClusterArgs): void {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(1, 0.55);
@@ -561,8 +595,9 @@ function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress }: DrawClusterAr
   }
 
   for (const mote of cluster.motes) {
-    const lx = mote.x - cx;
-    const ly = mote.y - cy;
+    const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
+    const lx = pushed.x - cx;
+    const ly = pushed.y - cy;
     const alpha = Math.min(0.95, 0.35 + mote.mass * 0.08);
     ctx.fillStyle = hexToRgba(mote.color, alpha);
     ctx.beginPath();
@@ -595,7 +630,7 @@ const V9_PLANET_WINDOWS = [
 ] as const;
 
 function drawPlanetarySystem(args: DrawClusterArgs): void {
-  const { ctx, cluster, stage, cx, cy, progress, now } = args;
+  const { ctx, cluster, stage, cx, cy, progress, now, pointerPressure } = args;
   const sunLevel = linkedEntityCount(args, 'Sun');
   const rockyPlanetLevel = linkedEntityCount(args, 'Rocky Planet');
   const sunT = Math.max(rangeT(progress, 0.08, 0.24) * 0.3, Math.min(1, sunLevel / 4));
@@ -625,7 +660,8 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   if (dustAlpha > 0.005) {
     cluster.motes.forEach((mote, idx) => {
       const shimmer = 0.54 + Math.sin(now / 1000 * 2 + idx) * 0.18;
-      drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * shimmer, mote.color, dustAlpha * shimmer, mote.orbitAngle ?? 0);
+      const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
+      drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * shimmer, mote.color, dustAlpha * shimmer, mote.orbitAngle ?? 0);
     });
   }
 
@@ -648,8 +684,11 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
     for (let i = 0; i < 16; i += 1) {
       const angle = now / 900 + i * 0.72;
       const orbit = 64 + (i % 6) * 22;
-      const x = cx + Math.cos(angle) * orbit;
-      const y = cy + Math.sin(angle) * orbit * 0.42;
+      const baseX = cx + Math.cos(angle) * orbit;
+      const baseY = cy + Math.sin(angle) * orbit * 0.42;
+      const pushed = applyPointerVisualDisplacement(baseX, baseY, pointerPressure, 14);
+      const x = pushed.x;
+      const y = pushed.y;
       ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#f0c18a' : '#8e806d', 0.55 * planT);
       ctx.beginPath();
       ctx.arc(x, y, 1.6 + (i % 4) * 0.4, 0, Math.PI * 2);
@@ -688,8 +727,11 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
       ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
       ctx.stroke();
       const angle = now / (1400 + idx * 190) + idx * 0.72;
-      const px = cx + Math.cos(angle) * body.orbit;
-      const py = cy + Math.sin(angle) * body.orbit * 0.42;
+      const basePx = cx + Math.cos(angle) * body.orbit;
+      const basePy = cy + Math.sin(angle) * body.orbit * 0.42;
+      const pushed = applyPointerVisualDisplacement(basePx, basePy, pointerPressure, 14);
+      const px = pushed.x;
+      const py = pushed.y;
       if (idx === 2) {
         // Earth in solar system: water by 95%, city by 98%
         if (progress >= 0.98) drawSolarEarth(ctx, px, py, body.r, 'city', now / 900);
@@ -1148,7 +1190,7 @@ function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterAr
 }
 
 function drawBlackHoleScene(args: DrawClusterArgs): void {
-  const { ctx, cluster, stage, cx, cy, width, height, now } = args;
+  const { ctx, cluster, stage, cx, cy, width, height, now, pointerPressure } = args;
   const evaporationLink = Math.min(
     1,
     linkedEntityRatio(args, 'Stellar BH Evaporation') * 0.62 +
@@ -1206,8 +1248,14 @@ function drawBlackHoleScene(args: DrawClusterArgs): void {
   cluster.motes.forEach((mote) => {
     const angle = Math.atan2(mote.y - cy, mote.x - cx) + now * 0.00025 * (0.6 + mote.hue);
     const orbitR = inner * (1.18 + mote.hue * 0.18);
-    const lx = Math.cos(angle) * orbitR;
-    const ly = Math.sin(angle) * orbitR;
+    const baseScreenX = cx + Math.cos(rotation * 0.18) * Math.cos(angle) * orbitR - Math.sin(rotation * 0.18) * Math.sin(angle) * orbitR * Math.cos(tilt);
+    const baseScreenY = cy + Math.sin(rotation * 0.18) * Math.cos(angle) * orbitR + Math.cos(rotation * 0.18) * Math.sin(angle) * orbitR * Math.cos(tilt);
+    const pushed = applyPointerVisualDisplacement(baseScreenX, baseScreenY, pointerPressure, 15);
+    const dx = pushed.x - cx;
+    const dy = pushed.y - cy;
+    const rot = -rotation * 0.18;
+    const lx = Math.cos(rot) * dx - Math.sin(rot) * dy;
+    const ly = (Math.sin(rot) * dx + Math.cos(rot) * dy) / Math.max(0.2, Math.cos(tilt));
     const hotness = Math.max(0.32, Math.min(0.82, 0.28 + mote.mass * 0.06));
     ctx.fillStyle = hexToRgba(mote.color, hotness);
     ctx.beginPath();

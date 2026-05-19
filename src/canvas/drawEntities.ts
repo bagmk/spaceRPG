@@ -56,6 +56,35 @@ interface EntityPosition {
   glowRadius: number;
 }
 
+interface PointerPressureVisualField {
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+}
+
+function applyPointerVisualDisplacement(
+  x: number,
+  y: number,
+  field: PointerPressureVisualField | null | undefined,
+  amount = 12,
+): { x: number; y: number; falloff: number } {
+  if (!field || field.strength <= 0) return { x, y, falloff: 0 };
+  const dx = x - field.x;
+  const dy = y - field.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance > field.radius) return { x, y, falloff: 0 };
+  const nx = distance > 0.001 ? dx / distance : 1;
+  const ny = distance > 0.001 ? dy / distance : 0;
+  const falloff = Math.pow(1 - distance / field.radius, 2);
+  const offset = amount * field.strength * falloff;
+  return {
+    x: x + nx * offset,
+    y: y + ny * offset,
+    falloff,
+  };
+}
+
 function hashString(value: string): number {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -1596,6 +1625,7 @@ function drawLifeOrbitEntities(
   earthRadius: number,
   items: EntityDrawItem[],
   now: number,
+  pointerPressure?: PointerPressureVisualField | null,
 ): void {
   if (items.length === 0) return;
 
@@ -1642,7 +1672,10 @@ function drawLifeOrbitEntities(
   });
 
   for (const position of positions) {
-    const { item, x, y, angle, orbitR, isFreeFlight } = position;
+    const { item, angle, orbitR, isFreeFlight } = position;
+    const pushed = applyPointerVisualDisplacement(position.x, position.y, pointerPressure, 14);
+    const x = pushed.x;
+    const y = pushed.y;
     const text = itemText(item);
     const size =
       item.rarity === 'legendary'
@@ -1732,6 +1765,7 @@ function drawLifeEarthEntities(
   cy: number,
   items: EntityDrawItem[],
   now: number,
+  pointerPressure?: PointerPressureVisualField | null,
 ): void {
   const earthRadius = TUNING.LIFE_SURFACE_R;
   const rotation = now * TUNING.LIFE_EARTH_ROT_RATE * 0.75;
@@ -1890,7 +1924,7 @@ function drawLifeEarthEntities(
     drawMoon(ctx, cx, cy, earthRadius, now, moonFraction, false);
   }
 
-  drawLifeOrbitEntities(ctx, cx, cy, earthRadius, orbitItems, now);
+  drawLifeOrbitEntities(ctx, cx, cy, earthRadius, orbitItems, now, pointerPressure);
 }
 
 function drawEntityGlyph(
@@ -2170,6 +2204,7 @@ export function drawEntities(
   stageId: number,
   purchasedEntities: PurchasedEntityEntry[],
   now: number,
+  pointerPressure?: PointerPressureVisualField | null,
 ): void {
   if (purchasedEntities.length === 0) return;
 
@@ -2223,7 +2258,7 @@ export function drawEntities(
   }
 
   if (stageId === 11) {
-    drawLifeEarthEntities(ctx, cx, cy, items, now);
+    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure);
     return;
   }
 
@@ -2338,6 +2373,19 @@ export function drawEntities(
       const centerPush = ((minCenterDist - cDist) / minCenterDist) * 0.6;
       a.body.vx -= ncx * centerPush;
       a.body.vy -= ncy * centerPush;
+    }
+
+    if (pointerPressure && pointerPressure.strength > 0) {
+      const pdx = a.body.x - pointerPressure.x;
+      const pdy = a.body.y - pointerPressure.y;
+      const pd = Math.hypot(pdx, pdy);
+      if (pd < pointerPressure.radius) {
+        const pnx = pd > 0.001 ? pdx / pd : 1;
+        const pny = pd > 0.001 ? pdy / pd : 0;
+        const push = Math.pow(1 - pd / pointerPressure.radius, 2) * pointerPressure.strength * 2.8;
+        a.body.vx += pnx * push - pny * push * 0.14;
+        a.body.vy += pny * push + pnx * push * 0.14;
+      }
     }
 
     // Dampening

@@ -23,7 +23,7 @@ export function drawParticles({ ctx, stage, particles, flyers, bursts }: DrawPar
       ctx.lineWidth = particle.r * 0.8;
       ctx.beginPath();
       ctx.moveTo(particle.x, particle.y);
-      ctx.lineTo(particle.x - particle.vx * 2.5, particle.y - particle.vy * 2.5);
+      ctx.lineTo(particle.x - particle.vx * 3.2, particle.y - particle.vy * 3.2);
       ctx.stroke();
     }
   });
