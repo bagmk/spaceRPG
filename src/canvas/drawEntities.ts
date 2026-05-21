@@ -2286,25 +2286,63 @@ function drawEntityGlyph(
 
       // Orbiting moon
       const moonAngle = now * 0.002 + item.seed * 0.3;
-      const moonDist = earthR * 1.6;
+      const moonDist = earthR * 1.8;
       const moonX = Math.cos(moonAngle) * moonDist;
       const moonY = Math.sin(moonAngle) * moonDist * 0.35;
-      const moonR = earthR * 0.18;
-      // Draw moon behind or in front based on angle
-      if (Math.sin(moonAngle) < 0) {
-        ctx.fillStyle = hexToRgba('#ccccbb', 0.7);
+      const moonR = earthR * 0.22;
+      const drawMoonEntity = () => {
+        // Moon glow
+        const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 2);
+        moonGlow.addColorStop(0, hexToRgba('#eeeedd', 0.08));
+        moonGlow.addColorStop(1, hexToRgba('#eeeedd', 0));
+        ctx.fillStyle = moonGlow;
+        fillCircle(ctx, moonX, moonY, moonR * 2);
+        // Moon base
+        const moonBase = ctx.createRadialGradient(moonX - moonR * 0.3, moonY - moonR * 0.3, 0, moonX, moonY, moonR);
+        moonBase.addColorStop(0, '#d8d4c8');
+        moonBase.addColorStop(0.7, '#b0aa98');
+        moonBase.addColorStop(1, '#888070');
+        ctx.fillStyle = moonBase;
         fillCircle(ctx, moonX, moonY, moonR);
-      }
+        // Craters
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+        ctx.clip();
+        const craters = [
+          { dx: 0.25, dy: -0.2, r: 0.18 },
+          { dx: -0.3, dy: 0.15, r: 0.14 },
+          { dx: 0.05, dy: 0.3, r: 0.11 },
+          { dx: -0.15, dy: -0.35, r: 0.09 },
+        ];
+        for (const c of craters) {
+          ctx.fillStyle = hexToRgba('#8a8270', 0.5);
+          fillCircle(ctx, moonX + c.dx * moonR, moonY + c.dy * moonR, c.r * moonR);
+          ctx.fillStyle = hexToRgba('#706858', 0.3);
+          fillCircle(ctx, moonX + c.dx * moonR + moonR * 0.02, moonY + c.dy * moonR + moonR * 0.02, c.r * moonR * 0.7);
+        }
+        ctx.restore();
+        // Terminator shadow (day/night)
+        const shadowPhase = moonAngle * 0.5;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = hexToRgba('#000000', 0.3);
+        ctx.beginPath();
+        ctx.ellipse(moonX + Math.cos(shadowPhase) * moonR * 0.4, moonY, moonR * 0.9, moonR, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+      // Draw moon behind or in front based on angle
+      if (Math.sin(moonAngle) < 0) drawMoonEntity();
       // Moon orbit path (faint)
-      ctx.strokeStyle = hexToRgba('#ffffff', 0.06);
-      ctx.lineWidth = 0.4;
+      ctx.strokeStyle = hexToRgba('#ffffff', 0.04);
+      ctx.lineWidth = 0.3;
       ctx.beginPath();
       ctx.ellipse(0, 0, moonDist, moonDist * 0.35, 0, 0, Math.PI * 2);
       ctx.stroke();
-      if (Math.sin(moonAngle) >= 0) {
-        ctx.fillStyle = hexToRgba('#ccccbb', 0.7);
-        fillCircle(ctx, moonX, moonY, moonR);
-      }
+      if (Math.sin(moonAngle) >= 0) drawMoonEntity();
       break;
     }
     case 'cell': {
@@ -2465,6 +2503,8 @@ export function drawEntities(
     if (entry.count <= 0) continue;
     const entity = findEntityById(entry.entityId, stageId);
     if (!entity) continue;
+    // Stage 10: Sun glyph is represented by the evolving sun animation, skip it
+    if (stageId === 10 && entity.name === 'Sun') continue;
     const existing = entitiesById.get(entity.id);
     if (existing) {
       existing.count += entry.count;
