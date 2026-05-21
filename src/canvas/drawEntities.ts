@@ -1771,22 +1771,24 @@ function drawLifeEarthEntities(
   const earthSpin = now * 0.002;
 
   // ── Detect purchased entities for visual state ──────────────────────────
-  // Use total entity count as progression fallback (old saves have different names)
-  const totalOwned = items.reduce((sum, i) => sum + i.ownedCount, 0);
-  const progression = Math.min(1, totalOwned / 30); // 0→1 as more entities purchased
   const has = (name: string) => items.some((i) => i.name.toLowerCase().includes(name));
+  const countOf = (name: string) => {
+    const e = items.find((i) => i.name.toLowerCase().includes(name));
+    return e ? e.ownedCount : 0;
+  };
 
-  // Progressive unlocks: earlier items = lower threshold
-  const hasCrust = progression > 0 || has('crust') || has('molten') || has('lipid');
-  const hasOcean = progression > 0.05 || has('ocean') || has('water') || has('rna');
-  const hasAtmo = progression > 0.1 || has('atmosphere') || has('atm') || has('prokaryote');
-  const hasMoon = progression > 0.15 || has('moon') || has('cambrian');
-  const hasPlants = progression > 0.25 || has('photosynthesis') || has('cambrian') || has('plant');
-  const hasContinents = progression > 0.3 || has('continent') || has('land');
-  const hasNeuron = progression > 0.5 || has('neuron') || has('sapiens') || has('intelligence');
-  const hasCityLights = progression > 0.6 || has('city') || has('homo');
-  const hasSatellite = progression > 0.7 || has('satellite') || has('probe') || has('telescope');
-  const moonFrac = Math.min(1, progression * 2);
+  // Each feature ONLY appears when its specific entity is purchased
+  const hasCrust = has('crust') || has('molten') || has('lipid');
+  const hasOcean = has('ocean') || has('water');
+  const hasAtmo = has('atmosphere') || has('atm');
+  const hasMoon = has('moon');
+  const hasPlants = has('photosynthesis');
+  const hasContinents = has('continent') || has('land') || has('cambrian');
+  const hasSapiens = has('sapiens') || has('homo');
+  const hasCityLights = has('city') || has('light');
+  const hasSatellite = has('satellite') || has('probe');
+  const moonCount = countOf('moon');
+  const moonFrac = hasMoon ? Math.min(1, moonCount / 5) : 0;
 
   // ── Moon ─────────────────────────────────────────────────────────────────
   const moonAngle = now * 0.0008;
@@ -1861,16 +1863,24 @@ function drawLifeEarthEntities(
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  // Base: molten or dark rock
-  if (hasCrust) {
+  // Base: always show a rocky planet, upgrades change its surface
+  {
     const moltenGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    moltenGrad.addColorStop(0, hasOcean ? '#1a2a50' : '#3a1a0a');
-    moltenGrad.addColorStop(1, hasOcean ? '#0a1830' : '#2a0a00');
+    if (hasOcean) {
+      moltenGrad.addColorStop(0, '#1a2a50');
+      moltenGrad.addColorStop(1, '#0a1830');
+    } else if (hasCrust) {
+      moltenGrad.addColorStop(0, '#3a1a0a');
+      moltenGrad.addColorStop(1, '#2a0a00');
+    } else {
+      moltenGrad.addColorStop(0, '#2a2a2a');
+      moltenGrad.addColorStop(1, '#151515');
+    }
     ctx.fillStyle = moltenGrad;
     fillCircle(ctx, cx, cy, R);
 
-    // Lava veins if no ocean yet
-    if (!hasOcean) {
+    // Lava veins if crust but no ocean
+    if (hasCrust && !hasOcean) {
       for (let i = 0; i < 6; i++) {
         const a = earthSpin * 0.3 + i * 1.05 + unit(i + 500, 1) * 2;
         const r = R * (0.3 + unit(i + 510, 2) * 0.5);
@@ -1880,9 +1890,6 @@ function drawLifeEarthEntities(
         fillCircle(ctx, vx, vy, R * 0.08);
       }
     }
-  } else {
-    ctx.fillStyle = '#1a1a1a';
-    fillCircle(ctx, cx, cy, R);
   }
 
   // Ocean
@@ -1937,15 +1944,20 @@ function drawLifeEarthEntities(
     }
   }
 
-  // Day/night terminator
+  // Day/night terminator (subtle so entities show through)
   const sunDir = earthSpin * 0.2;
-  ctx.fillStyle = hexToRgba('#000000', 0.35);
-  ctx.beginPath();
-  ctx.ellipse(cx - Math.cos(sunDir) * R * 0.5, cy, R * 0.9, R, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const nightGrad = ctx.createRadialGradient(
+    cx + Math.cos(sunDir) * R * 0.6, cy, R * 0.3,
+    cx - Math.cos(sunDir) * R * 0.3, cy, R * 1.1,
+  );
+  nightGrad.addColorStop(0, hexToRgba('#000000', 0));
+  nightGrad.addColorStop(0.5, hexToRgba('#000000', 0.1));
+  nightGrad.addColorStop(1, hexToRgba('#000000', 0.25));
+  ctx.fillStyle = nightGrad;
+  fillCircle(ctx, cx, cy, R);
 
-  // City lights on the dark side
-  if (hasCityLights) {
+  // City lights on the dark side (only after Homo Sapiens)
+  if (hasCityLights || hasSapiens) {
     const nightX = cx - Math.cos(sunDir) * R * 0.4;
     for (let i = 0; i < 12; i++) {
       const lx = nightX + (unit(i + 800, 1) - 0.5) * R * 0.9;
