@@ -2226,18 +2226,84 @@ function drawEntityGlyph(
       break;
     }
     case 'life': {
-      // Organic cell-like with membrane + organelles
-      ctx.strokeStyle = hexToRgba(item.color, 0.3);
-      ctx.lineWidth = 0.6;
+      // Rotating Earth with continents + atmosphere + orbiting moon
+      const earthR = s * 0.55;
+      const earthSpin = now * 0.0004 + item.seed * 0.1;
+
+      // Atmosphere glow
+      const atmoGrad = ctx.createRadialGradient(0, 0, earthR * 0.8, 0, 0, earthR * 1.3);
+      atmoGrad.addColorStop(0, hexToRgba('#4488ff', 0.0));
+      atmoGrad.addColorStop(0.5, hexToRgba('#4488ff', 0.12));
+      atmoGrad.addColorStop(1, hexToRgba('#4488ff', 0.0));
+      ctx.fillStyle = atmoGrad;
+      fillCircle(ctx, 0, 0, earthR * 1.3);
+
+      // Ocean base
+      ctx.fillStyle = hexToRgba('#1a3a6a', 0.85);
+      fillCircle(ctx, 0, 0, earthR);
+
+      // Continents (simplified blobs that rotate)
+      ctx.save();
       ctx.beginPath();
-      ctx.ellipse(0, 0, s * 0.7, s * 0.55, Math.sin(spin * 0.3) * 0.15, 0, Math.PI * 2);
+      ctx.arc(0, 0, earthR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = hexToRgba('#2d6e3f', 0.7);
+      for (let i = 0; i < 4; i++) {
+        const cAngle = earthSpin + i * 1.7 + unit(item.seed, i + 230) * 1.5;
+        const cLat = (unit(item.seed, i + 240) - 0.5) * earthR * 1.2;
+        const cx2 = Math.cos(cAngle) * earthR * 0.7;
+        const visible = Math.cos(cAngle);
+        if (visible > -0.2) {
+          const cSize = earthR * (0.2 + unit(item.seed, i + 250) * 0.2);
+          ctx.globalAlpha = 0.5 + visible * 0.4;
+          ctx.beginPath();
+          ctx.ellipse(cx2, cLat, cSize * (0.5 + visible * 0.5), cSize * 0.7, unit(item.seed, i + 260) * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      // Polar ice caps
+      ctx.fillStyle = hexToRgba('#ddeeff', 0.4);
+      ctx.beginPath();
+      ctx.ellipse(0, -earthR * 0.82, earthR * 0.4, earthR * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, earthR * 0.82, earthR * 0.35, earthR * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Specular highlight
+      const specGrad = ctx.createRadialGradient(-earthR * 0.3, -earthR * 0.3, 0, -earthR * 0.3, -earthR * 0.3, earthR * 0.8);
+      specGrad.addColorStop(0, hexToRgba('#ffffff', 0.2));
+      specGrad.addColorStop(1, hexToRgba('#ffffff', 0.0));
+      ctx.fillStyle = specGrad;
+      fillCircle(ctx, 0, 0, earthR);
+
+      // Thin atmosphere ring
+      ctx.strokeStyle = hexToRgba('#66aaff', 0.2);
+      ctx.lineWidth = earthR * 0.08;
+      strokeCircle(ctx, 0, 0, earthR * 1.05);
+
+      // Orbiting moon
+      const moonAngle = now * 0.0006 + item.seed * 0.3;
+      const moonDist = earthR * 1.6;
+      const moonX = Math.cos(moonAngle) * moonDist;
+      const moonY = Math.sin(moonAngle) * moonDist * 0.35;
+      const moonR = earthR * 0.18;
+      // Draw moon behind or in front based on angle
+      if (Math.sin(moonAngle) < 0) {
+        ctx.fillStyle = hexToRgba('#ccccbb', 0.7);
+        fillCircle(ctx, moonX, moonY, moonR);
+      }
+      // Moon orbit path (faint)
+      ctx.strokeStyle = hexToRgba('#ffffff', 0.06);
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, moonDist, moonDist * 0.35, 0, 0, Math.PI * 2);
       ctx.stroke();
-      // Organelles
-      for (let i = 0; i < 3; i++) {
-        const ox = (unit(item.seed, i + 230) - 0.5) * s * 0.7;
-        const oy = (unit(item.seed, i + 240) - 0.5) * s * 0.5;
-        ctx.fillStyle = hexToRgba(item.color, 0.3 + unit(item.seed, i + 250) * 0.3);
-        fillCircle(ctx, ox + Math.sin(now * 0.001 + i) * 1, oy, s * (0.08 + unit(item.seed, i + 260) * 0.08));
+      if (Math.sin(moonAngle) >= 0) {
+        ctx.fillStyle = hexToRgba('#ccccbb', 0.7);
+        fillCircle(ctx, moonX, moonY, moonR);
       }
       break;
     }
