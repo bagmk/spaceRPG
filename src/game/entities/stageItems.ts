@@ -446,23 +446,19 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Dyson Swarm':            { name: '다이슨 군집',      description: '별빛을 거두는 문명 규모의 반짝이는 구조물.' },
   'Habitable World':        { name: '생명 가능 행성',   description: '생명을 위한 모든 조건이 맞아떨어진 세계.' },
 
-  // Stage 11
-  'Lipid Membrane':         { name: '지질 막',          description: '안과 밖의 화학을 가르는 경계.' },
-  'RNA Molecule':           { name: 'RNA 분자',         description: '스스로 복제하면서 촉매로도 작용하는 분자.' },
-  'DNA Helix':              { name: 'DNA 이중나선',     description: '유전 기억을 미래로 전하는 견고한 이중나선.' },
-  'Prokaryote':             { name: '원핵생물',         description: '핵이 없는 단순한 세포 — 최초의 진정한 생명.' },
-  'Photosynthesis':         { name: '광합성',           description: '빛으로 화학반응을 일으켜 대기에 산소를 내놓는다.' },
-  'Cambrian Explosion':     { name: '캄브리아 대폭발',  description: '고대 바다에서 폭발적으로 등장한 새 몸체 설계들.' },
-  'Eukaryote':              { name: '진핵생물',         description: '내부 소기관과 핵을 갖춘 복잡한 세포.' },
-  'Multicellular Life':     { name: '다세포 생명',      description: '세포가 분화하고 한 몸으로 협력한다.' },
-  'First Ocean':            { name: '최초의 바다',      description: '식어 가는 하늘 아래 오래 지속되는 바다가 모인다.' },
-  'Continents Rise':        { name: '대륙의 융기',      description: '바다 위로 암석 대지가 솟아 지구의 얼굴을 바꾼다.' },
-  'Artificial Satellite':   { name: '인공위성',         description: '최초의 기계가 지구를 돌며 살아 있는 행성을 측량한다.' },
-  'Neuron':                 { name: '뉴런',             description: '빠른 정보 처리를 가능케 하는 신호 세포.' },
-  'Deep Space Probe':       { name: '심우주 탐사선',    description: '행성 너머로 지구를 싣고 가는 작은 기계.' },
-  'Homo Sapiens':           { name: '호모 사피엔스',    description: '생물학을 문화와 기계로 바꾸는 종.' },
-  'Homo Deus':              { name: '호모 데우스',      description: '인류가 자신의 생물학과 운명을 직접 조율하기 시작한다.' },
-  'Space Telescope':        { name: '우주 망원경',      description: '대기 위에서 과거를 되짚는 맑은 눈.' },
+  // Stage 11 — Earth formation → Life → Civilization
+  'Molten Crust':           { name: '용암 지각',        description: '냉각되는 마그마가 최초의 암석 표면을 만든다.' },
+  'First Ocean':            { name: '최초의 바다',      description: '수증기가 응결해 젊은 지구를 덮는 광활한 바다가 된다.' },
+  'Atmosphere':             { name: '대기',             description: '화산 가스가 행성을 보호하는 담요를 형성한다.' },
+  'Moon Formation':         { name: '달 형성',          description: '거대 충돌의 잔해가 모여 달이 된다.' },
+  'Prokaryote':             { name: '원핵생물',         description: '최초의 단순한 세포 — 생명이 심해에서 시작된다.' },
+  'Photosynthesis':         { name: '광합성',           description: '남세균이 대기를 산소로 채운다.' },
+  'Cambrian Explosion':     { name: '캄브리아 대폭발',  description: '고대 바다에서 복잡한 몸체 설계가 폭발적으로 등장한다.' },
+  'Continents Rise':        { name: '대륙의 융기',      description: '지각판이 수면 위로 땅을 밀어 올린다.' },
+  'Neuron':                 { name: '뉴런',             description: '신경 세포가 생각하는 네트워크를 엮는다.' },
+  'Homo Sapiens':           { name: '호모 사피엔스',    description: '언어와 불로 세상을 바꾸는 도구 제작자.' },
+  'City Lights':            { name: '도시의 불빛',      description: '문명이 행성의 밤을 밝힌다.' },
+  'Artificial Satellite':   { name: '인공위성',         description: '기계가 지구를 돌며 살아있는 행성을 측량한다.' },
   'Spacefaring Humanity':   { name: '우주 항해 인류',   description: '행성에서 태어난 종이 여러 세계의 문명이 된다.' },
   'Interstellar Ark':       { name: '성간 방주',        description: '지구의 생명 기록을 고향 별 너머로 실어 나른다.' },
 
@@ -718,55 +714,60 @@ export const STAGE_ENTITIES: StageEntity[] = [
   ]),
 
   // ── Stage 11: Life on Earth (4C + 4R + 4E + 2L) ────────────────────────────
+  // Common = Earth formation, Rare = Early life, Epic = Civilization, Legendary = Transcendence
   ...stage(11, [
+    // Common: Earth formation — each purchase visually changes the planet
     withAliases(
-      item('Lipid Membrane',  '◯',     'Boundary separating inside chemistry from outside.',     'common', 'auto',  2.0),
+      item('Molten Crust',     'ite',   'Cooling magma solidifies into the first rocky surface.',  'common', 'auto',  2.0),
       ['s11_02_lipid_membrane'],
     ),
     withAliases(
-      item('RNA Molecule',    'RNA',    'Self-copying molecule that also acts as a catalyst.',    'common', 'crit',  0.5, true),
+      item('First Ocean',      'H₂O',  'Steam condenses into vast oceans covering the young Earth.', 'common', 'click', 15.0),
       ['s11_03_rna_molecule', 's11_04_dna_helix'],
     ),
     withAliases(
-      item('Prokaryote',      '〇',    'Simple cell without a nucleus, first true living thing.', 'common', 'click', 15.0),
+      item('Atmosphere',       'atm',   'Volcanic gases form a protective blanket around the planet.', 'common', 'crit',  0.5, true),
       ['s11_05_prokaryote'],
     ),
     withAliases(
-      item('Cambrian Explosion','✳',   'Rapid burst of novel body plans in ancient seas.',       'common', 'time',  2.0),
+      item('Moon Formation',   '☽',    'Giant impact ejects debris that coalesces into the Moon.',  'common', 'time',  2.0),
       ['s11_07_cambrian_explosion', 's11_08_eukaryote', 's11_09_multicellular_life'],
     ),
+    // Rare: Life emerges and evolves
     withAliases(
-      item('Moon',            '🌕',    'Giant-impact debris that stabilized Earth\'s axial tilt.', 'rare',   'auto',  3.0),
+      item('Prokaryote',       '○',    'First simple cells — life begins in the deep ocean.',       'rare',   'auto',  3.0),
       ['s11_01_moon'],
     ),
-    item('First Ocean',       'H₂O',   'Cooling skies gather into the first long-lived oceans.',  'rare',   'click', 22.0),
-    item('Continents Rise',   'LAND',  'Rocky land breaks through the water and reshapes Earth.', 'rare',   'crit',  1.0, true),
+    item('Photosynthesis',     'O₂',   'Cyanobacteria fill the atmosphere with oxygen.',            'rare',   'click', 22.0),
+    item('Cambrian Explosion', '✳',    'Explosion of complex body plans in ancient seas.',          'rare',   'crit',  1.0, true),
     withAliases(
-      item('Photosynthesis',  '☀→O₂', 'Light-driven chemistry releasing oxygen into the air.',  'rare',   'time',  2.0),
+      item('Continents Rise',  'LAND', 'Tectonic plates push land above the waterline.',            'rare',   'time',  2.0),
       ['s11_06_photosynthesis'],
     ),
+    // Epic: Intelligence and civilization
     withAliases(
-      item('Neuron',          '⚡',    'Signal cell enabling rapid information processing.',     'epic',   'auto',  6.0),
+      item('Neuron',           '⚡',   'Nerve cells wire together into thinking networks.',          'epic',   'auto',  6.0),
       ['s11_11_neuron'],
     ),
     withAliases(
-      item('Homo Deus',       'HD',    'Humanity begins steering its own biology and destiny.',   'epic',   'click', 35.0),
+      item('Homo Sapiens',     'HS',   'Tool-makers who reshape the world with language and fire.',  'epic',   'click', 35.0),
       ['s11_13_homo_sapiens', 's11_13_intelligence'],
     ),
     withAliases(
-      item('Artificial Satellite','🛰', 'First machines orbit Earth and map the living planet.',  'epic',   'crit',  2.0, true),
+      item('City Lights',      '🌃',   'Civilization glows on the night side of the planet.',        'epic',   'crit',  2.0, true),
       ['s11_10_artificial_satellite', 's11_10_fish'],
     ),
     withAliases(
-      item('Deep Space Probe',   'VGR',  'A tiny craft carrying Earth beyond the planets.',        'epic',   'time',  5.0),
+      item('Artificial Satellite','🛰','Machines orbit Earth mapping the living planet.',            'epic',   'time',  5.0),
       ['s11_12_plant'],
     ),
+    // Legendary: Transcendence
     withAliases(
-      item('Spacefaring Humanity','🚀',  'A planet-born species becomes a civilization of worlds.', 'legendary','multiplier',50.0),
+      item('Spacefaring Humanity','🚀','A planet-born species becomes a civilization of worlds.',    'legendary','multiplier',50.0),
       ['s11_14_space_telescope'],
     ),
     withAliases(
-      item('Interstellar Ark',   'ARK',  'A living archive carrying Earth beyond its home star.',  'legendary','multiplier',50.0),
+      item('Interstellar Ark',   'ARK','A living archive carrying Earth beyond its home star.',      'legendary','multiplier',50.0),
       ['s11_14_homo_sapiens'],
     ),
   ]),
