@@ -1771,23 +1771,22 @@ function drawLifeEarthEntities(
   const earthSpin = now * 0.002;
 
   // ── Detect purchased entities for visual state ──────────────────────────
+  // Use total entity count as progression fallback (old saves have different names)
+  const totalOwned = items.reduce((sum, i) => sum + i.ownedCount, 0);
+  const progression = Math.min(1, totalOwned / 30); // 0→1 as more entities purchased
   const has = (name: string) => items.some((i) => i.name.toLowerCase().includes(name));
-  const countOf = (name: string) => {
-    const e = items.find((i) => i.name.toLowerCase().includes(name));
-    return e ? e.ownedCount : 0;
-  };
-  const hasCrust = has('crust') || has('molten');
-  const hasOcean = has('ocean');
-  const hasAtmo = has('atmosphere') || has('atm');
-  const hasMoon = has('moon');
-  const hasLife = has('prokaryote') || has('photosynthesis');
-  const hasPlants = has('photosynthesis') || has('cambrian');
-  const hasContinents = has('continent');
-  const hasNeuron = has('neuron') || has('sapiens');
-  const hasCityLights = has('city');
-  const hasSatellite = has('satellite');
-  const moonCount = countOf('moon');
-  const moonFrac = Math.min(1, moonCount / 5);
+
+  // Progressive unlocks: earlier items = lower threshold
+  const hasCrust = progression > 0 || has('crust') || has('molten') || has('lipid');
+  const hasOcean = progression > 0.05 || has('ocean') || has('water') || has('rna');
+  const hasAtmo = progression > 0.1 || has('atmosphere') || has('atm') || has('prokaryote');
+  const hasMoon = progression > 0.15 || has('moon') || has('cambrian');
+  const hasPlants = progression > 0.25 || has('photosynthesis') || has('cambrian') || has('plant');
+  const hasContinents = progression > 0.3 || has('continent') || has('land');
+  const hasNeuron = progression > 0.5 || has('neuron') || has('sapiens') || has('intelligence');
+  const hasCityLights = progression > 0.6 || has('city') || has('homo');
+  const hasSatellite = progression > 0.7 || has('satellite') || has('probe') || has('telescope');
+  const moonFrac = Math.min(1, progression * 2);
 
   // ── Moon ─────────────────────────────────────────────────────────────────
   const moonAngle = now * 0.0008;
