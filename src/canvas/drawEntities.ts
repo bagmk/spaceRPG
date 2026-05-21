@@ -9,9 +9,9 @@ function _getEntityBodyCache() { return _entityBodyCache; }
 
 const ICON_SIZE: Record<EntityRarity, number> = {
   common: 7,
-  rare: 9,
-  epic: 12,
-  legendary: 17,
+  rare: 10,
+  epic: 14,
+  legendary: 19,
 };
 
 const GLOW_RADIUS: Record<EntityRarity, number> = {
@@ -1935,263 +1935,445 @@ function drawEntityGlyph(
   size: number,
   now: number,
 ): void {
+  // Per-entity size variation based on seed (±15%)
+  const sizeVar = 0.85 + unit(item.seed, 10) * 0.3;
+  const s = size * sizeVar;
   const spin = now * 0.001 + item.sourceIndex * 0.7 + item.copyIndex * 0.23;
   const pulse = 1 + Math.sin(now * 0.002 + item.copyIndex) * 0.08;
+  // Slight color hue shift per entity copy
+  const hueShift = (item.copyIndex * 17 + item.sourceIndex * 31) % 360;
 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(spin * 0.18);
-  ctx.lineWidth = Math.max(1, size * 0.12);
+  ctx.lineWidth = Math.max(0.8, s * 0.1);
   ctx.strokeStyle = item.color;
   ctx.fillStyle = item.color;
+
   switch (item.glyph) {
-    case 'black_hole':
+    case 'black_hole': {
+      // Accretion disk with orbiting debris
+      const diskSpin = spin * 0.5;
       ctx.save();
-      ctx.rotate(-0.22);
-      ctx.fillStyle = hexToRgba(item.color, 0.75);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.25, size * 0.38, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      ctx.fillStyle = '#02030a';
-      fillCircle(ctx, 0, 0, size * 0.7);
-      ctx.strokeStyle = hexToRgba(item.color, 0.55);
-      strokeCircle(ctx, 0, 0, size * 1.05);
-      break;
-    case 'galaxy':
-      ctx.rotate(spin * 0.7);
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.95, 0.1, Math.PI * 1.1);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.95, Math.PI + 0.1, Math.PI * 2.1);
-      ctx.stroke();
-      fillCircle(ctx, 0, 0, size * 0.35 * pulse);
-      break;
-    case 'star':
-    case 'supernova':
-      ctx.lineWidth = Math.max(1, size * 0.16);
-      drawRays(ctx, size, item.glyph === 'supernova' ? 10 : 8);
-      fillCircle(ctx, 0, 0, size * (item.glyph === 'supernova' ? 0.58 : 0.48) * pulse);
-      break;
-    case 'planet':
-      fillCircle(ctx, 0, 0, size * 0.68);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.2, size * 0.35, -0.28, 0, Math.PI * 2);
-      ctx.stroke();
-      break;
-    case 'water':
-      ctx.save();
-      ctx.rotate(Math.PI / 4);
-      ctx.beginPath();
-      ctx.ellipse(0, -size * 0.1, size * 0.45, size * 0.68, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      ctx.rotate(diskSpin);
+      // Accretion ring
       ctx.strokeStyle = hexToRgba(item.color, 0.5);
+      ctx.lineWidth = s * 0.15;
       ctx.beginPath();
-      ctx.ellipse(0, size * 0.75, size * 0.9, size * 0.22, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, s * 1.3, s * 0.35, 0, 0, Math.PI * 2);
       ctx.stroke();
+      // Orbiting debris particles
+      for (let i = 0; i < 6; i++) {
+        const a = diskSpin * 3 + i * 1.05 + unit(item.seed, i) * 0.5;
+        const orbitR = s * (0.9 + unit(item.seed, i + 20) * 0.5);
+        const px = Math.cos(a) * orbitR;
+        const py = Math.sin(a) * orbitR * 0.3;
+        const pr = s * (0.06 + unit(item.seed, i + 30) * 0.08);
+        ctx.fillStyle = hexToRgba(item.color, 0.4 + unit(item.seed, i + 40) * 0.4);
+        fillCircle(ctx, px, py, pr);
+      }
+      ctx.restore();
+      // Event horizon
+      ctx.fillStyle = '#02030a';
+      fillCircle(ctx, 0, 0, s * 0.55);
+      // Photon ring glow
+      const bhGrad = ctx.createRadialGradient(0, 0, s * 0.5, 0, 0, s * 0.8);
+      bhGrad.addColorStop(0, hexToRgba(item.color, 0.35));
+      bhGrad.addColorStop(1, hexToRgba(item.color, 0));
+      ctx.fillStyle = bhGrad;
+      fillCircle(ctx, 0, 0, s * 0.8);
       break;
-    case 'molecule':
-      ctx.lineWidth = Math.max(1, size * 0.1);
-      ctx.beginPath();
-      ctx.moveTo(-size * 0.75, 0);
-      ctx.lineTo(0, -size * 0.35);
-      ctx.lineTo(size * 0.72, size * 0.18);
-      ctx.stroke();
-      fillCircle(ctx, -size * 0.75, 0, size * 0.32);
-      fillCircle(ctx, 0, -size * 0.35, size * 0.42);
-      fillCircle(ctx, size * 0.72, size * 0.18, size * 0.28);
+    }
+    case 'galaxy': {
+      // Spiral arms made of tiny dots
+      ctx.rotate(spin * 0.4);
+      const arms = 2;
+      for (let arm = 0; arm < arms; arm++) {
+        const armOffset = (arm / arms) * Math.PI * 2;
+        for (let i = 0; i < 12; i++) {
+          const t = i / 12;
+          const spiralA = armOffset + t * Math.PI * 2.5;
+          const r = s * (0.2 + t * 0.85);
+          const px = Math.cos(spiralA) * r;
+          const py = Math.sin(spiralA) * r * 0.6;
+          const dotR = s * (0.04 + (1 - t) * 0.1);
+          ctx.fillStyle = hexToRgba(item.color, 0.3 + (1 - t) * 0.5);
+          fillCircle(ctx, px, py, dotR);
+        }
+      }
+      // Bright core
+      const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.3);
+      coreGrad.addColorStop(0, hexToRgba('#ffffff', 0.6 * pulse));
+      coreGrad.addColorStop(1, hexToRgba(item.color, 0));
+      ctx.fillStyle = coreGrad;
+      fillCircle(ctx, 0, 0, s * 0.3);
       break;
-    case 'atom':
-    case 'lepton':
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.1, size * 0.45, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.1, size * 0.45, Math.PI / 2.6, 0, Math.PI * 2);
-      ctx.stroke();
-      fillCircle(ctx, 0, 0, size * 0.35);
-      ctx.fillStyle = '#fff';
-      fillCircle(ctx, Math.cos(spin) * size * 1.05, Math.sin(spin) * size * 0.45, size * 0.18);
+    }
+    case 'star':
+    case 'supernova': {
+      // Core with flickering corona particles
+      const isSN = item.glyph === 'supernova';
+      const rayCount = isSN ? 8 : 5;
+      for (let i = 0; i < rayCount; i++) {
+        const a = spin * (isSN ? 1.5 : 0.8) + i * (Math.PI * 2 / rayCount);
+        const len = s * (0.6 + Math.sin(now * 0.004 + i * 1.7) * 0.3);
+        const px = Math.cos(a) * len;
+        const py = Math.sin(a) * len;
+        const pr = s * (isSN ? 0.12 : 0.08) * (0.7 + Math.sin(now * 0.006 + i) * 0.3);
+        ctx.fillStyle = hexToRgba(item.color, 0.3 + Math.sin(now * 0.005 + i) * 0.2);
+        fillCircle(ctx, px, py, pr);
+      }
+      // Bright core
+      ctx.fillStyle = hexToRgba('#ffffff', isSN ? 0.7 : 0.5);
+      fillCircle(ctx, 0, 0, s * (isSN ? 0.35 : 0.28) * pulse);
+      ctx.fillStyle = hexToRgba(item.color, 0.6);
+      fillCircle(ctx, 0, 0, s * (isSN ? 0.45 : 0.35) * pulse);
       break;
+    }
     case 'nucleus':
-    case 'quark':
-      fillCircle(ctx, -size * 0.32, -size * 0.18, size * 0.34);
-      fillCircle(ctx, size * 0.22, -size * 0.12, size * 0.36);
-      fillCircle(ctx, -size * 0.05, size * 0.34, size * 0.34);
+    case 'quark': {
+      // Cluster of tightly bound sub-particles vibrating
+      const count = item.glyph === 'quark' ? 3 : 4;
+      for (let i = 0; i < count; i++) {
+        const baseA = (i / count) * Math.PI * 2;
+        const vibrate = Math.sin(now * 0.006 + i * 2.3 + item.seed) * s * 0.12;
+        const r = s * 0.28 + vibrate;
+        const px = Math.cos(baseA + spin * 0.3) * r;
+        const py = Math.sin(baseA + spin * 0.3) * r;
+        const dotSize = s * (0.22 + unit(item.seed, i + 50) * 0.12);
+        // Slight color variation per sub-particle
+        const alpha = 0.6 + unit(item.seed, i + 60) * 0.3;
+        ctx.fillStyle = hexToRgba(item.color, alpha);
+        fillCircle(ctx, px, py, dotSize);
+      }
+      // Binding force lines
       if (item.glyph === 'quark') {
-        ctx.strokeStyle = hexToRgba(item.color, 0.6);
-        strokeCircle(ctx, 0, 0, size * 0.95);
+        ctx.strokeStyle = hexToRgba(item.color, 0.25);
+        ctx.lineWidth = 0.5;
+        strokeCircle(ctx, 0, 0, s * 0.5);
       }
       break;
-    case 'radiation':
-      ctx.lineWidth = Math.max(1, size * 0.12);
-      drawRays(ctx, size, 6);
-      fillCircle(ctx, 0, 0, size * 0.25);
+    }
+    case 'atom':
+    case 'lepton': {
+      // Electron clouds — multiple electrons on different orbits
+      const orbits = item.glyph === 'atom' ? 2 : 1;
+      ctx.strokeStyle = hexToRgba(item.color, 0.2);
+      ctx.lineWidth = 0.5;
+      for (let o = 0; o < orbits; o++) {
+        const tilt = o * (Math.PI / (orbits + 1));
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s * (0.85 + o * 0.25), s * (0.35 + o * 0.1), tilt, 0, Math.PI * 2);
+        ctx.stroke();
+        // Electron on orbit
+        const eAngle = spin * (1.5 + o * 0.7);
+        const ex = Math.cos(eAngle) * s * (0.85 + o * 0.25);
+        const ey = Math.sin(eAngle) * s * (0.35 + o * 0.1);
+        const rotX = ex * Math.cos(tilt) - ey * Math.sin(tilt);
+        const rotY = ex * Math.sin(tilt) + ey * Math.cos(tilt);
+        ctx.fillStyle = '#ffffff';
+        fillCircle(ctx, rotX, rotY, s * 0.1);
+      }
+      // Nucleus
+      ctx.fillStyle = hexToRgba(item.color, 0.7);
+      fillCircle(ctx, 0, 0, s * 0.22);
       break;
+    }
+    case 'radiation': {
+      // Photon bursts radiating outward
+      for (let i = 0; i < 7; i++) {
+        const a = spin * 1.2 + i * 0.9;
+        const dist = s * (0.3 + ((now * 0.002 + i * 0.4) % 1) * 0.7);
+        const alpha = 1 - ((now * 0.002 + i * 0.4) % 1);
+        ctx.fillStyle = hexToRgba(item.color, alpha * 0.5);
+        fillCircle(ctx, Math.cos(a) * dist, Math.sin(a) * dist, s * 0.06);
+      }
+      ctx.fillStyle = hexToRgba('#ffffff', 0.5 * pulse);
+      fillCircle(ctx, 0, 0, s * 0.15);
+      break;
+    }
     case 'wave':
     case 'field':
-    case 'boson':
-      for (let i = -1; i <= 1; i++) {
+    case 'boson': {
+      // Animated sine wave with phase
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = hexToRgba(item.color, 0.6);
+      const waves = item.glyph === 'wave' ? 1 : 2;
+      for (let w = 0; w < waves; w++) {
         ctx.beginPath();
-        ctx.arc(i * size * 0.35, 0, size * 0.62, -0.8, 0.8);
+        for (let i = -20; i <= 20; i++) {
+          const t = i / 20;
+          const xp = t * s * 1.2;
+          const yp = Math.sin(t * 6 + spin * 2 + w * Math.PI) * s * 0.4 * (1 - Math.abs(t));
+          if (i === -20) ctx.moveTo(xp, yp);
+          else ctx.lineTo(xp, yp);
+        }
         ctx.stroke();
       }
-      if (item.glyph !== 'wave') fillCircle(ctx, 0, 0, size * 0.24);
+      if (item.glyph !== 'wave') {
+        ctx.fillStyle = hexToRgba(item.color, 0.4 * pulse);
+        fillCircle(ctx, 0, 0, s * 0.15);
+      }
       break;
+    }
     case 'cloud':
-    case 'halo':
-      ctx.fillStyle = hexToRgba(item.color, 0.55);
-      fillCircle(ctx, -size * 0.35, size * 0.05, size * 0.45);
-      fillCircle(ctx, size * 0.2, -size * 0.16, size * 0.55);
-      fillCircle(ctx, size * 0.48, size * 0.17, size * 0.38);
+    case 'halo': {
+      // Soft nebula blobs with varying opacity
+      const blobs = 5 + Math.floor(unit(item.seed, 70) * 3);
+      for (let i = 0; i < blobs; i++) {
+        const bx = (unit(item.seed, i + 80) - 0.5) * s * 1.4;
+        const by = (unit(item.seed, i + 90) - 0.5) * s * 1.0;
+        const br = s * (0.2 + unit(item.seed, i + 100) * 0.25);
+        const bAlpha = 0.15 + unit(item.seed, i + 110) * 0.25 + Math.sin(now * 0.001 + i) * 0.05;
+        ctx.fillStyle = hexToRgba(item.color, bAlpha);
+        fillCircle(ctx, bx + Math.sin(now * 0.0008 + i) * 2, by, br);
+      }
       if (item.glyph === 'halo') {
+        ctx.strokeStyle = hexToRgba(item.color, 0.15);
+        ctx.lineWidth = 0.5;
+        strokeCircle(ctx, 0, 0, s * 1.1);
+      }
+      break;
+    }
+    case 'plasma': {
+      // Hot swirling particles
+      for (let i = 0; i < 7; i++) {
+        const a = spin * 1.3 + (i / 7) * Math.PI * 2;
+        const r = s * (0.4 + Math.sin(now * 0.003 + i * 1.1) * 0.25);
+        const pr = s * (0.1 + unit(item.seed, i + 120) * 0.1);
+        ctx.fillStyle = hexToRgba(item.color, 0.5 + Math.sin(now * 0.004 + i) * 0.2);
+        fillCircle(ctx, Math.cos(a) * r, Math.sin(a * 1.5) * r * 0.7, pr);
+      }
+      break;
+    }
+    case 'quantum': {
+      // Space-warp dust cloud — tiny particles with color variation
+      const dustCount = 8 + Math.floor(unit(item.seed, 130) * 5);
+      for (let i = 0; i < dustCount; i++) {
+        const phase = unit(item.seed, i + 140) * Math.PI * 2;
+        const drift = now * 0.0005 * (0.5 + unit(item.seed, i + 150) * 1.0);
+        const r = s * (0.3 + unit(item.seed, i + 160) * 0.9);
+        const px = Math.cos(phase + drift) * r;
+        const py = Math.sin(phase * 1.3 + drift * 0.8) * r * 0.7;
+        const dotR = s * (0.04 + unit(item.seed, i + 170) * 0.06);
+        // Color variation — slight warm/cool shift
+        const warmth = unit(item.seed, i + 180);
+        const alpha = 0.2 + warmth * 0.4 + Math.sin(now * 0.002 + i) * 0.1;
+        ctx.fillStyle = hexToRgba(item.color, alpha);
+        fillCircle(ctx, px, py, dotR);
+      }
+      // Faint warp ring
+      ctx.strokeStyle = hexToRgba(item.color, 0.08 + Math.sin(spin) * 0.04);
+      ctx.lineWidth = 0.4;
+      const warpR = s * (0.8 + Math.sin(spin * 1.5) * 0.2);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, warpR, warpR * 0.5, spin * 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case 'entropy': {
+      // Dissolving fragments drifting apart
+      for (let i = 0; i < 6; i++) {
+        const a = spin * 0.4 + i * 1.1 + unit(item.seed, i + 190) * 0.5;
+        const drift = s * (0.3 + unit(item.seed, i + 200) * 0.5) * (1 + Math.sin(now * 0.001 + i) * 0.2);
+        const pr = s * (0.08 + unit(item.seed, i + 210) * 0.1);
+        const alpha = 0.6 - unit(item.seed, i + 220) * 0.3;
+        ctx.fillStyle = hexToRgba(item.color, alpha);
+        fillCircle(ctx, Math.cos(a) * drift, Math.sin(a) * drift, pr);
+      }
+      break;
+    }
+    case 'molecule': {
+      // Bond structure — connected nodes
+      const nodes = [
+        { x: -s * 0.55, y: 0, r: s * 0.2 },
+        { x: 0, y: -s * 0.35 + Math.sin(now * 0.003) * s * 0.05, r: s * 0.28 },
+        { x: s * 0.5, y: s * 0.15, r: s * 0.18 },
+      ];
+      ctx.strokeStyle = hexToRgba(item.color, 0.4);
+      ctx.lineWidth = s * 0.06;
+      for (let i = 0; i < nodes.length - 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[i + 1].x, nodes[i + 1].y);
+        ctx.stroke();
+      }
+      nodes.forEach((n, i) => {
+        ctx.fillStyle = hexToRgba(item.color, 0.5 + i * 0.15);
+        fillCircle(ctx, n.x, n.y, n.r);
+      });
+      break;
+    }
+    case 'dna': {
+      // Double helix with rungs
+      ctx.lineWidth = 0.7;
+      const steps = 10;
+      for (let i = 0; i < steps; i++) {
+        const t = (i / steps) * 2 - 1;
+        const yp = t * s;
+        const twist = spin * 0.8 + t * 3;
+        const x1 = Math.cos(twist) * s * 0.4;
+        const x2 = -x1;
         ctx.strokeStyle = hexToRgba(item.color, 0.5);
-        strokeCircle(ctx, 0, 0, size * 1.08);
+        ctx.beginPath();
+        ctx.moveTo(x1, yp);
+        ctx.lineTo(x2, yp);
+        ctx.stroke();
+        ctx.fillStyle = hexToRgba(item.color, 0.6);
+        fillCircle(ctx, x1, yp, s * 0.06);
+        fillCircle(ctx, x2, yp, s * 0.06);
       }
       break;
-    case 'plasma':
+    }
+    case 'life': {
+      // Organic cell-like with membrane + organelles
+      ctx.strokeStyle = hexToRgba(item.color, 0.3);
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.7, s * 0.55, Math.sin(spin * 0.3) * 0.15, 0, Math.PI * 2);
+      ctx.stroke();
+      // Organelles
+      for (let i = 0; i < 3; i++) {
+        const ox = (unit(item.seed, i + 230) - 0.5) * s * 0.7;
+        const oy = (unit(item.seed, i + 240) - 0.5) * s * 0.5;
+        ctx.fillStyle = hexToRgba(item.color, 0.3 + unit(item.seed, i + 250) * 0.3);
+        fillCircle(ctx, ox + Math.sin(now * 0.001 + i) * 1, oy, s * (0.08 + unit(item.seed, i + 260) * 0.08));
+      }
+      break;
+    }
+    case 'cell': {
+      ctx.strokeStyle = hexToRgba(item.color, 0.35);
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.85, s * 0.65, Math.sin(spin * 0.2) * 0.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(item.color, 0.5);
+      fillCircle(ctx, s * 0.1, -s * 0.05, s * 0.22);
+      break;
+    }
+    case 'neuron': {
+      // Cell body with branching dendrites
+      ctx.fillStyle = hexToRgba(item.color, 0.6);
+      fillCircle(ctx, 0, 0, s * 0.25);
+      ctx.lineWidth = 0.6;
       for (let i = 0; i < 5; i++) {
-        const angle = spin + (i / 5) * Math.PI * 2;
-        fillCircle(ctx, Math.cos(angle) * size * 0.75, Math.sin(angle * 1.7) * size * 0.55, size * 0.22);
-      }
-      strokeCircle(ctx, 0, 0, size * 0.92);
-      break;
-    case 'dna':
-      ctx.beginPath();
-      ctx.moveTo(-size * 0.45, -size);
-      ctx.bezierCurveTo(size * 0.4, -size * 0.55, -size * 0.4, size * 0.55, size * 0.45, size);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(size * 0.45, -size);
-      ctx.bezierCurveTo(-size * 0.4, -size * 0.55, size * 0.4, size * 0.55, -size * 0.45, size);
-      ctx.stroke();
-      break;
-    case 'life':
-      ctx.beginPath();
-      ctx.ellipse(-size * 0.28, -size * 0.1, size * 0.42, size * 0.25, -0.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(size * 0.32, size * 0.08, size * 0.42, size * 0.25, 0.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(0, size * 0.8);
-      ctx.lineTo(0, -size * 0.55);
-      ctx.stroke();
-      break;
-    case 'cell':
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 0.95, size * 0.74, Math.sin(spin) * 0.12, 0, Math.PI * 2);
-      ctx.stroke();
-      fillCircle(ctx, size * 0.12, -size * 0.05, size * 0.32);
-      break;
-    case 'neuron':
-      fillCircle(ctx, 0, 0, size * 0.36);
-      for (let i = 0; i < 4; i++) {
-        const angle = spin + (i / 4) * Math.PI * 2;
+        const a = (i / 5) * Math.PI * 2 + spin * 0.15;
+        const len = s * (0.5 + unit(item.seed, i + 270) * 0.5);
+        ctx.strokeStyle = hexToRgba(item.color, 0.3 + unit(item.seed, i + 280) * 0.2);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(angle) * size * 1.15, Math.sin(angle) * size * 1.15);
+        const midX = Math.cos(a + 0.3) * len * 0.6;
+        const midY = Math.sin(a + 0.3) * len * 0.6;
+        ctx.quadraticCurveTo(midX, midY, Math.cos(a) * len, Math.sin(a) * len);
         ctx.stroke();
+        // Synaptic terminal
+        ctx.fillStyle = hexToRgba(item.color, 0.4);
+        fillCircle(ctx, Math.cos(a) * len, Math.sin(a) * len, s * 0.05);
       }
       break;
+    }
     case 'void':
-    case 'singularity':
+    case 'singularity': {
+      // Dark center with fading concentric rings
       ctx.fillStyle = '#02030a';
-      fillCircle(ctx, 0, 0, size * 0.74);
-      ctx.strokeStyle = hexToRgba(item.color, 0.62);
-      strokeCircle(ctx, 0, 0, size * (item.glyph === 'singularity' ? 1.2 : 0.98));
-      if (item.glyph === 'singularity') strokeCircle(ctx, 0, 0, size * 0.55);
-      break;
-    case 'bounce':
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.92, 0.3, Math.PI * 1.75);
-      ctx.stroke();
-      fillCircle(ctx, 0, 0, size * 0.38 * pulse);
-      break;
-    case 'remnant':
-      ctx.strokeStyle = hexToRgba(item.color, 0.75);
-      strokeCircle(ctx, 0, 0, size * 0.8);
-      ctx.setLineDash([2, 3]);
-      strokeCircle(ctx, 0, 0, size * 1.08);
-      ctx.setLineDash([]);
-      fillCircle(ctx, 0, 0, size * 0.28);
-      break;
-    case 'entropy':
-      for (let i = 0; i < 5; i++) {
-        const angle = spin + i * 1.31;
-        fillCircle(ctx, Math.cos(angle) * size * (0.35 + i * 0.12), Math.sin(angle) * size * (0.35 + i * 0.1), size * 0.17);
+      fillCircle(ctx, 0, 0, s * 0.55);
+      for (let r = 1; r <= 3; r++) {
+        ctx.strokeStyle = hexToRgba(item.color, 0.15 / r);
+        ctx.lineWidth = 0.5;
+        strokeCircle(ctx, 0, 0, s * (0.6 + r * 0.2) * (1 + Math.sin(spin + r) * 0.05));
       }
       break;
-    case 'antiparticle':
-      strokeCircle(ctx, 0, 0, size * 0.9);
+    }
+    case 'bounce': {
+      ctx.strokeStyle = hexToRgba(item.color, 0.5);
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(-size * 0.45, 0);
-      ctx.lineTo(size * 0.45, 0);
+      ctx.arc(0, 0, s * 0.8, 0.3, Math.PI * 1.75);
       ctx.stroke();
-      fillCircle(ctx, 0, 0, size * 0.28);
+      // Arrow tip
+      const tipA = Math.PI * 1.75;
+      const tipX = Math.cos(tipA) * s * 0.8;
+      const tipY = Math.sin(tipA) * s * 0.8;
+      ctx.fillStyle = hexToRgba(item.color, 0.5);
+      fillCircle(ctx, tipX, tipY, s * 0.1);
+      fillCircle(ctx, 0, 0, s * 0.2 * pulse);
       break;
-    case 'quantum': {
-      // Space warp — curved grid lines bending inward like gravitational lensing
-      const r = size * 1.6;
-      const breathe = 0.7 + Math.sin(spin * 1.2) * 0.3;
-      const warpStrength = r * 0.35 * breathe;
-      const gridLines = 5;
+    }
+    case 'remnant': {
+      // Fading shell with dust
+      ctx.strokeStyle = hexToRgba(item.color, 0.3);
       ctx.lineWidth = 0.5;
-      ctx.lineCap = 'round';
-
-      // Horizontal warped lines
-      for (let i = 0; i < gridLines; i++) {
-        const t = (i / (gridLines - 1)) * 2 - 1; // -1 to 1
-        const yBase = t * r * 0.8;
-        const alpha = 0.12 + (1 - Math.abs(t)) * 0.18;
-        ctx.strokeStyle = hexToRgba(item.color, alpha);
+      ctx.setLineDash([2, 3]);
+      strokeCircle(ctx, 0, 0, s * 0.9);
+      ctx.setLineDash([]);
+      for (let i = 0; i < 4; i++) {
+        const a = spin * 0.2 + i * 1.6;
+        const r = s * (0.3 + unit(item.seed, i + 290) * 0.4);
+        ctx.fillStyle = hexToRgba(item.color, 0.25 + unit(item.seed, i + 300) * 0.2);
+        fillCircle(ctx, Math.cos(a) * r, Math.sin(a) * r, s * 0.08);
+      }
+      ctx.fillStyle = hexToRgba(item.color, 0.5);
+      fillCircle(ctx, 0, 0, s * 0.15);
+      break;
+    }
+    case 'antiparticle': {
+      // Matter-antimatter pair orbiting each other
+      const pairAngle = spin * 1.5;
+      const sep = s * 0.35;
+      ctx.fillStyle = hexToRgba(item.color, 0.7);
+      fillCircle(ctx, Math.cos(pairAngle) * sep, Math.sin(pairAngle) * sep, s * 0.2);
+      ctx.fillStyle = hexToRgba(item.color, 0.35);
+      fillCircle(ctx, -Math.cos(pairAngle) * sep, -Math.sin(pairAngle) * sep, s * 0.2);
+      // Annihilation glow at center
+      ctx.fillStyle = hexToRgba('#ffffff', 0.15 + Math.sin(spin * 3) * 0.1);
+      fillCircle(ctx, 0, 0, s * 0.12);
+      break;
+    }
+    case 'planet': {
+      fillCircle(ctx, 0, 0, s * 0.55);
+      // Ring
+      ctx.strokeStyle = hexToRgba(item.color, 0.4);
+      ctx.lineWidth = s * 0.06;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 1.0, s * 0.25, -0.2, 0, Math.PI * 2);
+      ctx.stroke();
+      // Surface detail
+      ctx.fillStyle = hexToRgba('#ffffff', 0.1);
+      fillCircle(ctx, -s * 0.15, -s * 0.1, s * 0.12);
+      break;
+    }
+    case 'water': {
+      // Water droplet with ripple
+      ctx.fillStyle = hexToRgba(item.color, 0.6);
+      ctx.beginPath();
+      ctx.ellipse(0, -s * 0.1, s * 0.35, s * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Ripple rings
+      for (let i = 1; i <= 2; i++) {
+        const rr = s * (0.4 + i * 0.25) * (1 + Math.sin(now * 0.002 + i) * 0.1);
+        ctx.strokeStyle = hexToRgba(item.color, 0.2 / i);
+        ctx.lineWidth = 0.4;
         ctx.beginPath();
-        for (let s = -1; s <= 1; s += 0.05) {
-          const xPos = s * r;
-          const distFromCenter = Math.hypot(s, t);
-          const warp = Math.exp(-distFromCenter * distFromCenter * 2.5) * warpStrength;
-          const yWarped = yBase + warp * Math.sign(yBase || 0.01);
-          if (s === -1) ctx.moveTo(xPos, yWarped);
-          else ctx.lineTo(xPos, yWarped);
-        }
+        ctx.ellipse(0, s * 0.4, rr, rr * 0.25, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
-
-      // Vertical warped lines
-      for (let i = 0; i < gridLines; i++) {
-        const t = (i / (gridLines - 1)) * 2 - 1;
-        const xBase = t * r * 0.8;
-        const alpha = 0.12 + (1 - Math.abs(t)) * 0.18;
-        ctx.strokeStyle = hexToRgba(item.color, alpha);
-        ctx.beginPath();
-        for (let s = -1; s <= 1; s += 0.05) {
-          const yPos = s * r;
-          const distFromCenter = Math.hypot(t, s);
-          const warp = Math.exp(-distFromCenter * distFromCenter * 2.5) * warpStrength;
-          const xWarped = xBase + warp * Math.sign(xBase || 0.01);
-          if (s === -1) ctx.moveTo(xWarped, yPos);
-          else ctx.lineTo(xWarped, yPos);
-        }
-        ctx.stroke();
-      }
-
-      // Subtle center glow
-      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.4);
-      grad.addColorStop(0, hexToRgba(item.color, 0.15 * pulse));
-      grad.addColorStop(1, hexToRgba(item.color, 0));
-      ctx.fillStyle = grad;
-      fillCircle(ctx, 0, 0, r * 0.4);
       break;
     }
     case 'particle':
-    default:
-      strokeCircle(ctx, 0, 0, size * 0.9);
-      fillCircle(ctx, 0, 0, size * 0.3 * pulse);
-      fillCircle(ctx, Math.cos(spin) * size * 0.9, Math.sin(spin * 1.4) * size * 0.55, size * 0.16);
-      fillCircle(ctx, Math.cos(spin + 2.1) * size * 0.7, Math.sin(spin + 2.1) * size * 0.75, size * 0.14);
+    default: {
+      // Generic particle cluster
+      const dots = 3 + Math.floor(unit(item.seed, 310) * 2);
+      for (let i = 0; i < dots; i++) {
+        const a = spin * 0.6 + (i / dots) * Math.PI * 2;
+        const r = s * (0.3 + unit(item.seed, i + 320) * 0.4);
+        const dr = s * (0.1 + unit(item.seed, i + 330) * 0.12);
+        ctx.fillStyle = hexToRgba(item.color, 0.4 + unit(item.seed, i + 340) * 0.3);
+        fillCircle(ctx, Math.cos(a) * r, Math.sin(a) * r, dr);
+      }
+      ctx.fillStyle = hexToRgba(item.color, 0.5 * pulse);
+      fillCircle(ctx, 0, 0, s * 0.15);
       break;
+    }
   }
 
   ctx.restore();
