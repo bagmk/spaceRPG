@@ -2293,15 +2293,15 @@ function drawEntityGlyph(
       const drawMoonEntity = () => {
         // Moon glow
         const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 2);
-        moonGlow.addColorStop(0, hexToRgba('#eeeedd', 0.08));
-        moonGlow.addColorStop(1, hexToRgba('#eeeedd', 0));
+        moonGlow.addColorStop(0, hexToRgba('#ffffee', 0.2));
+        moonGlow.addColorStop(1, hexToRgba('#ffffee', 0));
         ctx.fillStyle = moonGlow;
-        fillCircle(ctx, moonX, moonY, moonR * 2);
+        fillCircle(ctx, moonX, moonY, moonR * 2.5);
         // Moon base
         const moonBase = ctx.createRadialGradient(moonX - moonR * 0.3, moonY - moonR * 0.3, 0, moonX, moonY, moonR);
-        moonBase.addColorStop(0, '#d8d4c8');
-        moonBase.addColorStop(0.7, '#b0aa98');
-        moonBase.addColorStop(1, '#888070');
+        moonBase.addColorStop(0, '#f0ece0');
+        moonBase.addColorStop(0.6, '#d0c8b8');
+        moonBase.addColorStop(1, '#a8a090');
         ctx.fillStyle = moonBase;
         fillCircle(ctx, moonX, moonY, moonR);
         // Craters
@@ -2670,7 +2670,7 @@ export function drawEntities(
       if (pd < pointerPressure.radius) {
         const pnx = pd > 0.001 ? pdx / pd : 1;
         const pny = pd > 0.001 ? pdy / pd : 0;
-        const push = Math.pow(1 - pd / pointerPressure.radius, 2) * pointerPressure.strength * 2.8;
+        const push = Math.pow(1 - pd / pointerPressure.radius, 2) * pointerPressure.strength * 4.5;
         a.body.vx += pnx * push - pny * push * 0.14;
         a.body.vy += pny * push + pnx * push * 0.14;
       }
