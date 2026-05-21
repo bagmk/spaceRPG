@@ -2228,7 +2228,7 @@ function drawEntityGlyph(
     case 'life': {
       // Rotating Earth with continents + atmosphere + orbiting moon
       const earthR = s * 0.55;
-      const earthSpin = now * 0.0004 + item.seed * 0.1;
+      const earthSpin = now * 0.003 + item.seed * 0.1;
 
       // Atmosphere glow
       const atmoGrad = ctx.createRadialGradient(0, 0, earthR * 0.8, 0, 0, earthR * 1.3);
@@ -2285,7 +2285,7 @@ function drawEntityGlyph(
       strokeCircle(ctx, 0, 0, earthR * 1.05);
 
       // Orbiting moon
-      const moonAngle = now * 0.0006 + item.seed * 0.3;
+      const moonAngle = now * 0.002 + item.seed * 0.3;
       const moonDist = earthR * 1.6;
       const moonX = Math.cos(moonAngle) * moonDist;
       const moonY = Math.sin(moonAngle) * moonDist * 0.35;
