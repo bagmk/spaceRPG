@@ -2269,22 +2269,22 @@ export function drawEntities(
 
   interface StageDynamics { gravity: number; repulsion: number; centerPull: number; dampening: number; maxSpeed: number }
   const STAGE_DYNAMICS: Record<number, StageDynamics> = {
-    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 0.0015, dampening: 1.0, maxSpeed: 5.0 },
-    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 0.0012, dampening: 1.0, maxSpeed: 4.5 },
-    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 4.0 },
-    4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.8 },
-    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.5 },
-    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 1.0, maxSpeed: 3.0 },
-    7:  { gravity: 0.9, repulsion: 3.2, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.8 },
-    8:  { gravity: 1.0, repulsion: 3.5, centerPull: 0.001, dampening: 1.0, maxSpeed: 4.0 },
-    9:  { gravity: 1.1, repulsion: 3.0, centerPull: 0.0012, dampening: 1.0, maxSpeed: 4.5 },
-    10: { gravity: 0.7, repulsion: 2.8, centerPull: 0.0009, dampening: 1.0, maxSpeed: 3.2 },
-    11: { gravity: 0.5, repulsion: 2.0, centerPull: 0.0006, dampening: 1.0, maxSpeed: 2.5 },
-    12: { gravity: 1.3, repulsion: 4.0, centerPull: 0.0014, dampening: 1.0, maxSpeed: 4.5 },
-    13: { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 1.0, maxSpeed: 3.5 },
-    14: { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 1.0, maxSpeed: 3.0 },
-    15: { gravity: 1.5, repulsion: 4.5, centerPull: 0.0018, dampening: 1.0, maxSpeed: 5.5 },
-    16: { gravity: 0.3, repulsion: 1.5, centerPull: 0.0004, dampening: 1.0, maxSpeed: 2.0 },
+    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 0.0015, dampening: 0.998, maxSpeed: 5.0 },
+    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 0.0012, dampening: 0.998, maxSpeed: 4.5 },
+    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 4.0 },
+    4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
+    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.5 },
+    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 0.999, maxSpeed: 3.0 },
+    7:  { gravity: 0.9, repulsion: 3.2, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
+    8:  { gravity: 1.0, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 4.0 },
+    9:  { gravity: 1.1, repulsion: 3.0, centerPull: 0.0012, dampening: 0.998, maxSpeed: 4.5 },
+    10: { gravity: 0.7, repulsion: 2.8, centerPull: 0.0009, dampening: 0.998, maxSpeed: 3.2 },
+    11: { gravity: 0.5, repulsion: 2.0, centerPull: 0.0006, dampening: 0.999, maxSpeed: 2.5 },
+    12: { gravity: 1.3, repulsion: 4.0, centerPull: 0.0014, dampening: 0.998, maxSpeed: 4.5 },
+    13: { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.5 },
+    14: { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 0.999, maxSpeed: 3.0 },
+    15: { gravity: 1.5, repulsion: 4.5, centerPull: 0.0018, dampening: 0.997, maxSpeed: 5.5 },
+    16: { gravity: 0.3, repulsion: 1.5, centerPull: 0.0004, dampening: 0.999, maxSpeed: 2.0 },
   };
   const dyn = STAGE_DYNAMICS[stageId] ?? { gravity: 0.8, repulsion: 3.0, centerPull: 0.008, dampening: 0.97, maxSpeed: 1.5 };
   const RARITY_MASS: Record<string, number> = { legendary: 3.0, epic: 2.0, rare: 1.4, common: 1.0 };
