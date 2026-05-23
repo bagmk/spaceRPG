@@ -29,7 +29,6 @@ export function LoreSection({ loreId, language }: LoreSectionProps) {
   if (state.status === 'loading') {
     return (
       <div className="lore-section lore-section--loading">
-        <div className="lore-section__title">{language === 'ko' ? '심층 해설' : 'Lore'}</div>
         <div className="lore-section__body">…</div>
       </div>
     );
@@ -43,7 +42,6 @@ export function LoreSection({ loreId, language }: LoreSectionProps) {
 
   return (
     <div className="lore-section">
-      <div className="lore-section__title">{language === 'ko' ? '심층 해설' : 'Lore'}</div>
       <div className="lore-section__body" dangerouslySetInnerHTML={{ __html: formatBody(body) }} />
     </div>
   );
