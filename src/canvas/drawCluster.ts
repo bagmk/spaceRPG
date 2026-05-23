@@ -600,28 +600,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
     }
   }
 
-  // Layer 2: accretion dust — spirals toward sun, fades as planets form
-  const dustAlpha = 0.7 * (1 - rangeT(progress, 0.24, 0.72));
-  if (dustAlpha > 0.005) {
-    cluster.motes.forEach((mote) => {
-      const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
-      const dx = cx - pushed.x;
-      const dy = cy - pushed.y;
-      const dist = Math.hypot(dx, dy);
-      const streakLen = Math.min(8, dist * 0.08);
-      const nx = dist > 0.1 ? dx / dist : 0;
-      const ny = dist > 0.1 ? dy / dist : 0;
-      // Streak toward center
-      ctx.strokeStyle = hexToRgba(mote.color, dustAlpha * 0.5);
-      ctx.lineWidth = mote.r * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(pushed.x, pushed.y);
-      ctx.lineTo(pushed.x + nx * streakLen, pushed.y + ny * streakLen);
-      ctx.stroke();
-      // Dust dot
-      drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * 0.8, mote.color, dustAlpha * 0.6, mote.spin);
-    });
-  }
+  // (Dust is drawn after the sun — see Layer 5b below)
 
   // Layer 3: accretion disk rings (16–32%)
   const diskT = easeIO(rangeT(progress, 0.16, 0.32));
@@ -666,6 +645,46 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   if (sunT > 0) {
     const sunR = 8 + sunT * 28;
     drawSolarSun(ctx, stage, cx, cy, sunR, 0.75 + sunT * 0.2, now, sunLevel);
+  }
+
+  // Layer 5b: accretion dust — drawn ABOVE the sun so particles are visible
+  // Glowing sparks spiraling inward, fading as planets form
+  const dustAlpha = 0.85 * (1 - rangeT(progress, 0.40, 0.85));
+  if (dustAlpha > 0.005 && cluster.motes.length > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    cluster.motes.forEach((mote) => {
+      const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
+      const dx = cx - pushed.x;
+      const dy = cy - pushed.y;
+      const dist = Math.hypot(dx, dy);
+      const nx = dist > 0.1 ? dx / dist : 0;
+      const ny = dist > 0.1 ? dy / dist : 0;
+
+      // Glowing dust particle
+      const sparkle = 0.5 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.3;
+      const pr = mote.r * 1.5 + 1;
+      ctx.fillStyle = hexToRgba('#ffe8b0', dustAlpha * 0.7 * sparkle);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, pr, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hot white center
+      ctx.fillStyle = hexToRgba('#ffffff', dustAlpha * 0.4 * sparkle);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, mote.r * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inward streak (motion trail toward sun)
+      const streakLen = Math.min(12, dist * 0.1);
+      ctx.strokeStyle = hexToRgba('#ffd080', dustAlpha * 0.35);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(pushed.x, pushed.y);
+      ctx.lineTo(pushed.x + nx * streakLen, pushed.y + ny * streakLen);
+      ctx.stroke();
+    });
+    ctx.restore();
   }
 
   // Layer 6: individual planet formation and stable orbits
