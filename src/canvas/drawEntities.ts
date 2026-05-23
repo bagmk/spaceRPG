@@ -1948,8 +1948,9 @@ function stage11MoonOrbitRadius(earthR: number): number {
 }
 
 function stage11MoonBodyRadius(earthR: number, moonCount: number): number {
-  const grow = Math.min(1, moonCount / 5);
-  return earthR * (0.18 + grow * 0.10);
+  // Grows gradually across full maxCount (20 for common)
+  const grow = Math.min(1, moonCount / 20);
+  return earthR * (0.08 + grow * 0.24);
 }
 
 export interface Stage11MoonScreen {
