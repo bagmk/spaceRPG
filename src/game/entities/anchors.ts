@@ -38,16 +38,17 @@ function isRarityLocked(
   // Legendary requires stage 4+
   if (entity.rarity === 'legendary' && stageId < LEGENDARY_GATE_START_STAGE) return false;
 
-  // Check that all entities of the previous rarity tier have count > 0
+  // Check that all entities of the previous rarity tier are fully maxed
   const prevRarity = RARITY_ORDER[rarityIdx - 1];
   const prevTierEntities = getEntitiesForStage(stageId).filter((e) => e.rarity === prevRarity);
 
   return prevTierEntities.some((prev) => {
+    if (prev.maxCount <= 0) return false; // no cap = always satisfied
     const count = purchasedEntities.reduce(
       (sum, entry) => (entityMatchesId(prev, entry.entityId) ? sum + entry.count : sum),
       0,
     );
-    return count === 0;
+    return count < prev.maxCount;
   });
 }
 
