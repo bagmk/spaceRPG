@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { STAGE_LOGS, pickLogText } from '../game/stageLogs';
-import { openMilestoneLore } from '../game/loreLinks';
 import type { Lang } from '../i18n';
 
 interface StageLogToastProps {
@@ -14,9 +13,6 @@ interface ToastItem {
   id: string;
   title: string;
   message: string;
-  stageId: number;
-  progress: number;
-  titleEn: string;
 }
 
 export function StageLogToast({ stageId, progressPercent, language, onFirstDismiss }: StageLogToastProps) {
@@ -55,7 +51,7 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
       for (const log of newItems) {
         const key = `${stageId}:${log.progress}`;
         shownRef.current.add(key);
-        queueRef.current.push({ id: key, title: pickLogText(log.title, language), message: pickLogText(log.message, language), stageId: log.stageId, progress: log.progress, titleEn: log.title.en });
+        queueRef.current.push({ id: key, title: pickLogText(log.title, language), message: pickLogText(log.message, language) });
       }
       setQueueVersion((v) => v + 1);
     }
@@ -109,21 +105,6 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
           <div className="stage-log-title">{current.title}</div>
           <div className="stage-log-message">{current.message}</div>
         </div>
-        <button
-          type="button"
-          className="stage-log-lore"
-          aria-label="Open lore in new tab"
-          title={language === 'ko' ? '심층 해설 (새 탭)' : 'Read lore (new tab)'}
-          onClick={(event) => {
-            event.stopPropagation();
-            openMilestoneLore(
-              { stageId: current.stageId, progress: current.progress, title: { en: current.titleEn, ko: current.title } },
-              language,
-            );
-          }}
-        >
-          📖
-        </button>
         {showDismiss ? (
           <button
             type="button"

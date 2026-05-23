@@ -10896,51 +10896,184 @@ button.stat-header-item {
     min-height: 0 !important;
   }
 }
+/* ===== Inline lore section (EntityDetailCard) ===== */
+.lore-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  text-align: left;
+}
+.lore-section__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rarity-color, #8a97b4);
+  margin-bottom: 8px;
+}
+.lore-section__body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #c9d0e0;
+}
+.lore-section__body p { margin: 0 0 10px 0; }
+.lore-section__body p:last-child { margin-bottom: 0; }
+.lore-section__body strong { color: #e8eef8; font-weight: 600; }
+.lore-section__body em { color: #a0a8c0; font-style: italic; }
+.lore-section--loading .lore-section__body { color: #6a7390; text-align: center; }
 
-/* ===== Lore link buttons (entity panel + stage log toast) ===== */
-.entity-detail-card__lore {
-  position: absolute;
-  top: 10px;
-  right: 46px;
-  width: 28px;
-  height: 28px;
+/* scrollbar styling */
+.lore-section::-webkit-scrollbar { width: 6px; }
+.lore-section::-webkit-scrollbar-track { background: transparent; }
+.lore-section::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.lore-section::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* ===== Lore modal (Almanac milestone popup) ===== */
+.lore-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 16, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  cursor: pointer;
-  font-size: 14px;
-  transition: transform 0.15s ease, background 0.15s ease;
+  z-index: 200;
+  padding: 16px;
+  animation: lore-fade-in 0.2s ease;
 }
-.entity-detail-card__lore:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: scale(1.08);
-}
-.entity-detail-card__lore:active {
-  transform: scale(0.95);
+@keyframes lore-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.lore-modal {
+  position: relative;
+  background: linear-gradient(135deg, #14142e 0%, #1a1a3e 100%);
+  border: 1px solid rgba(160, 120, 255, 0.3);
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 80vh;
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  color: #e0d8f0;
 }
 
-.stage-log-lore {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-right: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+.lore-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.05);
+  color: #a098c0;
   cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.lore-modal__close:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+.lore-modal__lang {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 4px;
+}
+.lore-modal__lang button {
+  background: rgba(255, 255, 255, 0.05);
+  color: #8a97b4;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.lore-modal__lang button.active {
+  background: #4a3060;
+  color: #fff;
+  border-color: #8060b0;
+}
+
+.lore-modal__breadcrumb {
+  margin-top: 18px;
+  color: #a098c0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lore-modal__title {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.lore-modal__subtitle {
+  color: #a098c0;
+  font-size: 15px;
+  margin-top: 2px;
+}
+.lore-modal__meta {
+  display: inline-block;
+  margin-top: 10px;
+  margin-right: 6px;
+  padding: 3px 10px;
+  background: rgba(120, 100, 200, 0.15);
+  border: 1px solid rgba(160, 120, 255, 0.3);
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  font-size: 11px;
+  color: #c0b0ff;
+}
+.lore-modal__body {
+  margin-top: 14px;
+  overflow-y: auto;
+  padding-right: 8px;
   font-size: 14px;
-  flex-shrink: 0;
-  transition: background 0.15s ease, transform 0.15s ease;
+  line-height: 1.75;
+  color: #d0d8e8;
+  flex: 1;
 }
-.stage-log-lore:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.08);
+.lore-modal__body p { margin: 0 0 12px 0; }
+.lore-modal__body p:last-child { margin-bottom: 0; }
+.lore-modal__body strong { color: #b090ff; font-weight: 600; }
+.lore-modal__body em { color: #a098c0; font-style: italic; }
+
+.lore-modal__body::-webkit-scrollbar { width: 6px; }
+.lore-modal__body::-webkit-scrollbar-track { background: transparent; }
+.lore-modal__body::-webkit-scrollbar-thumb {
+  background: rgba(180, 150, 255, 0.3);
+  border-radius: 3px;
 }
-.stage-log-lore:active {
-  transform: scale(0.95);
+
+/* clickable almanac log entry */
+button.almanac-log-entry {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+button.almanac-log-entry:disabled {
+  cursor: default;
+}
+button.almanac-log-entry--open:hover {
+  background: rgba(160, 120, 255, 0.08);
+}
+
+@media (max-width: 600px) {
+  .lore-modal { padding: 24px 16px 16px; max-height: 90vh; max-height: 90dvh; }
+  .lore-modal__title { font-size: 18px; }
+  .lore-modal__body { font-size: 13px; }
 }

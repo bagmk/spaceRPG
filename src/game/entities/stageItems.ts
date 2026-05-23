@@ -726,31 +726,31 @@ export const STAGE_ENTITIES: StageEntity[] = [
     // Common 1 — Earth Formation (auto). Gateway to the moon.
     withAliases(
       item('Earth Formation',  '🌍',    'Rock and gas clump together, gradually sculpting a young planet.', 'common', 'auto',  2.0),
-      ['s11_01_molten_crust', 's11_02_lipid_membrane'],
+      ['s11_01_molten_crust'],
     ),
-    // Common 2 — Moon Formation (click). Old canonical was s11_04_moon_formation.
+    // Common 2 — Moon Formation (click).
     withAliases(
       item('Moon Formation',   '☽',     'Giant impact ejects debris that coalesces into the Moon.',  'common', 'click', 15.0),
-      ['s11_04_moon_formation', 's11_07_cambrian_explosion', 's11_08_eukaryote', 's11_09_multicellular_life'],
+      ['s11_04_moon_formation'],
     ),
-    // Common 3 — First Ocean (crit isFlat). Old canonical was s11_02_first_ocean.
+    // Common 3 — First Ocean (crit isFlat).
     withAliases(
       item('First Ocean',      'H₂O',   'Steam condenses into vast oceans covering the young Earth.', 'common', 'crit',  0.5, true),
-      ['s11_02_first_ocean', 's11_03_rna_molecule', 's11_04_dna_helix'],
+      ['s11_02_first_ocean'],
     ),
-    // Common 4 — Atmosphere (time). Old canonical was s11_03_atmosphere.
+    // Common 4 — Atmosphere (time).
     withAliases(
       item('Atmosphere',       'atm',   'Volcanic gases form a protective blanket around the planet.', 'common', 'time',  2.0),
-      ['s11_03_atmosphere', 's11_05_prokaryote'],
+      ['s11_03_atmosphere'],
     ),
     // Rare: Geology and life emerge
     withAliases(
       item('Continents Rise',  'LAND', 'Tectonic plates push land above the waterline.',            'rare',   'auto',  3.0),
-      ['s11_08_continents_rise', 's11_06_photosynthesis', 's11_01_moon'],
+      ['s11_08_continents_rise'],
     ),
     withAliases(
       item('Photosynthesis',   'O₂',   'Cyanobacteria fill the atmosphere with oxygen.',            'rare',   'click', 22.0),
-      ['s11_06_photosynthesis_old'],
+      ['s11_06_photosynthesis'],
     ),
     withAliases(
       item('Prokaryote',       '○',    'First simple cells — life begins in the deep ocean.',       'rare',   'crit',  1.0, true),

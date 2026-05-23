@@ -5,7 +5,8 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
-import { openEntityLore } from '../game/loreLinks';
+import { LoreSection } from './LoreSection';
+import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
 import { formatAutoRateValue, getCosmicTimeFillRate } from '../game/formulas';
@@ -535,19 +536,6 @@ function EntityDetailCard({
         >
           ×
         </button>
-        <button
-          type="button"
-          className="entity-detail-card__lore"
-          aria-label="Open lore in new tab"
-          title={language === 'ko' ? '심층 해설 (새 탭)' : 'Read lore (new tab)'}
-          onClick={(event) => {
-            event.stopPropagation();
-            openEntityLore({ stageId: entity.stageId, name: entity.name }, language);
-          }}
-          style={{ color: rarityColor }}
-        >
-          📖
-        </button>
         <div className="entity-detail-card__visual">
           <EntityGlyph entity={entity} color={rarityColor} />
         </div>
@@ -561,6 +549,7 @@ function EntityDetailCard({
           <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'entityLabUnowned')}</span>
           {totalEffectLabel ? <span style={{ color: rarityColor }}>{totalEffectLabel}</span> : null}
         </div>
+        <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
         <button
           type="button"
           className="entity-detail-card__buy"

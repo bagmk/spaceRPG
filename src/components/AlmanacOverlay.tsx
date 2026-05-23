@@ -3,6 +3,8 @@ import { ALMANAC, pickLang } from '../game/almanac';
 import { STAGE_LOGS, getLogsForStage, pickLogText } from '../game/stageLogs';
 import { STAGES } from '../game/stages';
 import { t, stageName, type Lang } from '../i18n';
+import { milestoneLoreId } from '../game/loreLinks';
+import { LoreModal } from './LoreModal';
 
 interface AlmanacOverlayProps {
   currentStageId: number;
@@ -13,6 +15,7 @@ interface AlmanacOverlayProps {
 
 export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
+  const [activeLoreId, setActiveLoreId] = useState<string | null>(null);
   const pillsRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const infoRef = useRef<HTMLDivElement | null>(null);
@@ -129,8 +132,15 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
               <div className="almanac-log-list">
                 {allLogs.map((log) => {
                   const unlocked = effectiveProgress >= log.progress;
+                  const loreId = unlocked ? milestoneLoreId(log.stageId, log.progress, log.title.en) : null;
                   return (
-                    <div key={log.progress} className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}>
+                    <button
+                      key={log.progress}
+                      type="button"
+                      className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}
+                      onClick={() => { if (loreId) setActiveLoreId(loreId); }}
+                      disabled={!unlocked}
+                    >
                       {!unlocked && (
                         <div className="almanac-log-progress">{t(language, 'almanacUnknown')}</div>
                       )}
@@ -142,7 +152,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                           <div className="almanac-log-entry-msg">{pickLogText(log.message, language)}</div>
                         ) : null}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -150,6 +160,9 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
           </div>
         </div>
       </div>
+      {activeLoreId !== null ? (
+        <LoreModal loreId={activeLoreId} language={language} onClose={() => setActiveLoreId(null)} />
+      ) : null}
     </div>
   );
 }

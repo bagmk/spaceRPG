@@ -1799,43 +1799,41 @@ function drawLifeOrbitEntities(
 
     const nameL = item.name.toLowerCase();
 
-    // ── Spacefaring Humanity — Dyson Sphere around the sun ──
+    // ── Spacefaring Humanity — Dyson Sphere wrapping Earth ──
     if (nameL.includes('spacefaring')) {
-      const dysonR = size * 2.8;
       const t = now * 0.001;
+      const dysonR = earthRadius * 1.25;
       ctx.save();
-      ctx.translate(x, y);
-      // Multiple rotating rings (Dyson swarm)
+      ctx.translate(cx, cy);
+      // 3 rotating Dyson swarm rings around the planet
       for (let ring = 0; ring < 3; ring++) {
-        const ringAngle = t * (0.3 + ring * 0.15) + ring * 2.1;
-        const tilt = 0.3 + ring * 0.25;
+        const ringAngle = t * (0.2 + ring * 0.12) + ring * 2.1;
+        const tilt = 0.35 + ring * 0.2;
         const pulse = 0.5 + Math.sin(t * 1.5 + ring * 1.2) * 0.3;
-        ctx.strokeStyle = hexToRgba('#ffd866', 0.35 * pulse);
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = hexToRgba('#ffd866', 0.3 * pulse);
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.ellipse(0, 0, dysonR * (1 + ring * 0.2), dysonR * tilt * (1 + ring * 0.2), ringAngle, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, dysonR + ring * 8, (dysonR + ring * 8) * tilt, ringAngle, 0, Math.PI * 2);
         ctx.stroke();
-        // Energy collection panels (dots on ring)
-        for (let p = 0; p < 6; p++) {
-          const pa = ringAngle + p * (Math.PI * 2 / 6);
-          const panelX = Math.cos(pa) * dysonR * (1 + ring * 0.2);
-          const panelY = Math.sin(pa) * dysonR * tilt * (1 + ring * 0.2);
-          ctx.fillStyle = hexToRgba('#ffe888', 0.4 * pulse);
-          fillCircle(ctx, panelX, panelY, 1.5);
+        // Energy collection panels
+        for (let p = 0; p < 8; p++) {
+          const pa = ringAngle + p * (Math.PI * 2 / 8);
+          const pr = dysonR + ring * 8;
+          const panelX = Math.cos(pa) * pr;
+          const panelY = Math.sin(pa) * pr * tilt;
+          ctx.fillStyle = hexToRgba('#ffe888', 0.35 * pulse);
+          fillCircle(ctx, panelX, panelY, 1.8);
         }
       }
-      // Central star glow
-      ctx.fillStyle = hexToRgba('#fff8e0', 0.6);
-      fillCircle(ctx, 0, 0, size * 0.7);
-      // Energy beam to Earth
-      ctx.strokeStyle = hexToRgba('#ffd866', 0.15);
-      ctx.lineWidth = 2;
-      ctx.setLineDash([3, 5]);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(cx - x, cy - y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      // Faint golden energy halo
+      ctx.fillStyle = hexToRgba('#ffd866', 0.04 + Math.sin(t * 0.8) * 0.02);
+      fillCircle(ctx, 0, 0, dysonR + 20);
+      ctx.restore();
+      // Small glyph at orbital position
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = hexToRgba('#ffe888', 0.8);
+      fillCircle(ctx, 0, 0, 3);
       ctx.restore();
     }
     // ── Interstellar Ark — massive generation ship ──
@@ -2216,72 +2214,60 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Continents — Pangaea → modern continents evolution
-  // contC=1-2: single supercontinent (Pangaea), contC=3+: starts splitting
-  // contC=5+: modern-like arrangement with separate continents
+  // Continents — Pangaea → modern continents
+  // contC=1: single Pangaea blob, contC grows → continents drift apart
   if (continentsN > 0) {
-    const drift = Math.min(1, (contC - 1) / 5); // 0=Pangaea, 1=modern
-    // Define rough continent shapes (lon offset, lat, width, height, rotation)
-    const CONTINENTS = [
-      { lon: 0.0,  lat: -0.05, w: 0.28, h: 0.35, rot: 0.1,  name: 'africa' },
-      { lon: 0.55, lat: -0.25, w: 0.22, h: 0.32, rot: -0.15, name: 'americas' },
-      { lon: -0.5, lat: 0.3,   w: 0.30, h: 0.18, rot: 0.05,  name: 'eurasia' },
-      { lon: 0.8,  lat: 0.35,  w: 0.14, h: 0.14, rot: 0.3,   name: 'australia' },
-      { lon: 0.15, lat: -0.55, w: 0.20, h: 0.10, rot: -0.1,  name: 'antarctica' },
-      { lon: -0.3, lat: -0.15, w: 0.15, h: 0.22, rot: 0.2,   name: 'india' },
-      { lon: 0.35, lat: 0.15,  w: 0.12, h: 0.18, rot: -0.05, name: 'island' },
+    const drift = Math.min(1, Math.max(0, (contC - 1) / 6));
+    const sizeGrow = Math.min(1, contC / 3);
+    // Fixed continent positions (screen-space, no rotation — always visible)
+    // x/y are offsets from center as fraction of R
+    const PANGAEA = [
+      // Pangaea position (clustered)     Modern position (spread)
+      { px: 0.05, py: -0.05, mx: -0.10, my: -0.10, w: 0.28, h: 0.32, rot: 0.1 },   // Africa
+      { px: -0.10, py: 0.0,  mx: -0.50, my: -0.05, w: 0.20, h: 0.40, rot: -0.1 },   // Americas
+      { px: 0.10, py: 0.15,  mx: 0.10,  my: 0.30,  w: 0.35, h: 0.16, rot: 0.05 },   // Eurasia
+      { px: 0.15, py: -0.15, mx: 0.42,  my: -0.30, w: 0.12, h: 0.12, rot: 0.3 },    // Australia
+      { px: 0.0,  py: -0.25, mx: 0.0,   my: -0.52, w: 0.24, h: 0.08, rot: 0 },      // Antarctica
+      { px: 0.12, py: 0.05,  mx: 0.25,  my: 0.05,  w: 0.10, h: 0.14, rot: 0.2 },    // India
+      { px: -0.08, py: 0.12, mx: -0.32, my: 0.22,  w: 0.08, h: 0.10, rot: -0.1 },   // Islands
     ];
-    const visibleCount = Math.min(CONTINENTS.length, continentsN);
+    const visibleCount = Math.min(PANGAEA.length, continentsN);
+
+    // Color: brown rock → green with photosynthesis
+    const gr = Math.round(110 - photoGrow * 40);
+    const gg = Math.round(82 + photoGrow * 35);
+    const gb = Math.round(50 + photoGrow * 10);
+    const landColor = `rgb(${gr}, ${gg}, ${gb})`;
 
     for (let i = 0; i < visibleCount; i++) {
-      const c = CONTINENTS[i];
-      // Pangaea: all continents clustered near center; drift spreads them out
-      const spreadLon = c.lon * drift;
-      const spreadLat = c.lat * (0.3 + drift * 0.7);
-      const cLon = earthSpin + spreadLon * Math.PI;
-      const visible = Math.cos(cLon);
-      if (visible <= -0.05) continue;
+      const c = PANGAEA[i];
+      // Interpolate between Pangaea (clustered) and modern (spread) positions
+      const lx = cx + (c.px + (c.mx - c.px) * drift) * R;
+      const ly = cy + (c.py + (c.my - c.py) * drift) * R;
+      const cw = R * c.w * (0.3 + sizeGrow * 0.7);
+      const ch = R * c.h * (0.3 + sizeGrow * 0.7);
+      const alpha = Math.min(0.92, sizeGrow * 0.95);
 
-      // Size grows as contC increases (land rising from ocean)
-      const sizeGrow = Math.min(1, contC / 3);
-      const cw = R * c.w * (0.4 + sizeGrow * 0.6) * (0.45 + visible * 0.55);
-      const ch = R * c.h * (0.4 + sizeGrow * 0.6);
-      const px = cx + Math.cos(cLon) * R * 0.58;
-      const py = cy + spreadLat * R * 0.55;
-
-      // Color: brown rock → green with photosynthesis
-      const gr = Math.round(105 - photoGrow * 35);
-      const gg = Math.round(78 + photoGrow * 30);
-      const gb = Math.round(48 + photoGrow * 8);
-      const rock = `rgb(${gr}, ${gg}, ${gb})`;
-
-      // Draw continent with irregular edges (multiple overlapping ellipses)
-      ctx.fillStyle = hexToRgba(rock, (0.7 + visible * 0.25) * sizeGrow);
       ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(c.rot + drift * 0.2);
-      // Main body
+      ctx.translate(lx, ly);
+      ctx.rotate(c.rot);
+      // Main landmass
+      ctx.fillStyle = hexToRgba(landColor, alpha);
       ctx.beginPath();
       ctx.ellipse(0, 0, cw, ch, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Sub-lobe for more natural shape
+      // Sub-lobe for natural coastline
       ctx.beginPath();
-      ctx.ellipse(cw * 0.3, ch * -0.2, cw * 0.5, ch * 0.6, 0.3, 0, Math.PI * 2);
+      ctx.ellipse(cw * 0.25, ch * -0.15, cw * 0.45, ch * 0.55, 0.25, 0, Math.PI * 2);
       ctx.fill();
-      // Mountain ridge highlight
-      if (sizeGrow > 0.6) {
-        ctx.fillStyle = hexToRgba('#8a7256', 0.2 * sizeGrow);
+      // Mountain highlight
+      if (sizeGrow > 0.5) {
+        ctx.fillStyle = hexToRgba('#a08860', 0.15 * sizeGrow);
         ctx.beginPath();
-        ctx.ellipse(cw * -0.1, 0, cw * 0.3, ch * 0.15, c.rot * 0.5, 0, Math.PI * 2);
+        ctx.ellipse(0, ch * -0.1, cw * 0.3, ch * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
-
-      // Coastal shadow / shelf
-      ctx.fillStyle = hexToRgba('#1a3a5a', 0.12 * sizeGrow);
-      ctx.beginPath();
-      ctx.ellipse(px + 1, py + 1, cw * 1.08, ch * 1.08, c.rot + drift * 0.2, 0, Math.PI * 2);
-      ctx.fill();
     }
   }
 
