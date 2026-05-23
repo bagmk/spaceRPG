@@ -5874,7 +5874,7 @@ button.stat-header-item {
 .entity-detail-card {
   position: relative;
   width: min(100%, 330px);
-  max-height: min(420px, calc(100dvh - 80px));
+  max-height: calc(100dvh - 60px);
   overflow-y: auto;
   scrollbar-width: none;
   padding: 24px 22px 20px;
@@ -10923,8 +10923,10 @@ button.stat-header-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  max-height: 180px;
+  max-height: 120px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   text-align: left;
 }
 .lore-section__title {
