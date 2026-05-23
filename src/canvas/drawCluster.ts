@@ -647,38 +647,43 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
     drawSolarSun(ctx, stage, cx, cy, sunR, 0.75 + sunT * 0.2, now, sunLevel);
   }
 
-  // Layer 5b: accretion dust — drawn ABOVE the sun so particles are visible
-  // Glowing sparks spiraling inward, fading as planets form
-  const dustAlpha = 0.85 * (1 - rangeT(progress, 0.40, 0.85));
+  // Layer 5b: accretion dust — glowing sparks orbiting outside the sun
+  const sunVisualR = sunT > 0 ? (8 + sunT * 28) * 2.5 : 0; // sun corona radius
+  const dustAlpha = 0.9 * (1 - rangeT(progress, 0.45, 0.88));
   if (dustAlpha > 0.005 && cluster.motes.length > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     cluster.motes.forEach((mote) => {
       const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
-      const dx = cx - pushed.x;
-      const dy = cy - pushed.y;
-      const dist = Math.hypot(dx, dy);
-      const nx = dist > 0.1 ? dx / dist : 0;
-      const ny = dist > 0.1 ? dy / dist : 0;
+      const dist = Math.hypot(cx - pushed.x, cy - pushed.y);
+      // Skip dust inside the sun corona — it wouldn't be visible anyway
+      if (dist < sunVisualR) return;
+      const nx = dist > 0.1 ? (cx - pushed.x) / dist : 0;
+      const ny = dist > 0.1 ? (cy - pushed.y) / dist : 0;
 
-      // Glowing dust particle
-      const sparkle = 0.5 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.3;
-      const pr = mote.r * 1.5 + 1;
-      ctx.fillStyle = hexToRgba('#ffe8b0', dustAlpha * 0.7 * sparkle);
+      // Outer glow halo
+      const sparkle = 0.6 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.4;
+      ctx.fillStyle = hexToRgba('#ffd880', dustAlpha * 0.2 * sparkle);
       ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, pr, 0, Math.PI * 2);
+      ctx.arc(pushed.x, pushed.y, mote.r * 4 + 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hot white center
-      ctx.fillStyle = hexToRgba('#ffffff', dustAlpha * 0.4 * sparkle);
+      // Bright particle core
+      ctx.fillStyle = hexToRgba('#ffe8b0', dustAlpha * 0.85 * sparkle);
       ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, mote.r * 0.6, 0, Math.PI * 2);
+      ctx.arc(pushed.x, pushed.y, mote.r * 1.5 + 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Inward streak (motion trail toward sun)
-      const streakLen = Math.min(12, dist * 0.1);
-      ctx.strokeStyle = hexToRgba('#ffd080', dustAlpha * 0.35);
-      ctx.lineWidth = 0.8;
+      // White hot center
+      ctx.fillStyle = hexToRgba('#ffffff', dustAlpha * 0.55 * sparkle);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, mote.r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Motion streak toward sun
+      const streakLen = Math.min(14, dist * 0.12);
+      ctx.strokeStyle = hexToRgba('#ffc860', dustAlpha * 0.4);
+      ctx.lineWidth = 1.0;
       ctx.beginPath();
       ctx.moveTo(pushed.x, pushed.y);
       ctx.lineTo(pushed.x + nx * streakLen, pushed.y + ny * streakLen);

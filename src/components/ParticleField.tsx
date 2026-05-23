@@ -354,6 +354,10 @@ function createBaseMote(
 }
 
 function addMoteToCluster(cluster: MoteCluster, _stage: Stage, mote: Mote, _maxMassCap: number): void {
+  if (cluster.motes.length >= TUNING.MOTE_MAX) {
+    enrichExistingMote(cluster, _stage, mote, _maxMassCap);
+    return;
+  }
   cluster.motes.push(mote);
 }
 
@@ -1121,17 +1125,24 @@ function applyPointerAttractionToRogue(
   const distance = Math.hypot(dx, dy);
   if (distance > attractionRadius) return;
 
+  // Tier-based: minor=nimble, major=steady, massive=heavy
+  const tierFriction = rogue.typeKey === 'minor' ? 0.995 : rogue.typeKey === 'major' ? 0.985 : 0.97;
+  const tierMaxSpeed = rogue.typeKey === 'minor' ? 1.8 : rogue.typeKey === 'major' ? 1.3 : 0.9;
+
   const nx = distance > 0.001 ? dx / distance : 0;
   const ny = distance > 0.001 ? dy / distance : 0;
   const falloff = 1 - distance / attractionRadius;
-  const pull = field.strength * falloff * falloff * 0.6 * dtScale;
+  const pull = field.strength * falloff * falloff * 1.2 * dtScale;
   rogue.vx += nx * pull;
   rogue.vy += ny * pull;
 
+  rogue.vx *= tierFriction;
+  rogue.vy *= tierFriction;
+
   const speed = Math.hypot(rogue.vx, rogue.vy);
-  if (speed > 1.2) {
-    rogue.vx = (rogue.vx / speed) * 1.2;
-    rogue.vy = (rogue.vy / speed) * 1.2;
+  if (speed > tierMaxSpeed) {
+    rogue.vx = (rogue.vx / speed) * tierMaxSpeed;
+    rogue.vy = (rogue.vy / speed) * tierMaxSpeed;
   }
 }
 
