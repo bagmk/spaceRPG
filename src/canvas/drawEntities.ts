@@ -1841,7 +1841,9 @@ function drawLifeOrbitEntities(
       const t = now * 0.001;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(angle);
+      // Face along orbit tangent with gentle weaving
+      const heading = angle + Math.PI / 2 + Math.sin(t * 0.35) * 0.25;
+      ctx.rotate(heading);
       const s = size * 1.2;
 
       // Engine glow trail (drawn first, behind ship)

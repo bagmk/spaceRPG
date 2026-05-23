@@ -578,7 +578,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, progress, now, pointerPressure } = args;
   const sunLevel = linkedEntityCount(args, 'Sun');
   const rockyPlanetLevel = linkedEntityCount(args, 'Rocky Planet');
-  const sunT = Math.max(rangeT(progress, 0.08, 0.24) * 0.3, Math.min(1, sunLevel / 4));
+  const sunT = Math.max(rangeT(progress, 0.08, 0.24) * 0.3, Math.min(1, sunLevel / 20));
 
   // Layer 1: molecular cloud / nebula haze (0–16%)
   const hazeAlpha = easeIO(rangeT(progress, 0, 0.08)) * (1 - easeIO(rangeT(progress, 0.10, 0.22)));
