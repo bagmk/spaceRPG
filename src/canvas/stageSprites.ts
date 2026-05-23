@@ -364,13 +364,35 @@ function drawSpritePlanet(ctx: CanvasRenderingContext2D, r: number, color: strin
 }
 
 function drawSpriteCell(ctx: CanvasRenderingContext2D, r: number, color: string): void {
-  ctx.fillStyle = hexToRgba(color, 0.9);
+  // Ice crystal / snowflake
+  const s = Math.max(1.5, r * 1.3);
+  const branches = 6;
+  ctx.strokeStyle = hexToRgba(color, 0.75);
+  ctx.lineWidth = Math.max(0.4, s * 0.1);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < branches; i++) {
+    const a = (i / branches) * Math.PI * 2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(ca * s, sa * s);
+    ctx.stroke();
+    // Side twigs
+    const mid = s * 0.55;
+    const tw = s * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(ca * mid, sa * mid);
+    ctx.lineTo(ca * mid + Math.cos(a + 0.5) * tw, sa * mid + Math.sin(a + 0.5) * tw);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ca * mid, sa * mid);
+    ctx.lineTo(ca * mid + Math.cos(a - 0.5) * tw, sa * mid + Math.sin(a - 0.5) * tw);
+    ctx.stroke();
+  }
+  ctx.fillStyle = hexToRgba('#ffffff', 0.35);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.8, r * 1.15), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(0, 0, Math.max(0.8, r * 0.35), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.12, 0, Math.PI * 2);
   ctx.fill();
 }
 
