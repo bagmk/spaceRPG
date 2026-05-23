@@ -3357,7 +3357,8 @@ export function drawEntities(
     const entity = findEntityById(entry.entityId, stageId);
     if (!entity) continue;
     // Stage 10: Sun glyph is represented by the evolving sun animation, skip it
-    if (stageId === 10 && entity.name === 'Sun') continue;
+    // Stage 10: all entities are visualized by the cluster renderer (sun, planets, etc.)
+    if (stageId === 10) continue;
     const existing = entitiesById.get(entity.id);
     if (existing) {
       existing.count += entry.count;
