@@ -83,9 +83,6 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
 
         <div className="almanac-content" ref={contentRef}>
           <div className="almanac-info" ref={infoRef}>
-            <div className={`almanac-stage-label ${isFuture(selectedId) ? 'muted' : ''}`}>
-              {`${t(language, 'almanacStageOf')} ${selectedId} / 16`}
-            </div>
             <h2 className="almanac-stage-name">
               {isFuture(selectedId)
                 ? <span className="almanac-locked-name">{localizedStageName}</span>
@@ -130,7 +127,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
               </div>
             ) : (
               <div className="almanac-log-list">
-                {allLogs.map((log) => {
+                {allLogs.filter((log) => log.progress > 0).map((log) => {
                   const unlocked = effectiveProgress >= log.progress;
                   const loreId = unlocked ? milestoneLoreId(log.stageId, log.progress, log.title.en) : null;
                   return (

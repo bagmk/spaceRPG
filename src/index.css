@@ -391,6 +391,15 @@ canvas {
   white-space: nowrap;
 }
 
+.hud-stage-title--clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.hud-stage-title--clickable:hover {
+  color: var(--accent);
+}
+
 .hud-gauge {
   height: 5px;
   background: rgba(255, 255, 255, 0.12);
