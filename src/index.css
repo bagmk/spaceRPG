@@ -4148,7 +4148,9 @@ button.stat-header-item {
   .bottom-buttons {
     gap: 6px;
     bottom: 10px;
-    right: 10px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
   }
 
   /* ── Scale indicator: small, bottom-left ── */
