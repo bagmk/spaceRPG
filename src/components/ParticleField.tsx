@@ -1121,32 +1121,17 @@ function applyPointerAttractionToRogue(
   const distance = Math.hypot(dx, dy);
   if (distance > attractionRadius) return;
 
-  const fallbackAngle = rogue.id * 0.73;
-  const nx = distance > 0.001 ? dx / distance : Math.cos(fallbackAngle);
-  const ny = distance > 0.001 ? dy / distance : Math.sin(fallbackAngle);
+  const nx = distance > 0.001 ? dx / distance : 0;
+  const ny = distance > 0.001 ? dy / distance : 0;
   const falloff = 1 - distance / attractionRadius;
-  const orbitRadius = field.radius * 0.44;
-  const closeT = distance < orbitRadius ? 1 - distance / orbitRadius : 0;
-  const closeGrip = distance < field.radius * 0.42 ? 1.03 : 1;
-  const inwardBrake = closeT > 0 ? Math.max(0.22, 1 - closeT * 0.74) : 1;
-  const easedPull = Math.pow(falloff, 2.25);
-  const pull = field.strength * (0.025 + easedPull * 0.78) * closeGrip * inwardBrake * dtScale;
+  const pull = field.strength * falloff * falloff * 0.6 * dtScale;
   rogue.vx += nx * pull;
   rogue.vy += ny * pull;
 
-  if (closeT > 0) {
-    const spinDirection = rogue.id % 2 === 0 ? 1 : -1;
-    const repel = field.strength * closeT * closeT * 0.68 * dtScale;
-    const orbit = field.strength * (0.1 + closeT * 0.42) * dtScale;
-    rogue.vx += -nx * repel + -ny * orbit * spinDirection;
-    rogue.vy += -ny * repel + nx * orbit * spinDirection;
-  }
-
   const speed = Math.hypot(rogue.vx, rogue.vy);
-  const maxSpeed = 1;
-  if (speed > maxSpeed) {
-    rogue.vx = (rogue.vx / speed) * maxSpeed;
-    rogue.vy = (rogue.vy / speed) * maxSpeed;
+  if (speed > 1.2) {
+    rogue.vx = (rogue.vx / speed) * 1.2;
+    rogue.vy = (rogue.vy / speed) * 1.2;
   }
 }
 
