@@ -1669,10 +1669,14 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         rogue.spotted = true;
         onEncounter({ name: rogue.name, color: rogue.color });
       }
-      if (rogue.age > TUNING.ROGUE_EXPIRE_MS) {
+      // Don't expire/despawn if pointer is attracting this rogue
+      const pointerNear = pointerPressure
+        ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y) < pointerPressure.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT
+        : false;
+      if (!pointerNear && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
         return;
       }
-      if (Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
+      if (!pointerNear && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
         return;
       }
       nextRogues.push(rogue);
