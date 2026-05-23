@@ -649,7 +649,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
 
   // Layer 5b: accretion dust — glowing sparks orbiting outside the sun
   const sunVisualR = sunT > 0 ? (8 + sunT * 28) * 2.5 : 0; // sun corona radius
-  const dustAlpha = 0.9 * (1 - rangeT(progress, 0.45, 0.88));
+  const dustAlpha = Math.max(0.25, 0.9 * (1 - rangeT(progress, 0.45, 0.88)));
   if (dustAlpha > 0.005 && cluster.motes.length > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -887,7 +887,27 @@ function drawSolarEarth(
 // entities in drawEntities.ts (`drawLifeEarthEntities`). The cluster pass
 // for `lifeSurface` only emits the milestone flash. The earlier
 // progression-driven Pangaea/drift/civilisation rendering has been removed.
-function drawLifeSurface({ ctx, cx, cy, stage, progress }: DrawClusterArgs): void {
+function drawLifeSurface({ ctx, cluster, cx, cy, stage, progress, now, pointerPressure }: DrawClusterArgs): void {
+  // Draw orbiting motes around the earth
+  if (cluster.motes.length > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    cluster.motes.forEach((mote) => {
+      const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 12);
+      const shimmer = 0.5 + Math.sin(now * 0.003 + mote.id * 1.7) * 0.3;
+      // Outer glow
+      ctx.fillStyle = hexToRgba(mote.color, 0.15 * shimmer);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, mote.r * 3.5 + 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Bright core
+      ctx.fillStyle = hexToRgba(mote.color, 0.7 * shimmer);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, mote.r * 1.2 + 1, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
   drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
 }
 
@@ -1252,7 +1272,7 @@ function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterAr
 
   cluster.motes.forEach((mote, index) => {
     const flash = index % 11 === 0 ? 0.4 + pulse * 0.4 : 0.18 + pulse * 0.08;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.9, mote.color, flash, now / 1000 + index);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 1.1, mote.color, flash, now / 1000 + index);
   });
 }
 
@@ -1324,9 +1344,15 @@ function drawBlackHoleScene(args: DrawClusterArgs): void {
     const lx = Math.cos(rot) * dx - Math.sin(rot) * dy;
     const ly = (Math.sin(rot) * dx + Math.cos(rot) * dy) / Math.max(0.2, Math.cos(tilt));
     const hotness = Math.max(0.32, Math.min(0.82, 0.28 + mote.mass * 0.06));
+    // Outer glow
+    ctx.fillStyle = hexToRgba(mote.color, hotness * 0.25);
+    ctx.beginPath();
+    ctx.arc(lx, ly, Math.max(4, mote.r * 3.5), 0, Math.PI * 2);
+    ctx.fill();
+    // Core
     ctx.fillStyle = hexToRgba(mote.color, hotness);
     ctx.beginPath();
-    ctx.arc(lx, ly, Math.max(1.2, mote.r * 0.7), 0, Math.PI * 2);
+    ctx.arc(lx, ly, Math.max(1.8, mote.r * 1.1), 0, Math.PI * 2);
     ctx.fill();
   });
   ctx.restore();
@@ -1577,8 +1603,14 @@ function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now }: Draw
   }
 
   cluster.motes.forEach((mote) => {
-    const flicker = 0.12 + Math.max(0, Math.sin(now / 180 + mote.id)) * 0.36;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.85, mote.color, flicker, mote.age / 800);
+    const flicker = 0.35 + Math.max(0, Math.sin(now / 180 + mote.id)) * 0.5;
+    // Outer glow so the tiny fluctuation sprite is visible
+    const glowR = mote.r * 4;
+    ctx.fillStyle = hexToRgba(mote.color, flicker * 0.28);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 1.3, mote.color, flicker, mote.age / 800);
   });
 }
 

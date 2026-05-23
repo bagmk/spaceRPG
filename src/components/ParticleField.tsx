@@ -787,12 +787,18 @@ function applyAnchorForce(
       mote.vy += nx * 0.42 * dtScale;
       break;
     }
-    case 'lifeSurface':
-      mote.x = cx;
-      mote.y = cy;
-      mote.vx = 0;
-      mote.vy = 0;
+    case 'lifeSurface': {
+      // Orbit around the earth instead of snapping to center
+      const earthR = TUNING.LIFE_SURFACE_R;
+      const orbitR = earthR * (1.2 + mote.hue * 0.6);
+      const radial = (dist - orbitR) / Math.max(orbitR, 20);
+      mote.vx += nx * radial * 0.6 * dtScale;
+      mote.vy += ny * radial * 0.6 * dtScale;
+      // Tangential orbit
+      mote.vx += -ny * 0.35 * dtScale;
+      mote.vy += nx * 0.35 * dtScale;
       break;
+    }
     case 'redGiant': {
       const targetR = clusterRadius * (mote.hue < 0.5 ? 0.34 + mote.hue * 0.48 : 0.85 + mote.hue * 0.36);
       const radial = (dist - targetR) / Math.max(targetR, 32);
@@ -845,7 +851,7 @@ function applyMoteWander(
   now: number,
   dtScale: number,
 ): void {
-  if (stage.clusterMode === 'lifeSurface' || stage.clusterMode === 'planetary') {
+  if (stage.clusterMode === 'planetary') {
     return;
   }
 
@@ -880,6 +886,10 @@ function applyMoteWander(
     case 'remnant':
       mote.vx += waveA * 0.004 * dtScale;
       mote.vy += waveB * 0.004 * dtScale;
+      break;
+    case 'lifeSurface':
+      mote.vx += (-ny * 0.015 + waveA * 0.003) * dtScale;
+      mote.vy += (nx * 0.015 + waveB * 0.003) * dtScale;
       break;
     case 'blackHole':
       mote.vx += -ny * 0.04 * dtScale;
