@@ -2078,45 +2078,95 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Continents — only appear after Continents Rise is purchased
+  // Continents — anchored landmasses that "rise" via a one-shot tween (no
+  // more left/right jitter). Each one has a fixed seed-driven emergence start
+  // and grows from 60% to 100% size as it surfaces.
   if (continentsN > 0) {
+    const RISE_MS = 800;
+    const STAGGER = 8000;
     for (let i = 0; i < continentsN; i += 1) {
       const cLon = earthSpin + (i / continentsN) * Math.PI * 2 + unit(i + 600, 1) * 0.8;
       const cLat = (unit(i + 610, 2) - 0.5) * 0.85;
       const visible = Math.cos(cLon);
       if (visible <= -0.05) continue;
-      const cw = R * (0.18 + unit(i + 620, 3) * 0.20) * (0.45 + visible * 0.55);
-      const ch = R * (0.14 + unit(i + 630, 4) * 0.18);
-      // Bare rock vs photosynthesis green tint
+      const emergeStart = unit(i + 645, 8) * (STAGGER * 0.5);
+      const localT = Math.max(0, Math.min(1, ((now - emergeStart) % STAGGER) / RISE_MS));
+      const emerge = localT * localT * (3 - 2 * localT); // smoothstep
+      const cw = R * (0.20 + unit(i + 620, 3) * 0.20) * (0.45 + visible * 0.55) * (0.6 + emerge * 0.4);
+      const ch = R * (0.14 + unit(i + 630, 4) * 0.18) * (0.6 + emerge * 0.4);
+      const px = cx + Math.cos(cLon) * R * 0.62;
+      const py = cy + cLat * R * 0.6;
+      const rotation = unit(i + 640, 5) * 0.6;
+      // Base rock (photoGrow shifts hue toward green)
       const rock = `rgb(${Math.round(110 - photoGrow * 30)}, ${Math.round(82 + photoGrow * 18)}, ${Math.round(52 + photoGrow * 6)})`;
       ctx.fillStyle = hexToRgba(rock, 0.78 + visible * 0.18);
       ctx.beginPath();
-      ctx.ellipse(cx + Math.cos(cLon) * R * 0.62, cy + cLat * R * 0.6, cw, ch, unit(i + 640, 5) * 0.6, 0, Math.PI * 2);
+      ctx.ellipse(px, py, cw, ch, rotation, 0, Math.PI * 2);
       ctx.fill();
-
-      if (hasPhoto) {
-        ctx.fillStyle = hexToRgba('#2e8a3a', 0.34 + photoGrow * 0.32 + visible * 0.15);
-        ctx.beginPath();
-        ctx.ellipse(cx + Math.cos(cLon) * R * 0.62, cy + cLat * R * 0.6, cw * 0.78, ch * 0.72, unit(i + 641, 6) * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // Coastal shadow
+      ctx.fillStyle = hexToRgba('#341a08', 0.18);
+      ctx.beginPath();
+      ctx.ellipse(px + cw * 0.06, py + ch * 0.10, cw * 0.94, ch * 0.94, rotation, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  // Prokaryote — pale mineral pinpricks in the ocean
-  if (proN > 0 && hasOcean) {
+  // Photosynthesis — soft watercolor green brush blooms across the surface,
+  // anchored to fixed lat/lon and gently breathing in/out over a few seconds.
+  // Replaces the harsh elliptical green overlay so it looks painted on.
+  if (hasPhoto) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const strokes = Math.min(28, Math.floor(8 + photoGrow * 22));
+    for (let i = 0; i < strokes; i += 1) {
+      const lon = i * 0.74 + unit(i + 1100, 1) * 6 + earthSpin * 0.18;
+      const lat = (unit(i + 1101, 2) - 0.5) * 1.4;
+      const visible = Math.cos(lon) * Math.cos(lat);
+      if (visible < -0.1) continue;
+      const bx = cx + Math.cos(lon) * R * 0.64 * Math.cos(lat);
+      const by = cy + Math.sin(lat) * R * 0.68;
+      const bloomT = ((now * 0.0004 + unit(i + 1102, 3) * 8) % 4) / 4;
+      const bloom = bloomT * bloomT * (3 - 2 * bloomT);
+      const len = R * (0.08 + unit(i + 1103, 4) * 0.22) * (0.5 + photoGrow * 0.8) * (0.6 + bloom * 0.6);
+      const wid = len * (0.42 + unit(i + 1104, 5) * 0.22);
+      const tilt = unit(i + 1105, 6) * Math.PI;
+      const greens = ['#3fcf6f', '#5be08a', '#2da556', '#7ff0a4'];
+      const tint = greens[i % greens.length];
+      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, len);
+      grad.addColorStop(0, hexToRgba(tint, 0.42 * (0.4 + photoGrow * 0.6)));
+      grad.addColorStop(0.6, hexToRgba(tint, 0.18 * (0.5 + photoGrow * 0.5)));
+      grad.addColorStop(1, hexToRgba(tint, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, len, wid, tilt, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Prokaryote — drifting microbial particles near Earth core. Each one
+  // floats on a small, near-stationary orbit, bobs gently, glows softly, and
+  // slides away from the cursor (with satellite amplifying the effect).
+  if (proN > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < proN; i += 1) {
-      const lon = earthSpin * 1.4 + i * 0.92 + unit(i + 700, 1) * 6;
-      const lat = (unit(i + 710, 2) - 0.5) * 1.6;
-      const vis = Math.cos(lon) * Math.cos(lat);
-      if (vis < 0.1) continue;
-      const px = cx + Math.cos(lon) * R * 0.7 * Math.cos(lat);
-      const py = cy + Math.sin(lat) * R * 0.78;
-      const flick = 0.35 + Math.sin(now * 0.003 + i * 1.7) * 0.25;
-      ctx.fillStyle = hexToRgba('#9affc8', flick);
-      fillCircle(ctx, px, py, 0.9 + vis * 0.7);
+      const orbitR = R * (0.08 + unit(i + 1200, 1) * 0.38);
+      const angle = now * (0.00016 + unit(i + 1201, 2) * 0.0002) + unit(i + 1202, 3) * 6.28;
+      const bobY = Math.sin(now * 0.0009 + i * 1.7) * R * 0.04;
+      const baseX = cx + Math.cos(angle) * orbitR;
+      const baseY = cy + Math.sin(angle) * orbitR * 0.85 + bobY;
+      const w = applyWiggle(baseX, baseY);
+      const flick = 0.55 + Math.sin(now * 0.003 + i * 1.7) * 0.3;
+      // Soft halo
+      const halo = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, 6 + w.falloff * 5);
+      halo.addColorStop(0, hexToRgba('#9affc8', 0.40 + w.falloff * 0.25));
+      halo.addColorStop(1, hexToRgba('#9affc8', 0));
+      ctx.fillStyle = halo;
+      fillCircle(ctx, w.x, w.y, 6 + w.falloff * 5);
+      // Bright core
+      ctx.fillStyle = hexToRgba('#dafff0', flick + w.falloff * 0.3);
+      fillCircle(ctx, w.x, w.y, 1.2 + w.falloff * 1.4);
     }
     ctx.restore();
   }

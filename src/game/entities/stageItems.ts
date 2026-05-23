@@ -874,10 +874,16 @@ export function entityMatchesId(entity: StageEntity, entityId: string): boolean 
 }
 
 export function findEntityById(entityId: string, stageId?: number): StageEntity | undefined {
-  return STAGE_ENTITIES.find((entity) => {
-    if (stageId !== undefined && entity.stageId !== stageId) return false;
-    return entityMatchesId(entity, entityId);
-  });
+  // Canonical id wins before any alias — otherwise a later entity's canonical
+  // id can collide with an earlier entity's alias list, e.g. Cambrian's id
+  // `s11_07_cambrian_explosion` was being eaten by Moon Formation's old alias
+  // list and the player would see a moon appear when they bought Cambrian.
+  const candidates = stageId !== undefined
+    ? STAGE_ENTITIES.filter((entity) => entity.stageId === stageId)
+    : STAGE_ENTITIES;
+  const canonical = candidates.find((entity) => entity.id === entityId);
+  if (canonical) return canonical;
+  return candidates.find((entity) => entity.aliases?.includes(entityId) === true);
 }
 
 export function getPurchasedEntityCount(
