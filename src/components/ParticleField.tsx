@@ -1139,7 +1139,7 @@ function applyPointerAttractionToRogue(
   const nx = distance > 0.001 ? dx / distance : 0;
   const ny = distance > 0.001 ? dy / distance : 0;
   const falloff = 1 - distance / attractionRadius;
-  const pull = field.strength * falloff * falloff * 1.5 * dtScale;
+  const pull = field.strength * falloff * falloff * 2.5 * dtScale;
 
   // Dampen original velocity so pointer pull dominates
   const dampStrength = 0.92 - falloff * 0.15; // closer = more dampening
@@ -1675,14 +1675,17 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         rogue.spotted = true;
         onEncounter({ name: rogue.name, color: rogue.color });
       }
-      // Don't expire/despawn if pointer is attracting this rogue
-      const pointerNear = pointerPressure
-        ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y) < pointerPressure.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT
-        : false;
-      if (!pointerNear && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
+      // Don't expire/despawn if pointer has ever attracted this rogue
+      const attractDist = pointerPressure
+        ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y)
+        : Infinity;
+      const inRange = attractDist < pointerPressure!?.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
+      if (inRange) (rogue as any)._attracted = true;
+      const isTracked = (rogue as any)._attracted && pointerPressure;
+      if (!isTracked && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
         return;
       }
-      if (!pointerNear && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
+      if (!isTracked && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
         return;
       }
       nextRogues.push(rogue);
