@@ -2327,30 +2327,61 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Cambrian Explosion — small wriggly creatures swimming in the ocean.
-  // They react to pointer-hover wiggle (Satellite amplifies the effect).
+  // Cambrian Explosion — bioluminescent life gems scattered across the ocean.
+  // Each level adds more creatures with increasing color diversity.
+  // Nearby gems connect with faint "web of life" threads.
   if (cambrianN > 0 && hasOcean) {
-    for (let i = 0; i < cambrianN; i += 1) {
-      const orbit = 0.3 + unit(i + 770, 1) * 0.55;
-      const phase = now * (0.0007 + unit(i + 771, 2) * 0.0009) + i * 1.3;
-      const lat = (unit(i + 772, 3) - 0.5) * 1.4;
-      const baseX = cx + Math.cos(phase + earthSpin * 0.4) * R * orbit;
-      const baseY = cy + Math.sin(lat) * R * 0.6 + Math.sin(phase * 2.4) * R * 0.04;
-      const dist = Math.hypot(baseX - cx, baseY - cy);
-      if (dist > R * 0.86) continue;
-      const w = applyWiggle(baseX, baseY);
-      // Body — tapered tail
-      ctx.strokeStyle = hexToRgba('#ffd7a8', 0.55 + w.falloff * 0.2);
-      ctx.lineWidth = 1.4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(w.x, w.y);
-      ctx.lineTo(w.x - Math.cos(phase + earthSpin * 0.4) * 6, w.y - Math.sin(phase * 2.4) * 2);
-      ctx.stroke();
-      // Head dot
-      ctx.fillStyle = hexToRgba('#ffe7c0', 0.85);
-      fillCircle(ctx, w.x, w.y, 1.4 + w.falloff * 0.7);
+    const lifeColors = ['#ff6b8a', '#ffaa44', '#44ddaa', '#44aaff', '#cc77ff', '#ffdd44', '#ff8855', '#66eebb'];
+    const diversity = Math.min(lifeColors.length, 2 + cambrianC);
+    const gemCount = Math.min(36, cambrianN * 3);
+
+    // Collect gem positions for web connections
+    const gems: Array<{ x: number; y: number; color: string }> = [];
+
+    ctx.save();
+    for (let i = 0; i < gemCount; i++) {
+      const lon = i * 1.1 + unit(i + 770, 1) * 4;
+      const lat = (unit(i + 771, 2) - 0.5) * 1.2;
+      const px = cx + Math.cos(lon + earthSpin * 0.3) * R * (0.25 + unit(i + 772, 3) * 0.45);
+      const py = cy + Math.sin(lat) * R * 0.55;
+      const dist = Math.hypot(px - cx, py - cy);
+      if (dist > R * 0.82) continue;
+
+      const color = lifeColors[i % diversity];
+      const breathe = 0.6 + Math.sin(now * 0.002 + i * 1.9) * 0.4;
+      const gemR = 1.2 + unit(i + 773, 4) * 1.5;
+
+      // Soft glow
+      ctx.fillStyle = hexToRgba(color, 0.10 * breathe);
+      fillCircle(ctx, px, py, gemR * 3.5);
+      // Bright core
+      ctx.fillStyle = hexToRgba(color, 0.45 * breathe);
+      fillCircle(ctx, px, py, gemR);
+      // White sparkle center
+      ctx.fillStyle = hexToRgba('#ffffff', 0.3 * breathe);
+      fillCircle(ctx, px, py, gemR * 0.4);
+
+      gems.push({ x: px, y: py, color });
     }
+
+    // Web of life — faint lines between nearby gems
+    if (gems.length > 2) {
+      ctx.globalAlpha = 0.08;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < gems.length; i++) {
+        for (let j = i + 1; j < Math.min(gems.length, i + 4); j++) {
+          const d = Math.hypot(gems[i].x - gems[j].x, gems[i].y - gems[j].y);
+          if (d > R * 0.35) continue;
+          ctx.strokeStyle = gems[i].color;
+          ctx.beginPath();
+          ctx.moveTo(gems[i].x, gems[i].y);
+          ctx.lineTo(gems[j].x, gems[j].y);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
   }
 
   // Neuron — cyan node graph with electrical pulses traveling along edges.
