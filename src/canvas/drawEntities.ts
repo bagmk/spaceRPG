@@ -2287,16 +2287,12 @@ function drawLifeEarthEntities(
       const by = cy + Math.sin(lat) * R * 0.68;
       const bloomT = ((now * 0.0004 + unit(i + 1102, 3) * 8) % 4) / 4;
       const bloom = bloomT * bloomT * (3 - 2 * bloomT);
-      const len = R * (0.08 + unit(i + 1103, 4) * 0.22) * (0.5 + photoGrow * 0.8) * (0.6 + bloom * 0.6);
-      const wid = len * (0.42 + unit(i + 1104, 5) * 0.22);
+      const len = R * (0.04 + unit(i + 1103, 4) * 0.10) * (0.4 + photoGrow * 0.6) * (0.6 + bloom * 0.4);
+      const wid = len * (0.5 + unit(i + 1104, 5) * 0.3);
       const tilt = unit(i + 1105, 6) * Math.PI;
       const greens = ['#3fcf6f', '#5be08a', '#2da556', '#7ff0a4'];
       const tint = greens[i % greens.length];
-      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, len);
-      grad.addColorStop(0, hexToRgba(tint, 0.42 * (0.4 + photoGrow * 0.6)));
-      grad.addColorStop(0.6, hexToRgba(tint, 0.18 * (0.5 + photoGrow * 0.5)));
-      grad.addColorStop(1, hexToRgba(tint, 0));
-      ctx.fillStyle = grad;
+      ctx.fillStyle = hexToRgba(tint, 0.18 * (0.3 + photoGrow * 0.5));
       ctx.beginPath();
       ctx.ellipse(bx, by, len, wid, tilt, 0, Math.PI * 2);
       ctx.fill();
@@ -2560,10 +2556,7 @@ function drawLifeEarthEntities(
   } // end "if (sphereR > 0.5)" Earth-body guard
 
   // ── Biosphere veins outside the clip (life force tendrils) ───────────────
-  const hasCambrian = cambrianC > 0;
-  if (hasPhoto || hasCambrian || hasNeuron) {
-    drawEarthBiosphereVeins(ctx, cx, cy, R, items, now);
-  }
+  // Biosphere veins removed — too noisy
 
   // Atmosphere ring (outline) — always visible once purchased
   if (hasAtmo) {

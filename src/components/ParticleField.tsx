@@ -1760,11 +1760,11 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           );
           if (moon.visible) {
             const dist = Math.hypot(x - moon.moonX, y - moon.moonY);
-            if (dist <= moon.moonR * 1.4) {
+            if (dist <= moon.moonR * 1.8) {
               const cluster = worldRef.current.cluster;
               cluster.moonAngleOffset =
-                (cluster.moonAngleOffset ?? 0) + (event.pointerType === 'touch' ? 0.42 : 0.32);
-              cluster.moonNudgeImpulse = 1;
+                (cluster.moonAngleOffset ?? 0) + (event.pointerType === 'touch' ? 0.06 : 0.04);
+              cluster.moonNudgeImpulse = Math.min(1, (cluster.moonNudgeImpulse ?? 0) + 0.3);
             }
           }
         }
