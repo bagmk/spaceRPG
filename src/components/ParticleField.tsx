@@ -1706,14 +1706,13 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       progress: visualProgress,
       pointerPressure,
     });
-    drawParticles({
-      ctx,
-      stage,
-      particles: world.particles,
-      flyers: world.flyers,
-      bursts: world.bursts,
-    });
+    if (stage.clusterMode !== 'lifeSurface') {
+      drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
+    }
     drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now, pointerPressure, world.cluster);
+    if (stage.clusterMode === 'lifeSurface') {
+      drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
+    }
     drawRogues(ctx, world.rogues, width, height, now, pointerPressure);
     drawEffects({
       ctx,
