@@ -1620,13 +1620,14 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
 
     if (!interactionLocked) {
       const encounterTimeScale = Math.min(2.5, Math.sqrt(Math.max(1, timeMult)));
+      const earlyStage = stage.id <= 2;
+      const rogueMax = earlyStage ? 4 : TUNING.ROGUE_MAX;
+      const intervalMin = earlyStage ? 4000 : TUNING.ENCOUNTER_INTERVAL_MIN_MS;
+      const intervalMax = earlyStage ? 12000 : TUNING.ENCOUNTER_INTERVAL_MAX_MS;
       world.rogueCooldown -= frameDt * encounterTimeScale;
-      if (world.rogueCooldown <= 0 && world.rogues.length < TUNING.ROGUE_MAX) {
+      if (world.rogueCooldown <= 0 && world.rogues.length < rogueMax) {
         world.rogues.push(createRogue(world, stage, width, height));
-        world.rogueCooldown =
-          TUNING.ENCOUNTER_INTERVAL_MIN_MS +
-          Math.random() *
-            (TUNING.ENCOUNTER_INTERVAL_MAX_MS - TUNING.ENCOUNTER_INTERVAL_MIN_MS);
+        world.rogueCooldown = intervalMin + Math.random() * (intervalMax - intervalMin);
       }
     }
 
