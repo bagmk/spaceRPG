@@ -134,13 +134,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                   const unlocked = effectiveProgress >= log.progress;
                   const loreId = unlocked ? milestoneLoreId(log.stageId, log.progress, log.title.en) : null;
                   return (
-                    <button
-                      key={log.progress}
-                      type="button"
-                      className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}
-                      onClick={() => { if (loreId) setActiveLoreId(loreId); }}
-                      disabled={!unlocked}
-                    >
+                    <div key={log.progress} className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}>
                       {!unlocked && (
                         <div className="almanac-log-progress">{t(language, 'almanacUnknown')}</div>
                       )}
@@ -152,7 +146,17 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                           <div className="almanac-log-entry-msg">{pickLogText(log.message, language)}</div>
                         ) : null}
                       </div>
-                    </button>
+                      {unlocked && loreId ? (
+                        <button
+                          type="button"
+                          className="almanac-log-entry__more"
+                          onClick={() => setActiveLoreId(loreId)}
+                          aria-label={language === 'ko' ? '심층 해설 보기' : 'Read more'}
+                        >
+                          {language === 'ko' ? '자세히 →' : 'More →'}
+                        </button>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>

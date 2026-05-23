@@ -3246,15 +3246,17 @@ export function drawEntities(
   }
 
   if (items.length === 0) return;
+
+  // Stage 11 uses its own entity lookup — skip the generic draw cap
+  if (stageId === 11) {
+    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure, cluster);
+    return;
+  }
+
   if (items.length > MAX_TOTAL_ENTITY_DRAW) {
     const RARITY_PRIORITY: Record<string, number> = { legendary: 0, epic: 1, rare: 2, common: 3 };
     items.sort((a, b) => (RARITY_PRIORITY[a.rarity] ?? 3) - (RARITY_PRIORITY[b.rarity] ?? 3));
     items.length = MAX_TOTAL_ENTITY_DRAW;
-  }
-
-  if (stageId === 11) {
-    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure, cluster);
-    return;
   }
 
   // ── N-body physics simulation for entity particles ──────────────────────

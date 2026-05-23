@@ -11101,19 +11101,39 @@ button.stat-header-item {
   border-radius: 3px;
 }
 
-/* clickable almanac log entry */
-button.almanac-log-entry {
-  width: 100%;
-  text-align: left;
+/* Small "More →" button on unlocked milestone entries */
+.almanac-log-entry {
+  position: relative;
+}
+.almanac-log-entry__more {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 1px solid rgba(180, 150, 255, 0.35);
+  color: #b090ff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 4px 10px;
+  border-radius: 14px;
   cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
   font-family: inherit;
-  color: inherit;
 }
-button.almanac-log-entry:disabled {
-  cursor: default;
+.almanac-log-entry__more:hover {
+  background: rgba(180, 150, 255, 0.15);
+  color: #d0b8ff;
+  border-color: rgba(180, 150, 255, 0.55);
 }
-button.almanac-log-entry--open:hover {
-  background: rgba(160, 120, 255, 0.08);
+.almanac-log-entry__more:active {
+  transform: translateY(-50%) scale(0.96);
+}
+/* Leave space for the More button so text doesn't overlap */
+.almanac-log-entry--open .almanac-log-body {
+  padding-right: 64px;
 }
 
 @media (max-width: 600px) {
