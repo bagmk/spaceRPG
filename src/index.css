@@ -391,12 +391,19 @@ canvas {
   white-space: nowrap;
 }
 
-.hud-stage-title--clickable {
+button.hud-stage-title--clickable {
+  all: unset;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: inherit;
+  color: inherit;
+  pointer-events: auto;
   transition: color 0.15s;
 }
 
-.hud-stage-title--clickable:hover {
+button.hud-stage-title--clickable:hover {
   color: var(--accent);
 }
 

@@ -723,7 +723,7 @@ export function GameScreen({
               </button>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
-                  <span className="hud-stage-title hud-stage-title--clickable" role="button" tabIndex={0} onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }} onKeyDown={(e) => { if (e.key === 'Enter') setAlmanacOpen(true); }}>{displayStageLabel}</span>
+                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
                     <span className="hud-entropy-readout">
                       <span>{t(language, 'hudEntropy')}</span>
