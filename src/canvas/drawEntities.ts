@@ -2384,44 +2384,82 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Neuron — cyan node graph with electrical pulses traveling along edges.
-  // Visually distinct from Photosynthesis's diffuse green blooms.
+  // Neuron — synaptic flashes across the planet surface.
+  // Random golden sparks fire on the surface and chain-react to nearby points.
+  // The planet looks like it's waking up, thinking.
   if (hasNeuron) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const nodes = neuronMesh;
-    const pts: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < nodes; i += 1) {
-      const lon = earthSpin * 0.6 + i * 0.78;
-      const vis = Math.cos(lon);
-      if (vis < 0) continue;
-      const lat = (unit(i + 820, 1) - 0.5) * 1.2;
-      const baseX = cx + Math.cos(lon) * R * 0.55;
-      const baseY = cy + Math.sin(lat) * R * 0.5;
-      const w = applyWiggle(baseX, baseY);
-      pts.push({ x: w.x, y: w.y });
+    const nodeCount = Math.min(20, 6 + neuronC * 2);
+    const t = now * 0.001;
+
+    // Generate fixed synapse positions on the surface
+    const synapses: Array<{ x: number; y: number; fire: number }> = [];
+    for (let i = 0; i < nodeCount; i++) {
+      const lon = i * 0.92 + unit(i + 820, 1) * 2.5;
+      const lat = (unit(i + 821, 2) - 0.5) * 1.1;
+      const px = cx + Math.cos(lon) * R * (0.35 + unit(i + 822, 3) * 0.35);
+      const py = cy + Math.sin(lat) * R * 0.45;
+      const dist = Math.hypot(px - cx, py - cy);
+      if (dist > R * 0.82) continue;
+      // Each synapse fires on its own cycle (0→1→0)
+      const firePhase = ((t * (0.4 + unit(i + 823, 4) * 0.6) + unit(i + 824, 5) * 10) % 3) / 3;
+      const fire = firePhase < 0.15
+        ? firePhase / 0.15                     // ramp up
+        : firePhase < 0.3
+          ? 1 - (firePhase - 0.15) / 0.15     // ramp down
+          : 0;                                  // dormant
+      synapses.push({ x: px, y: py, fire });
     }
-    for (let i = 0; i < pts.length; i += 1) {
-      for (let j = i + 1; j < pts.length; j += 1) {
-        const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
-        if (d > R * 0.55) continue;
-        // Static dim edge
-        ctx.strokeStyle = hexToRgba('#74cfff', 0.10);
+
+    // Chain-reaction arcs between firing synapses
+    for (let i = 0; i < synapses.length; i++) {
+      const a = synapses[i];
+      if (a.fire < 0.1) continue;
+      // Find nearest neighbor and draw arc
+      let bestJ = -1;
+      let bestD = Infinity;
+      for (let j = 0; j < synapses.length; j++) {
+        if (j === i) continue;
+        const d = Math.hypot(a.x - synapses[j].x, a.y - synapses[j].y);
+        if (d < bestD && d < R * 0.6) { bestD = d; bestJ = j; }
+      }
+      if (bestJ >= 0) {
+        const b = synapses[bestJ];
+        // Traveling pulse along the arc
+        const pulsePos = a.fire;
+        const arcX = a.x + (b.x - a.x) * pulsePos;
+        const arcY = a.y + (b.y - a.y) * pulsePos;
+        // Dim connection line
+        ctx.strokeStyle = hexToRgba('#ffe088', 0.06 + a.fire * 0.08);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
-        ctx.moveTo(pts[i].x, pts[i].y);
-        ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.moveTo(a.x, a.y);
+        const midX = (a.x + b.x) / 2 + (a.y - b.y) * 0.15;
+        const midY = (a.y + b.y) / 2 + (b.x - a.x) * 0.15;
+        ctx.quadraticCurveTo(midX, midY, b.x, b.y);
         ctx.stroke();
-        // Electric pulse traveling along the edge
-        const pulseT = ((now * 0.0008 + (i * nodes + j) * 0.12) % 1);
-        const pxd = pts[i].x + (pts[j].x - pts[i].x) * pulseT;
-        const pyd = pts[i].y + (pts[j].y - pts[i].y) * pulseT;
-        ctx.fillStyle = hexToRgba('#cfeeff', 0.72 - pulseT * 0.4);
-        fillCircle(ctx, pxd, pyd, 1.4);
+        // Traveling spark
+        ctx.fillStyle = hexToRgba('#ffffff', 0.5 * a.fire);
+        fillCircle(ctx, arcX, arcY, 1.2);
       }
-      // Bright neuron core (cyan, not green)
-      ctx.fillStyle = hexToRgba('#a8e5ff', 0.55);
-      fillCircle(ctx, pts[i].x, pts[i].y, 1.7);
+    }
+
+    // Draw synapse nodes
+    for (const s of synapses) {
+      // Warm ambient glow (always visible)
+      ctx.fillStyle = hexToRgba('#ffe4a0', 0.06 + s.fire * 0.04);
+      fillCircle(ctx, s.x, s.y, 4 + s.fire * 3);
+      // Firing flash (bright golden burst)
+      if (s.fire > 0.05) {
+        ctx.fillStyle = hexToRgba('#ffd866', 0.3 * s.fire);
+        fillCircle(ctx, s.x, s.y, 2.5 + s.fire * 4);
+        ctx.fillStyle = hexToRgba('#ffffff', 0.5 * s.fire);
+        fillCircle(ctx, s.x, s.y, 1.2 + s.fire * 1.5);
+      }
+      // Dormant node (subtle warm dot)
+      ctx.fillStyle = hexToRgba('#e8c878', 0.2);
+      fillCircle(ctx, s.x, s.y, 1.3);
     }
     ctx.restore();
   }

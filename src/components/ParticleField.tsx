@@ -481,7 +481,17 @@ function spawnMotesAtClick(
     Math.max(1, clickEmissionCount);
   for (let i = 0; i < count; i += 1) {
     if (stage.clusterMode === 'lifeSurface') {
-      addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now), maxMassCap);
+      // Spawn motes OUTSIDE earth radius so they're visible
+      const earthR = TUNING.LIFE_SURFACE_R;
+      const spawnAngle = Math.atan2(clickY - cy, clickX - cx) + (Math.random() - 0.5) * 1.2;
+      const spawnR = earthR * (1.15 + Math.random() * 0.6);
+      const mx = cx + Math.cos(spawnAngle) * spawnR;
+      const my = cy + Math.sin(spawnAngle) * spawnR;
+      const mote = createBaseMote(cluster, stage, mx, my,
+        (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, now);
+      mote.color = `hsl(${190 + Math.random() * 30}, ${60 + Math.random() * 20}%, ${75 + Math.random() * 15}%)`;
+      mote.surfaceKind = 'water';
+      addMoteToCluster(cluster, stage, mote, maxMassCap);
       continue;
     }
     if (stage.clusterMode === 'blackHole') {
@@ -541,7 +551,16 @@ function spawnAutoMote(
 ): void {
   if (stage.id === 10) return;
   if (stage.clusterMode === 'lifeSurface') {
-    addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now), maxMassCap);
+    const earthR = TUNING.LIFE_SURFACE_R;
+    const angle = Math.random() * Math.PI * 2;
+    const spawnR = earthR * (1.1 + Math.random() * 0.5);
+    const mx = cx + Math.cos(angle) * spawnR;
+    const my = cy + Math.sin(angle) * spawnR;
+    const mote = createBaseMote(cluster, stage, mx, my,
+      (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, now);
+    mote.color = `hsl(${190 + Math.random() * 30}, ${60 + Math.random() * 20}%, ${75 + Math.random() * 15}%)`;
+    mote.surfaceKind = 'water';
+    addMoteToCluster(cluster, stage, mote, maxMassCap);
     return;
   }
   if (stage.clusterMode === 'blackHole') {
