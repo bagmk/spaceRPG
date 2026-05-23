@@ -1842,41 +1842,68 @@ function drawLifeOrbitEntities(
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle);
-      const shipLen = size * 3.5;
-      // Hull (elongated)
-      ctx.fillStyle = hexToRgba('#c0d0e0', 0.7);
+      const s = size * 1.2;
+
+      // Engine glow trail (drawn first, behind ship)
+      const trailLen = s * (4 + Math.sin(t * 2.5) * 0.8);
+      const trailGrad = ctx.createLinearGradient(-s * 1.2, 0, -s * 1.2 - trailLen, 0);
+      trailGrad.addColorStop(0, hexToRgba('#66bbff', 0.45));
+      trailGrad.addColorStop(0.3, hexToRgba('#4488ff', 0.2));
+      trailGrad.addColorStop(1, hexToRgba('#2255aa', 0));
+      ctx.fillStyle = trailGrad;
       ctx.beginPath();
-      ctx.ellipse(0, 0, shipLen, size * 0.8, 0, 0, Math.PI * 2);
+      ctx.moveTo(-s * 1.2, -s * 0.2);
+      ctx.quadraticCurveTo(-s * 1.2 - trailLen * 0.5, -s * 0.05, -s * 1.2 - trailLen, 0);
+      ctx.quadraticCurveTo(-s * 1.2 - trailLen * 0.5, s * 0.05, -s * 1.2, s * 0.2);
+      ctx.closePath();
       ctx.fill();
-      // Central habitat ring
-      ctx.strokeStyle = hexToRgba('#8ab8ff', 0.5);
-      ctx.lineWidth = 1.5;
+
+      // Main hull — sleek diamond shape
+      ctx.fillStyle = hexToRgba('#d0dce8', 0.82);
       ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.2, size * 1.2, 0, 0, Math.PI * 2);
+      ctx.moveTo(s * 1.8, 0);           // nose
+      ctx.lineTo(s * 0.3, -s * 0.55);   // top wing
+      ctx.lineTo(-s * 1.2, -s * 0.25);  // rear top
+      ctx.lineTo(-s * 1.2, s * 0.25);   // rear bottom
+      ctx.lineTo(s * 0.3, s * 0.55);    // bottom wing
+      ctx.closePath();
+      ctx.fill();
+
+      // Hull center stripe (bridge)
+      ctx.fillStyle = hexToRgba('#a8c4e0', 0.6);
+      ctx.beginPath();
+      ctx.moveTo(s * 1.5, 0);
+      ctx.lineTo(s * 0.2, -s * 0.18);
+      ctx.lineTo(-s * 1.0, -s * 0.1);
+      ctx.lineTo(-s * 1.0, s * 0.1);
+      ctx.lineTo(s * 0.2, s * 0.18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cockpit window
+      ctx.fillStyle = hexToRgba('#aaeeff', 0.7);
+      ctx.beginPath();
+      ctx.ellipse(s * 1.2, 0, s * 0.2, s * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Habitat dome (rotating ring of lights)
+      ctx.strokeStyle = hexToRgba('#88bbff', 0.35);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.65, s * 0.65, 0, 0, Math.PI * 2);
       ctx.stroke();
-      // Rotating habitat lights
-      for (let i = 0; i < 8; i++) {
-        const la = t * 0.8 + i * (Math.PI * 2 / 8);
-        const lx = Math.cos(la) * size * 1.1;
-        const ly = Math.sin(la) * size * 1.1;
-        ctx.fillStyle = hexToRgba('#aaeeff', 0.4 + Math.sin(t * 2 + i) * 0.2);
-        fillCircle(ctx, lx, ly, 1.2);
+      for (let i = 0; i < 6; i++) {
+        const la = t * 0.6 + i * (Math.PI * 2 / 6);
+        ctx.fillStyle = hexToRgba('#cceeff', 0.35 + Math.sin(t * 1.5 + i) * 0.15);
+        fillCircle(ctx, Math.cos(la) * s * 0.6, Math.sin(la) * s * 0.6, 1.0);
       }
-      // Engine exhaust
-      const exhaustLen = shipLen * (0.3 + Math.sin(t * 3) * 0.1);
-      ctx.fillStyle = hexToRgba('#4488ff', 0.3);
-      ctx.beginPath();
-      ctx.moveTo(-shipLen, -size * 0.3);
-      ctx.lineTo(-shipLen - exhaustLen, 0);
-      ctx.lineTo(-shipLen, size * 0.3);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = hexToRgba('#88ccff', 0.5);
-      ctx.beginPath();
-      ctx.moveTo(-shipLen, -size * 0.15);
-      ctx.lineTo(-shipLen - exhaustLen * 0.6, 0);
-      ctx.lineTo(-shipLen, size * 0.15);
-      ctx.closePath();
+
+      // Wing-tip nav lights
+      const navBlink = Math.sin(t * 4) > 0.3 ? 0.8 : 0.2;
+      ctx.fillStyle = hexToRgba('#ff4444', navBlink);
+      fillCircle(ctx, s * 0.3, -s * 0.52, 1.0);
+      ctx.fillStyle = hexToRgba('#44ff44', navBlink);
+      fillCircle(ctx, s * 0.3, s * 0.52, 1.0);
       ctx.fill();
       ctx.restore();
     }
@@ -2594,11 +2621,16 @@ function drawLifeEarthEntities(
         // Skip lights on the day side
         const lightSunDot = (lx - cx) * Math.cos(sunDir) + (ly - cy) * Math.sin(sunDir);
         if (lightSunDot > R * 0.1) continue;
-        const flicker = 0.55 + Math.sin(now * 0.0046 + i * 2.7) * 0.35;
+        const flicker = 0.7 + Math.sin(now * 0.0046 + i * 2.7) * 0.3;
+        // Bright core
         ctx.fillStyle = hexToRgba('#ffe28a', flicker);
-        fillCircle(ctx, lx, ly, 1 + unit(i + 820, 3) * 1.6);
-        ctx.fillStyle = hexToRgba('#ffd060', 0.18);
-        fillCircle(ctx, lx, ly, 3 + unit(i + 821, 4) * 2.4);
+        fillCircle(ctx, lx, ly, 1.4 + unit(i + 820, 3) * 1.8);
+        // Warm glow halo
+        ctx.fillStyle = hexToRgba('#ffd060', 0.28 + cityGrow * 0.12);
+        fillCircle(ctx, lx, ly, 4 + unit(i + 821, 4) * 3);
+        // Hot white center
+        ctx.fillStyle = hexToRgba('#ffffff', 0.25 * flicker);
+        fillCircle(ctx, lx, ly, 0.8);
       }
       ctx.restore();
     }
