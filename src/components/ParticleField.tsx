@@ -1675,17 +1675,23 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         rogue.spotted = true;
         onEncounter({ name: rogue.name, color: rogue.color });
       }
-      // Don't expire/despawn if pointer has ever attracted this rogue
+      // Once pointer attracts a rogue, keep it alive much longer
       const attractDist = pointerPressure
         ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y)
         : Infinity;
-      const inRange = attractDist < pointerPressure!?.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
-      if (inRange) (rogue as any)._attracted = true;
-      const isTracked = (rogue as any)._attracted && pointerPressure;
-      if (!isTracked && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
+      const inRange = pointerPressure && attractDist < pointerPressure.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
+      if (inRange) {
+        (rogue as any)._attracted = true;
+        (rogue as any)._lastAttractTime = now;
+      }
+      const wasAttracted = (rogue as any)._attracted;
+      const gracePeriod = wasAttracted ? 8000 : 0; // 8s grace after last attraction
+      const timeSinceAttract = now - ((rogue as any)._lastAttractTime ?? 0);
+      const isProtected = wasAttracted && timeSinceAttract < gracePeriod;
+      if (!isProtected && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
         return;
       }
-      if (!isTracked && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
+      if (!isProtected && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
         return;
       }
       nextRogues.push(rogue);
