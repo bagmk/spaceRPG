@@ -3360,7 +3360,7 @@ export function drawEntities(
     // Stage 10: Sun + planet-related entities are drawn by the cluster renderer
     if (stageId === 10) {
       const n = entity.name;
-      if (n === 'Sun' || n === 'Rocky Planet' || n === 'Gas Giant' || n === 'Dust Grain' || n === 'Planetesimal') continue;
+      if (n === 'Sun') continue;
     }
     const existing = entitiesById.get(entity.id);
     if (existing) {

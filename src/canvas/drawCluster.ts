@@ -546,7 +546,7 @@ function drawGalaxyDisk({ ctx, cluster, stage, cx, cy, progress, pointerPressure
     const alpha = Math.min(0.95, 0.35 + mote.mass * 0.08);
     ctx.fillStyle = hexToRgba(mote.color, alpha);
     ctx.beginPath();
-    ctx.arc(lx, ly, Math.max(0.7, mote.r * 0.55), 0, Math.PI * 2);
+    ctx.arc(lx, ly, Math.max(1.0, mote.r * 0.7), 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -763,7 +763,7 @@ function drawSolarDust({ ctx, cluster, stage, now }: DrawClusterArgs, alpha = 0.
   const t = now / 1000;
   cluster.motes.forEach((mote, index) => {
     const shimmer = 0.54 + Math.sin(t * 2 + index) * 0.18;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * shimmer, mote.color, alpha * shimmer, mote.orbitAngle ?? 0);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * (0.7 + shimmer * 0.5), mote.color, alpha * shimmer, mote.orbitAngle ?? 0);
   });
 }
 
