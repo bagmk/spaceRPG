@@ -3357,8 +3357,11 @@ export function drawEntities(
     const entity = findEntityById(entry.entityId, stageId);
     if (!entity) continue;
     // Stage 10: Sun glyph is represented by the evolving sun animation, skip it
-    // Stage 10: all entities are visualized by the cluster renderer (sun, planets, etc.)
-    if (stageId === 10) continue;
+    // Stage 10: Sun + planet-related entities are drawn by the cluster renderer
+    if (stageId === 10) {
+      const n = entity.name;
+      if (n === 'Sun' || n === 'Rocky Planet' || n === 'Gas Giant' || n === 'Dust Grain' || n === 'Planetesimal') continue;
+    }
     const existing = entitiesById.get(entity.id);
     if (existing) {
       existing.count += entry.count;
