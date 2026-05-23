@@ -1783,6 +1783,22 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
           updatePointerPressure(x, y, event.pointerType, 0.72);
+          // Moon hover wiggle
+          if (worldRef.current && stage.id === 11) {
+            const mcx = sizeRef.current.width / 2;
+            const mcy = sizeRef.current.height / 2;
+            const moon = getStage11MoonScreen(mcx, mcy, performance.now(), worldRef.current.cluster, purchasedEntities);
+            if (moon.visible) {
+              const dist = Math.hypot(x - moon.moonX, y - moon.moonY);
+              if (dist <= moon.moonR * 2.5) {
+                const proximity = 1 - dist / (moon.moonR * 2.5);
+                const cluster = worldRef.current.cluster;
+                cluster.moonAngleOffset =
+                  (cluster.moonAngleOffset ?? 0) + proximity * 0.006;
+                cluster.moonNudgeImpulse = Math.min(0.4, Math.max(cluster.moonNudgeImpulse ?? 0, proximity * 0.25));
+              }
+            }
+          }
           return;
         }
         if (dragPointerId.current !== event.pointerId) {
