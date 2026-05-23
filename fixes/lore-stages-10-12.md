@@ -513,3 +513,297 @@ Searches: dedicated SETI Dyson-sphere hunts have used WISE infrared survey data.
 **KO.** ~40억 년 전. 표면이 100°C 아래로 식음; 대기 물이 응축돼 바다로. 초기 바다 뜨거움(~80°C), 산성(용해된 CO₂ → 탄산), 산소 없음. 중앙해령에서 열수공 형성. 열수공의 화학 기울기(알칼리, 뜨거움, 광물 풍부)가 유리한 생명 기원 장소(알칼리 열수공 이론, 러셀 & 레인). LUCA가 ~4.2 Gya까지 그런 열수공 근처에서 등장했을 수 있다.
 
 ---
+### 🔬 Milestone 32% — Continents Rise / 대륙의 융기
+
+**EN.** ~3.5-3.0 Gya. Continental crust differentiates from oceanic crust via partial melting and recycling. First stable cratons form (Vaalbara). Plate tectonics likely starts here (debated). Earth has both continents and oceans — unique configuration vs Venus (no oceans) and Mars (no plate tectonics).
+
+**KO.** ~35-30억 년 전. 대륙 지각이 부분 용융과 재순환으로 해양 지각에서 분화. 첫 안정 강괴 형성(발바라). 판 구조가 아마 여기서 시작(논란). 지구는 대륙과 바다 모두를 가짐 — 금성(바다 없음)과 화성(판 구조 없음)에 비해 독특한 구성.
+
+---
+
+### 🔬 Milestone 45% — Life Spreads / 생명의 확산
+
+**EN.** ~2.5-1.5 Gya. Cyanobacteria photosynthesis triggers Great Oxygenation Event (2.4 Gya). Eukaryotes evolve ~2.1 Gya via endosymbiosis (mitochondria from engulfed bacteria). First multicellular life ~1.5 Gya. Stromatolites still building. Ocean chemistry transforms; iron precipitates out (banded iron formations). Snowball Earth events freeze entire planet (2.4, 0.72-0.66 Gya).
+
+**KO.** ~25-15억 년 전. 시아노박테리아 광합성이 대산소화 사건 촉발(2.4 Gya). 진핵생물이 ~2.1 Gya 내공생(삼킨 박테리아에서 미토콘드리아)으로 진화. 첫 다세포 생명 ~1.5 Gya. 스트로마톨라이트 여전히 건설 중. 바다 화학 변환; 철이 침전(띠 모양 철 형성). 눈덩이 지구 사건이 전체 행성을 동결(2.4, 7.2-6.6억 년 전).
+
+---
+
+### 🔬 Milestone 58% — A Living Planet / 살아있는 행성
+
+**EN.** ~600-200 Mya. Cambrian Explosion ~539 Mya unleashes animal diversity. Land colonization: plants ~470 Mya, arthropods ~430 Mya, vertebrates ~375 Mya (Tiktaalik). Devonian forests build coal. Reptiles dominate Mesozoic (250-66 Mya). KT extinction (66 Mya, Chicxulub impact) wipes non-avian dinosaurs. Mammals diversify. Earth becomes a planet where life shapes geology, atmosphere, climate.
+
+**KO.** ~6-2억 년 전. 캄브리아 대폭발 ~5.39억 년 전이 동물 다양성 풀어놓음. 육지 정착: 식물 ~4.7억 년 전, 절지동물 ~4.3억 년 전, 척추동물 ~3.75억 년 전(틱타알릭). 데본기 숲이 석탄 형성. 파충류가 중생대 지배(2.5-0.66억 년 전). KT 멸종(6,600만 년 전, 칙술룹 충돌)이 비조류 공룡 일소. 포유류 다양화. 지구가 생명이 지질학, 대기, 기후를 빚는 행성이 됨.
+
+---
+
+### 🔬 Milestone 72% — Civilization / 문명
+
+**EN.** ~10,000 years ago to present. Agricultural revolution (10 kya) enables settled societies. First cities (Çatalhöyük, Uruk) ~7 kya. Writing (cuneiform, hieroglyphs) ~5 kya. Industrial Revolution (~1750) accelerates everything: population 1B (1804) → 2B (1927) → 4B (1974) → 8B (2022). Anthropocene era: humans now drive geology + climate. Sixth mass extinction underway, driven by habitat loss + climate change. Earth's biosphere bears human fingerprints everywhere.
+
+**KO.** ~10,000년 전부터 현재까지. 농업 혁명(1만 년 전)이 정착 사회 가능케 함. 첫 도시(차탈회위크, 우루크) ~7,000년 전. 문자(설형문자, 상형문자) ~5,000년 전. 산업혁명(~1750)이 모든 것을 가속화: 인구 10억(1804) → 20억(1927) → 40억(1974) → 80억(2022). 인류세 시대: 인간이 이제 지질학 + 기후 주도. 서식지 손실 + 기후 변화가 주도하는 6차 대멸종 진행 중. 지구 생물권이 어디에나 인간 지문을 가짐.
+
+---
+
+### 🔬 Milestone 82% — Space Age / 우주 시대
+
+**EN.** Brief future ahead. Sputnik (1957) launched humanity into space. Moon landing (1969). Mars rovers (1997, 2004, 2012, 2021). JWST (2021) sees nearly back to first stars. Voyager 1 (1977) now in interstellar space. Civilization at Kardashev 0.7. Possible futures: solar system colonization (2100s), Dyson swarms (2500s?), interstellar exploration (millennia?). Or: collapse from climate change, nuclear war, AI risk, pandemic. Fermi paradox haunts: where is everyone?
+
+**KO.** 짧은 미래가 앞에 있다. 스푸트니크(1957)가 인류를 우주로 발사. 달 착륙(1969). 화성 로버(1997, 2004, 2012, 2021). JWST(2021)가 첫 별 거의까지 봄. 보이저 1(1977)이 이제 성간 공간에. 카르다쇼프 0.7의 문명. 가능한 미래: 태양계 식민지화(2100년대), 다이슨 군집(2500년대?), 성간 탐사(천 년?). 또는: 기후 변화, 핵전쟁, AI 위험, 팬데믹으로부터의 붕괴. 페르미 역설이 따라다님: 모두 어디 있는가?
+
+---
+### 🔬 Milestone 90% — Orbital Industry / 궤도 산업
+
+**EN.** Near future (2050+). Commercial spaceflight matures; orbital factories produce specialty materials in microgravity. Asteroid mining (platinum group metals, water for fuel). Space-based solar power transmits energy to Earth via microwave. Tourism normalizes; lunar bases (Artemis Base Camp + Chinese ILRS). Mars colonization underway. Earth-Moon system becomes economically integrated.
+
+**KO.** 가까운 미래(2050+). 상업 우주비행 성숙; 궤도 공장이 미세 중력에서 특수 재료 생산. 소행성 채굴(백금족 금속, 연료용 물). 우주 기반 태양광이 마이크로파를 통해 지구에 에너지 전송. 관광 정상화; 달 기지(아르테미스 베이스 캠프 + 중국 ILRS). 화성 식민화 진행. 지구-달 시스템이 경제적으로 통합됨.
+
+---
+
+### 🔬 Milestone 97% — Peak Earth / 지구 절정
+
+**EN.** ~2080-2200. Global population peaks ~10 billion then declines. AI/automation has transformed labor; UBI common. Climate change adaptation/mitigation in full swing — net zero achieved, possibly geoengineering. Genetic engineering routine. Quantum computers tackle previously intractable problems. Brain-computer interfaces mature. Civilization at the height of technological power, but constrained by physics: light-speed limits, energy density limits, biology's slow adaptation.
+
+**KO.** ~2080-2200. 전 세계 인구가 ~100억에 정점 그 후 감소. AI/자동화가 노동을 변혁; UBI 흔함. 기후 변화 적응/완화가 본격적 — 순 제로 달성, 가능하게 지구공학. 유전 공학 일상화. 양자 컴퓨터가 이전 다루기 어려운 문제 해결. 뇌-컴퓨터 인터페이스 성숙. 기술적 힘의 정점에 있는 문명, 그러나 물리에 의해 제약: 광속 한계, 에너지 밀도 한계, 생물학의 느린 적응.
+
+---
+
+### 🔬 Milestone 100% — A Brief Golden Age / 짧은 황금기
+
+**EN.** Civilization's golden window — perhaps a few millennia of peak knowledge, abundance, and cosmic awareness. From cosmic perspective: an instant. We are a single cell on a planet around a star in a galaxy in a universe, asking what the universe is. The universe doesn't promise this lasts. Sun will continue brightening (~1% per 100 Myr); in ~1 Gyr Earth's biosphere starts failing. In ~5 Gyr Sun becomes red giant. Long before then, civilization must spread, adapt, transcend — or perish quietly in our cradle.
+
+**KO.** 문명의 황금 창 — 아마 정점 지식, 풍요, 우주적 자각의 몇천 년. 우주적 관점에서: 한 순간. 우리는 우주 안 은하 안 별 주위 행성 위의 단일 세포, 우주가 무엇인지 묻고 있다. 우주가 이것이 지속될 것을 약속하지 않는다. 태양은 계속 밝아질 것(~1억 년당 ~1%); ~10억 년 후 지구 생물권이 실패하기 시작. ~50억 년 후 태양이 적색거성이 됨. 그 훨씬 전에 문명은 퍼지고, 적응하고, 초월해야 한다 — 또는 요람에서 조용히 멸망.
+
+---
+
+## 📍 Stage 12 — Civilization / 문명 (실제: 태양의 죽음)
+
+> *문명의 끝이 아니라 태양의 끝. 적색거성 단계는 거의 모든 별의 운명.*
+
+---
+
+### 🪐 Red Giant Envelope / 적색거성 외피
+*Common · auto x2.0 · `🔴`*
+
+**EN.** When core hydrogen exhausts (~10 Gyr for Sun-like stars), core contracts and heats; H-shell burning around inert He core inflates outer envelope to 100-1000× original radius. Surface cools (red color) even as luminosity increases (~100-1000× original). Sun will become red giant in ~5 Gyr, engulfing Mercury, Venus, possibly Earth. Largest known red giant: UY Scuti (~1700 R_☉ — if at Sun's position, would extend past Saturn).
+
+**KO.** 핵 수소가 고갈되면(태양 같은 별의 경우 ~100억 년), 핵이 수축하고 가열; 불활성 He 핵 주위의 H-껍질 연소가 외피를 원래 반지름의 100-1000×로 부풀린다. 표면이 차가워짐(붉은 색) — 광도가 증가함에도(~100-1000× 원래). 태양은 ~50억 년 후 적색거성이 되어 수성, 금성, 가능하게 지구를 삼킬 것. 알려진 가장 큰 적색거성: UY Scuti(~1700 R_☉ — 태양 위치라면 토성 너머까지 확장).
+
+---
+
+### 🪐 Stellar Wind AGB / AGB 항성풍
+*Common · click x15.0 · `~~~→`*
+
+**EN.** Asymptotic Giant Branch (AGB) stars: post-red-giant, He-shell burning around C/O core. Pulsating envelopes drive massive mass loss via radiation pressure on dust + pulsations. AGB wind: 10⁻⁶ to 10⁻⁴ M_☉/yr, velocity 10-30 km/s. Over ~10⁵ years, AGB stars eject 50-80% of their mass — enriching ISM with C, N, O, dust, s-process elements (50% of heavy elements beyond iron). This is how the universe gets its "metals" beyond what supernovae produce.
+
+**KO.** 점근거성가지(AGB) 별: 적색거성 이후, C/O 핵 주위의 He-껍질 연소. 맥동하는 외피가 먼지에 대한 복사 압력 + 맥동을 통해 막대한 질량 손실을 일으킨다. AGB 풍: 10⁻⁶에서 10⁻⁴ M_☉/yr, 속도 10-30 km/s. ~10⁵년에 걸쳐 AGB 별이 질량의 50-80%를 방출 — C, N, O, 먼지, s-과정 원소(철 너머 무거운 원소의 50%)로 ISM 농축. 이게 초신성이 만드는 것 너머 우주가 "금속"을 얻는 방법.
+
+---
+
+### 🪐 Carbon-O Core / 탄소-산소 핵
+*Common · crit(flat) x0.5 · `C/O`*
+
+**EN.** Post-He-burning core of Sun-like star: ~0.5-0.6 M_☉ of carbon + oxygen ash, electron-degenerate (supported by Pauli exclusion). Carbon/oxygen ratio depends on stellar mass and convection. Sun's core won't reach fusion temperature for C → Mg/Ne/O; will simply become an inert C/O white dwarf. Stars >8 M_☉ continue burning C → Mg, then O → Si → Fe, then core-collapse supernova. The fate of C/O core determines whether star becomes WD, neutron star, or black hole.
+
+**KO.** 태양 같은 별의 He-연소 이후 핵: 탄소 + 산소 재의 ~0.5-0.6 M_☉, 전자 축퇴(파울리 배제에 의해 지지). 탄소/산소 비는 항성 질량과 대류에 의존. 태양 핵은 C → Mg/Ne/O 융합 온도에 도달하지 못함; 단순히 불활성 C/O 백색왜성이 될 것. 별 >8 M_☉은 C → Mg, 그 다음 O → Si → Fe, 그 다음 핵붕괴 초신성 계속 연소. C/O 핵의 운명이 별이 WD, 중성자별, 또는 블랙홀이 될지 결정한다.
+
+---
+### 🪐 Helium Flash / 헬륨 섬광
+*Common · time x2.0 · `⚡He`*
+
+**EN.** Low-mass stars (0.5-2 M_☉) experience runaway He fusion ignition in degenerate core: temperature rises but pressure doesn't (because degenerate pressure is T-independent). Runaway: ε ∝ T⁴⁰ for triple-α reaction! Releases ~6 × 10⁴¹ J in seconds — equivalent to Sun's total energy output for 200 million years. But trapped beneath envelope, invisible from outside. Lifts degeneracy as T rises, then quiescent He-burning ensues for ~10⁸ years. Higher-mass stars don't have this — they fuse He non-degenerately, smoothly.
+
+**KO.** 저질량 별(0.5-2 M_☉)이 축퇴 핵에서 폭주 He 융합 점화 경험: 온도는 상승하지만 압력은 그렇지 않다(축퇴 압력이 T-독립이므로). 폭주: 삼중-α 반응의 경우 ε ∝ T⁴⁰! 몇 초 안에 ~6 × 10⁴¹ J 방출 — 태양 총 에너지 출력의 2억 년치에 해당. 하지만 외피 아래 갇혀 있어 외부에서 보이지 않음. T가 상승하면서 축퇴 해제, 그 다음 ~10⁸년 동안 정온 He-연소. 더 무거운 별은 이게 없다 — 비축퇴로 매끄럽게 He 융합.
+
+---
+
+### 🪐 Planetary Nebula / 행성상 성운
+*Rare · auto x4.0 · `PN`*
+
+**EN.** Final stage of low-/intermediate-mass stars: AGB envelope ejected over ~10⁴ years; hot central white dwarf ionizes ejected gas → emission nebula visible across galaxy. Famous examples: Ring Nebula (M57), Helix (NGC 7293), Cat's Eye (NGC 6543), Crab (actually supernova remnant). Misnamed by William Herschel (1785) for visual resemblance to planets — nothing to do with planets. Lifetime ~10⁴ years before nebula disperses. Spectacular astrophysical art.
+
+**KO.** 저-/중질량 별의 마지막 단계: AGB 외피가 ~10⁴년에 걸쳐 방출; 뜨거운 중심 백색왜성이 방출 가스를 이온화 → 은하 전체에 걸쳐 보이는 방출 성운. 유명한 예: 고리 성운(M57), 헬릭스(NGC 7293), 고양이 눈(NGC 6543), 게(실제로는 초신성 잔해). 윌리엄 허셜(1785)이 행성과의 시각적 유사성으로 잘못 명명 — 행성과 관계 없음. 수명 ~10⁴년 후 성운 흩어짐. 장관의 천체물리학적 예술.
+
+---
+
+### 🪐 Mass Transfer / 질량 이동
+*Rare · click x22.0 · `→→`*
+
+**EN.** Binary star systems can swap mass when one fills its Roche lobe (gravitational equipotential). Companion accretes; modifies evolution. Mass transfer powers X-ray binaries (compact object eating donor), creates Algol paradox (more evolved star is less massive), causes Type Ia supernovae (WD eats matter until reaches Chandrasekhar limit). Recent: LIGO/Virgo detections of compact binary mergers (NS-NS, BH-BH, NS-BH) all involve binary star evolution with mass transfer. GW170817 (2017) was the first multi-messenger event.
+
+**KO.** 쌍성 시스템이 한쪽이 로슈 로브(중력 등퍼텐셜)를 채울 때 질량 교환 가능. 동반자가 부착; 진화 수정. 질량 이동이 X선 쌍성(공급자 먹는 컴팩트 천체) 동력, 알골 역설(더 진화된 별이 덜 무거움) 생성, Ia형 초신성 야기(WD가 찬드라세카르 한계까지 물질 먹음). 최근: LIGO/Virgo의 컴팩트 쌍성 합병 검출(NS-NS, BH-BH, NS-BH) 모두 질량 이동을 가진 쌍성 진화 수반. GW170817(2017)이 첫 다중 메신저 사건.
+
+---
+
+### 🪐 Degenerate Electron / 축퇴 전자
+*Rare · crit(flat) x0.8 · `e°`*
+
+**EN.** In white dwarfs and neutron star cores, electrons are pushed close enough that Pauli exclusion dominates: electrons can't share quantum states, creating "degeneracy pressure" independent of temperature. Supports WD against gravity up to Chandrasekhar limit (1.4 M_☉, Subrahmanyan Chandrasekhar 1931, Nobel 1983). Above limit, electron degeneracy fails → core collapse. Same physics with neutrons (neutron degeneracy pressure) supports neutron stars up to ~2-3 M_☉ (Tolman-Oppenheimer-Volkoff limit).
+
+**KO.** 백색왜성과 중성자별 핵에서 전자가 충분히 가까워져 파울리 배제가 지배: 전자가 양자 상태를 공유할 수 없어 온도와 독립적인 "축퇴 압력" 생성. WD를 중력에 대해 찬드라세카르 한계(1.4 M_☉, 수브라마니안 찬드라세카르 1931, 1983 노벨상)까지 지지. 한계 초과 시 전자 축퇴 실패 → 핵 붕괴. 중성자의 같은 물리(중성자 축퇴 압력)가 중성자별을 ~2-3 M_☉(톨먼-오펜하이머-볼코프 한계)까지 지지.
+
+---
+
+### 🪐 White Dwarf / 백색왜성
+*Rare · time x3.0 · `WD`*
+
+**EN.** Stellar corpse of Sun-like star: ~0.6 M_☉ in Earth-sized radius (10,000 km). Density 10⁹ kg/m³ (1 teaspoon = 5 tons). Composed of degenerate electron-supported C/O. Cools over billions of years; eventually becomes "black dwarf" (theoretical — universe not old enough yet for any to exist). Sirius B (discovered 1862) first known WD. ~10 billion in Milky Way. End-state of >95% of stars. Sun's ultimate fate after ~5 Gyr more.
+
+**KO.** 태양 같은 별의 항성 시체: 지구 크기 반지름(10,000 km)에 ~0.6 M_☉. 밀도 10⁹ kg/m³(1 작은술 = 5톤). 축퇴 전자가 지지하는 C/O로 구성. 수십억 년에 걸쳐 식음; 결국 "흑색왜성"이 됨(이론적 — 우주가 아직 어느 것도 존재할 만큼 늙지 않음). 시리우스 B(1862년 발견)가 처음 알려진 WD. 우리 은하에 ~100억. 별의 >95%의 끝 상태. ~50억 년 후 태양의 궁극적 운명.
+
+---
+### 🪐 Neutron Star / 중성자별
+*Epic · auto x7.0 · `NS`*
+
+**EN.** Stellar corpse of 8-25 M_☉ stars after core-collapse supernova. ~1.4 M_☉ packed into 10-20 km radius. Density 10¹⁷ kg/m³ (nuclear density). Composed almost entirely of neutrons (electrons + protons → neutrons + neutrinos via inverse beta decay). Rotation rates: ~ms periods (millisecond pulsars). Magnetic fields: 10⁸-10¹⁵ Gauss. Predicted by Baade & Zwicky (1934); first observed (as pulsar) by Bell + Hewish (1967, Nobel 1974 to Hewish — Bell controversially overlooked). NS-NS merger GW170817 produced gold, platinum via r-process.
+
+**KO.** 핵붕괴 초신성 후 8-25 M_☉ 별의 항성 시체. ~1.4 M_☉이 10-20 km 반지름에 압축. 밀도 10¹⁷ kg/m³(핵 밀도). 거의 전적으로 중성자로 구성(전자 + 양성자 → 중성자 + 중성미자, 역 베타 붕괴). 회전율: ~ms 주기(밀리초 펄서). 자기장: 10⁸-10¹⁵ 가우스. 바데 & 츠비키(1934) 예측; 펄서로서 벨 + 휴이시(1967, 1974 휴이시 노벨상 — 벨이 논란 속에 간과됨)가 처음 관측. NS-NS 합병 GW170817이 r-과정으로 금, 백금 생산.
+
+---
+
+### 🪐 Nova Eruption / 신성 폭발
+*Epic · click x35.0 · `NOVA`*
+
+**EN.** White dwarf accretes hydrogen from binary companion until shell reaches fusion conditions: explosive H burning ejects 10⁻⁴ to 10⁻⁵ M_☉, brightening WD by 10⁴-10⁶× for weeks. Recurring novae: WD remains intact, eruption repeats every decades-millennia. Distinct from Type Ia SN (which destroys WD). Recent: T Coronae Borealis recurrent nova predicted to erupt in 2024-2025 — visible to naked eye, last seen 1946. Important laboratories for nuclear astrophysics.
+
+**KO.** 백색왜성이 쌍성 동반자에서 수소를 부착해 껍질이 융합 조건에 도달할 때까지: 폭발적 H 연소가 10⁻⁴에서 10⁻⁵ M_☉ 방출, WD를 몇 주 동안 10⁴-10⁶× 밝게. 재발 신성: WD 그대로, 분출이 수십 년-천 년마다 반복. Ia형 SN(WD 파괴)과 구별. 최근: T 북관자리 재발 신성이 2024-2025년 분출 예측 — 육안으로 보임, 마지막 1946년. 핵 천체물리학의 중요 실험실.
+
+---
+
+### 🪐 Magnetar / 마그네타
+*Epic · crit(flat) x2.5 · `⊛M`*
+
+**EN.** Neutron star with extreme magnetic field (10¹⁴-10¹⁵ Gauss — quadrillion times Earth's). Approximately 30 known in Milky Way. Magnetic field decay drives X-ray + gamma-ray bursts. Soft Gamma Repeaters (SGRs) and Anomalous X-ray Pulsars (AXPs) are magnetars. SGR 1806-20 (2004) flare so powerful it ionized upper Earth atmosphere from 50,000 light-years away. Fast Radio Burst (FRB) progenitors: recent evidence ties some FRBs to magnetars (especially repeating FRB 180916, 121102).
+
+**KO.** 극단적 자기장의 중성자별(10¹⁴-10¹⁵ 가우스 — 지구의 1,000조 배). 우리 은하에 약 30개 알려짐. 자기장 감쇠가 X선 + 감마선 폭발 일으킴. 연성 감마 반복기(SGR)와 변칙 X선 펄서(AXP)가 마그네타. SGR 1806-20(2004) 플레어가 너무 강력해서 50,000광년 떨어진 지구 상층 대기 이온화. 빠른 라디오 폭발(FRB) 선조: 최근 증거가 일부 FRB를 마그네타에 연결(특히 반복 FRB 180916, 121102).
+
+---
+
+### 🪐 Gravitational Wave / 중력파
+*Epic · time x5.0 · `◌~`*
+
+**EN.** Spacetime ripples predicted by Einstein (1916); first directly detected by LIGO (September 14, 2015 — GW150914, binary BH merger 1.3 Bly away). Caused by accelerating massive objects (compact binaries, NS-NS, BH-BH, BH-NS mergers). Strain at Earth: ΔL/L ~ 10⁻²¹ (i.e., LIGO measures mirror separation of 4 km to 1/1000 the diameter of a proton). 2017 Nobel (Weiss, Barish, Thorne). LIGO/Virgo/KAGRA O4 run (2023-2024) detected 80+ events. Future: LISA space mission (2030s) detects mHz GWs from supermassive BH mergers; PTAs already see nHz background (NANOGrav 2023).
+
+**KO.** 아인슈타인 예측(1916)의 시공간 잔물결; LIGO가 직접 처음 검출(2015년 9월 14일 — GW150914, 13억 광년 떨어진 쌍 BH 합병). 가속하는 무거운 천체(컴팩트 쌍성, NS-NS, BH-BH, BH-NS 합병)에 의해 발생. 지구에서의 변형: ΔL/L ~ 10⁻²¹(즉 LIGO는 4 km 거울 분리를 양성자 지름의 1/1000까지 측정). 2017 노벨상(와이스, 배리시, 손). LIGO/Virgo/KAGRA O4 운행(2023-2024)이 80+ 사건 검출. 미래: LISA 우주 임무(2030년대)가 거대 BH 합병에서 mHz GW 검출; PTA가 이미 nHz 배경 관측(NANOGrav 2023).
+
+---
+
+### 🪐 Type Ia Supernova / Ia형 초신성
+*Legendary · multiplier x50.0 · `SNIa`*
+
+**EN.** Thermonuclear explosion of CO white dwarf when it accretes mass past Chandrasekhar limit (~1.4 M_☉). Complete disruption — no remnant. Peak luminosity ~5 × 10⁹ L_☉ (10 billion times brighter than Sun!). Standard candles: Ia SNe have consistent peak luminosity (Phillips relation, 1993), letting cosmologists measure distances. Used by Perlmutter, Riess, Schmidt (1998 — Nobel 2011) to discover accelerating expansion + dark energy. JWST and Roman Space Telescope continuing to extend Ia SN cosmology to z > 2.
+
+**KO.** 찬드라세카르 한계(~1.4 M_☉) 너머 질량을 부착할 때 CO 백색왜성의 열핵 폭발. 완전 파괴 — 잔해 없음. 정점 광도 ~5 × 10⁹ L_☉(태양보다 100억 배 밝음!). 표준 촛불: Ia SN은 일관된 정점 광도를 가짐(필립스 관계, 1993), 우주론자들이 거리를 측정할 수 있게 함. 펄머터·라이스·슈미트(1998 — 2011 노벨상)가 가속 팽창 + 암흑에너지 발견에 사용. JWST와 로먼 우주 망원경이 Ia SN 우주론을 z > 2까지 계속 확장.
+
+---
+
+### 🪐 Core Collapse SN / 핵붕괴 초신성
+*Legendary · multiplier x50.0 · `SNII`*
+
+**EN.** Massive stars (>8 M_☉) end as core-collapse supernovae. Iron core grows past 1.4 M_☉, electron degeneracy fails, core collapses in ~1 second to neutron star or black hole. Gravitational binding energy ~10⁴⁶ J released — 99% as neutrinos, 1% as kinetic energy, 0.01% as light. SN 1987A (Large Magellanic Cloud) was nearest naked-eye SN since 1604 — confirmed neutrino emission (Kamiokande, IMB, Baksan). Produces r-process elements partially (debate ongoing — NS mergers may dominate). Modern: JWST + Hubble follow SNe across cosmic history.
+
+**KO.** 무거운 별(>8 M_☉)이 핵붕괴 초신성으로 끝남. 철 핵이 1.4 M_☉를 넘어 성장, 전자 축퇴 실패, 핵이 ~1초에 중성자별 또는 블랙홀로 붕괴. 중력 결합 에너지 ~10⁴⁶ J 방출 — 99% 중성미자, 1% 운동 에너지, 0.01% 빛. SN 1987A(대마젤란 은하)가 1604년 이래 가장 가까운 육안 SN — 중성미자 방출 확인(가미오칸데, IMB, 바크산). r-과정 원소 부분적 생성(논쟁 진행 중 — NS 합병이 지배할 수 있음). 현대: JWST + 허블이 우주 역사 전체에 걸쳐 SN 추적.
+
+---
+### 🔬 Milestone 0% — The Sun Ages / 태양의 노화
+
+**EN.** Sun in ~5 Gyr. Hydrogen exhausted in core (~10 Gyr total main-sequence lifetime). H-shell burning around inert He core. Luminosity increasing ~10% per Gyr already from now. Earth's oceans evaporate ~1 Gyr from present. Habitable zone moves outward.
+
+**KO.** 태양 ~50억 년 후. 핵에서 수소 고갈(~100억 년 총 주계열 수명). 불활성 He 핵 주위 H-껍질 연소. 광도가 이미 지금부터 Gyr당 ~10% 증가. 지구 바다는 현재로부터 ~10억 년 후 증발. 거주 가능 영역이 바깥으로 이동.
+
+---
+
+### 🔬 Milestone 10% — Solar Brightening / 태양 밝아짐
+
+**EN.** Sun's H-shell burns hotter; luminosity rises to ~1.4 L_today. Earth too hot for liquid water on surface. Mars enters habitable zone temporarily. Hydrogen-helium core inflates envelope; subgiant phase begins.
+
+**KO.** 태양의 H-껍질이 더 뜨겁게 연소; 광도가 ~1.4 L_today로 상승. 지구가 표면 액체 물에 너무 뜨거움. 화성이 잠시 거주 가능 영역 진입. 수소-헬륨 핵이 외피를 부풀림; 부거성 단계 시작.
+
+---
+
+### 🔬 Milestone 20% — Red Giant Begins / 적색거성 시작
+
+**EN.** Sun expands dramatically — radius ~50× current, luminosity ~1000× current. Surface temperature drops to ~3000 K (red color). Core helium fusion begins via helium flash. Inner planets cooked.
+
+**KO.** 태양이 극적으로 팽창 — 반지름 현재의 ~50×, 광도 현재의 ~1000×. 표면 온도가 ~3000 K로 떨어짐(붉은색). 헬륨 섬광을 통해 핵 헬륨 융합 시작. 안쪽 행성들 익혀짐.
+
+---
+
+### 🔬 Milestone 32% — Mercury Lost / 수성 소실
+
+**EN.** Sun's expanding envelope engulfs Mercury (~0.39 AU). Mercury — never having had atmosphere or magnetic field anyway — is vaporized in solar plasma. First planet to be destroyed.
+
+**KO.** 태양의 팽창하는 외피가 수성을 삼킴(~0.39 AU). 수성 — 어차피 대기나 자기장이 없었던 — 이 태양 플라스마에서 증발. 파괴된 첫 행성.
+
+---
+
+### 🔬 Milestone 40% — Venus Lost / 금성 소실
+
+**EN.** Sun reaches Venus orbit (~0.72 AU). Venus's already-hellish surface is incinerated; thick CO₂ atmosphere boils away. Earth-Sun distance becomes ~0.99 AU (Earth's orbit migrates outward slightly as Sun loses mass).
+
+**KO.** 태양이 금성 궤도 도달(~0.72 AU). 금성의 이미 지옥 같은 표면이 소각; 두꺼운 CO₂ 대기가 끓어 사라짐. 지구-태양 거리가 ~0.99 AU가 됨(태양이 질량 잃으면서 지구 궤도 약간 바깥으로 이동).
+
+---
+
+### 🔬 Milestone 48% — Earth Burns / 지구의 불타는 운명
+
+**EN.** Sun grows past 1 AU. Earth's oceans long gone; now even rocks vaporize. Atmosphere stripped; surface re-molten. The biosphere ended billions of years ago, but any traces of human civilization (e.g., Voyager records, lunar artifacts) are obliterated.
+
+**KO.** 태양이 1 AU를 넘어 성장. 지구 바다는 오래 전 사라짐; 이제 암석조차 증발. 대기 박탈; 표면 재용융. 생물권은 수십억 년 전 끝났지만 인간 문명의 흔적(예: 보이저 기록, 달 인공물)이 말살.
+
+---
+
+### 🔬 Milestone 56% — Earth Lost / 지구 소실
+
+**EN.** Whether Earth is engulfed or survives outside Sun's expanded envelope is uncertain (depends on mass loss rate). Most calculations: Earth swallowed by ~7.6 Gyr from now. If outside: drag forces in Sun's outer atmosphere likely spiral Earth inward over Myr. Either way: Earth ceases to exist as planet.
+
+**KO.** 지구가 삼켜질지 태양의 팽창된 외피 밖에서 살아남을지는 불확실(질량 손실률에 의존). 대부분 계산: 지구는 지금부터 ~76억 년에 삼켜짐. 밖에 있어도: 태양 외부 대기의 끌림 힘이 Myr에 걸쳐 지구를 안으로 나선화시킬 가능성. 어느 쪽이든: 지구가 행성으로 존재하기를 멈춤.
+
+---
+### 🔬 Milestone 66% — Mars Scorched / 화성 그을림
+
+**EN.** Solar radiation incinerates Mars's surface. Whatever water ice existed in polar caps and subsurface is gone. The classic "Mars colonization" futures envisioned by humanity are erased. Outer planets begin warming significantly.
+
+**KO.** 태양 복사가 화성 표면을 소각. 극관과 지하에 존재했던 어떤 물 얼음도 사라짐. 인류가 상상한 고전적 "화성 식민화" 미래가 지워짐. 외곽 행성들이 상당히 따뜻해지기 시작.
+
+---
+
+### 🔬 Milestone 74% — Outer Worlds Stripped / 외곽 세계 박탈
+
+**EN.** Sun reaches asymptotic giant branch (AGB) maximum size. Jupiter (5.2 AU) and Saturn (9.5 AU) heat up; their gaseous envelopes partially evaporate. Icy moons (Europa, Titan, Enceladus) become temporarily hot — liquid surface water might briefly exist before being lost. Last possible habitable epochs in solar system.
+
+**KO.** 태양이 점근거성가지(AGB) 최대 크기 도달. 목성(5.2 AU)과 토성(9.5 AU)이 가열; 그들의 가스 외피가 부분적으로 증발. 얼음 위성(유로파, 타이탄, 엔셀라두스)이 일시적으로 뜨거워짐 — 액체 표면 물이 잃기 전 잠시 존재할 수 있음. 태양계의 마지막 가능한 거주 가능 시대.
+
+---
+
+### 🔬 Milestone 82% — Megastructures Fail / 거대구조 붕괴
+
+**EN.** Any Dyson swarms or megastructures built by civilizations are destroyed by Sun's expansion. The energy regime shifts: civilizations capable of moving must do so by now or accept extinction. Realistically, post-Sun-death civilizations would have migrated to other stars or stellar remnants long ago.
+
+**KO.** 문명이 만든 어떤 다이슨 군집이나 거대구조도 태양의 팽창에 의해 파괴됨. 에너지 체제 이동: 이동 가능한 문명은 지금 해야 하거나 멸종 수용. 현실적으로 태양 사후 문명은 오래 전 다른 별이나 항성 잔해로 이주했을 것.
+
+---
+
+### 🔬 Milestone 90% — Envelope Ejection / 외피 방출
+
+**EN.** AGB pulsations eject Sun's outer envelope (~50% of mass) into space via stellar winds + thermal pulses. Material expands at 10-30 km/s; over ~10⁴ years, forms a beautiful planetary nebula. Central hot WD progenitor ionizes ejected material. Sun's spectacular swan song visible across galaxy.
+
+**KO.** AGB 맥동이 태양의 외피(~질량의 50%)를 항성풍 + 열 펄스를 통해 우주로 방출. 물질이 10-30 km/s로 팽창; ~10⁴년에 걸쳐 아름다운 행성상 성운 형성. 중심 뜨거운 WD 선조가 방출 물질을 이온화. 태양의 장관의 백조의 노래가 은하 전체에 걸쳐 보임.
+
+---
+
+### 🔬 Milestone 96% — White Dwarf / 백색왜성
+
+**EN.** Sun's exposed C/O core: 0.55 M_☉, radius ~6,000 km (similar to Earth), surface temperature ~100,000 K (very hot WD initially). Electron degeneracy pressure supports against gravity. Will cool over trillions of years; eventually black dwarf.
+
+**KO.** 태양의 노출된 C/O 핵: 0.55 M_☉, 반지름 ~6,000 km(지구와 유사), 표면 온도 ~100,000 K(초기에 매우 뜨거운 WD). 전자 축퇴 압력이 중력에 대해 지지. 수조 년에 걸쳐 식음; 결국 흑색왜성.
+
+---
+
+### 🔬 Milestone 100% — After the Sun / 태양 이후
+
+**EN.** ~12-13 Gyr from now. Sun is a cooling white dwarf. Outer planets (Jupiter, Saturn, etc.) orbit in cold darkness. Solar system continues, but without star — just gravitational rubble. Galactic star formation also winding down. The era of "main sequence stars" — when most stars burn hydrogen — is ending. The universe is entering geriatric phase.
+
+**KO.** 지금으로부터 ~12-13 Gyr. 태양이 식어가는 백색왜성. 외곽 행성(목성, 토성 등)이 차가운 어둠 속에서 궤도. 태양계는 계속되지만 별 없이 — 중력 잔해일 뿐. 은하 별 형성도 잦아드는 중. "주계열성" 시대 — 대부분의 별이 수소를 태우는 — 가 끝나가는 중. 우주가 노년기에 진입.
+
+---

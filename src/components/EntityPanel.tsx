@@ -4,7 +4,8 @@ import type { PurchasedEntityEntry } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
-import { getStageAnchorEntity, isEntityLockedByAnchor } from '../game/entities/anchors';
+import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
+import { openEntityLore } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
 import { formatAutoRateValue, getCosmicTimeFillRate } from '../game/formulas';
@@ -277,9 +278,9 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
             <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
           )}
           {entities.map((entity, idx) => {
-            const anchorLocked = isEntityLockedByAnchor(entity, purchasedEntities);
-            const anchor = anchorLocked ? getStageAnchorEntity(entity.stageId) : undefined;
-            const anchorName = anchor ? entityName(anchor, language) : undefined;
+            const prereq = getEntityLockPrerequisite(entity, purchasedEntities);
+            const anchorLocked = prereq !== undefined;
+            const anchorName = prereq ? entityName(prereq, language) : undefined;
             return (
               <EntityCard
                 key={entity.id}
@@ -413,7 +414,9 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
         <div className="entity-card__name">{displayName}</div>
         <div className="entity-card__meta">
           <span className="entity-card__effect" style={{ color: rarityColor }}>
-            {effectLabel}
+            {anchorLockedBy
+              ? t(language, 'entityLabAnchorLockHint').replace('{anchor}', anchorLockedBy)
+              : effectLabel}
           </span>
         </div>
         {showLevelProgress ? (
@@ -531,6 +534,19 @@ function EntityDetailCard({
           onClick={onClose}
         >
           ×
+        </button>
+        <button
+          type="button"
+          className="entity-detail-card__lore"
+          aria-label="Open lore in new tab"
+          title={language === 'ko' ? '심층 해설 (새 탭)' : 'Read lore (new tab)'}
+          onClick={(event) => {
+            event.stopPropagation();
+            openEntityLore({ stageId: entity.stageId, name: entity.name }, language);
+          }}
+          style={{ color: rarityColor }}
+        >
+          📖
         </button>
         <div className="entity-detail-card__visual">
           <EntityGlyph entity={entity} color={rarityColor} />

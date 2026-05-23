@@ -8,13 +8,13 @@ import { findEntityById } from '../game/entities/stageItems';
 // IDs follow `s${stageId}_${index padded to 2 digits}_${slug(name)}`.
 const S11 = {
   CRUST:       's11_01_earth_formation',
-  OCEAN:       's11_02_first_ocean',
-  ATMO:        's11_03_atmosphere',
-  MOON:        's11_04_moon_formation',
-  PROKARYOTE:  's11_05_prokaryote',
+  MOON:        's11_02_moon_formation',
+  OCEAN:       's11_03_first_ocean',
+  ATMO:        's11_04_atmosphere',
+  CONTINENTS:  's11_05_continents_rise',
   PHOTO:       's11_06_photosynthesis',
-  CAMBRIAN:    's11_07_cambrian_explosion',
-  CONTINENTS:  's11_08_continents_rise',
+  PROKARYOTE:  's11_07_prokaryote',
+  CAMBRIAN:    's11_08_cambrian_explosion',
   NEURON:      's11_09_neuron',
   SAPIENS:     's11_10_homo_sapiens',
   CITY_LIGHTS: 's11_11_city_lights',
@@ -1590,8 +1590,7 @@ function isLifeOrbitEntity(item: EntityDrawItem): boolean {
     'probe',
     'lander',
     'ark',
-    'homo sapiens',
-    'intelligence',
+    'spacefaring',
   );
 }
 
@@ -1733,7 +1732,7 @@ function drawLifeOrbitEntities(
           ? 12
           : 8.5;
 
-    if (textHas(text, 'telescope', 'observatory', 'intelligence', 'homo sapiens')) {
+    if (textHas(text, 'telescope', 'observatory')) {
       const surfaceX = cx + Math.cos(angle + Math.PI) * earthRadius * 0.62;
       const surfaceY = cy + Math.sin(angle + Math.PI) * earthRadius * 0.36;
       ctx.strokeStyle = hexToRgba(item.color, 0.14);
@@ -1798,11 +1797,99 @@ function drawLifeOrbitEntities(
       ctx.stroke();
     }
 
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle + (isFreeFlight ? 0 : Math.PI / 2));
-    drawSpacecraftBody(ctx, item, size, now);
-    ctx.restore();
+    const nameL = item.name.toLowerCase();
+
+    // ── Spacefaring Humanity — Dyson Sphere around the sun ──
+    if (nameL.includes('spacefaring')) {
+      const dysonR = size * 2.8;
+      const t = now * 0.001;
+      ctx.save();
+      ctx.translate(x, y);
+      // Multiple rotating rings (Dyson swarm)
+      for (let ring = 0; ring < 3; ring++) {
+        const ringAngle = t * (0.3 + ring * 0.15) + ring * 2.1;
+        const tilt = 0.3 + ring * 0.25;
+        const pulse = 0.5 + Math.sin(t * 1.5 + ring * 1.2) * 0.3;
+        ctx.strokeStyle = hexToRgba('#ffd866', 0.35 * pulse);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, dysonR * (1 + ring * 0.2), dysonR * tilt * (1 + ring * 0.2), ringAngle, 0, Math.PI * 2);
+        ctx.stroke();
+        // Energy collection panels (dots on ring)
+        for (let p = 0; p < 6; p++) {
+          const pa = ringAngle + p * (Math.PI * 2 / 6);
+          const panelX = Math.cos(pa) * dysonR * (1 + ring * 0.2);
+          const panelY = Math.sin(pa) * dysonR * tilt * (1 + ring * 0.2);
+          ctx.fillStyle = hexToRgba('#ffe888', 0.4 * pulse);
+          fillCircle(ctx, panelX, panelY, 1.5);
+        }
+      }
+      // Central star glow
+      ctx.fillStyle = hexToRgba('#fff8e0', 0.6);
+      fillCircle(ctx, 0, 0, size * 0.7);
+      // Energy beam to Earth
+      ctx.strokeStyle = hexToRgba('#ffd866', 0.15);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(cx - x, cy - y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    // ── Interstellar Ark — massive generation ship ──
+    else if (nameL.includes('ark')) {
+      const t = now * 0.001;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      const shipLen = size * 3.5;
+      // Hull (elongated)
+      ctx.fillStyle = hexToRgba('#c0d0e0', 0.7);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, shipLen, size * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Central habitat ring
+      ctx.strokeStyle = hexToRgba('#8ab8ff', 0.5);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 1.2, size * 1.2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Rotating habitat lights
+      for (let i = 0; i < 8; i++) {
+        const la = t * 0.8 + i * (Math.PI * 2 / 8);
+        const lx = Math.cos(la) * size * 1.1;
+        const ly = Math.sin(la) * size * 1.1;
+        ctx.fillStyle = hexToRgba('#aaeeff', 0.4 + Math.sin(t * 2 + i) * 0.2);
+        fillCircle(ctx, lx, ly, 1.2);
+      }
+      // Engine exhaust
+      const exhaustLen = shipLen * (0.3 + Math.sin(t * 3) * 0.1);
+      ctx.fillStyle = hexToRgba('#4488ff', 0.3);
+      ctx.beginPath();
+      ctx.moveTo(-shipLen, -size * 0.3);
+      ctx.lineTo(-shipLen - exhaustLen, 0);
+      ctx.lineTo(-shipLen, size * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = hexToRgba('#88ccff', 0.5);
+      ctx.beginPath();
+      ctx.moveTo(-shipLen, -size * 0.15);
+      ctx.lineTo(-shipLen - exhaustLen * 0.6, 0);
+      ctx.lineTo(-shipLen, size * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    // ── Generic orbital entity ──
+    else {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle + (isFreeFlight ? 0 : Math.PI / 2));
+      drawSpacecraftBody(ctx, item, size, now);
+      ctx.restore();
+    }
   }
 
   ctx.restore();
@@ -1943,7 +2030,12 @@ function drawLifeEarthEntities(
 
   // Entity-count budgets that ramp with purchases.
   const dustClumps   = Math.max(0, Math.min(20, crustC * 2 + 6));   // accretion debris
-  const sphereR      = R * smoothstep01(crustC / 12);                // sphere fills in by ~level 12
+  // Earth size scales for the ENTIRE 1→20 range so every Earth Formation
+  // purchase makes the planet visibly bigger. count=1 ≈ small proto-Earth
+  // (~22% radius), count=20 = full radius R.
+  const sphereR      = hasCrust
+    ? R * (0.22 + 0.78 * smoothstep01(crustC / 20))
+    : 0;
   const oceanBlobs   = Math.min(22, oceanC * 2);                     // pools growing into seas
   const atmoLayers   = Math.min(4, 1 + Math.floor(atmoC / 5));       // halo intensity steps
   const cloudCount   = Math.min(12, Math.floor(atmoC * 0.7));        // clouds appear over time
@@ -2017,29 +2109,56 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // ── Atmosphere outer halo ────────────────────────────────────────────────
-  if (hasAtmo) {
-    const ag = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * (1.32 + atmoGrow * 0.15));
-    ag.addColorStop(0, hexToRgba('#7ec0ff', 0.18 + atmoGrow * 0.10));
-    ag.addColorStop(0.5, hexToRgba('#3c80d8', 0.10));
+  // ── Atmosphere — grows progressively. The first click drops one faint
+  // wisp; each subsequent click adds another wisp and thickens the halo,
+  // so the atmosphere wraps the planet gradually instead of popping in.
+  if (hasAtmo && sphereR > 0.5) {
+    // Linear "level" 0..1 so very low atmoC stays very subtle.
+    const atmoLevel = Math.min(1, atmoC / 20);
+    const haloR = sphereR * (1.10 + atmoLevel * 0.35);
+    // Full halo gradient — alpha scales strongly with atmoLevel so level 1
+    // is almost invisible and level 20 is a thick blue envelope.
+    const ag = ctx.createRadialGradient(cx, cy, sphereR * 0.94, cx, cy, haloR);
+    ag.addColorStop(0, hexToRgba('#7ec0ff', 0.04 + atmoLevel * 0.24));
+    ag.addColorStop(0.5, hexToRgba('#3c80d8', 0.02 + atmoLevel * 0.14));
     ag.addColorStop(1, hexToRgba('#1c4080', 0));
     ctx.fillStyle = ag;
-    fillCircle(ctx, cx, cy, R * 1.45);
+    fillCircle(ctx, cx, cy, haloR);
+
+    // Wisp ribbons — one per purchased atmosphere level (up to ~8), each
+    // anchored at a fixed angle so successive purchases add new streaks.
+    const wispCount = Math.min(8, atmoC);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < wispCount; i += 1) {
+      const angle = (i / 8) * Math.PI * 2 + unit(i + 1300, 1) * 0.6;
+      const arcStart = angle - 0.55;
+      const arcEnd = angle + 0.55;
+      const wispR = sphereR * (1.04 + atmoLevel * 0.12);
+      const breathe = 0.4 + Math.sin(now * 0.0008 + i * 1.7) * 0.4;
+      const alpha = (0.06 + atmoLevel * 0.10) * breathe;
+      ctx.strokeStyle = hexToRgba('#a8d8ff', alpha);
+      ctx.lineWidth = sphereR * (0.02 + atmoLevel * 0.05);
+      ctx.beginPath();
+      ctx.arc(cx, cy, wispR, arcStart, arcEnd);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
-  // ── Earth body (clipped sphere) ──────────────────────────────────────────
+  // ── Earth body (clipped to the *current* sphere size, not fixed R) ──────
+  if (sphereR > 0.5) {
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.arc(cx, cy, sphereR, 0, Math.PI * 2);
   ctx.clip();
 
-  // Base layer — depends on which formation entities are owned.
+  // Base layer is ALWAYS the rocky planet (lava → cooled rock as crustGrow
+  // ramps). The ocean is rendered on top as progressively-painted patches
+  // below so the player sees water spread across the surface click by click,
+  // instead of the planet flipping to blue the moment First Ocean is bought.
   const baseGrad = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.28, R * 0.06, cx, cy, R);
-  if (hasOcean) {
-    baseGrad.addColorStop(0, '#1f5fa6');
-    baseGrad.addColorStop(0.55, '#0e3a72');
-    baseGrad.addColorStop(1, '#04203d');
-  } else if (hasCrust) {
+  if (hasCrust) {
     const heat = 1 - crustGrow * 0.55;
     baseGrad.addColorStop(0, `rgb(${Math.round(120 + heat * 80)}, ${Math.round(60 + heat * 30)}, ${Math.round(30 + heat * 12)})`);
     baseGrad.addColorStop(1, `rgb(${Math.round(56 + heat * 22)}, ${Math.round(24 + heat * 10)}, ${Math.round(12 + heat * 4)})`);
@@ -2049,6 +2168,25 @@ function drawLifeEarthEntities(
   }
   ctx.fillStyle = baseGrad;
   fillCircle(ctx, cx, cy, R);
+
+  // Ocean — gradual blue wash over the entire planet, then continents rise above it
+  if (oceanC > 0) {
+    // Full-sphere ocean wash that fades in smoothly with each purchase
+    const washAlpha = Math.min(0.88, oceanGrow * 0.92);
+    ctx.fillStyle = hexToRgba('#1a5a9e', washAlpha);
+    fillCircle(ctx, cx, cy, sphereR);
+    // Deeper ocean gradient for depth
+    if (oceanGrow > 0.3) {
+      const deepA = Math.min(0.5, (oceanGrow - 0.3) * 0.7);
+      ctx.fillStyle = hexToRgba('#0a3060', deepA);
+      fillCircle(ctx, cx, cy, sphereR * 0.85);
+    }
+    // Specular highlight on water
+    ctx.fillStyle = hexToRgba('#5abaff', 0.08 + oceanGrow * 0.06);
+    ctx.beginPath();
+    ctx.ellipse(cx - sphereR * 0.2, cy - sphereR * 0.25, sphereR * 0.4, sphereR * 0.25, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Lava veins on a crust that hasn't cooled into ocean yet
   if (hasCrust && !hasOcean) {
@@ -2078,35 +2216,71 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Continents — anchored landmasses that "rise" via a one-shot tween (no
-  // more left/right jitter). Each one has a fixed seed-driven emergence start
-  // and grows from 60% to 100% size as it surfaces.
+  // Continents — Pangaea → modern continents evolution
+  // contC=1-2: single supercontinent (Pangaea), contC=3+: starts splitting
+  // contC=5+: modern-like arrangement with separate continents
   if (continentsN > 0) {
-    const RISE_MS = 800;
-    const STAGGER = 8000;
-    for (let i = 0; i < continentsN; i += 1) {
-      const cLon = earthSpin + (i / continentsN) * Math.PI * 2 + unit(i + 600, 1) * 0.8;
-      const cLat = (unit(i + 610, 2) - 0.5) * 0.85;
+    const drift = Math.min(1, (contC - 1) / 5); // 0=Pangaea, 1=modern
+    // Define rough continent shapes (lon offset, lat, width, height, rotation)
+    const CONTINENTS = [
+      { lon: 0.0,  lat: -0.05, w: 0.28, h: 0.35, rot: 0.1,  name: 'africa' },
+      { lon: 0.55, lat: -0.25, w: 0.22, h: 0.32, rot: -0.15, name: 'americas' },
+      { lon: -0.5, lat: 0.3,   w: 0.30, h: 0.18, rot: 0.05,  name: 'eurasia' },
+      { lon: 0.8,  lat: 0.35,  w: 0.14, h: 0.14, rot: 0.3,   name: 'australia' },
+      { lon: 0.15, lat: -0.55, w: 0.20, h: 0.10, rot: -0.1,  name: 'antarctica' },
+      { lon: -0.3, lat: -0.15, w: 0.15, h: 0.22, rot: 0.2,   name: 'india' },
+      { lon: 0.35, lat: 0.15,  w: 0.12, h: 0.18, rot: -0.05, name: 'island' },
+    ];
+    const visibleCount = Math.min(CONTINENTS.length, continentsN);
+
+    for (let i = 0; i < visibleCount; i++) {
+      const c = CONTINENTS[i];
+      // Pangaea: all continents clustered near center; drift spreads them out
+      const spreadLon = c.lon * drift;
+      const spreadLat = c.lat * (0.3 + drift * 0.7);
+      const cLon = earthSpin + spreadLon * Math.PI;
       const visible = Math.cos(cLon);
       if (visible <= -0.05) continue;
-      const emergeStart = unit(i + 645, 8) * (STAGGER * 0.5);
-      const localT = Math.max(0, Math.min(1, ((now - emergeStart) % STAGGER) / RISE_MS));
-      const emerge = localT * localT * (3 - 2 * localT); // smoothstep
-      const cw = R * (0.20 + unit(i + 620, 3) * 0.20) * (0.45 + visible * 0.55) * (0.6 + emerge * 0.4);
-      const ch = R * (0.14 + unit(i + 630, 4) * 0.18) * (0.6 + emerge * 0.4);
-      const px = cx + Math.cos(cLon) * R * 0.62;
-      const py = cy + cLat * R * 0.6;
-      const rotation = unit(i + 640, 5) * 0.6;
-      // Base rock (photoGrow shifts hue toward green)
-      const rock = `rgb(${Math.round(110 - photoGrow * 30)}, ${Math.round(82 + photoGrow * 18)}, ${Math.round(52 + photoGrow * 6)})`;
-      ctx.fillStyle = hexToRgba(rock, 0.78 + visible * 0.18);
+
+      // Size grows as contC increases (land rising from ocean)
+      const sizeGrow = Math.min(1, contC / 3);
+      const cw = R * c.w * (0.4 + sizeGrow * 0.6) * (0.45 + visible * 0.55);
+      const ch = R * c.h * (0.4 + sizeGrow * 0.6);
+      const px = cx + Math.cos(cLon) * R * 0.58;
+      const py = cy + spreadLat * R * 0.55;
+
+      // Color: brown rock → green with photosynthesis
+      const gr = Math.round(105 - photoGrow * 35);
+      const gg = Math.round(78 + photoGrow * 30);
+      const gb = Math.round(48 + photoGrow * 8);
+      const rock = `rgb(${gr}, ${gg}, ${gb})`;
+
+      // Draw continent with irregular edges (multiple overlapping ellipses)
+      ctx.fillStyle = hexToRgba(rock, (0.7 + visible * 0.25) * sizeGrow);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(c.rot + drift * 0.2);
+      // Main body
       ctx.beginPath();
-      ctx.ellipse(px, py, cw, ch, rotation, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, cw, ch, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Coastal shadow
-      ctx.fillStyle = hexToRgba('#341a08', 0.18);
+      // Sub-lobe for more natural shape
       ctx.beginPath();
-      ctx.ellipse(px + cw * 0.06, py + ch * 0.10, cw * 0.94, ch * 0.94, rotation, 0, Math.PI * 2);
+      ctx.ellipse(cw * 0.3, ch * -0.2, cw * 0.5, ch * 0.6, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Mountain ridge highlight
+      if (sizeGrow > 0.6) {
+        ctx.fillStyle = hexToRgba('#8a7256', 0.2 * sizeGrow);
+        ctx.beginPath();
+        ctx.ellipse(cw * -0.1, 0, cw * 0.3, ch * 0.15, c.rot * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Coastal shadow / shelf
+      ctx.fillStyle = hexToRgba('#1a3a5a', 0.12 * sizeGrow);
+      ctx.beginPath();
+      ctx.ellipse(px + 1, py + 1, cw * 1.08, ch * 1.08, c.rot + drift * 0.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -2171,57 +2345,70 @@ function drawLifeEarthEntities(
     ctx.restore();
   }
 
-  // Cambrian explosion — wandering creature trails in the ocean
+  // Cambrian Explosion — small wriggly creatures swimming in the ocean.
+  // They react to pointer-hover wiggle (Satellite amplifies the effect).
   if (cambrianN > 0 && hasOcean) {
     for (let i = 0; i < cambrianN; i += 1) {
       const orbit = 0.3 + unit(i + 770, 1) * 0.55;
-      const phase = now * (0.0006 + unit(i + 771, 2) * 0.0008) + i * 1.3;
+      const phase = now * (0.0007 + unit(i + 771, 2) * 0.0009) + i * 1.3;
       const lat = (unit(i + 772, 3) - 0.5) * 1.4;
-      const px = cx + Math.cos(phase + earthSpin * 0.4) * R * orbit;
-      const py = cy + Math.sin(lat) * R * 0.6 + Math.sin(phase * 2.4) * R * 0.04;
-      const dist = Math.hypot(px - cx, py - cy);
+      const baseX = cx + Math.cos(phase + earthSpin * 0.4) * R * orbit;
+      const baseY = cy + Math.sin(lat) * R * 0.6 + Math.sin(phase * 2.4) * R * 0.04;
+      const dist = Math.hypot(baseX - cx, baseY - cy);
       if (dist > R * 0.86) continue;
-      ctx.strokeStyle = hexToRgba('#ffd7a8', 0.55);
-      ctx.lineWidth = 1.2;
+      const w = applyWiggle(baseX, baseY);
+      // Body — tapered tail
+      ctx.strokeStyle = hexToRgba('#ffd7a8', 0.55 + w.falloff * 0.2);
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px - Math.cos(phase + earthSpin * 0.4) * 6, py - Math.sin(phase * 2.4) * 2);
+      ctx.moveTo(w.x, w.y);
+      ctx.lineTo(w.x - Math.cos(phase + earthSpin * 0.4) * 6, w.y - Math.sin(phase * 2.4) * 2);
       ctx.stroke();
+      // Head dot
       ctx.fillStyle = hexToRgba('#ffe7c0', 0.85);
-      fillCircle(ctx, px, py, 1.4);
+      fillCircle(ctx, w.x, w.y, 1.4 + w.falloff * 0.7);
     }
   }
 
-  // Neuron — wispy neural mesh over land
+  // Neuron — cyan node graph with electrical pulses traveling along edges.
+  // Visually distinct from Photosynthesis's diffuse green blooms.
   if (hasNeuron) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const nodes = 10;
+    const nodes = neuronMesh;
     const pts: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < nodes; i += 1) {
       const lon = earthSpin * 0.6 + i * 0.78;
       const vis = Math.cos(lon);
       if (vis < 0) continue;
       const lat = (unit(i + 820, 1) - 0.5) * 1.2;
-      pts.push({
-        x: cx + Math.cos(lon) * R * 0.55,
-        y: cy + Math.sin(lat) * R * 0.5,
-      });
+      const baseX = cx + Math.cos(lon) * R * 0.55;
+      const baseY = cy + Math.sin(lat) * R * 0.5;
+      const w = applyWiggle(baseX, baseY);
+      pts.push({ x: w.x, y: w.y });
     }
     for (let i = 0; i < pts.length; i += 1) {
       for (let j = i + 1; j < pts.length; j += 1) {
         const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
         if (d > R * 0.55) continue;
-        const flicker = 0.4 + Math.sin(now * 0.0015 + i * 2.3 + j) * 0.4;
-        ctx.strokeStyle = hexToRgba('#7dffd1', 0.06 * flicker);
-        ctx.lineWidth = 0.7;
+        // Static dim edge
+        ctx.strokeStyle = hexToRgba('#74cfff', 0.10);
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(pts[i].x, pts[i].y);
         ctx.lineTo(pts[j].x, pts[j].y);
         ctx.stroke();
+        // Electric pulse traveling along the edge
+        const pulseT = ((now * 0.0008 + (i * nodes + j) * 0.12) % 1);
+        const pxd = pts[i].x + (pts[j].x - pts[i].x) * pulseT;
+        const pyd = pts[i].y + (pts[j].y - pts[i].y) * pulseT;
+        ctx.fillStyle = hexToRgba('#cfeeff', 0.72 - pulseT * 0.4);
+        fillCircle(ctx, pxd, pyd, 1.4);
       }
-      ctx.fillStyle = hexToRgba('#a9ffe2', 0.4);
-      fillCircle(ctx, pts[i].x, pts[i].y, 1.2);
+      // Bright neuron core (cyan, not green)
+      ctx.fillStyle = hexToRgba('#a8e5ff', 0.55);
+      fillCircle(ctx, pts[i].x, pts[i].y, 1.7);
     }
     ctx.restore();
   }
@@ -2253,6 +2440,34 @@ function drawLifeEarthEntities(
     }
   }
 
+  // Homo Sapiens — tiny rectangle "buildings" with warm window glow. This
+  // is what makes Sapiens visually unique vs Satellites (which live in
+  // orbit, not on the surface).
+  if (buildingN > 0) {
+    for (let i = 0; i < buildingN; i += 1) {
+      const lon = earthSpin + i * 0.62 + unit(i + 870, 1) * 1.8;
+      const lat = (unit(i + 871, 2) - 0.5) * 0.7;
+      const vis = Math.cos(lon);
+      if (vis <= 0.05) continue;
+      const baseX = cx + Math.cos(lon) * R * 0.5;
+      const baseY = cy + Math.sin(lat) * R * 0.45;
+      const w = applyWiggle(baseX, baseY);
+      const hgt = 1.8 + sapiensGrow * 3.6 + unit(i + 872, 3) * 1.6;
+      ctx.save();
+      ctx.translate(w.x, w.y);
+      // Building silhouette
+      ctx.fillStyle = `rgba(232, 224, 198, ${0.55 + vis * 0.3})`;
+      ctx.fillRect(-1.3, -hgt, 2.6, hgt);
+      // Window strip glow on twilight/night sides
+      if (vis < 0.65) {
+        ctx.fillStyle = hexToRgba('#ffd17a', 0.55 + Math.sin(now * 0.004 + i) * 0.25);
+        ctx.fillRect(-0.7, -hgt * 0.7, 1.4, 0.55);
+        ctx.fillRect(-0.7, -hgt * 0.35, 1.4, 0.55);
+      }
+      ctx.restore();
+    }
+  }
+
   // Day/night terminator — softer; rotates with the orbit so day side faces sun
   {
     const sunDir = moonAngle * 0.18 + earthSpin * 0.05;
@@ -2265,8 +2480,9 @@ function drawLifeEarthEntities(
     ctx.fillStyle = nightGrad;
     fillCircle(ctx, cx, cy, R);
 
-    // City lights — only after Homo Sapiens (or explicit City Lights entity)
-    if ((hasSapiens || hasCity) && cityC > 0) {
+    // City lights — turn on the moment Sapiens shows up (or via the explicit
+    // City Lights entity). They live on the night side only.
+    if ((hasSapiens || hasCity) && cityN > 0) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       const nightX = cx - Math.cos(sunDir) * R * 0.4;
@@ -2287,26 +2503,58 @@ function drawLifeEarthEntities(
       ctx.restore();
     }
 
-    // Homo Sapiens — small fire spark on land before cities glow
+    // Homo Sapiens fires — properly grounded camp fires on the planet
+    // surface (clipped to the sphere), each with an ember + flickering
+    // flame + thin smoke plume tilted away from the sun. Stops once city
+    // lights have taken over.
     if (hasSapiens && cityC === 0) {
-      for (let i = 0; i < sapiensC; i += 1) {
-        const lon = earthSpin + i * 1.6;
-        const lat = (unit(i + 830, 1) - 0.5) * 0.8;
-        const px = cx + Math.cos(lon) * R * 0.55;
-        const py = cy + Math.sin(lat) * R * 0.5;
-        const flick = 0.4 + Math.sin(now * 0.005 + i) * 0.3;
-        ctx.fillStyle = hexToRgba('#ff9544', flick);
-        fillCircle(ctx, px, py, 1.4);
+      const lit = Math.cos(sunDir);
+      for (let i = 0; i < sapiensC * 3; i += 1) {
+        const lon = earthSpin + unit(i + 830, 1) * Math.PI * 2;
+        const lat = (unit(i + 831, 2) - 0.5) * 0.9;
+        const visible = Math.cos(lon) * Math.cos(lat);
+        if (visible < 0.1) continue;
+        // Land on the surface, not centre — surfFrac > 0.7 keeps the spark
+        // hugging the rocky crust.
+        const surfFrac = 0.74;
+        const baseX = cx + Math.cos(lon) * sphereR * surfFrac * Math.cos(lat);
+        const baseY = cy + Math.sin(lat) * sphereR * surfFrac;
+        const w = applyWiggle(baseX, baseY);
+        const flick = 0.55 + Math.sin(now * 0.005 + i) * 0.35;
+        // Outer orange ember
+        ctx.fillStyle = hexToRgba('#ff7a26', flick);
+        fillCircle(ctx, w.x, w.y, 1.6 + w.falloff * 0.8);
+        // Inner yellow flame tip
+        ctx.fillStyle = hexToRgba('#ffd17a', flick * 0.75);
+        fillCircle(ctx, w.x, w.y, 0.75);
+        // Thin smoke plume drifting away from the sun
+        const smokeLen = 5 + Math.sin(now * 0.003 + i * 1.3) * 1.5;
+        ctx.strokeStyle = hexToRgba('#bcbcbc', 0.18);
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(w.x, w.y);
+        ctx.quadraticCurveTo(
+          w.x - lit * 2,
+          w.y - smokeLen * 0.5,
+          w.x - lit * 4,
+          w.y - smokeLen,
+        );
+        ctx.stroke();
       }
     }
   }
 
-  // Moon shadow on Earth (only when moon is in front)
-  if (hasMoon && !moonBehind) {
-    const shadowX = moonX * 0.32 + cx * 0.68;
-    const shadowY = moonY * 0.32 + cy * 0.68;
-    ctx.fillStyle = hexToRgba('#000000', 0.16 + moonGrow * 0.06);
-    fillCircle(ctx, shadowX, shadowY, moonR * 1.6);
+  // Moon shadow on Earth — fades smoothly based on moon angle
+  if (hasMoon) {
+    const sinA = Math.sin(moonAngle);
+    // sinA > 0 = moon in front; fade from 0 at sinA=0 to full at sinA=0.5+
+    const shadowFade = Math.max(0, Math.min(1, sinA * 3));
+    if (shadowFade > 0.01) {
+      const shadowX = moonX * 0.32 + cx * 0.68;
+      const shadowY = moonY * 0.32 + cy * 0.68;
+      ctx.fillStyle = hexToRgba('#000000', shadowFade * (0.14 + moonGrow * 0.06));
+      fillCircle(ctx, shadowX, shadowY, moonR * (1.2 + shadowFade * 0.4));
+    }
   }
 
   // Day-side specular highlight
@@ -2323,6 +2571,7 @@ function drawLifeEarthEntities(
   }
 
   ctx.restore(); // end Earth clip
+  } // end "if (sphereR > 0.5)" Earth-body guard
 
   // ── Biosphere veins outside the clip (life force tendrils) ───────────────
   const hasCambrian = cambrianC > 0;
@@ -2337,19 +2586,54 @@ function drawLifeEarthEntities(
     strokeCircle(ctx, cx, cy, R * 1.01);
   }
 
-  // ── Satellites orbiting ──────────────────────────────────────────────────
+  // ── Satellites — body + solar-panel wings + scan beam + comm ping.
+  // Visually very different from Sapiens (which is on the surface).
+  // They also react to pointer pressure: a mouse-down near them pushes
+  // them outward briefly.
   if (hasSat) {
-    const satCount = 2 + Math.min(4, L.count(S11.SATELLITE));
-    for (let i = 0; i < satCount; i += 1) {
+    ctx.save();
+    for (let i = 0; i < satN; i += 1) {
       const sa = now * (0.0009 + i * 0.00033) + i * 2.1;
-      const sr = R * (1.12 + i * 0.07);
-      const sx = cx + Math.cos(sa) * sr;
-      const sy = cy + Math.sin(sa) * sr * 0.38;
-      ctx.fillStyle = hexToRgba('#ffffff', 0.68);
-      fillCircle(ctx, sx, sy, 1.4);
-      ctx.fillStyle = hexToRgba('#88aaff', 0.35 + Math.sin(now * 0.008 + i) * 0.2);
-      fillCircle(ctx, sx, sy, 2.2);
+      const sr = R * (1.14 + i * 0.07);
+      let sx = cx + Math.cos(sa) * sr;
+      let sy = cy + Math.sin(sa) * sr * 0.38;
+      const pushed = applyPointerVisualDisplacement(sx, sy, pointerPressure, 14);
+      sx = pushed.x;
+      sy = pushed.y;
+      // Body bus
+      ctx.fillStyle = hexToRgba('#ffffff', 0.82);
+      fillCircle(ctx, sx, sy, 1.8);
+      // Solar-panel wings (rotated along orbit)
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(sa + Math.PI / 2);
+      ctx.fillStyle = hexToRgba('#88aaff', 0.62);
+      ctx.fillRect(-3.4, -0.7, 6.8, 1.4);
+      ctx.fillStyle = hexToRgba('#aaccff', 0.42);
+      ctx.fillRect(-3.2, -0.35, 6.4, 0.7);
+      ctx.restore();
+      // Scan beam fan pointing at Earth
+      const beamAngle = Math.atan2(cy - sy, cx - sx);
+      const beamHalf = 0.17 + Math.sin(now * 0.003 + i) * 0.05;
+      const beamReach = Math.hypot(sx - cx, sy - cy) * 0.95;
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, beamReach);
+      grad.addColorStop(0, hexToRgba('#9ce0ff', 0.32 + satGrow * 0.20));
+      grad.addColorStop(1, hexToRgba('#9ce0ff', 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.arc(sx, sy, beamReach, beamAngle - beamHalf, beamAngle + beamHalf);
+      ctx.closePath();
+      ctx.fill();
+      // Comm ping ring expanding outward
+      const ringPhase = (now * 0.001 + i * 0.7) % 1;
+      ctx.strokeStyle = hexToRgba('#cdeaff', (1 - ringPhase) * 0.42);
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 4 + ringPhase * 22, 0, Math.PI * 2);
+      ctx.stroke();
     }
+    ctx.restore();
   }
 
   // Moon in front of Earth — drawn last so it sits above the surface
@@ -2357,9 +2641,10 @@ function drawLifeEarthEntities(
     drawMoon(ctx, moonX, moonY, moonR, now, moonAngle, moonGrow, false, moonNudgePulse);
   }
 
-  // Legendary / Spacefaring / Ark / Telescope / Sapiens orbital glyphs
+  // Legendary / Spacefaring / Ark / Telescope orbital glyphs — pointer
+  // pressure pushes them outward slightly when the cursor is nearby.
   const orbitItems = items.filter(isLifeOrbitEntity);
-  drawLifeOrbitEntities(ctx, cx, cy, R, orbitItems, now);
+  drawLifeOrbitEntities(ctx, cx, cy, R, orbitItems, now, pointerPressure);
 }
 
 function drawEntityGlyph(

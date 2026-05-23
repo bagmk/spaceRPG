@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmic Coalescence — Lore</title>
+<style>
+  :root {
+    --bg: #0a0a1a;
+    --bg-card: #14142e;
+    --text: #e0d8f0;
+    --text-dim: #a098c0;
+    --accent: #8060d0;
+    --accent-bright: #b090ff;
+    --border: #2a2a4a;
+    --common: #6db86d;
+    --rare: #4a8fff;
+    --epic: #b060f0;
+    --legendary: #ffa500;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #0a0a1a 0%, #14142e 100%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.7;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .lang-switcher {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: flex-end;
+  }
+  .lang-switcher button {
+    background: var(--bg);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .lang-switcher button.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent-bright);
+  }
+  .lang-switcher button:hover { color: var(--text); }
+  .breadcrumb {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  .meta {
+    display: inline-block;
+    background: var(--bg);
+    color: var(--accent-bright);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+  .rarity-common { color: var(--common); border-color: var(--common); }
+  .rarity-rare { color: var(--rare); border-color: var(--rare); }
+  .rarity-epic { color: var(--epic); border-color: var(--epic); }
+  .rarity-legendary { color: var(--legendary); border-color: var(--legendary); }
+  .body {
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  .body p { margin-bottom: 16px; }
+  .body strong { color: var(--accent-bright); font-weight: 600; }
+  .body em { color: var(--text-dim); font-style: italic; }
+  .footer {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+  }
+  .footer a {
+    color: var(--accent-bright);
+    text-decoration: none;
+    margin: 0 8px;
+  }
+  .footer a:hover { text-decoration: underline; }
+  .error {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 60px 20px;
+  }
+  .error h2 { color: var(--text); margin-bottom: 12px; }
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .container { padding: 20px; border-radius: 8px; }
+    h1 { font-size: 24px; }
+    .subtitle { font-size: 16px; }
+    .body { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="container" id="root">
+  <div class="error">Loading...</div>
+</div>
+<script>
+(async function() {
+  const root = document.getElementById('root');
+  
+  // Parse URL params
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const initialLang = (params.get('lang') || localStorage.getItem('cc_lore_lang') || 'en').toLowerCase();
+  let currentLang = initialLang === 'ko' ? 'ko' : 'en';
+  
+  if (!id) {
+    root.innerHTML = '<div class="error"><h2>No item specified</h2><p>Add ?id=stage01-entity-quantum-fluctuation to the URL.</p></div>';
+    return;
+  }
+  
+  // Resolve base path (handles GitHub Pages /repo/ prefix)
+  function loreUrl() {
+    const path = window.location.pathname;
+    // If pathname is /something/lore.html, fetch /something/lore.json
+    const dir = path.substring(0, path.lastIndexOf('/') + 1);
+    return dir + 'lore.json';
+  }
+  
+  let lore;
+  try {
+    const response = await fetch(loreUrl());
+    if (!response.ok) throw new Error('Failed to load lore data');
+    lore = await response.json();
+  } catch (err) {
+    root.innerHTML = '<div class="error"><h2>Failed to load lore</h2><p>' + err.message + '</p></div>';
+    return;
+  }
+  
+  const item = lore[id];
+  if (!item) {
+    root.innerHTML = '<div class="error"><h2>Item not found</h2><p>ID: ' + id + '</p></div>';
+    return;
+  }
+  
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  
+  // Simple markdown-style formatter: **bold**, *italic*, paragraphs
+  function formatBody(text) {
+    return escapeHtml(text)
+      .split(/\n\n+/)
+      .map(p => p.replace(/\n/g, '<br>'))
+      .map(p => '<p>' + p
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+      + '</p>')
+      .join('');
+  }
+  
+  function render() {
+    localStorage.setItem('cc_lore_lang', currentLang);
+    
+    const isEntity = item.type === 'entity';
+    const stageLabel = currentLang === 'ko' ? item.stageKo : item.stageEn;
+    const stageNum = String(item.stageId).padStart(2, '0');
+    
+    let title, subtitle, metaHtml, body;
+    
+    if (isEntity) {
+      title = currentLang === 'ko' ? item.nameKo : item.nameEn;
+      subtitle = currentLang === 'ko' ? item.nameEn : item.nameKo;
+      
+      // Parse rarity from meta string
+      const rarityMatch = (item.meta || '').match(/(common|rare|epic|legendary)/i);
+      const rarityClass = rarityMatch ? ('rarity-' + rarityMatch[1].toLowerCase()) : '';
+      metaHtml = '<div class="meta ' + rarityClass + '">' + escapeHtml(item.meta || '') + '</div>';
+      
+      body = currentLang === 'ko' ? item.bodyKo : item.bodyEn;
+    } else {
+      // milestone
+      const titleEn = item.titleEn;
+      const titleKo = item.titleKo;
+      title = currentLang === 'ko' ? titleKo : titleEn;
+      subtitle = currentLang === 'ko' ? titleEn : titleKo;
+      metaHtml = '<div class="meta">' + item.progress + '% — ' + (currentLang === 'ko' ? '진행도' : 'Progress') + '</div>';
+      body = currentLang === 'ko' ? item.bodyKo : item.bodyEn;
+    }
+    
+    const breadcrumb = (currentLang === 'ko' ? '스테이지 ' : 'Stage ') + stageNum + ' · ' + escapeHtml(stageLabel) +
+                       ' · ' + (isEntity ? (currentLang === 'ko' ? '엔티티' : 'Entity') : (currentLang === 'ko' ? '마일스톤' : 'Milestone'));
+    
+    root.innerHTML = 
+      '<div class="lang-switcher">' +
+        '<button class="' + (currentLang === 'en' ? 'active' : '') + '" data-lang="en">English</button>' +
+        '<button class="' + (currentLang === 'ko' ? 'active' : '') + '" data-lang="ko">한국어</button>' +
+      '</div>' +
+      '<div class="breadcrumb">' + breadcrumb + '</div>' +
+      '<h1>' + escapeHtml(title) + '</h1>' +
+      '<div class="subtitle">' + escapeHtml(subtitle) + '</div>' +
+      metaHtml +
+      '<div class="body">' + formatBody(body) + '</div>' +
+      '<div class="footer">' +
+        '<a href="#" onclick="window.close();return false;">' + (currentLang === 'ko' ? '닫기' : 'Close') + '</a> · ' +
+        '<a href="javascript:history.back()">' + (currentLang === 'ko' ? '뒤로' : 'Back') + '</a>' +
+      '</div>';
+    
+    // Title for browser tab
+    document.title = title + ' — Cosmic Coalescence';
+    
+    // Wire up language buttons
+    root.querySelectorAll('[data-lang]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentLang = btn.dataset.lang;
+        render();
+      });
+    });
+  }
+  
+  render();
+})();
+</script>
+</body>
+</html>

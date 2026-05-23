@@ -715,35 +715,50 @@ export const STAGE_ENTITIES: StageEntity[] = [
   ]),
 
   // ── Stage 11: Life on Earth (4C + 4R + 4E + 2L) ────────────────────────────
-  // Common = Earth formation, Rare = Early life, Epic = Civilization, Legendary = Transcendence
+  // Common = Earth formation (chain-locked), Rare = Early life,
+  // Epic = Civilization, Legendary = Transcendence.
+  //
+  // Common purchase order is gated as a chain:
+  //   Earth Formation → Moon Formation → (First Ocean + Atmosphere)
+  // Effect type follows position: position 2 = click, position 3 = crit,
+  // position 4 = time, so the slot effect stays consistent.
   ...stage(11, [
-    // Common: Earth formation — each purchase visually changes the planet
+    // Common 1 — Earth Formation (auto). Gateway to the moon.
     withAliases(
       item('Earth Formation',  '🌍',    'Rock and gas clump together, gradually sculpting a young planet.', 'common', 'auto',  2.0),
       ['s11_01_molten_crust', 's11_02_lipid_membrane'],
     ),
+    // Common 2 — Moon Formation (click). Old canonical was s11_04_moon_formation.
     withAliases(
-      item('First Ocean',      'H₂O',  'Steam condenses into vast oceans covering the young Earth.', 'common', 'click', 15.0),
-      ['s11_03_rna_molecule', 's11_04_dna_helix'],
+      item('Moon Formation',   '☽',     'Giant impact ejects debris that coalesces into the Moon.',  'common', 'click', 15.0),
+      ['s11_04_moon_formation', 's11_07_cambrian_explosion', 's11_08_eukaryote', 's11_09_multicellular_life'],
+    ),
+    // Common 3 — First Ocean (crit isFlat). Old canonical was s11_02_first_ocean.
+    withAliases(
+      item('First Ocean',      'H₂O',   'Steam condenses into vast oceans covering the young Earth.', 'common', 'crit',  0.5, true),
+      ['s11_02_first_ocean', 's11_03_rna_molecule', 's11_04_dna_helix'],
+    ),
+    // Common 4 — Atmosphere (time). Old canonical was s11_03_atmosphere.
+    withAliases(
+      item('Atmosphere',       'atm',   'Volcanic gases form a protective blanket around the planet.', 'common', 'time',  2.0),
+      ['s11_03_atmosphere', 's11_05_prokaryote'],
+    ),
+    // Rare: Geology and life emerge
+    withAliases(
+      item('Continents Rise',  'LAND', 'Tectonic plates push land above the waterline.',            'rare',   'auto',  3.0),
+      ['s11_08_continents_rise', 's11_06_photosynthesis', 's11_01_moon'],
     ),
     withAliases(
-      item('Atmosphere',       'atm',   'Volcanic gases form a protective blanket around the planet.', 'common', 'crit',  0.5, true),
+      item('Photosynthesis',   'O₂',   'Cyanobacteria fill the atmosphere with oxygen.',            'rare',   'click', 22.0),
+      ['s11_06_photosynthesis_old'],
+    ),
+    withAliases(
+      item('Prokaryote',       '○',    'First simple cells — life begins in the deep ocean.',       'rare',   'crit',  1.0, true),
       ['s11_05_prokaryote'],
     ),
     withAliases(
-      item('Moon Formation',   '☽',    'Giant impact ejects debris that coalesces into the Moon.',  'common', 'time',  2.0),
-      ['s11_07_cambrian_explosion', 's11_08_eukaryote', 's11_09_multicellular_life'],
-    ),
-    // Rare: Life emerges and evolves
-    withAliases(
-      item('Prokaryote',       '○',    'First simple cells — life begins in the deep ocean.',       'rare',   'auto',  3.0),
-      ['s11_01_moon'],
-    ),
-    item('Photosynthesis',     'O₂',   'Cyanobacteria fill the atmosphere with oxygen.',            'rare',   'click', 22.0),
-    item('Cambrian Explosion', '✳',    'Explosion of complex body plans in ancient seas.',          'rare',   'crit',  1.0, true),
-    withAliases(
-      item('Continents Rise',  'LAND', 'Tectonic plates push land above the waterline.',            'rare',   'time',  2.0),
-      ['s11_06_photosynthesis'],
+      item('Cambrian Explosion', '✳',  'Explosion of complex body plans in ancient seas.',          'rare',   'time',  2.0),
+      ['s11_07_cambrian_explosion'],
     ),
     // Epic: Intelligence and civilization
     withAliases(

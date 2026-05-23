@@ -10896,3 +10896,51 @@ button.stat-header-item {
     min-height: 0 !important;
   }
 }
+
+/* ===== Lore link buttons (entity panel + stage log toast) ===== */
+.entity-detail-card__lore {
+  position: absolute;
+  top: 10px;
+  right: 46px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.entity-detail-card__lore:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.08);
+}
+.entity-detail-card__lore:active {
+  transform: scale(0.95);
+}
+
+.stage-log-lore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.stage-log-lore:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+.stage-log-lore:active {
+  transform: scale(0.95);
+}
