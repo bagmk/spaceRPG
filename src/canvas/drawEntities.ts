@@ -2117,8 +2117,8 @@ function drawLifeEarthEntities(
     // Full halo gradient — alpha scales strongly with atmoLevel so level 1
     // is almost invisible and level 20 is a thick blue envelope.
     const ag = ctx.createRadialGradient(cx, cy, sphereR * 0.94, cx, cy, haloR);
-    ag.addColorStop(0, hexToRgba('#7ec0ff', 0.04 + atmoLevel * 0.24));
-    ag.addColorStop(0.5, hexToRgba('#3c80d8', 0.02 + atmoLevel * 0.14));
+    ag.addColorStop(0, hexToRgba('#7ec0ff', 0.12 + atmoLevel * 0.30));
+    ag.addColorStop(0.5, hexToRgba('#3c80d8', 0.06 + atmoLevel * 0.18));
     ag.addColorStop(1, hexToRgba('#1c4080', 0));
     ctx.fillStyle = ag;
     fillCircle(ctx, cx, cy, haloR);
@@ -2565,11 +2565,11 @@ function drawLifeEarthEntities(
     drawEarthBiosphereVeins(ctx, cx, cy, R, items, now);
   }
 
-  // Atmosphere ring (outline)
+  // Atmosphere ring (outline) — always visible once purchased
   if (hasAtmo) {
-    ctx.strokeStyle = hexToRgba('#8ed0ff', 0.22 + atmoGrow * 0.18);
-    ctx.lineWidth = R * 0.025;
-    strokeCircle(ctx, cx, cy, R * 1.01);
+    ctx.strokeStyle = hexToRgba('#8ed0ff', 0.30 + atmoGrow * 0.25);
+    ctx.lineWidth = R * 0.035;
+    strokeCircle(ctx, cx, cy, R * 1.02);
   }
 
   // ── Satellites — body + solar-panel wings + scan beam + comm ping.

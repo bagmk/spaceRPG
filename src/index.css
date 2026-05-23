@@ -10903,7 +10903,7 @@ button.stat-header-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  max-height: 220px;
+  max-height: 180px;
   overflow-y: auto;
   text-align: left;
 }
@@ -10934,6 +10934,30 @@ button.stat-header-item {
   border-radius: 3px;
 }
 .lore-section::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* Match dark theme on the entity detail card (its own outer scroll) */
+.entity-detail-card {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.entity-detail-card::-webkit-scrollbar {
+  width: 6px;
+}
+.entity-detail-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.entity-detail-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+.entity-detail-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.30);
+}
+/* Firefox: also use scrollbar-width for the lore section */
+.lore-section {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
 
 /* ===== Lore modal (Almanac milestone popup) ===== */
 .lore-modal-backdrop {
