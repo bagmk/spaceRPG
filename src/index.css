@@ -4461,6 +4461,25 @@ button.stat-header-item {
   display: flex;
   flex-direction: column;
   gap: 9px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.entity-panel__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.entity-panel__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.entity-panel__list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.entity-detail-card::-webkit-scrollbar {
+  display: none;
 }
 
 .entity-panel__empty {
@@ -5855,8 +5874,9 @@ button.stat-header-item {
 .entity-detail-card {
   position: relative;
   width: min(100%, 330px);
-  max-height: calc(100dvh - 44px);
+  max-height: min(420px, calc(100dvh - 80px));
   overflow-y: auto;
+  scrollbar-width: none;
   padding: 24px 22px 20px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--rarity-color, #9bd9ff) 34%, rgba(255, 255, 255, 0.12));
