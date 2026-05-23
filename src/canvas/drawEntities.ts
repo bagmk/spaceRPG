@@ -2491,31 +2491,80 @@ function drawLifeEarthEntities(
     }
   }
 
-  // Homo Sapiens — tiny rectangle "buildings" with warm window glow. This
-  // is what makes Sapiens visually unique vs Satellites (which live in
-  // orbit, not on the surface).
-  if (buildingN > 0) {
-    for (let i = 0; i < buildingN; i += 1) {
-      const lon = earthSpin + i * 0.62 + unit(i + 870, 1) * 1.8;
-      const lat = (unit(i + 871, 2) - 0.5) * 0.7;
-      const vis = Math.cos(lon);
-      if (vis <= 0.05) continue;
-      const baseX = cx + Math.cos(lon) * R * 0.5;
-      const baseY = cy + Math.sin(lat) * R * 0.45;
-      const w = applyWiggle(baseX, baseY);
-      const hgt = 1.8 + sapiensGrow * 3.6 + unit(i + 872, 3) * 1.6;
-      ctx.save();
-      ctx.translate(w.x, w.y);
-      // Building silhouette
-      ctx.fillStyle = `rgba(232, 224, 198, ${0.55 + vis * 0.3})`;
-      ctx.fillRect(-1.3, -hgt, 2.6, hgt);
-      // Window strip glow on twilight/night sides
-      if (vis < 0.65) {
-        ctx.fillStyle = hexToRgba('#ffd17a', 0.55 + Math.sin(now * 0.004 + i) * 0.25);
-        ctx.fillRect(-0.7, -hgt * 0.7, 1.4, 0.55);
-        ctx.fillRect(-0.7, -hgt * 0.35, 1.4, 0.55);
+  // Homo Sapiens — civilization spreading across the surface.
+  // Settlements grow into cities connected by roads, with agriculture patches.
+  if (hasSapiens) {
+    const civLevel = Math.min(1, sapiensC / 5);
+    const settlements = Math.min(12, 2 + sapiensC * 2);
+
+    // Generate settlement positions
+    const towns: Array<{ x: number; y: number; size: number }> = [];
+    for (let i = 0; i < settlements; i++) {
+      const lon = i * 0.85 + unit(i + 870, 1) * 2.5;
+      const lat = (unit(i + 871, 2) - 0.5) * 0.85;
+      const px = cx + Math.cos(lon) * R * (0.3 + unit(i + 872, 3) * 0.35);
+      const py = cy + Math.sin(lat) * R * 0.45;
+      const dist = Math.hypot(px - cx, py - cy);
+      if (dist > R * 0.78) continue;
+      const size = 1.5 + civLevel * 2.5 + unit(i + 873, 4) * 1.5;
+      towns.push({ x: px, y: py, size });
+    }
+
+    // Roads connecting nearby settlements
+    if (civLevel > 0.2 && towns.length > 1) {
+      ctx.strokeStyle = hexToRgba('#c8b088', 0.12 + civLevel * 0.08);
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < towns.length; i++) {
+        // Connect to 1-2 nearest neighbors
+        for (let j = i + 1; j < Math.min(towns.length, i + 3); j++) {
+          const d = Math.hypot(towns[i].x - towns[j].x, towns[i].y - towns[j].y);
+          if (d > R * 0.4) continue;
+          ctx.beginPath();
+          ctx.moveTo(towns[i].x, towns[i].y);
+          ctx.lineTo(towns[j].x, towns[j].y);
+          ctx.stroke();
+        }
       }
-      ctx.restore();
+    }
+
+    // Agriculture patches near settlements
+    if (civLevel > 0.3) {
+      ctx.fillStyle = hexToRgba('#b8a860', 0.12 + civLevel * 0.06);
+      for (let i = 0; i < towns.length; i++) {
+        const fieldW = towns[i].size * (0.8 + civLevel * 0.6);
+        const fieldH = fieldW * 0.6;
+        const fx = towns[i].x + unit(i + 880, 5) * 4 - 2;
+        const fy = towns[i].y + unit(i + 881, 6) * 3;
+        ctx.fillRect(fx - fieldW / 2, fy, fieldW, fieldH);
+      }
+    }
+
+    // Settlement clusters — stacked rectangles (buildings)
+    for (const town of towns) {
+      const buildingCount = Math.min(5, 1 + Math.floor(civLevel * 4));
+      for (let b = 0; b < buildingCount; b++) {
+        const bw = 1 + unit(town.size * 100 + b, 1) * 1.5;
+        const bh = town.size * (0.5 + unit(town.size * 100 + b + 10, 2) * 1.2);
+        const bx = town.x + (unit(town.size * 100 + b + 20, 3) - 0.5) * town.size * 1.5;
+        const by = town.y + (unit(town.size * 100 + b + 30, 4) - 0.5) * town.size * 0.8;
+        // Building
+        ctx.fillStyle = hexToRgba('#d8ceb0', 0.5 + civLevel * 0.3);
+        ctx.fillRect(bx - bw / 2, by - bh, bw, bh);
+      }
+      // Warm center glow (hearth/activity)
+      ctx.fillStyle = hexToRgba('#ffcc66', 0.08 + civLevel * 0.06);
+      fillCircle(ctx, town.x, town.y, town.size * 1.8);
+
+      // Landmark at high level — pyramid or tower
+      if (civLevel > 0.6 && town.size > 3.5) {
+        ctx.fillStyle = hexToRgba('#e0d0a8', 0.65);
+        ctx.beginPath();
+        ctx.moveTo(town.x, town.y - town.size * 1.8);
+        ctx.lineTo(town.x - town.size * 0.5, town.y);
+        ctx.lineTo(town.x + town.size * 0.5, town.y);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 
