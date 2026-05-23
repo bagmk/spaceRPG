@@ -205,6 +205,7 @@ export const STRINGS = {
                           ko: '클리어 — 엔티티는 여전히 활성·강화 가능' },
   entityLabNoEntities:  { en: 'No entities for this stage yet.', ko: '아직 이 단계의 엔티티가 없습니다.' },
   entityLabLocked:      { en: 'LOCKED',                    ko: '잠김' },
+  entityLabAnchorLock:  { en: 'Finish {anchor} first',     ko: '{anchor} 완성 필요' },
   entityLabMax:         { en: 'MAX',                       ko: '최대' },
   entityLabMaxed:       { en: 'MAXED',                     ko: '최대치' },
   entityLabGet:         { en: 'GET',                       ko: '획득' },

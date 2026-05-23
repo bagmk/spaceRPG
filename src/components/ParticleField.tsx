@@ -2,7 +2,7 @@ import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from 'react'
 import { drawCluster } from '../canvas/drawCluster';
 import { drawCore } from '../canvas/drawCore';
 import { drawEffects } from '../canvas/drawEffects';
-import { drawEntities } from '../canvas/drawEntities';
+import { drawEntities, getStage11MoonScreen } from '../canvas/drawEntities';
 import { drawParticles } from '../canvas/drawParticles';
 import { drawRogues } from '../canvas/drawRogues';
 import { drawStars } from '../canvas/drawStars';
@@ -108,6 +108,8 @@ function createMoteCluster(): MoteCluster {
     diskTilt: TUNING.BLACKHOLE_DISK_TILT,
     diskRotation: 0,
     earthRotation: 0,
+    moonAngleOffset: 0,
+    moonNudgeImpulse: 0,
   };
 }
 
@@ -346,6 +348,8 @@ function createBaseMote(
     hue,
     age: 0,
     bornAt: now,
+    spin: Math.random() * Math.PI * 2,
+    spinVel: (Math.random() - 0.5) * 0.08,
   };
 }
 
@@ -474,6 +478,8 @@ function spawnMotesAtClick(
   maxMassCap: number,
   now: number,
 ): void {
+  // Stage 10 (Solar System): no mote sprites — sun evolves via entity purchases instead
+  if (stage.id === 10) return;
   const count =
     ((isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0)) *
     Math.max(1, clickEmissionCount);
@@ -537,6 +543,7 @@ function spawnAutoMote(
   maxMassCap: number,
   now: number,
 ): void {
+  if (stage.id === 10) return;
   if (stage.clusterMode === 'lifeSurface') {
     addMoteToCluster(cluster, stage, createSurfaceMote(cluster, stage, cx, cy, now), maxMassCap);
     return;
@@ -634,6 +641,11 @@ function stepClusterPhysics(
 
   cluster.diskRotation = (cluster.diskRotation ?? 0) + dt * 0.0011;
   cluster.earthRotation = (cluster.earthRotation ?? 0) + dt * TUNING.LIFE_EARTH_ROT_RATE;
+  // Moon nudge impulse decays back to zero over ~700ms so the user sees a
+  // bright flash on click that fades smoothly.
+  if ((cluster.moonNudgeImpulse ?? 0) > 0) {
+    cluster.moonNudgeImpulse = Math.max(0, (cluster.moonNudgeImpulse ?? 0) - dt * 0.0016);
+  }
 
   const dtScale = Math.min(2.2, Math.max(0.2, dt / 16.67));
   const clusterMass = motes.reduce((sum, mote) => sum + mote.mass, 0);
@@ -677,6 +689,8 @@ function stepClusterPhysics(
     }
     mote.x += mote.vx * dtScale;
     mote.y += mote.vy * dtScale;
+    mote.spin += mote.spinVel * dtScale;
+    mote.spinVel += (speed * 0.002 - mote.spinVel * 0.02) * dtScale;
     mote.age += dt;
     mote.orbitAngle = Math.atan2(mote.y - cy, mote.x - cx);
   });
@@ -1024,7 +1038,7 @@ function applyPointerPressureToMote(
   dtScale: number,
 ): void {
   if (stage.clusterMode === 'lifeSurface') return;
-  const radius = field.radius * 0.82;
+  const radius = TUNING.MOTE_POINTER_PUSH_RADIUS;
   const { nx, ny, distance } = pressureDirection(
     mote.x - field.x,
     mote.y - field.y,
@@ -1032,13 +1046,14 @@ function applyPointerPressureToMote(
   );
   if (distance > radius) return;
   const falloff = 1 - distance / radius;
-  const push = field.strength * (falloff * falloff) * 2.6 * dtScale;
-  const curl = field.strength * falloff * 0.24 * dtScale;
+  const push = field.strength * (falloff * falloff) * TUNING.MOTE_POINTER_PUSH_STRENGTH * dtScale;
+  const curl = field.strength * falloff * 0.35 * dtScale;
   mote.vx += nx * push - ny * curl;
   mote.vy += ny * push + nx * curl;
+  mote.spinVel += (nx > 0 ? 1 : -1) * push * 0.06;
 
   const speed = Math.hypot(mote.vx, mote.vy);
-  const maxSpeed = TUNING.MOTE_MAX_SPEED * 1.55;
+  const maxSpeed = TUNING.MOTE_MAX_SPEED * 2.0;
   if (speed > maxSpeed) {
     mote.vx = (mote.vx / speed) * maxSpeed;
     mote.vy = (mote.vy / speed) * maxSpeed;
@@ -1698,7 +1713,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       flyers: world.flyers,
       bursts: world.bursts,
     });
-    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now, pointerPressure);
+    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now, pointerPressure, world.cluster);
     drawRogues(ctx, world.rogues, width, height, now, pointerPressure);
     drawEffects({
       ctx,
@@ -1754,6 +1769,25 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         const pressureStrength = event.pointerType === 'touch' ? 1.0 : 1.05;
         updatePointerPressure(x, y, event.pointerType, pressureStrength);
         applyPointerPressureImpulse(worldRef.current, stage, x, y, event.pointerType, pressureStrength);
+
+        // Stage 11: clicking the Moon nudges its orbit slightly and pulses its glow.
+        if (stage.id === 11 && worldRef.current) {
+          const cx = rect.width / 2;
+          const cy = rect.height / 2;
+          const moon = getStage11MoonScreen(
+            cx, cy, performance.now(), worldRef.current.cluster, purchasedEntities,
+          );
+          if (moon.visible) {
+            const dist = Math.hypot(x - moon.moonX, y - moon.moonY);
+            if (dist <= moon.moonR * 1.4) {
+              const cluster = worldRef.current.cluster;
+              cluster.moonAngleOffset =
+                (cluster.moonAngleOffset ?? 0) + (event.pointerType === 'touch' ? 0.42 : 0.32);
+              cluster.moonNudgeImpulse = 1;
+            }
+          }
+        }
+
         if (event.button !== 1) {
           onGatherClick(x, y, hitRogue);
         }

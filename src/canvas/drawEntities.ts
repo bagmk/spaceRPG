@@ -1,7 +1,27 @@
 import { hexToRgba } from '../game/formulas';
 import { TUNING } from '../game/constants';
 import type { EntityEffectType, EntityGlyph, EntityRarity, PurchasedEntityEntry, StageEntity } from '../game/entities/types';
+import type { MoteCluster } from '../game/types/canvas';
 import { findEntityById } from '../game/entities/stageItems';
+
+// ── Stage 11 entity ID lookup ───────────────────────────────────────────────
+// IDs follow `s${stageId}_${index padded to 2 digits}_${slug(name)}`.
+const S11 = {
+  CRUST:       's11_01_earth_formation',
+  OCEAN:       's11_02_first_ocean',
+  ATMO:        's11_03_atmosphere',
+  MOON:        's11_04_moon_formation',
+  PROKARYOTE:  's11_05_prokaryote',
+  PHOTO:       's11_06_photosynthesis',
+  CAMBRIAN:    's11_07_cambrian_explosion',
+  CONTINENTS:  's11_08_continents_rise',
+  NEURON:      's11_09_neuron',
+  SAPIENS:     's11_10_homo_sapiens',
+  CITY_LIGHTS: 's11_11_city_lights',
+  SATELLITE:   's11_12_artificial_satellite',
+  SPACEFARING: 's11_13_spacefaring_humanity',
+  ARK:         's11_14_interstellar_ark',
+} as const;
 
 // Persistent velocity cache for entity n-body simulation
 const _entityBodyCache = new Map<string, { x: number; y: number; vx: number; vy: number; lastSeen: number }>();
@@ -1231,47 +1251,29 @@ function lifeEntityGlow(item: EntityDrawItem): number {
   return GLOW_RADIUS[item.rarity] * scaleByRarity[item.rarity];
 }
 
-/** Stage 11: The Moon — orbits Earth, grows with moonFraction (Moon entity level 0–1), proper z-order */
+/** Stage 11: The Moon — screen-space rendering with mares, craters, terminator. */
 function drawMoon(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  earthRadius: number,
+  mx: number,
+  my: number,
+  moonRadius: number,
   now: number,
-  moonFraction: number,   // 0 = no Moon entity, 1 = fully maxed
+  orbitAngle: number,
+  moonFraction: number,
   isBehind: boolean,
+  nudgePulse = 0,
 ): void {
-  // Always show moon, but grows dramatically from level 1 → 20
-  const moonRadius = earthRadius * (0.16 + moonFraction * 0.36);
-  const orbitR = earthRadius * 2.55;
-  const orbTilt = 0.62;
-  const angle = now * 0.000022;
-  const mx = cx + Math.cos(angle) * orbitR;
-  const my = cy + Math.sin(angle) * orbitR * orbTilt;
-
-  // Orbit track — draw only on the "behind" pass so it sits behind Earth
-  if (isBehind) {
-    ctx.save();
-    ctx.strokeStyle = hexToRgba('#a89c78', 0.06 + moonFraction * 0.04);
-    ctx.lineWidth = 0.6;
-    ctx.setLineDash([3, 8]);
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, orbitR, orbitR * orbTilt, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  }
-
-  const depthAlpha = isBehind ? 0.52 : 1.0;
+  const depthAlpha = isBehind ? 0.55 : 1.0;
+  const nudgeGlow = Math.max(0, Math.min(1, nudgePulse));
 
   ctx.save();
 
-  // Soft outer glow — grows with moonFraction
+  // Soft outer glow — extra intensity when user just nudged the moon
   ctx.globalCompositeOperation = 'lighter';
-  const glowR = moonRadius * 3.2;
+  const glowR = moonRadius * (3.0 + nudgeGlow * 1.4);
   const glow = ctx.createRadialGradient(mx, my, 0, mx, my, glowR);
-  glow.addColorStop(0, hexToRgba('#d8d0b4', (0.18 + moonFraction * 0.18) * depthAlpha));
-  glow.addColorStop(0.45, hexToRgba('#b0a880', 0.07 * depthAlpha));
+  glow.addColorStop(0, hexToRgba('#fff0d8', (0.22 + moonFraction * 0.18 + nudgeGlow * 0.30) * depthAlpha));
+  glow.addColorStop(0.4, hexToRgba('#d8c89c', 0.08 * depthAlpha));
   glow.addColorStop(1, hexToRgba('#887860', 0));
   ctx.fillStyle = glow;
   ctx.beginPath();
@@ -1279,49 +1281,82 @@ function drawMoon(
   ctx.fill();
   ctx.globalCompositeOperation = 'source-over';
 
-  // Moon body
+  // Moon body — pearlescent gradient
   ctx.beginPath();
   ctx.arc(mx, my, moonRadius, 0, Math.PI * 2);
   const bodyGrad = ctx.createRadialGradient(
-    mx - moonRadius * 0.28, my - moonRadius * 0.28, moonRadius * 0.04,
+    mx - moonRadius * 0.32, my - moonRadius * 0.32, moonRadius * 0.05,
     mx, my, moonRadius,
   );
-  bodyGrad.addColorStop(0, `rgba(218, 208, 184, ${0.96 * depthAlpha})`);
-  bodyGrad.addColorStop(0.5, `rgba(162, 154, 132, ${0.92 * depthAlpha})`);
-  bodyGrad.addColorStop(1, `rgba(86, 80, 66, ${0.88 * depthAlpha})`);
+  bodyGrad.addColorStop(0, `rgba(238, 230, 210, ${0.98 * depthAlpha})`);
+  bodyGrad.addColorStop(0.45, `rgba(196, 188, 168, ${0.95 * depthAlpha})`);
+  bodyGrad.addColorStop(0.78, `rgba(140, 132, 116, ${0.92 * depthAlpha})`);
+  bodyGrad.addColorStop(1, `rgba(78, 72, 60, ${0.9 * depthAlpha})`);
   ctx.fillStyle = bodyGrad;
   ctx.fill();
 
-  // Craters + phase shadow clipped to moon circle
   ctx.save();
   ctx.beginPath();
   ctx.arc(mx, my, moonRadius, 0, Math.PI * 2);
   ctx.clip();
 
+  // Lunar maria — large dark patches (Mare Imbrium, Tranquillitatis, Serenitatis…)
+  const mares = [
+    { ox: -0.10, oy: -0.20, rx: 0.42, ry: 0.30, a: 0.22 },
+    { ox:  0.18, oy: -0.06, rx: 0.28, ry: 0.24, a: 0.20 },
+    { ox: -0.22, oy:  0.18, rx: 0.32, ry: 0.20, a: 0.18 },
+    { ox:  0.06, oy:  0.30, rx: 0.20, ry: 0.16, a: 0.16 },
+  ];
+  for (const m of mares) {
+    const mareGrad = ctx.createRadialGradient(
+      mx + m.ox * moonRadius, my + m.oy * moonRadius, 0,
+      mx + m.ox * moonRadius, my + m.oy * moonRadius, m.rx * moonRadius,
+    );
+    mareGrad.addColorStop(0, `rgba(58, 54, 48, ${m.a * depthAlpha})`);
+    mareGrad.addColorStop(1, 'rgba(58, 54, 48, 0)');
+    ctx.fillStyle = mareGrad;
+    ctx.beginPath();
+    ctx.ellipse(mx + m.ox * moonRadius, my + m.oy * moonRadius, m.rx * moonRadius, m.ry * moonRadius, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Craters (10 — both rims and floors)
   const craters = [
-    { ox: 0.26, oy: -0.2, r: 0.22 },
-    { ox: -0.31, oy: 0.24, r: 0.17 },
-    { ox: 0.07, oy: 0.34, r: 0.13 },
-    { ox: -0.16, oy: -0.32, r: 0.11 },
-    { ox: 0.38, oy: 0.12, r: 0.09 },
+    { ox:  0.28, oy: -0.22, r: 0.18 },
+    { ox: -0.34, oy:  0.20, r: 0.15 },
+    { ox:  0.06, oy:  0.36, r: 0.12 },
+    { ox: -0.18, oy: -0.30, r: 0.10 },
+    { ox:  0.42, oy:  0.10, r: 0.085 },
+    { ox: -0.05, oy: -0.55, r: 0.075 },
+    { ox:  0.50, oy: -0.30, r: 0.065 },
+    { ox: -0.46, oy: -0.05, r: 0.06 },
+    { ox:  0.32, oy:  0.45, r: 0.055 },
+    { ox: -0.10, oy:  0.58, r: 0.05 },
   ];
   for (const c of craters) {
     const crX = mx + c.ox * moonRadius;
     const crY = my + c.oy * moonRadius;
     const crR = c.r * moonRadius;
-    ctx.fillStyle = `rgba(62, 58, 46, ${0.32 * depthAlpha})`;
+    // Floor (darker)
+    ctx.fillStyle = `rgba(52, 48, 38, ${0.34 * depthAlpha})`;
     ctx.beginPath();
     ctx.arc(crX, crY, crR, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = `rgba(200, 192, 168, ${0.2 * depthAlpha})`;
-    ctx.lineWidth = 0.65;
+    // Bright rim arc on the sun-facing side
+    ctx.strokeStyle = `rgba(232, 224, 198, ${0.32 * depthAlpha})`;
+    ctx.lineWidth = Math.max(0.5, crR * 0.18);
     ctx.beginPath();
-    ctx.arc(crX - crR * 0.2, crY - crR * 0.2, crR * 1.06, Math.PI * 0.85, Math.PI * 1.85);
+    ctx.arc(crX, crY, crR * 1.02, Math.PI * 0.85, Math.PI * 1.85);
     ctx.stroke();
+    // Bright inner highlight on the opposite side
+    ctx.fillStyle = `rgba(232, 224, 198, ${0.18 * depthAlpha})`;
+    ctx.beginPath();
+    ctx.arc(crX + crR * 0.18, crY + crR * 0.18, crR * 0.32, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // Phase shadow — rotates with orbit angle
-  const shadowDir = angle + 0.85;
+  // Phase shadow — driven by the orbit angle so day side faces 'sun'
+  const shadowDir = orbitAngle + 0.85;
   const sg = ctx.createLinearGradient(
     mx + Math.cos(shadowDir) * moonRadius,
     my + Math.sin(shadowDir) * moonRadius,
@@ -1329,14 +1364,28 @@ function drawMoon(
     my - Math.sin(shadowDir) * moonRadius * 0.55,
   );
   sg.addColorStop(0, 'rgba(4, 6, 20, 0)');
-  sg.addColorStop(0.32, 'rgba(4, 6, 20, 0.14)');
-  sg.addColorStop(0.62, 'rgba(4, 6, 20, 0.52)');
-  sg.addColorStop(1, 'rgba(4, 6, 20, 0.80)');
+  sg.addColorStop(0.30, 'rgba(4, 6, 20, 0.10)');
+  sg.addColorStop(0.65, 'rgba(4, 6, 20, 0.46)');
+  sg.addColorStop(1, 'rgba(4, 6, 20, 0.74)');
   ctx.fillStyle = sg;
   ctx.fillRect(mx - moonRadius - 1, my - moonRadius - 1, moonRadius * 2 + 2, moonRadius * 2 + 2);
 
   ctx.restore(); // exits moon clip
   ctx.restore();
+
+  // Subtle click feedback ring (decays toward zero each frame)
+  if (nudgeGlow > 0.02) {
+    ctx.save();
+    ctx.strokeStyle = hexToRgba('#fff4c8', 0.6 * nudgeGlow);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(mx, my, moonRadius * (1.2 + (1 - nudgeGlow) * 0.4), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Mark `now` as used so the signature stays stable for future tweaks.
+  void now;
 }
 
 /** Stage 11: Canvas-wide living ambient — aurora bands, neural web, signal pulses */
@@ -1759,261 +1808,496 @@ function drawLifeOrbitEntities(
   ctx.restore();
 }
 
+// ── Stage 11: lookup helpers ────────────────────────────────────────────────
+interface S11Lookup {
+  has: (id: string) => boolean;
+  count: (id: string) => number;
+}
+
+function makeS11Lookup(items: EntityDrawItem[]): S11Lookup {
+  const counts = new Map<string, number>();
+  for (const it of items) {
+    if (!counts.has(it.id)) counts.set(it.id, it.ownedCount);
+  }
+  return {
+    has: (id) => (counts.get(id) ?? 0) > 0,
+    count: (id) => counts.get(id) ?? 0,
+  };
+}
+
+function stage11MoonAngle(now: number, cluster?: MoteCluster | null): number {
+  return now * 0.00022 + (cluster?.moonAngleOffset ?? 0);
+}
+
+const STAGE11_MOON_ORBIT_TILT = 0.34;
+
+function stage11MoonOrbitRadius(earthR: number): number {
+  return earthR * 1.95;
+}
+
+function stage11MoonBodyRadius(earthR: number, moonCount: number): number {
+  const grow = Math.min(1, moonCount / 5);
+  return earthR * (0.18 + grow * 0.10);
+}
+
+export interface Stage11MoonScreen {
+  cx: number;
+  cy: number;
+  earthR: number;
+  moonX: number;
+  moonY: number;
+  moonR: number;
+  isBehind: boolean;
+  visible: boolean;
+}
+
+export function getStage11MoonScreen(
+  cx: number,
+  cy: number,
+  now: number,
+  cluster: MoteCluster | null | undefined,
+  purchasedEntities: PurchasedEntityEntry[],
+): Stage11MoonScreen {
+  const earthR = TUNING.LIFE_SURFACE_R;
+  let moonCount = 0;
+  for (const entry of purchasedEntities) {
+    const ent = findEntityById(entry.entityId, 11);
+    if (ent && ent.id === S11.MOON) moonCount += entry.count;
+  }
+  const angle = stage11MoonAngle(now, cluster);
+  const dist = stage11MoonOrbitRadius(earthR);
+  const moonR = stage11MoonBodyRadius(earthR, moonCount);
+  const moonX = cx + Math.cos(angle) * dist;
+  const moonY = cy + Math.sin(angle) * dist * STAGE11_MOON_ORBIT_TILT;
+  return {
+    cx,
+    cy,
+    earthR,
+    moonX,
+    moonY,
+    moonR,
+    isBehind: Math.sin(angle) < 0,
+    visible: moonCount > 0,
+  };
+}
+
+function smoothstep01(t: number): number {
+  const x = Math.max(0, Math.min(1, t));
+  return x * x * (3 - 2 * x);
+}
+
 function drawLifeEarthEntities(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   items: EntityDrawItem[],
   now: number,
-  _pointerPressure?: PointerPressureVisualField | null,
+  pointerPressure?: PointerPressureVisualField | null,
+  cluster?: MoteCluster | null,
 ): void {
   const R = TUNING.LIFE_SURFACE_R;
-  const earthSpin = now * 0.002;
+  // Earth rotation: prefer the shared cluster counter so day/night stays in
+  // sync with the sim, otherwise fall back to a derived spin from `now`.
+  const earthSpin = cluster?.earthRotation !== undefined
+    ? cluster.earthRotation * 12 + now * 0.0006
+    : now * 0.0009;
 
-  // ── Detect purchased entities for visual state ──────────────────────────
-  const has = (name: string) => items.some((i) => i.name.toLowerCase().includes(name));
-  const countOf = (name: string) => {
-    const e = items.find((i) => i.name.toLowerCase().includes(name));
-    return e ? e.ownedCount : 0;
-  };
+  const L = makeS11Lookup(items);
 
-  // Each feature ONLY appears when its specific entity is purchased
-  const hasCrust = has('crust') || has('molten') || has('lipid');
-  const hasOcean = has('ocean') || has('water');
-  const hasAtmo = has('atmosphere') || has('atm');
-  const hasMoon = has('moon');
-  const hasPlants = has('photosynthesis');
-  const hasContinents = has('continent') || has('land') || has('cambrian');
-  const hasSapiens = has('sapiens') || has('homo');
-  const hasCityLights = has('city') || has('light');
-  const hasSatellite = has('satellite') || has('probe');
-  const moonCount = countOf('moon');
-  const moonFrac = hasMoon ? Math.min(1, moonCount / 5) : 0;
+  // Raw counts (0..20 for commons, 0..10 rares, 0..5 epics, 0..3 legendaries).
+  const crustC      = L.count(S11.CRUST);
+  const oceanC      = L.count(S11.OCEAN);
+  const atmoC       = L.count(S11.ATMO);
+  const moonC       = L.count(S11.MOON);
+  const proC        = L.count(S11.PROKARYOTE);
+  const photoC      = L.count(S11.PHOTO);
+  const cambrianC   = L.count(S11.CAMBRIAN);
+  const contC       = L.count(S11.CONTINENTS);
+  const neuronC     = L.count(S11.NEURON);
+  const sapiensC    = L.count(S11.SAPIENS);
+  const cityC       = L.count(S11.CITY_LIGHTS);
+  const satC        = L.count(S11.SATELLITE);
 
-  // ── Moon ─────────────────────────────────────────────────────────────────
-  const moonAngle = now * 0.0008;
-  const moonDist = R * 1.7;
-  const moonR = R * (0.12 + moonFrac * 0.12);
-  const moonX = cx + Math.cos(moonAngle) * moonDist;
-  const moonY = cy + Math.sin(moonAngle) * moonDist * 0.35;
-  const moonBehind = Math.sin(moonAngle) < 0;
+  const hasCrust   = crustC > 0;
+  const hasOcean   = oceanC > 0;
+  const hasAtmo    = atmoC > 0;
+  const hasMoon    = moonC > 0;
+  const hasPhoto   = photoC > 0;
+  const hasContinents = contC > 0 || cambrianC > 0; // Cambrian implies surface land
+  const hasNeuron  = neuronC > 0;
+  const hasSapiens = sapiensC > 0;
+  const hasCity    = cityC > 0 || hasSapiens;
+  const hasSat     = satC > 0;
 
-  const drawMoonBody = () => {
-    if (!hasMoon && moonFrac === 0) return;
-    // Glow
-    const mg = ctx.createRadialGradient(moonX, moonY, moonR * 0.3, moonX, moonY, moonR * 2.5);
-    mg.addColorStop(0, hexToRgba('#ffffee', 0.15));
-    mg.addColorStop(1, hexToRgba('#ffffee', 0));
-    ctx.fillStyle = mg;
-    fillCircle(ctx, moonX, moonY, moonR * 2.5);
-    // Surface gradient
-    const ms = ctx.createRadialGradient(moonX - moonR * 0.3, moonY - moonR * 0.25, 0, moonX, moonY, moonR);
-    ms.addColorStop(0, '#eeeadc');
-    ms.addColorStop(0.5, '#ccc6b4');
-    ms.addColorStop(1, '#9a9488');
-    ctx.fillStyle = ms;
-    fillCircle(ctx, moonX, moonY, moonR);
-    // Craters
+  // 0..1 ramps. Each one scales smoothly across the full common (×20) range,
+  // so the visual change keeps deepening every click instead of plateauing
+  // after a couple of purchases.
+  const crustGrow    = smoothstep01(crustC / 20);      // 0..1 over 20 clicks
+  const oceanGrow    = smoothstep01(oceanC / 20);
+  const atmoGrow     = smoothstep01(atmoC / 20);
+  const moonGrow     = smoothstep01(moonC / 20);
+  const photoGrow    = smoothstep01(photoC / 10);      // rare → 10 max
+  const sapiensGrow  = smoothstep01(sapiensC / 5);     // epic → 5 max
+  const cityGrow     = smoothstep01((cityC * 2 + sapiensC) / 10);
+  const satGrow      = smoothstep01(satC / 5);
+
+  // Entity-count budgets that ramp with purchases.
+  const dustClumps   = Math.max(0, Math.min(20, crustC * 2 + 6));   // accretion debris
+  const sphereR      = R * smoothstep01(crustC / 12);                // sphere fills in by ~level 12
+  const oceanBlobs   = Math.min(22, oceanC * 2);                     // pools growing into seas
+  const atmoLayers   = Math.min(4, 1 + Math.floor(atmoC / 5));       // halo intensity steps
+  const cloudCount   = Math.min(12, Math.floor(atmoC * 0.7));        // clouds appear over time
+  const cambrianN    = Math.min(12, cambrianC);
+  const proN         = Math.min(20, proC * 2);
+  const neuronMesh   = Math.min(14, neuronC);
+  const continentsN  = hasContinents ? Math.min(7, Math.max(2, contC + Math.floor(cambrianC / 3))) : 0;
+  const cityN        = Math.min(40, cityC * 4 + sapiensC * 3);
+  const buildingN    = Math.min(18, sapiensC * 3);                   // tiny buildings
+  const satN         = Math.min(6, 1 + satC);
+
+  // ── Pre-stage: no entities yet → primordial gas cloud hint ───────────────
+  if (!hasCrust && !hasOcean && !hasAtmo && !hasMoon && items.length === 0) {
+    const cloudR = R * 1.05;
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
-    ctx.clip();
-    const craters = [{ dx: 0.3, dy: -0.2, r: 0.2 }, { dx: -0.25, dy: 0.2, r: 0.15 }, { dx: 0.05, dy: 0.35, r: 0.12 }];
-    for (const c of craters) {
-      ctx.fillStyle = hexToRgba('#8a8270', 0.4);
-      fillCircle(ctx, moonX + c.dx * moonR, moonY + c.dy * moonR, c.r * moonR);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 5; i += 1) {
+      const swirl = ctx.createRadialGradient(
+        cx + Math.cos(now * 0.0002 + i) * R * 0.18,
+        cy + Math.sin(now * 0.00018 + i * 1.7) * R * 0.18,
+        0,
+        cx, cy, cloudR,
+      );
+      swirl.addColorStop(0, hexToRgba('#d8b890', 0.06));
+      swirl.addColorStop(1, hexToRgba('#3a2a1a', 0));
+      ctx.fillStyle = swirl;
+      fillCircle(ctx, cx, cy, cloudR);
     }
     ctx.restore();
-    // Terminator
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = hexToRgba('#000000', 0.25);
-    ctx.beginPath();
-    ctx.ellipse(moonX + Math.cos(moonAngle * 0.5) * moonR * 0.3, moonY, moonR * 0.85, moonR, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  };
+    return;
+  }
 
-  // Moon behind Earth
-  if (moonBehind) drawMoonBody();
-  // Moon orbit path
+  // ── Canvas-wide neural ambient (after Neuron purchased) ──────────────────
+  if (hasNeuron || hasSapiens) {
+    drawLifeCanvasAmbient(ctx, cx, cy, R, items, now);
+  }
+
+  // ── Moon orbit geometry ──────────────────────────────────────────────────
+  const moonAngle = stage11MoonAngle(now, cluster);
+  const moonDist = stage11MoonOrbitRadius(R);
+  const moonR = stage11MoonBodyRadius(R, moonCount);
+  const moonX = cx + Math.cos(moonAngle) * moonDist;
+  const moonY = cy + Math.sin(moonAngle) * moonDist * STAGE11_MOON_ORBIT_TILT;
+  const moonBehind = Math.sin(moonAngle) < 0;
+  const moonNudgePulse = Math.max(0, Math.min(1, cluster?.moonNudgeImpulse ?? 0));
+
+  // Moon behind Earth — drawn before Earth body
+  if (hasMoon && moonBehind) {
+    drawMoon(ctx, moonX, moonY, moonR, now, moonAngle, moonGrow, true, moonNudgePulse);
+  }
+
+  // Moon orbit guide (only when moon owned)
   if (hasMoon) {
-    ctx.strokeStyle = hexToRgba('#ffffff', 0.03);
-    ctx.lineWidth = 0.3;
+    ctx.save();
+    ctx.strokeStyle = hexToRgba('#ffffff', 0.05);
+    ctx.lineWidth = 0.6;
+    ctx.setLineDash([4, 9]);
     ctx.beginPath();
-    ctx.ellipse(cx, cy, moonDist, moonDist * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, moonDist, moonDist * STAGE11_MOON_ORBIT_TILT, 0, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
 
-  // ── Atmosphere halo ──────────────────────────────────────────────────────
+  // ── Atmosphere outer halo ────────────────────────────────────────────────
   if (hasAtmo) {
-    const ag = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.5);
-    ag.addColorStop(0, hexToRgba('#66aaff', 0.15));
-    ag.addColorStop(0.5, hexToRgba('#4488dd', 0.08));
-    ag.addColorStop(1, hexToRgba('#4488dd', 0));
+    const ag = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * (1.32 + atmoGrow * 0.15));
+    ag.addColorStop(0, hexToRgba('#7ec0ff', 0.18 + atmoGrow * 0.10));
+    ag.addColorStop(0.5, hexToRgba('#3c80d8', 0.10));
+    ag.addColorStop(1, hexToRgba('#1c4080', 0));
     ctx.fillStyle = ag;
-    fillCircle(ctx, cx, cy, R * 1.5);
+    fillCircle(ctx, cx, cy, R * 1.45);
   }
 
-  // ── Earth surface (clipped circle) ────────────────────────────────────────
+  // ── Earth body (clipped sphere) ──────────────────────────────────────────
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.clip();
 
-  // Base: always show a rocky planet, upgrades change its surface
-  {
-    const moltenGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    if (hasOcean) {
-      moltenGrad.addColorStop(0, '#1a2a50');
-      moltenGrad.addColorStop(1, '#0a1830');
-    } else if (hasCrust) {
-      moltenGrad.addColorStop(0, '#3a1a0a');
-      moltenGrad.addColorStop(1, '#2a0a00');
-    } else {
-      moltenGrad.addColorStop(0, '#2a2a2a');
-      moltenGrad.addColorStop(1, '#151515');
-    }
-    ctx.fillStyle = moltenGrad;
-    fillCircle(ctx, cx, cy, R);
-
-    // Lava veins if crust but no ocean
-    if (hasCrust && !hasOcean) {
-      for (let i = 0; i < 6; i++) {
-        const a = earthSpin * 0.3 + i * 1.05 + unit(i + 500, 1) * 2;
-        const r = R * (0.3 + unit(i + 510, 2) * 0.5);
-        const vx = cx + Math.cos(a) * r;
-        const vy = cy + Math.sin(a) * r * 0.8;
-        ctx.fillStyle = hexToRgba('#ff4400', 0.2 + Math.sin(now * 0.003 + i) * 0.1);
-        fillCircle(ctx, vx, vy, R * 0.08);
-      }
-    }
-  }
-
-  // Ocean
+  // Base layer — depends on which formation entities are owned.
+  const baseGrad = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.28, R * 0.06, cx, cy, R);
   if (hasOcean) {
-    ctx.fillStyle = hexToRgba('#0c2d5e', 0.85);
-    fillCircle(ctx, cx, cy, R);
+    baseGrad.addColorStop(0, '#1f5fa6');
+    baseGrad.addColorStop(0.55, '#0e3a72');
+    baseGrad.addColorStop(1, '#04203d');
+  } else if (hasCrust) {
+    const heat = 1 - crustGrow * 0.55;
+    baseGrad.addColorStop(0, `rgb(${Math.round(120 + heat * 80)}, ${Math.round(60 + heat * 30)}, ${Math.round(30 + heat * 12)})`);
+    baseGrad.addColorStop(1, `rgb(${Math.round(56 + heat * 22)}, ${Math.round(24 + heat * 10)}, ${Math.round(12 + heat * 4)})`);
+  } else {
+    baseGrad.addColorStop(0, '#1a1a1a');
+    baseGrad.addColorStop(1, '#0a0a0a');
+  }
+  ctx.fillStyle = baseGrad;
+  fillCircle(ctx, cx, cy, R);
+
+  // Lava veins on a crust that hasn't cooled into ocean yet
+  if (hasCrust && !hasOcean) {
+    const veinIntensity = 1 - crustGrow * 0.5;
+    for (let i = 0; i < 9; i += 1) {
+      const a = earthSpin * 0.35 + i * 0.78 + unit(i + 500, 1) * 1.6;
+      const r = R * (0.18 + unit(i + 510, 2) * 0.62);
+      const vx = cx + Math.cos(a) * r;
+      const vy = cy + Math.sin(a) * r * 0.95;
+      const flicker = 0.25 + Math.sin(now * 0.0042 + i * 1.7) * 0.15;
+      ctx.fillStyle = hexToRgba('#ff5a14', flicker * veinIntensity);
+      fillCircle(ctx, vx, vy, R * (0.05 + unit(i + 511, 3) * 0.05));
+    }
   }
 
-  // Continents (rotate with Earth)
-  if (hasContinents || hasOcean) {
-    const numContinents = hasContinents ? 5 : 2;
-    for (let i = 0; i < numContinents; i++) {
-      const cLon = earthSpin + i * 1.3 + unit(i + 600, 1) * 1.5;
-      const cLat = (unit(i + 610, 2) - 0.5) * R * 1.1;
+  // Ocean wave shimmer over the base (only when ocean is unlocked)
+  if (hasOcean) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i += 1) {
+      const ripple = 0.06 + Math.sin(now * 0.0008 + i * 2.1) * 0.05;
+      ctx.fillStyle = hexToRgba('#7ec8ff', ripple * (0.4 + oceanGrow * 0.6));
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + R * 0.08, R * 0.78, R * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Continents — only appear after Continents Rise is purchased
+  if (continentsN > 0) {
+    for (let i = 0; i < continentsN; i += 1) {
+      const cLon = earthSpin + (i / continentsN) * Math.PI * 2 + unit(i + 600, 1) * 0.8;
+      const cLat = (unit(i + 610, 2) - 0.5) * 0.85;
       const visible = Math.cos(cLon);
-      if (visible > -0.1) {
-        const cw = R * (0.15 + unit(i + 620, 3) * 0.15) * (0.5 + visible * 0.5);
-        const ch = R * (0.12 + unit(i + 630, 4) * 0.15);
-        const green = hasPlants ? '#1a5a2a' : '#5a4a30';
-        ctx.fillStyle = hexToRgba(green, 0.6 + visible * 0.3);
+      if (visible <= -0.05) continue;
+      const cw = R * (0.18 + unit(i + 620, 3) * 0.20) * (0.45 + visible * 0.55);
+      const ch = R * (0.14 + unit(i + 630, 4) * 0.18);
+      // Bare rock vs photosynthesis green tint
+      const rock = `rgb(${Math.round(110 - photoGrow * 30)}, ${Math.round(82 + photoGrow * 18)}, ${Math.round(52 + photoGrow * 6)})`;
+      ctx.fillStyle = hexToRgba(rock, 0.78 + visible * 0.18);
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(cLon) * R * 0.62, cy + cLat * R * 0.6, cw, ch, unit(i + 640, 5) * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (hasPhoto) {
+        ctx.fillStyle = hexToRgba('#2e8a3a', 0.34 + photoGrow * 0.32 + visible * 0.15);
         ctx.beginPath();
-        ctx.ellipse(cx + Math.cos(cLon) * R * 0.65, cy + cLat * 0.7, cw, ch, unit(i + 640, 5) * 0.6, 0, Math.PI * 2);
+        ctx.ellipse(cx + Math.cos(cLon) * R * 0.62, cy + cLat * R * 0.6, cw * 0.78, ch * 0.72, unit(i + 641, 6) * 0.6, 0, Math.PI * 2);
         ctx.fill();
       }
     }
   }
 
-  // Ice caps
+  // Prokaryote — pale mineral pinpricks in the ocean
+  if (proN > 0 && hasOcean) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < proN; i += 1) {
+      const lon = earthSpin * 1.4 + i * 0.92 + unit(i + 700, 1) * 6;
+      const lat = (unit(i + 710, 2) - 0.5) * 1.6;
+      const vis = Math.cos(lon) * Math.cos(lat);
+      if (vis < 0.1) continue;
+      const px = cx + Math.cos(lon) * R * 0.7 * Math.cos(lat);
+      const py = cy + Math.sin(lat) * R * 0.78;
+      const flick = 0.35 + Math.sin(now * 0.003 + i * 1.7) * 0.25;
+      ctx.fillStyle = hexToRgba('#9affc8', flick);
+      fillCircle(ctx, px, py, 0.9 + vis * 0.7);
+    }
+    ctx.restore();
+  }
+
+  // Cambrian explosion — wandering creature trails in the ocean
+  if (cambrianN > 0 && hasOcean) {
+    for (let i = 0; i < cambrianN; i += 1) {
+      const orbit = 0.3 + unit(i + 770, 1) * 0.55;
+      const phase = now * (0.0006 + unit(i + 771, 2) * 0.0008) + i * 1.3;
+      const lat = (unit(i + 772, 3) - 0.5) * 1.4;
+      const px = cx + Math.cos(phase + earthSpin * 0.4) * R * orbit;
+      const py = cy + Math.sin(lat) * R * 0.6 + Math.sin(phase * 2.4) * R * 0.04;
+      const dist = Math.hypot(px - cx, py - cy);
+      if (dist > R * 0.86) continue;
+      ctx.strokeStyle = hexToRgba('#ffd7a8', 0.55);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px - Math.cos(phase + earthSpin * 0.4) * 6, py - Math.sin(phase * 2.4) * 2);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba('#ffe7c0', 0.85);
+      fillCircle(ctx, px, py, 1.4);
+    }
+  }
+
+  // Neuron — wispy neural mesh over land
+  if (hasNeuron) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const nodes = 10;
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < nodes; i += 1) {
+      const lon = earthSpin * 0.6 + i * 0.78;
+      const vis = Math.cos(lon);
+      if (vis < 0) continue;
+      const lat = (unit(i + 820, 1) - 0.5) * 1.2;
+      pts.push({
+        x: cx + Math.cos(lon) * R * 0.55,
+        y: cy + Math.sin(lat) * R * 0.5,
+      });
+    }
+    for (let i = 0; i < pts.length; i += 1) {
+      for (let j = i + 1; j < pts.length; j += 1) {
+        const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+        if (d > R * 0.55) continue;
+        const flicker = 0.4 + Math.sin(now * 0.0015 + i * 2.3 + j) * 0.4;
+        ctx.strokeStyle = hexToRgba('#7dffd1', 0.06 * flicker);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x, pts[i].y);
+        ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = hexToRgba('#a9ffe2', 0.4);
+      fillCircle(ctx, pts[i].x, pts[i].y, 1.2);
+    }
+    ctx.restore();
+  }
+
+  // Ice caps appear once an ocean has condensed
   if (hasOcean) {
-    ctx.fillStyle = hexToRgba('#ddeeff', 0.35);
+    ctx.fillStyle = hexToRgba('#dceeff', 0.42);
     ctx.beginPath();
-    ctx.ellipse(cx, cy - R * 0.82, R * 0.35, R * 0.12, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - R * 0.84, R * 0.32, R * 0.10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(cx, cy + R * 0.85, R * 0.3, R * 0.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + R * 0.86, R * 0.30, R * 0.10, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Clouds (if atmosphere)
+  // Clouds (with atmosphere)
   if (hasAtmo) {
-    ctx.fillStyle = hexToRgba('#ffffff', 0.12);
-    for (let i = 0; i < 5; i++) {
-      const ca = earthSpin * 1.1 + i * 1.25 + unit(i + 700, 1) * 2;
-      const clat = (unit(i + 710, 2) - 0.5) * R * 0.9;
+    const cloudCount = 4 + Math.floor(atmoGrow * 4);
+    ctx.fillStyle = hexToRgba('#ffffff', 0.16 + atmoGrow * 0.08);
+    for (let i = 0; i < cloudCount; i += 1) {
+      const ca = earthSpin * 0.7 + i * 1.18 + unit(i + 700, 1) * 2;
+      const clat = (unit(i + 710, 2) - 0.5) * 0.9;
       const vis = Math.cos(ca);
-      if (vis > 0) {
-        const cw = R * (0.12 + unit(i + 720, 3) * 0.12);
-        ctx.beginPath();
-        ctx.ellipse(cx + Math.cos(ca) * R * 0.6, cy + clat * 0.6, cw, cw * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
+      if (vis <= 0.05) continue;
+      const cw = R * (0.16 + unit(i + 720, 3) * 0.16);
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(ca) * R * 0.58, cy + clat * R * 0.55, cw, cw * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Day/night terminator — softer; rotates with the orbit so day side faces sun
+  {
+    const sunDir = moonAngle * 0.18 + earthSpin * 0.05;
+    const dayCx = cx + Math.cos(sunDir) * R * 0.6;
+    const dayCy = cy - R * 0.05;
+    const nightGrad = ctx.createRadialGradient(dayCx, dayCy, R * 0.18, cx - Math.cos(sunDir) * R * 0.2, cy, R * 1.15);
+    nightGrad.addColorStop(0, hexToRgba('#000000', 0));
+    nightGrad.addColorStop(0.55, hexToRgba('#000000', 0.18));
+    nightGrad.addColorStop(1, hexToRgba('#000000', 0.5));
+    ctx.fillStyle = nightGrad;
+    fillCircle(ctx, cx, cy, R);
+
+    // City lights — only after Homo Sapiens (or explicit City Lights entity)
+    if ((hasSapiens || hasCityLights) && cityN > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const nightX = cx - Math.cos(sunDir) * R * 0.4;
+      for (let i = 0; i < cityN; i += 1) {
+        const lx = nightX + (unit(i + 800, 1) - 0.5) * R * 1.2;
+        const ly = cy + (unit(i + 810, 2) - 0.5) * R * 1.5;
+        const distFromCenter = Math.hypot(lx - cx, ly - cy);
+        if (distFromCenter > R * 0.88) continue;
+        // Skip lights on the day side
+        const lightSunDot = (lx - cx) * Math.cos(sunDir) + (ly - cy) * Math.sin(sunDir);
+        if (lightSunDot > R * 0.1) continue;
+        const flicker = 0.55 + Math.sin(now * 0.0046 + i * 2.7) * 0.35;
+        ctx.fillStyle = hexToRgba('#ffe28a', flicker);
+        fillCircle(ctx, lx, ly, 1 + unit(i + 820, 3) * 1.6);
+        ctx.fillStyle = hexToRgba('#ffd060', 0.18);
+        fillCircle(ctx, lx, ly, 3 + unit(i + 821, 4) * 2.4);
+      }
+      ctx.restore();
+    }
+
+    // Homo Sapiens — small fire spark on land before cities glow
+    if (hasSapiens && cityN === 0) {
+      for (let i = 0; i < sapiensN; i += 1) {
+        const lon = earthSpin + i * 1.6;
+        const lat = (unit(i + 830, 1) - 0.5) * 0.8;
+        const px = cx + Math.cos(lon) * R * 0.55;
+        const py = cy + Math.sin(lat) * R * 0.5;
+        const flick = 0.4 + Math.sin(now * 0.005 + i) * 0.3;
+        ctx.fillStyle = hexToRgba('#ff9544', flick);
+        fillCircle(ctx, px, py, 1.4);
       }
     }
   }
 
-  // Day/night terminator (subtle so entities show through)
-  const sunDir = earthSpin * 0.2;
-  const nightGrad = ctx.createRadialGradient(
-    cx + Math.cos(sunDir) * R * 0.6, cy, R * 0.3,
-    cx - Math.cos(sunDir) * R * 0.3, cy, R * 1.1,
-  );
-  nightGrad.addColorStop(0, hexToRgba('#000000', 0));
-  nightGrad.addColorStop(0.5, hexToRgba('#000000', 0.1));
-  nightGrad.addColorStop(1, hexToRgba('#000000', 0.25));
-  ctx.fillStyle = nightGrad;
-  fillCircle(ctx, cx, cy, R);
-
-  // City lights on the dark side (only after Homo Sapiens)
-  if (hasCityLights || hasSapiens) {
-    const nightX = cx - Math.cos(sunDir) * R * 0.4;
-    for (let i = 0; i < 12; i++) {
-      const lx = nightX + (unit(i + 800, 1) - 0.5) * R * 0.9;
-      const ly = cy + (unit(i + 810, 2) - 0.5) * R * 1.2;
-      const distFromCenter = Math.hypot(lx - cx, ly - cy);
-      if (distFromCenter < R * 0.9) {
-        const flicker = 0.3 + Math.sin(now * 0.005 + i * 2.3) * 0.15;
-        ctx.fillStyle = hexToRgba('#ffdd66', flicker);
-        fillCircle(ctx, lx, ly, 1 + unit(i + 820, 3) * 1.5);
-      }
-    }
-  }
-
-  // Moon shadow on Earth
+  // Moon shadow on Earth (only when moon is in front)
   if (hasMoon && !moonBehind) {
-    const shadowX = moonX * 0.3 + cx * 0.7;
-    const shadowY = moonY * 0.3 + cy * 0.7;
-    ctx.fillStyle = hexToRgba('#000000', 0.12);
-    fillCircle(ctx, shadowX, shadowY, moonR * 1.5);
+    const shadowX = moonX * 0.32 + cx * 0.68;
+    const shadowY = moonY * 0.32 + cy * 0.68;
+    ctx.fillStyle = hexToRgba('#000000', 0.16 + moonGrow * 0.06);
+    fillCircle(ctx, shadowX, shadowY, moonR * 1.6);
   }
 
-  // Specular highlight
-  const specGrad = ctx.createRadialGradient(cx + Math.cos(sunDir) * R * 0.35, cy - R * 0.25, 0, cx, cy, R * 0.9);
-  specGrad.addColorStop(0, hexToRgba('#ffffff', 0.15));
-  specGrad.addColorStop(1, hexToRgba('#ffffff', 0));
-  ctx.fillStyle = specGrad;
-  fillCircle(ctx, cx, cy, R);
+  // Day-side specular highlight
+  if (hasOcean || hasAtmo) {
+    const sunDir = moonAngle * 0.18 + earthSpin * 0.05;
+    const specGrad = ctx.createRadialGradient(
+      cx + Math.cos(sunDir) * R * 0.4, cy - R * 0.25, 0,
+      cx + Math.cos(sunDir) * R * 0.4, cy - R * 0.25, R * 0.7,
+    );
+    specGrad.addColorStop(0, hexToRgba('#ffffff', 0.18));
+    specGrad.addColorStop(1, hexToRgba('#ffffff', 0));
+    ctx.fillStyle = specGrad;
+    fillCircle(ctx, cx, cy, R);
+  }
 
   ctx.restore(); // end Earth clip
 
-  // ── Atmosphere ring ──────────────────────────────────────────────────────
+  // ── Biosphere veins outside the clip (life force tendrils) ───────────────
+  if (hasPhoto || hasCambrian || hasNeuron) {
+    drawEarthBiosphereVeins(ctx, cx, cy, R, items, now);
+  }
+
+  // Atmosphere ring (outline)
   if (hasAtmo) {
-    ctx.strokeStyle = hexToRgba('#66aaff', 0.2);
-    ctx.lineWidth = R * 0.04;
-    strokeCircle(ctx, cx, cy, R * 1.02);
+    ctx.strokeStyle = hexToRgba('#8ed0ff', 0.22 + atmoGrow * 0.18);
+    ctx.lineWidth = R * 0.025;
+    strokeCircle(ctx, cx, cy, R * 1.01);
   }
 
   // ── Satellites orbiting ──────────────────────────────────────────────────
   if (hasSatellite) {
-    for (let i = 0; i < 3; i++) {
-      const sa = now * (0.001 + i * 0.0004) + i * 2.1;
-      const sr = R * (1.15 + i * 0.08);
+    const satCount = 2 + Math.min(4, L.count(S11.SATELLITE));
+    for (let i = 0; i < satCount; i += 1) {
+      const sa = now * (0.0009 + i * 0.00033) + i * 2.1;
+      const sr = R * (1.12 + i * 0.07);
       const sx = cx + Math.cos(sa) * sr;
-      const sy = cy + Math.sin(sa) * sr * 0.4;
-      ctx.fillStyle = hexToRgba('#ffffff', 0.6);
-      fillCircle(ctx, sx, sy, 1.2);
-      // Solar panel glint
-      ctx.fillStyle = hexToRgba('#88aaff', 0.3 + Math.sin(now * 0.008 + i) * 0.2);
-      fillCircle(ctx, sx, sy, 2);
+      const sy = cy + Math.sin(sa) * sr * 0.38;
+      ctx.fillStyle = hexToRgba('#ffffff', 0.68);
+      fillCircle(ctx, sx, sy, 1.4);
+      ctx.fillStyle = hexToRgba('#88aaff', 0.35 + Math.sin(now * 0.008 + i) * 0.2);
+      fillCircle(ctx, sx, sy, 2.2);
     }
   }
 
-  // Moon in front of Earth
-  if (!moonBehind) drawMoonBody();
+  // Moon in front of Earth — drawn last so it sits above the surface
+  if (hasMoon && !moonBehind) {
+    drawMoon(ctx, moonX, moonY, moonR, now, moonAngle, moonGrow, false, moonNudgePulse);
+  }
 
-  // ── Orbit entity glyphs (legendary etc.) ────────────────────────────────
+  // Legendary / Spacefaring / Ark / Telescope / Sapiens orbital glyphs
   const orbitItems = items.filter(isLifeOrbitEntity);
   drawLifeOrbitEntities(ctx, cx, cy, R, orbitItems, now);
 }
@@ -2582,6 +2866,7 @@ export function drawEntities(
   purchasedEntities: PurchasedEntityEntry[],
   now: number,
   pointerPressure?: PointerPressureVisualField | null,
+  cluster?: MoteCluster | null,
 ): void {
   if (purchasedEntities.length === 0) return;
 
@@ -2637,7 +2922,7 @@ export function drawEntities(
   }
 
   if (stageId === 11) {
-    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure);
+    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure, cluster);
     return;
   }
 

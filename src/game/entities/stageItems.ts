@@ -448,6 +448,7 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
 
   // Stage 11 — Earth formation → Life → Civilization
   'Molten Crust':           { name: '용암 지각',        description: '냉각되는 마그마가 최초의 암석 표면을 만든다.' },
+  'Earth Formation':        { name: '지구 형성',        description: '먼지와 돌덩어리가 충돌·합체하며 점점 둥근 행성을 빚어낸다.' },
   'First Ocean':            { name: '최초의 바다',      description: '수증기가 응결해 젊은 지구를 덮는 광활한 바다가 된다.' },
   'Atmosphere':             { name: '대기',             description: '화산 가스가 행성을 보호하는 담요를 형성한다.' },
   'Moon Formation':         { name: '달 형성',          description: '거대 충돌의 잔해가 모여 달이 된다.' },
@@ -718,8 +719,8 @@ export const STAGE_ENTITIES: StageEntity[] = [
   ...stage(11, [
     // Common: Earth formation — each purchase visually changes the planet
     withAliases(
-      item('Molten Crust',     'ite',   'Cooling magma solidifies into the first rocky surface.',  'common', 'auto',  2.0),
-      ['s11_02_lipid_membrane'],
+      item('Earth Formation',  '🌍',    'Rock and gas clump together, gradually sculpting a young planet.', 'common', 'auto',  2.0),
+      ['s11_01_molten_crust', 's11_02_lipid_membrane'],
     ),
     withAliases(
       item('First Ocean',      'H₂O',  'Steam condenses into vast oceans covering the young Earth.', 'common', 'click', 15.0),

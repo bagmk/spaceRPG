@@ -4,6 +4,7 @@ import type { PurchasedEntityEntry } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { getStageAnchorEntity, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
 import { formatAutoRateValue, getCosmicTimeFillRate } from '../game/formulas';
@@ -275,21 +276,27 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
           {entities.length === 0 && (
             <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
           )}
-          {entities.map((entity, idx) => (
-            <EntityCard
-              key={entity.id}
-              entity={entity}
-              count={countOf(entity)}
-              quanta={quanta}
-              language={language}
-              rarityColor={RARITY_COLORS[entity.rarity]}
-              onPurchase={onPurchase}
-              onInspect={() => setInspectedEntityId(entity.id)}
-              animDelay={idx * 45}
-              canPurchase={selectedStageId <= currentStageId}
-              displayStageId={selectedStageId}
-            />
-          ))}
+          {entities.map((entity, idx) => {
+            const anchorLocked = isEntityLockedByAnchor(entity, purchasedEntities);
+            const anchor = anchorLocked ? getStageAnchorEntity(entity.stageId) : undefined;
+            const anchorName = anchor ? entityName(anchor, language) : undefined;
+            return (
+              <EntityCard
+                key={entity.id}
+                entity={entity}
+                count={countOf(entity)}
+                quanta={quanta}
+                language={language}
+                rarityColor={RARITY_COLORS[entity.rarity]}
+                onPurchase={onPurchase}
+                onInspect={() => setInspectedEntityId(entity.id)}
+                animDelay={idx * 45}
+                canPurchase={selectedStageId <= currentStageId && !anchorLocked}
+                anchorLockedBy={anchorLocked ? anchorName : undefined}
+                displayStageId={selectedStageId}
+              />
+            );
+          })}
         </div>
       </aside>
       {inspectedEntity ? (
@@ -300,7 +307,10 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
           quanta={quanta}
           language={language}
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
-          canPurchase={selectedStageId <= currentStageId}
+          canPurchase={
+            selectedStageId <= currentStageId &&
+            !isEntityLockedByAnchor(inspectedEntity, purchasedEntities)
+          }
           displayStageId={selectedStageId}
           onPurchase={onPurchase}
           onClose={() => setInspectedEntityId(null)}
@@ -320,10 +330,11 @@ interface CardProps {
   onInspect: () => void;
   animDelay: number;
   canPurchase: boolean;
+  anchorLockedBy?: string;
   displayStageId: number;
 }
 
-function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, displayStageId }: CardProps) {
+function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, displayStageId }: CardProps) {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const cost = getEntityCost(entity, count);
@@ -454,7 +465,11 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
             </>
           ) : (
             <span className="entity-card__buy-label">
-              {!canPurchase ? t(language, 'entityLabLocked') : t(language, 'entityLabMax')}
+              {anchorLockedBy
+                ? t(language, 'entityLabAnchorLock').replace('{anchor}', anchorLockedBy)
+                : !canPurchase
+                  ? t(language, 'entityLabLocked')
+                  : t(language, 'entityLabMax')}
             </span>
           )}
         </button>

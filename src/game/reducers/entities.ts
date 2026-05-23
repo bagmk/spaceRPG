@@ -1,6 +1,7 @@
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
+import { isEntityLockedByAnchor } from '../entities/anchors';
 import { getEntityCost } from '../entities/types';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -20,6 +21,11 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
 
   // Max count check
   if (entity.maxCount > 0 && currentCount >= entity.maxCount) return state;
+
+  // Anchor lock — non-anchor entities on the same stage are blocked until
+  // the anchor entity for that stage (e.g. Sun on stage 10, Earth Formation
+  // on stage 11) is fully maxed.
+  if (isEntityLockedByAnchor(entity, state.purchasedEntities)) return state;
 
   const cost = getEntityCost(entity, currentCount);
   if (state.quanta < cost) return state;

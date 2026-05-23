@@ -33,61 +33,6 @@ function drawMilestoneFlash(
   }
 }
 
-function drawEarthSatellites(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  t: number,
-  now: number,
-): void {
-  const orbits = [radius + 20, radius + 34, radius + 52];
-  for (let i = 0; i < 3; i += 1) {
-    ctx.strokeStyle = hexToRgba('#aaccff', 0.06 * t);
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, orbits[i], 0, Math.PI * 2);
-    ctx.stroke();
-    const angle = now / (700 + i * 280) + i * 2.1;
-    const sx = cx + Math.cos(angle) * orbits[i];
-    const sy = cy + Math.sin(angle) * orbits[i];
-    ctx.fillStyle = hexToRgba('#ffffff', 0.75 * t * (0.6 + 0.4 * Math.sin(now / 380 + i * 2.3)));
-    ctx.beginPath();
-    ctx.arc(sx, sy, 1.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function drawEarthMegastructures(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  t: number,
-  now: number,
-): void {
-  const ringR = radius + 28;
-  for (let i = 0; i < 7; i += 1) {
-    const start = (i / 7) * Math.PI * 2 + now / 4000;
-    ctx.strokeStyle = hexToRgba('#ffcc66', 0.35 * t);
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.arc(cx, cy, ringR, start, start + (Math.PI * 2 / 7) * 0.55);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 4; i += 1) {
-    const angle = now / 2200 + i * Math.PI * 0.5;
-    const sx = cx + Math.cos(angle) * (radius + 46);
-    const sy = cy + Math.sin(angle) * (radius + 46);
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.rotate(angle + Math.PI / 2);
-    ctx.fillStyle = hexToRgba('#3366dd', 0.45 * t);
-    ctx.fillRect(-4, -1.2, 8, 2.4);
-    ctx.restore();
-  }
-}
-
 // V9 planet formation: each planet appears individually from dust → proto → sphere → final
 function drawFormingPlanet(
   ctx: CanvasRenderingContext2D,
@@ -280,7 +225,7 @@ function drawGenericMotes({ ctx, cluster, stage, cx, cy, now, progress, pointerP
       mote.r * 1.16,
       mote.color,
       0.86 * ageAlpha,
-      now / 1000 + mote.hue * Math.PI * 2,
+      mote.spin,
     );
   });
 }
@@ -327,7 +272,7 @@ function drawInflation(args: DrawClusterArgs): void {
     const ageAlpha = Math.min(1, mote.age / 200);
     const wobble = Math.sin(t * 12 + idx) * 0.9;
     const pushed = applyPointerVisualDisplacement(mote.x + wobble, mote.y + wobble, pointerPressure, 13);
-    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.6 + progress * 0.8), mote.color, 0.96 * ageAlpha, t + mote.hue * Math.PI);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.6 + progress * 0.8), mote.color, 0.96 * ageAlpha, mote.spin);
   });
 }
 
@@ -340,7 +285,7 @@ function drawBaryogenesis(args: DrawClusterArgs): void {
   cluster.motes.forEach((mote, idx) => {
     const flicker = 0.6 + Math.sin(t * 8 + idx) * 0.2;
     const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 12);
-    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.02 + flicker * 0.18), mote.color, 0.78 + progress * 0.12, mote.age / 180 + idx);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * (1.02 + flicker * 0.18), mote.color, 0.78 + progress * 0.12, mote.spin);
   });
 }
 
@@ -361,7 +306,7 @@ function drawQGPlasma(args: DrawClusterArgs): void {
     ctx.beginPath();
     ctx.arc(pushed.x, pushed.y, r * 2.6, 0, Math.PI * 2);
     ctx.fill();
-    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, r, mote.color, 0.78 * pulse, mote.hue * Math.PI * 2 + t * 0.2);
+    drawStageSprite(ctx, stage.id, pushed.x, pushed.y, r, mote.color, 0.78 * pulse, mote.spin);
   }
 
   // faint turbulence threads
@@ -655,13 +600,26 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
     }
   }
 
-  // Layer 2: dust / mote sprites (fade out as planets form)
-  const dustAlpha = 0.65 * (1 - rangeT(progress, 0.16, 0.68));
+  // Layer 2: accretion dust — spirals toward sun, fades as planets form
+  const dustAlpha = 0.7 * (1 - rangeT(progress, 0.24, 0.72));
   if (dustAlpha > 0.005) {
-    cluster.motes.forEach((mote, idx) => {
-      const shimmer = 0.54 + Math.sin(now / 1000 * 2 + idx) * 0.18;
+    cluster.motes.forEach((mote) => {
       const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
-      drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * shimmer, mote.color, dustAlpha * shimmer, mote.orbitAngle ?? 0);
+      const dx = cx - pushed.x;
+      const dy = cy - pushed.y;
+      const dist = Math.hypot(dx, dy);
+      const streakLen = Math.min(8, dist * 0.08);
+      const nx = dist > 0.1 ? dx / dist : 0;
+      const ny = dist > 0.1 ? dy / dist : 0;
+      // Streak toward center
+      ctx.strokeStyle = hexToRgba(mote.color, dustAlpha * 0.5);
+      ctx.lineWidth = mote.r * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(pushed.x, pushed.y);
+      ctx.lineTo(pushed.x + nx * streakLen, pushed.y + ny * streakLen);
+      ctx.stroke();
+      // Dust dot
+      drawStageSprite(ctx, stage.id, pushed.x, pushed.y, mote.r * 0.8, mote.color, dustAlpha * 0.6, mote.spin);
     });
   }
 
@@ -708,7 +666,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   if (sunT > 0) {
     const sunR = 8 + easeIO(sunT) * 24;
     const fullSunR = Math.max(sunR, sunLevel >= 4 || progress >= 0.98 ? 32 : sunR);
-    drawSolarSun(ctx, stage, cx, cy, fullSunR, 0.75 + easeIO(sunT) * 0.2 - progress * 0.15);
+    drawSolarSun(ctx, stage, cx, cy, fullSunR, 0.75 + easeIO(sunT) * 0.2 - progress * 0.15, now, sunLevel);
   }
 
   // Layer 6: individual planet formation and stable orbits
@@ -737,6 +695,31 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
         if (progress >= 0.98) drawSolarEarth(ctx, px, py, body.r, 'city', now / 900);
         else if (progress >= 0.95) drawSolarEarth(ctx, px, py, body.r, 'water', now / 900);
         else drawPlanetBase(ctx, px, py, body.r, '#8f4b33', '#2a120f');
+
+        // Moon orbiting Earth + shadow on Earth
+        const moonLevel = linkedEntityCount(args, 'Moon');
+        if (moonLevel > 0) {
+          const moonOrbit = body.r * 2.2;
+          const moonAngle = now / 2200;
+          const moonR = 2.5;
+          const mx = px + Math.cos(moonAngle) * moonOrbit;
+          const my = py + Math.sin(moonAngle) * moonOrbit * 0.45;
+          // Moon body
+          ctx.fillStyle = '#d0cdc4';
+          ctx.beginPath();
+          ctx.arc(mx, my, moonR, 0, Math.PI * 2);
+          ctx.fill();
+          // Shadow on Earth when moon is in front (sin < 0 = closer to viewer)
+          if (Math.sin(moonAngle) < 0.2) {
+            const shadowX = px + Math.cos(moonAngle) * body.r * 0.5;
+            const shadowY = py + Math.sin(moonAngle) * body.r * 0.2;
+            const shadowAlpha = 0.2 * (1 - Math.max(0, Math.sin(moonAngle)) / 0.2);
+            ctx.fillStyle = hexToRgba('#000000', Math.min(0.2, shadowAlpha));
+            ctx.beginPath();
+            ctx.arc(shadowX, shadowY, body.r * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       } else {
         drawPlanetBase(ctx, px, py, body.r, body.color, '#1d1a21');
       }
@@ -768,31 +751,87 @@ function drawSolarSun(
   cy: number,
   radius: number,
   flare = 1,
+  now = 0,
+  sunLevel = 0,
 ): void {
-  const sun = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, 1, cx, cy, radius * 2.8);
-  sun.addColorStop(0, hexToRgba('#fff7cf', 0.98));
-  sun.addColorStop(0.34, hexToRgba(stage.coreColor, 0.92));
-  sun.addColorStop(1, hexToRgba(stage.accent, 0));
-  ctx.fillStyle = sun;
+  const t = now / 1000;
+  const maturity = Math.min(1, sunLevel / 4);
+
+  // Corona glow — grows with maturity
+  const coronaR = radius * (2.2 + maturity * 1.2) * flare;
+  ctx.fillStyle = hexToRgba(stage.accent, 0.08 + maturity * 0.06);
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 2.8 * flare, 0, Math.PI * 2);
+  ctx.arc(cx, cy, coronaR, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#ffe39b';
+
+  // Inner glow
+  const glowR = radius * (1.6 + maturity * 0.5);
+  ctx.fillStyle = hexToRgba(stage.coreColor, 0.2 + maturity * 0.15);
+  ctx.beginPath();
+  ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sun body — brighter with maturity
+  const bodyColor = maturity < 0.3 ? '#c4885a' : maturity < 0.7 ? '#f0b858' : '#ffe39b';
+  ctx.fillStyle = bodyColor;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.fill();
+
+  // Highlight spot
+  ctx.fillStyle = hexToRgba('#fffff0', 0.25 + maturity * 0.2);
+  ctx.beginPath();
+  ctx.arc(cx - radius * 0.28, cy - radius * 0.28, radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Surface convection cells — appear after level 2
+  if (sunLevel >= 2) {
+    const cellCount = 5 + sunLevel;
+    for (let i = 0; i < cellCount; i++) {
+      const angle = (i / cellCount) * Math.PI * 2 + t * 0.15;
+      const dist = radius * (0.3 + (i % 3) * 0.18);
+      const cellX = cx + Math.cos(angle) * dist;
+      const cellY = cy + Math.sin(angle) * dist;
+      const cellR = 1.5 + (i % 3);
+      const pulse = 0.6 + Math.sin(t * 2.5 + i * 1.7) * 0.3;
+      ctx.fillStyle = hexToRgba('#fff8e0', 0.18 * pulse);
+      ctx.beginPath();
+      ctx.arc(cellX, cellY, cellR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Solar flares — appear after level 3
+  if (sunLevel >= 3) {
+    for (let f = 0; f < 3; f++) {
+      const flareAngle = t * 0.3 + f * 2.1;
+      const flareLen = radius * (0.6 + Math.sin(t * 1.8 + f * 3.1) * 0.35);
+      const fx = cx + Math.cos(flareAngle) * radius;
+      const fy = cy + Math.sin(flareAngle) * radius;
+      const ex = cx + Math.cos(flareAngle) * (radius + flareLen);
+      const ey = cy + Math.sin(flareAngle) * (radius + flareLen);
+      ctx.strokeStyle = hexToRgba('#ffcc44', 0.25 + Math.sin(t * 3 + f) * 0.1);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      const cpx = (fx + ex) / 2 + Math.sin(t * 2 + f) * 8;
+      const cpy = (fy + ey) / 2 + Math.cos(t * 2.3 + f) * 8;
+      ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+      ctx.stroke();
+    }
+  }
 }
 
 const SOLAR_BODIES = [
-  { name: 'Mercury', orbit: 54, r: 3.2, color: '#b7a28a', showAt: 0.28 },
-  { name: 'Venus', orbit: 76, r: 5.2, color: '#e7bb79', showAt: 0.36 },
-  { name: 'Earth', orbit: 100, r: 5.8, color: '#5aa7ff', showAt: 0.44 },
-  { name: 'Mars', orbit: 124, r: 4.4, color: '#cf7655', showAt: 0.52 },
-  { name: 'Jupiter', orbit: 162, r: 10.2, color: '#d7a77e', showAt: 0.6 },
-  { name: 'Saturn', orbit: 196, r: 8.8, color: '#ead09a', showAt: 0.68, rings: true },
-  { name: 'Uranus', orbit: 226, r: 6.6, color: '#a9efe9', showAt: 0.76 },
-  { name: 'Neptune', orbit: 254, r: 6.3, color: '#5b86ff', showAt: 0.84 },
-  { name: 'Pluto', orbit: 282, r: 2.6, color: '#d8d2c6', showAt: 0.92 },
+  { name: 'Mercury', orbit: 54, r: 4.5, color: '#b7a28a', showAt: 0.28 },
+  { name: 'Venus', orbit: 76, r: 7.0, color: '#e7bb79', showAt: 0.36 },
+  { name: 'Earth', orbit: 100, r: 7.8, color: '#5aa7ff', showAt: 0.44 },
+  { name: 'Mars', orbit: 124, r: 6.0, color: '#cf7655', showAt: 0.52 },
+  { name: 'Jupiter', orbit: 162, r: 14.0, color: '#d7a77e', showAt: 0.6 },
+  { name: 'Saturn', orbit: 196, r: 12.0, color: '#ead09a', showAt: 0.68, rings: true },
+  { name: 'Uranus', orbit: 226, r: 9.0, color: '#a9efe9', showAt: 0.76 },
+  { name: 'Neptune', orbit: 254, r: 8.5, color: '#5b86ff', showAt: 0.84 },
+  { name: 'Pluto', orbit: 282, r: 3.5, color: '#d8d2c6', showAt: 0.92 },
 ];
 
 
@@ -818,19 +857,27 @@ function drawSolarEarth(
 
 
 
-// V9 Realistic Earth: Pangaea → continental drift → modern Earth
-// Continent specs: [pangaea dx, pangaea dy, modern dx, modern dy, w, h, rotation]
-// All in fraction of sphere radius
-const CONTINENTS = [
-  { p: [0.05, -0.04], m: [0.28, -0.20], w: 0.50, h: 0.25, a: 0.15 }, // Eurasia
-  { p: [0.07, 0.15], m: [0.24, 0.24], w: 0.18, h: 0.35, a: 0.06 },   // Africa
-  { p: [-0.04, -0.06], m: [-0.38, -0.14], w: 0.30, h: 0.27, a: -0.18 }, // N.America
-  { p: [0.02, 0.17], m: [-0.26, 0.30], w: 0.16, h: 0.32, a: 0.08 },  // S.America
-  { p: [0.06, 0.28], m: [0.46, 0.36], w: 0.18, h: 0.12, a: -0.08 },  // Australia
-  { p: [0.00, 0.52], m: [0.00, 0.57], w: 0.44, h: 0.11, a: 0.00 },   // Antarctica
-] as const;
+// NOTE: Stage 11's Earth/Moon/biosphere is drawn entirely from purchased
+// entities in drawEntities.ts (`drawLifeEarthEntities`). The cluster pass
+// for `lifeSurface` only emits the milestone flash. The earlier
+// progression-driven Pangaea/drift/civilisation rendering has been removed.
+function drawLifeSurface({ ctx, cx, cy, stage, progress }: DrawClusterArgs): void {
+  drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
+}
 
-function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
+/* removed: legacy progression-driven Earth renderer.
+   Stage 11 now draws everything from purchased entities in drawEntities.ts.
+function _unusedLifeSurfaceLegacy({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
+  // V9 continent layout used by the removed renderer. Kept inside the dead
+  // function so it tree-shakes alongside the rest of this block.
+  const CONTINENTS = [
+    { p: [0.05, -0.04], m: [0.28, -0.20], w: 0.50, h: 0.25, a: 0.15 },
+    { p: [0.07, 0.15], m: [0.24, 0.24], w: 0.18, h: 0.35, a: 0.06 },
+    { p: [-0.04, -0.06], m: [-0.38, -0.14], w: 0.30, h: 0.27, a: -0.18 },
+    { p: [0.02, 0.17], m: [-0.26, 0.30], w: 0.16, h: 0.32, a: 0.08 },
+    { p: [0.06, 0.28], m: [0.46, 0.36], w: 0.18, h: 0.12, a: -0.08 },
+    { p: [0.00, 0.52], m: [0.00, 0.57], w: 0.44, h: 0.11, a: 0.00 },
+  ] as const;
   const radius = TUNING.LIFE_SURFACE_R;
   const t = now / 1000;
 
@@ -1040,16 +1087,10 @@ function drawLifeSurface({ ctx, cluster, stage, cx, cy, progress, now }: DrawClu
   });
 
   // Space Age: satellites (82–90%)
-  if (progress >= 0.82) {
-    drawEarthSatellites(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.82, 0.90)), now);
-  }
   // Megastructures (90–97%)
-  if (progress >= 0.90) {
-    drawEarthMegastructures(ctx, cx, cy, radius, easeIO(rangeT(progress, 0.90, 0.97)), now);
-  }
-
   drawMilestoneFlash(ctx, cx, cy, progress, stage.accent);
 }
+*/
 
 function drawRedGiantBloom(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, now } = args;

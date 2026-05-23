@@ -163,6 +163,8 @@ export interface Mote {
   orbitAngle?: number;
   orbitRadius?: number;
   spiralPhase?: number;
+  spin: number;
+  spinVel: number;
 }
 
 export interface MoteCluster {
@@ -172,4 +174,6 @@ export interface MoteCluster {
   diskTilt?: number;
   diskRotation?: number;
   earthRotation?: number;
+  moonAngleOffset?: number;
+  moonNudgeImpulse?: number;
 }

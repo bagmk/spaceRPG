@@ -28,22 +28,28 @@ export function drawRogues(
     }
 
     if (pointerPressure) {
-      const attractionRadius = pointerPressure.radius * ROGUE_POINTER_ATTRACTION_RADIUS_MULT;
+      const attractionRadius = pointerPressure.radius * ROGUE_POINTER_ATTRACTION_RADIUS_MULT * 1.5;
       const dx = pointerPressure.x - rogue.x;
       const dy = pointerPressure.y - rogue.y;
       const distance = Math.hypot(dx, dy);
       if (distance < attractionRadius) {
         const pull = Math.pow(1 - distance / attractionRadius, 2);
-        ctx.strokeStyle = hexToRgba(rogue.color, Math.min(0.42, pull * pointerPressure.strength * 0.18));
-        ctx.lineWidth = 0.8 + pull * 1.8;
-        ctx.setLineDash([3 + pull * 5, 7]);
+        const alpha = Math.min(0.7, pull * pointerPressure.strength * 0.45);
+        ctx.strokeStyle = hexToRgba(rogue.color, alpha);
+        ctx.lineWidth = 1.2 + pull * 2.5;
+        ctx.setLineDash([2 + pull * 4, 4]);
         ctx.beginPath();
         ctx.moveTo(pointerPressure.x, pointerPressure.y);
-        const midX = (pointerPressure.x + rogue.x) / 2 + Math.sin(now / 260 + rogue.id) * 12 * pull;
-        const midY = (pointerPressure.y + rogue.y) / 2 + Math.cos(now / 300 + rogue.id) * 12 * pull;
+        const midX = (pointerPressure.x + rogue.x) / 2 + Math.sin(now / 260 + rogue.id) * 14 * pull;
+        const midY = (pointerPressure.y + rogue.y) / 2 + Math.cos(now / 300 + rogue.id) * 14 * pull;
         ctx.quadraticCurveTo(midX, midY, rogue.x, rogue.y);
         ctx.stroke();
         ctx.setLineDash([]);
+        // Glow dot at pointer end
+        ctx.fillStyle = hexToRgba(rogue.color, alpha * 0.6);
+        ctx.beginPath();
+        ctx.arc(pointerPressure.x, pointerPressure.y, 3 * pull, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
