@@ -1955,7 +1955,16 @@ function drawLifeEarthEntities(
   const buildingN    = Math.min(18, sapiensC * 3);                   // tiny buildings
   const satN         = Math.min(6, 1 + satC);
 
-  // ── Pre-stage: no entities yet → primordial gas cloud hint ───────────────
+  // Hover wiggle helper — surface points drift away from the cursor (or are
+  // tugged by the satellite-amplified scan ripple). Returns a displaced
+  // (x, y) plus a 0..1 falloff for opacity/size tweaks.
+  const wiggleAmount = (hasSat ? 7 : 2.4) * (1 + satGrow * 1.4);
+  const applyWiggle = (x: number, y: number) =>
+    pointerPressure && pointerPressure.strength > 0
+      ? applyPointerVisualDisplacement(x, y, pointerPressure, wiggleAmount)
+      : { x, y, falloff: 0 };
+
+  // ── Pre-stage: no entities yet → primordial accretion dust ───────────────
   if (!hasCrust && !hasOcean && !hasAtmo && !hasMoon && items.length === 0) {
     const cloudR = R * 1.05;
     ctx.save();
@@ -1984,7 +1993,7 @@ function drawLifeEarthEntities(
   // ── Moon orbit geometry ──────────────────────────────────────────────────
   const moonAngle = stage11MoonAngle(now, cluster);
   const moonDist = stage11MoonOrbitRadius(R);
-  const moonR = stage11MoonBodyRadius(R, moonCount);
+  const moonR = stage11MoonBodyRadius(R, moonC);
   const moonX = cx + Math.cos(moonAngle) * moonDist;
   const moonY = cy + Math.sin(moonAngle) * moonDist * STAGE11_MOON_ORBIT_TILT;
   const moonBehind = Math.sin(moonAngle) < 0;
@@ -2207,7 +2216,7 @@ function drawLifeEarthEntities(
     fillCircle(ctx, cx, cy, R);
 
     // City lights — only after Homo Sapiens (or explicit City Lights entity)
-    if ((hasSapiens || hasCityLights) && cityN > 0) {
+    if ((hasSapiens || hasCity) && cityC > 0) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       const nightX = cx - Math.cos(sunDir) * R * 0.4;
@@ -2229,8 +2238,8 @@ function drawLifeEarthEntities(
     }
 
     // Homo Sapiens — small fire spark on land before cities glow
-    if (hasSapiens && cityN === 0) {
-      for (let i = 0; i < sapiensN; i += 1) {
+    if (hasSapiens && cityC === 0) {
+      for (let i = 0; i < sapiensC; i += 1) {
         const lon = earthSpin + i * 1.6;
         const lat = (unit(i + 830, 1) - 0.5) * 0.8;
         const px = cx + Math.cos(lon) * R * 0.55;
@@ -2266,6 +2275,7 @@ function drawLifeEarthEntities(
   ctx.restore(); // end Earth clip
 
   // ── Biosphere veins outside the clip (life force tendrils) ───────────────
+  const hasCambrian = cambrianC > 0;
   if (hasPhoto || hasCambrian || hasNeuron) {
     drawEarthBiosphereVeins(ctx, cx, cy, R, items, now);
   }
@@ -2278,7 +2288,7 @@ function drawLifeEarthEntities(
   }
 
   // ── Satellites orbiting ──────────────────────────────────────────────────
-  if (hasSatellite) {
+  if (hasSat) {
     const satCount = 2 + Math.min(4, L.count(S11.SATELLITE));
     for (let i = 0; i < satCount; i += 1) {
       const sa = now * (0.0009 + i * 0.00033) + i * 2.1;
