@@ -693,11 +693,14 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   }
 
   // Layer 6: individual planet formation and stable orbits
+  // localT is based on Rocky Planet entity count, NOT progress — so planets
+  // don't shrink/grow as quanta fluctuates.
   SOLAR_BODIES.forEach((body, idx) => {
     if (sunLevel <= 0) return;
     if (idx >= rockyPlanetLevel) return;
-    const win = V9_PLANET_WINDOWS[idx];
-    const localT = Math.max(0.18, rangeT(progress, win.start, win.end));
+    // Each planet needs ~1 Rocky Planet level to fully form
+    const formProgress = Math.min(1, (rockyPlanetLevel - idx) / 1.5);
+    const localT = Math.max(0.18, formProgress);
     if (localT < 1.0) {
       drawFormingPlanet(ctx, cx, cy, idx, localT, now);
     } else {

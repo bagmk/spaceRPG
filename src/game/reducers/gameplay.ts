@@ -226,8 +226,9 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
   const clickScaledBonus = getAdjustedClickPower(state) * getEncounterClickMultiplier(action.tier);
   const rawBonus = Math.max(action.bonus, clickScaledBonus);
   const scaledClickBonus = clickScaledBonus * mult * modifiers.encounterBonusMult;
+  const tierCapMult = action.tier === 'massive' ? 3 : action.tier === 'major' ? 2 : 1;
   const cap = Math.max(
-    stage.threshold * (modifiers.manyWorldsCapMult > 1 ? 0.05 : 0.02),
+    stage.threshold * (modifiers.manyWorldsCapMult > 1 ? 0.05 : 0.02) * tierCapMult,
     scaledClickBonus,
   );
   const cappedBonus = Math.min(rawBonus * mult * modifiers.encounterBonusMult, cap);
