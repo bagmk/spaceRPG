@@ -662,11 +662,10 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
     }
   }
 
-  // Layer 5: proto-sun and stable sun
+  // Layer 5: proto-sun and stable sun — grows linearly with purchases
   if (sunT > 0) {
-    const sunR = 8 + easeIO(sunT) * 28;
-    const fullSunR = Math.max(sunR, progress >= 0.98 ? 36 : sunR);
-    drawSolarSun(ctx, stage, cx, cy, fullSunR, 0.75 + easeIO(sunT) * 0.2 - progress * 0.15, now, sunLevel);
+    const sunR = 8 + sunT * 28;
+    drawSolarSun(ctx, stage, cx, cy, sunR, 0.75 + sunT * 0.2, now, sunLevel);
   }
 
   // Layer 6: individual planet formation and stable orbits
