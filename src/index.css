@@ -11151,7 +11151,7 @@ button.stat-header-item {
 }
 /* Leave space for the More button so text doesn't overlap */
 .almanac-log-entry--open .almanac-log-body {
-  padding-right: 64px;
+  padding-right: 78px;
 }
 
 @media (max-width: 600px) {

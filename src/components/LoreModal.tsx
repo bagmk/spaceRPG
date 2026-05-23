@@ -78,27 +78,7 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
     <div className="lore-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="lore-modal__close" onClick={onClose} aria-label="Close">×</button>
-        <div className="lore-modal__lang">
-          <button
-            type="button"
-            className={internalLang === 'en' ? 'active' : ''}
-            onClick={() => setInternalLang('en')}
-          >EN</button>
-          <button
-            type="button"
-            className={internalLang === 'ko' ? 'active' : ''}
-            onClick={() => setInternalLang('ko')}
-          >KO</button>
-        </div>
-        <div className="lore-modal__breadcrumb">
-          {(internalLang === 'ko' ? '스테이지 ' : 'Stage ') + stageNum + ' · ' + stageLabel + ' · ' +
-            (isEntity ? (internalLang === 'ko' ? '엔티티' : 'Entity')
-                       : (internalLang === 'ko' ? '마일스톤' : 'Milestone'))}
-        </div>
         <h2 className="lore-modal__title">{title}</h2>
-        {subtitle ? <div className="lore-modal__subtitle">{subtitle}</div> : null}
-        {item.meta ? <div className="lore-modal__meta">{item.meta}</div> : null}
-        {item.progress !== undefined ? <div className="lore-modal__meta">{item.progress}%</div> : null}
         <div className="lore-modal__body" dangerouslySetInnerHTML={{ __html: formatBody(body ?? '') }} />
       </div>
     </div>
