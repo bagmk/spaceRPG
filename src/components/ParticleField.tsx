@@ -1139,7 +1139,13 @@ function applyPointerAttractionToRogue(
   const nx = distance > 0.001 ? dx / distance : 0;
   const ny = distance > 0.001 ? dy / distance : 0;
   const falloff = 1 - distance / attractionRadius;
-  const pull = field.strength * falloff * falloff * 1.2 * dtScale;
+  const pull = field.strength * falloff * falloff * 1.5 * dtScale;
+
+  // Dampen original velocity so pointer pull dominates
+  const dampStrength = 0.92 - falloff * 0.15; // closer = more dampening
+  rogue.vx *= dampStrength;
+  rogue.vy *= dampStrength;
+
   rogue.vx += nx * pull;
   rogue.vy += ny * pull;
 
