@@ -1215,7 +1215,7 @@ function drawRedGiantBloom(args: DrawClusterArgs): void {
 
   cluster.motes.forEach((mote) => {
     const alpha = mote.hue < 0.5 ? 0.45 : 0.28;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.75, mote.color, alpha, mote.age / 1000);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 1.1, mote.color, alpha, mote.age / 1000);
   });
 
   drawMilestoneFlash(ctx, cx, cy, progress, '#ff7744');
@@ -1233,7 +1233,7 @@ function drawRemnantCloud({ ctx, cluster, stage, cx, cy, progress }: DrawCluster
 
   cluster.motes.forEach((mote) => {
     const alpha = 0.18 + Math.min(0.45, mote.mass * 0.05);
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.62, mote.color, alpha, mote.hue * Math.PI);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.95, mote.color, alpha, mote.hue * Math.PI);
   });
 }
 
@@ -1249,7 +1249,7 @@ function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterAr
 
   cluster.motes.forEach((mote, index) => {
     const flash = index % 11 === 0 ? 0.4 + pulse * 0.4 : 0.18 + pulse * 0.08;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.58, mote.color, flash, now / 1000 + index);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.9, mote.color, flash, now / 1000 + index);
   });
 }
 
@@ -1323,7 +1323,7 @@ function drawBlackHoleScene(args: DrawClusterArgs): void {
     const hotness = Math.max(0.32, Math.min(0.82, 0.28 + mote.mass * 0.06));
     ctx.fillStyle = hexToRgba(mote.color, hotness);
     ctx.beginPath();
-    ctx.arc(lx, ly, Math.max(0.9, mote.r * 0.5), 0, Math.PI * 2);
+    ctx.arc(lx, ly, Math.max(1.2, mote.r * 0.7), 0, Math.PI * 2);
     ctx.fill();
   });
   ctx.restore();
@@ -1575,7 +1575,7 @@ function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now }: Draw
 
   cluster.motes.forEach((mote) => {
     const flicker = 0.12 + Math.max(0, Math.sin(now / 180 + mote.id)) * 0.36;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.45, mote.color, flicker, mote.age / 800);
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.85, mote.color, flicker, mote.age / 800);
   });
 }
 

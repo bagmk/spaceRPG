@@ -478,8 +478,6 @@ function spawnMotesAtClick(
   maxMassCap: number,
   now: number,
 ): void {
-  // Stage 10 (Solar System): no mote sprites — sun evolves via entity purchases instead
-  if (stage.id === 10) return;
   const count =
     ((isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0)) *
     Math.max(1, clickEmissionCount);
@@ -553,7 +551,6 @@ function spawnAutoMote(
   maxMassCap: number,
   now: number,
 ): void {
-  if (stage.id === 10) return;
   if (stage.clusterMode === 'lifeSurface') {
     const earthR = TUNING.LIFE_SURFACE_R;
     const angle = Math.random() * Math.PI * 2;
