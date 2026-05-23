@@ -353,12 +353,8 @@ function createBaseMote(
   };
 }
 
-function addMoteToCluster(cluster: MoteCluster, stage: Stage, mote: Mote, maxMassCap: number): void {
-  if (cluster.motes.length < TUNING.MOTE_MAX) {
-    cluster.motes.push(mote);
-    return;
-  }
-  enrichExistingMote(cluster, stage, mote, maxMassCap);
+function addMoteToCluster(cluster: MoteCluster, _stage: Stage, mote: Mote, _maxMassCap: number): void {
+  cluster.motes.push(mote);
 }
 
 function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote, maxMassCap: number): void {
@@ -588,17 +584,6 @@ function capWorldCollections(world: CanvasWorld): void {
   world.wakeTrails = world.wakeTrails.slice(-TUNING.WAKE_TRAIL_MAX);
   world.shockwaves = world.shockwaves.slice(-TUNING.SHOCKWAVE_MAX);
   world.rogues = world.rogues.slice(-TUNING.ROGUE_MAX);
-  if (world.cluster.motes.length > TUNING.MOTE_MAX) {
-    world.cluster.motes.sort((a, b) => a.mass - b.mass);
-    while (world.cluster.motes.length > Math.max(1, TUNING.MOTE_MAX - 10)) {
-      const sacrifice = world.cluster.motes.shift();
-      const target = world.cluster.motes[0];
-      if (!sacrifice || !target) break;
-      target.mass += sacrifice.mass;
-      target.r = getMoteRadius(target.mass);
-    }
-    world.moteNeighborCache.clear();
-  }
 }
 
 function getBlackHoleRadius(width: number, height: number, progress: number): number {
@@ -633,10 +618,6 @@ function stepClusterPhysics(
   if (shouldRefreshNeighbors) {
     refreshNeighborCache(motes, world.moteNeighborCache);
     world.moteLastNeighborRefresh = now;
-    if (motes.length > TUNING.MOTE_MAX * 0.7) {
-      mergeCloseMotes(cluster, world.moteNeighborCache, effectiveMaxMass);
-      world.moteNeighborCache.clear();
-    }
   }
 
   cluster.diskRotation = (cluster.diskRotation ?? 0) + dt * 0.0011;
