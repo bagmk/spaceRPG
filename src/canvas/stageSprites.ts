@@ -472,42 +472,93 @@ function drawSpriteEmber(ctx: CanvasRenderingContext2D, r: number, color: string
 }
 
 function drawSpriteDwarf(ctx: CanvasRenderingContext2D, r: number, color: string): void {
-  ctx.fillStyle = color;
+  // Stage 13: Dying star — dimming glow with fading corona
+  const s = Math.max(2, r * 1.8);
+  // Fading corona
+  const grad = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.2);
+  grad.addColorStop(0, hexToRgba(color, 0.5));
+  grad.addColorStop(0.5, hexToRgba(color, 0.15));
+  grad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.5, r), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
+  // Dense core
+  ctx.fillStyle = hexToRgba(color, 0.7);
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  // Faint pulsating ring (remnant shell)
+  ctx.strokeStyle = hexToRgba(color, 0.15);
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.8, 0, Math.PI * 2);
   ctx.stroke();
 }
 
 function drawSpriteDecay(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.rotate(Math.sin(t * 8) * 0.2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  // Stage 14: Particle decay — fragments splitting apart from center
+  const s = Math.max(2, r * 1.8);
+  const phase = t * 0.8;
+  // Decaying fragments flying outward
+  for (let i = 0; i < 5; i++) {
+    const a = phase + (i / 5) * Math.PI * 2;
+    const dist = s * (0.2 + ((t * 0.3 + i * 0.2) % 1) * 0.8);
+    const fade = 1 - ((t * 0.3 + i * 0.2) % 1);
+    const px = Math.cos(a) * dist;
+    const py = Math.sin(a) * dist;
+    ctx.fillStyle = hexToRgba(color, fade * 0.5);
+    ctx.beginPath();
+    ctx.arc(px, py, s * 0.08 * fade, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Unstable core flickering
+  const flicker = 0.4 + Math.sin(t * 5) * 0.3;
+  ctx.fillStyle = hexToRgba(color, flicker);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.5, r), 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Decay wave ring
+  ctx.strokeStyle = hexToRgba(color, 0.12);
+  ctx.lineWidth = 0.3;
+  const waveR = s * (0.3 + (t * 0.5 % 1) * 0.8);
   ctx.beginPath();
-  ctx.moveTo(-r, -r);
-  ctx.lineTo(r, r);
-  ctx.moveTo(-r, r);
-  ctx.lineTo(r, -r);
+  ctx.arc(0, 0, waveR, 0, Math.PI * 2);
   ctx.stroke();
 }
 
 function drawSpriteHawking(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  // Stage 15: Hawking radiation — black hole emitting particles
+  const s = Math.max(2, r * 1.8);
+  // Event horizon (dark center)
+  ctx.fillStyle = '#020308';
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.5, r), Math.PI * 0.2, Math.PI * 1.8);
-  ctx.stroke();
-  ctx.rotate(t * 0.5);
+  ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  // Photon ring
+  ctx.strokeStyle = hexToRgba(color, 0.35);
+  ctx.lineWidth = s * 0.08;
   ctx.beginPath();
-  ctx.moveTo(r * 0.3, -r * 1.3);
-  ctx.lineTo(r * 1.5, -r * 2.1);
-  ctx.lineTo(r * 1.1, -r * 1.2);
+  ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2);
   ctx.stroke();
+  // Hawking radiation particles escaping
+  for (let i = 0; i < 4; i++) {
+    const a = t * 0.6 + (i / 4) * Math.PI * 2;
+    const escape = s * (0.6 + ((t * 0.4 + i * 0.25) % 1) * 0.6);
+    const fade = 1 - ((t * 0.4 + i * 0.25) % 1);
+    ctx.fillStyle = hexToRgba(color, fade * 0.6);
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * escape, Math.sin(a) * escape, s * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Accretion glow
+  const glowGrad = ctx.createRadialGradient(0, 0, s * 0.35, 0, 0, s * 0.9);
+  glowGrad.addColorStop(0, hexToRgba(color, 0.15));
+  glowGrad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = glowGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.9, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawSpriteFluctuation(
@@ -516,8 +567,31 @@ function drawSpriteFluctuation(
   color: string,
   t: number,
 ): void {
-  if (Math.sin(t * 10) > -0.2) {
-    ctx.fillStyle = color;
-    ctx.fillRect(-r * 0.5, -r * 0.5, Math.max(1, r), Math.max(1, r));
+  // Stage 16: Heat death — lone fading particle in void
+  const s = Math.max(2, r * 1.6);
+  // Single dim particle that breathes
+  const breathe = 0.3 + Math.sin(t * 0.5) * 0.3;
+  const drift = Math.sin(t * 0.3) * s * 0.15;
+  // Faint void glow
+  const voidGrad = ctx.createRadialGradient(drift, 0, 0, drift, 0, s * 0.8);
+  voidGrad.addColorStop(0, hexToRgba(color, 0.08 * breathe));
+  voidGrad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = voidGrad;
+  ctx.beginPath();
+  ctx.arc(drift, 0, s * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+  // The lone particle
+  ctx.fillStyle = hexToRgba(color, breathe);
+  ctx.beginPath();
+  ctx.arc(drift, Math.cos(t * 0.4) * s * 0.08, s * 0.1 * breathe, 0, Math.PI * 2);
+  ctx.fill();
+  // Occasional quantum flicker (ghost particle appears/disappears)
+  if (Math.sin(t * 3) > 0.7) {
+    const fx = Math.sin(t * 1.7) * s * 0.5;
+    const fy = Math.cos(t * 2.1) * s * 0.4;
+    ctx.fillStyle = hexToRgba('#ffffff', 0.15);
+    ctx.beginPath();
+    ctx.arc(fx, fy, s * 0.04, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
