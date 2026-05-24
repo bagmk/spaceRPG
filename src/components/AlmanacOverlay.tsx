@@ -6,6 +6,15 @@ import { t, stageName, type Lang } from '../i18n';
 import { milestoneLoreId } from '../game/loreLinks';
 import { LoreModal } from './LoreModal';
 
+/** Remove filler words like "roughly", "about", "near", "approximately" from era values */
+function stripPrefix(s: string | undefined): string {
+  if (!s) return '';
+  return s
+    .replace(/^(roughly|about|near|approximately|circa|~)\s+/i, '')
+    .replace(/,?\s*(model[- ]dependent|uncertain|speculative|theoretical|estimated)/gi, '')
+    .trim();
+}
+
 interface AlmanacOverlayProps {
   currentStageId: number;
   progressPercent: number;
@@ -98,13 +107,13 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                 <p className="almanac-short">{pickLang(almanac?.short, language)}</p>
                 {almanac?.cosmicEra ? (
                   <div className="almanac-era-tags">
-                    <span className="almanac-era-tag">⏱ {pickLang(almanac.cosmicEra.timeRange, language)}</span>
-                    <span className="almanac-era-tag">🌡 {pickLang(almanac.cosmicEra.temperature, language)}</span>
+                    <span className="almanac-era-tag">{stripPrefix(pickLang(almanac.cosmicEra.timeRange, language))}</span>
+                    <span className="almanac-era-tag">{stripPrefix(pickLang(almanac.cosmicEra.temperature, language))}</span>
                   </div>
                 ) : null}
                 <p className="almanac-body">{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
                 {almanac?.funFact ? (
-                  <p className="almanac-funfact">💡 {pickLang(almanac.funFact, language)}</p>
+                  <p className="almanac-funfact">{pickLang(almanac.funFact, language)}</p>
                 ) : null}
               </>
             )}
