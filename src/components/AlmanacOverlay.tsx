@@ -96,17 +96,16 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
             ) : (
               <>
                 <p className="almanac-short">{pickLang(almanac?.short, language)}</p>
-                <p className="almanac-body">{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
                 {almanac?.cosmicEra ? (
-                  <div className="almanac-era">
-                    <div className="almanac-era__row"><span className="almanac-era__icon">⏱</span><span className="almanac-era__label">{t(language, 'almanacEraTime')}</span><span>{pickLang(almanac.cosmicEra.timeRange, language)}</span></div>
-                    <div className="almanac-era__row"><span className="almanac-era__icon">🌡</span><span className="almanac-era__label">{t(language, 'almanacEraTemp')}</span><span>{pickLang(almanac.cosmicEra.temperature, language)}</span></div>
-                    <div className="almanac-era__row"><span className="almanac-era__icon">⚛</span><span className="almanac-era__label">{t(language, 'almanacEraKey')}</span><span>{pickLang(almanac.cosmicEra.keyParticles, language)}</span></div>
-                    {almanac.cosmicEra.realWorldScale ? <p className="almanac-era__scale">{pickLang(almanac.cosmicEra.realWorldScale, language)}</p> : null}
+                  <div className="almanac-era-tags">
+                    <span className="almanac-era-tag">⏱ {pickLang(almanac.cosmicEra.timeRange, language)}</span>
+                    <span className="almanac-era-tag">🌡 {pickLang(almanac.cosmicEra.temperature, language)}</span>
+                    <span className="almanac-era-tag">⚛ {pickLang(almanac.cosmicEra.keyParticles, language)}</span>
                   </div>
                 ) : null}
-                {almanac?.uncertaintyNote ? (
-                  <p className="almanac-note">{pickLang(almanac.uncertaintyNote, language)}</p>
+                <p className="almanac-body">{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
+                {almanac?.cosmicEra?.realWorldScale ? (
+                  <p className="almanac-scale">{pickLang(almanac.cosmicEra.realWorldScale, language)}</p>
                 ) : null}
                 {almanac?.funFact ? (
                   <p className="almanac-funfact">💡 {pickLang(almanac.funFact, language)}</p>

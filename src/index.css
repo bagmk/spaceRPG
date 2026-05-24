@@ -78,6 +78,54 @@ button,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── Phase 5 perf: compositing hints + mobile backdrop-filter dial-down ──
+ * Reasoning: GPU compositing cost on iPhones is dominated by backdrop-filter
+ * blur of large panels. We can't drop backdrop-filter on desktop without
+ * losing the look, but on narrow viewports (mobile + small tablets) we
+ * trade a small visual difference for substantial frame-time savings.
+ * will-change is set sparingly on layers we know move/fade frequently.
+ */
+
+.game-canvas,
+.canvas-stage,
+.particle-field,
+.game-canvas-hitbox {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.overlay-backdrop,
+.overlay-card,
+.shop-panel,
+.entity-panel,
+.entity-overlay,
+.almanac-overlay,
+.skills-panel,
+.lore-modal,
+.settings-panel,
+.active-boost-hud {
+  will-change: opacity, transform;
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  :root {
+    /* Cheaper blur on mobile: smaller radius, no saturation, lower fillrate. */
+    --panel-blur: blur(6px);
+  }
+
+  /* Heaviest panels: drop backdrop entirely on mobile, swap to opaque bg. */
+  .entity-panel,
+  .entity-overlay,
+  .almanac-overlay,
+  .skills-panel,
+  .lore-modal {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(8, 9, 14, 0.94);
+  }
+}
+
+
 .app-shell,
 .field,
 .timeline,
@@ -2652,51 +2700,28 @@ button.stat-header-item {
   backdrop-filter: none;
 }
 
-.almanac-era {
-  display: grid;
-  gap: 0;
-  margin: 14px 0;
-  padding: 0;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 15%, transparent);
-  background: rgba(255, 255, 255, 0.02);
+.almanac-era-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 6px 0 14px;
 }
 
-.almanac-era__row {
-  display: grid;
-  grid-template-columns: 24px 56px 1fr;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
+.almanac-era-tag {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  font-family: var(--mono);
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+.almanac-scale {
   font-size: 11px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.almanac-era__row:last-of-type {
-  border-bottom: none;
-}
-
-.almanac-era__icon {
-  font-size: 12px;
-  text-align: center;
-}
-
-.almanac-era__label {
-  font-weight: 700;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.4);
-}
-
-.almanac-era__scale {
-  margin: 0;
-  padding: 8px 12px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
   font-style: italic;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  margin: 8px 0 0;
 }
 
 .singularity-tree {

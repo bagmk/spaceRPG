@@ -412,6 +412,19 @@ export function GameScreen({
   const clickSeqRef = useRef(0);
   const clickSeqResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Phase 6 cleanup: ensure the click-sequence reset timer is released on unmount.
+  // The handler-side already clears the previous timeout before setting a new one,
+  // but if the component unmounts while a timer is pending, the callback would
+  // mutate a ref on a torn-down component.
+  useEffect(() => {
+    return () => {
+      if (clickSeqResetRef.current) {
+        clearTimeout(clickSeqResetRef.current);
+        clickSeqResetRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!state.lastClickEvent) {
       return undefined;

@@ -2636,8 +2636,8 @@
     "nameEn": "Mass Transfer",
     "nameKo": "질량 이동",
     "meta": "Rare · click x22.0 · `→→`",
-    "bodyEn": "Binary star systems can swap mass when one fills its Roche lobe (gravitational equipotential). Companion accretes; modifies evolution. Mass transfer powers X-ray binaries (compact object eating donor), creates Algol paradox (more evolved star is less massive), causes Type Ia supernovae (WD eats matter until reaches Chandrasekhar limit). Recent: LIGO/Virgo detections of compact binary mergers (NS-NS, BH-BH, NS-BH) all involve binary star evolution with mass transfer. GW170817 (2017) was the first multi-messenger event.",
-    "bodyKo": "쌍성 시스템이 한쪽이 로슈 로브(중력 등퍼텐셜)를 채울 때 질량 교환 가능. 동반자가 부착; 진화 수정. 질량 이동이 X선 쌍성(공급자 먹는 컴팩트 천체) 동력, 알골 역설(더 진화된 별이 덜 무거움) 생성, Ia형 초신성 야기(WD가 찬드라세카르 한계까지 물질 먹음). 최근: LIGO/Virgo의 컴팩트 쌍성 합병 검출(NS-NS, BH-BH, NS-BH) 모두 질량 이동을 가진 쌍성 진화 수반. GW170817(2017)이 첫 다중 메신저 사건."
+    "bodyEn": "In a close binary star system, one star can transfer mass to its companion when it expands enough to fill its \"Roche lobe\" — the tear-drop-shaped region of gravitational influence around each star in the binary. Material from one star spills across the inner Lagrange point onto the other, changing both stars' subsequent evolution. Mass transfer powers a wide variety of phenomena: X-ray binaries (in which a compact object like a neutron star or black hole accretes gas from a normal-star companion and emits X-rays as the gas heats up), the historic \"Algol paradox\" (in which the more evolved star in a famous binary turned out to be the less massive one — a puzzle solved when astronomers realized mass had been transferred to its partner), and Type Ia supernovae (in which a white dwarf accretes matter until it crosses the Chandrasekhar limit and explodes). Recent gravitational-wave detections by LIGO, Virgo, and Japan's KAGRA of mergers between compact objects (neutron-star–neutron-star, black-hole–black-hole, and mixed pairs) all originate from binary stars that went through earlier phases of mass transfer. The first multi-messenger event — gravitational waves plus light — was the NS–NS merger GW170817 in 2017.",
+    "bodyKo": "가까이 붙어 있는 쌍성에서는, 한 별이 충분히 부풀어 \"로슈 로브(Roche lobe, 쌍성 안에서 각 별이 중력적으로 지배하는, 눈물방울 모양의 영역)\"를 가득 채우게 되면, 그 표면 물질이 두 별 사이의 내부 라그랑주 점을 넘어 동반자 쪽으로 흘러들어 갈 수 있다. 이 \"질량 이동\"은 양쪽 별의 이후 진화를 모두 바꿔놓는다. 질량 이동은 매우 다양한 현상의 동력원이다. 평범한 별이 동반자인 중성자별이나 블랙홀에 가스를 떠넘기고, 그 가스가 압축·가열되며 X선을 내는 \"X선 쌍성\"이 그렇고, \"알골(Algol) 역설\" — 더 진화된 별이 오히려 더 가벼운 쌍성으로 알려져 한동안 미스터리였던 사건이지만, 실은 그 별이 동반자에게 질량을 넘겨주었기 때문이라는 사실로 해결되었다 — 도 그렇고, 백색왜성이 동반자에게서 가스를 받아 챈드라세카르 한계를 넘는 순간 폭발하는 Ia형 초신성도 그렇다. 최근 LIGO·Virgo·일본 KAGRA가 검출한 중력파 사건들 — 중성자별 쌍, 블랙홀 쌍, 혹은 그 혼합 쌍의 합병 — 도 모두 한때 질량 이동을 거친 쌍성에서 비롯한 결과들이다. 그 가운데 2017년의 중성자별 쌍 합병 GW170817은 중력파와 빛을 함께 검출한 인류 최초의 \"다중 메신저\" 사건이었다."
   },
   "stage12-entity-degenerate-electron": {
     "id": "stage12-entity-degenerate-electron",
@@ -2672,8 +2672,8 @@
     "nameEn": "Neutron Star",
     "nameKo": "중성자별",
     "meta": "Epic · auto x7.0 · `NS`",
-    "bodyEn": "Stellar corpse of 8-25 M_☉ stars after core-collapse supernova. ~1.4 M_☉ packed into 10-20 km radius. Density 10¹⁷ kg/m³ (nuclear density). Composed almost entirely of neutrons (electrons + protons → neutrons + neutrinos via inverse beta decay). Rotation rates: ~ms periods (millisecond pulsars). Magnetic fields: 10⁸-10¹⁵ Gauss. Predicted by Baade & Zwicky (1934); first observed (as pulsar) by Bell + Hewish (1967, Nobel 1974 to Hewish — Bell controversially overlooked). NS-NS merger GW170817 produced gold, platinum via r-process.",
-    "bodyKo": "핵붕괴 초신성 후 8-25 M_☉ 별의 항성 시체. ~1.4 M_☉이 10-20 km 반지름에 압축. 밀도 10¹⁷ kg/m³(핵 밀도). 거의 전적으로 중성자로 구성(전자 + 양성자 → 중성자 + 중성미자, 역 베타 붕괴). 회전율: ~ms 주기(밀리초 펄서). 자기장: 10⁸-10¹⁵ 가우스. 바데 & 츠비키(1934) 예측; 펄서로서 벨 + 휴이시(1967, 1974 휴이시 노벨상 — 벨이 논란 속에 간과됨)가 처음 관측. NS-NS 합병 GW170817이 r-과정으로 금, 백금 생산."
+    "bodyEn": "A neutron star is the corpse left behind by a core-collapse supernova of a star originally between about 8 and 25 solar masses. Roughly 1.4 solar masses gets packed into a sphere only 10–20 kilometers in radius, giving a density around 10¹⁷ kilograms per cubic meter — comparable to the density inside an atomic nucleus. Most of its material is, as the name suggests, neutrons: at these pressures, electrons and protons combine into neutrons and neutrinos via \"inverse beta decay,\" and the neutrons sit packed at nuclear density. Many neutron stars rotate at millisecond periods (\"millisecond pulsars\"), and their magnetic fields range from about 10⁸ to 10¹⁵ gauss. Their existence was predicted by Walter Baade and Fritz Zwicky in 1934, but they were not actually observed until 1967, when Jocelyn Bell Burnell — then a graduate student — found the first \"pulsar\" with her supervisor Antony Hewish. (The 1974 Nobel Prize went to Hewish in a notoriously controversial omission of Bell.) In 2017 the gravitational-wave event GW170817 from a neutron-star merger directly demonstrated that such mergers forge heavy elements like gold and platinum through r-process nucleosynthesis.",
+    "bodyKo": "중성자별은 원래 태양 질량의 약 8~25배였던 별이 핵 붕괴 초신성으로 폭발한 뒤 남는 \"항성 시체\"다. 약 1.4 태양 질량의 물질이 반지름 10~20 km 정도의 작은 구체 안에 압축되어 있고, 그 밀도는 약 10¹⁷ kg/m³로, 원자핵 내부 밀도와 맞먹는다. 이름 그대로 성분의 거의 전부가 중성자다. 이런 압력에서는 전자와 양성자가 \"역 베타 붕괴\"를 통해 중성자와 중성미자로 바뀌고, 만들어진 중성자들이 핵 밀도 그대로 빽빽이 들어찬다. 자전 주기는 짧으면 수 밀리초(\"밀리초 펄서\")에 이르고, 자기장 세기는 약 10⁸~10¹⁵ 가우스 범위다. 중성자별의 존재는 1934년 발터 바데와 프리츠 츠비키가 예측했지만, 실제로 관측된 것은 1967년이었다. 당시 대학원생이었던 조슬린 벨 버넬이 지도교수 앤서니 휴이시와 함께 첫 \"펄서\"를 발견했고, 1974년 노벨 물리학상은 휴이시에게 돌아갔다. 벨이 명백히 빠진 이 수상은 지금까지도 큰 논쟁거리로 남아 있다. 2017년에는 중성자별 쌍의 합병에서 나온 중력파 사건 GW170817이 관측되었는데, 이 사건은 그런 합병이 \"r-과정 핵합성\"을 통해 금이나 백금 같은 무거운 원소를 실제로 만들어낸다는 점을 인류에게 직접 보여준 결정적 증거가 되었다."
   },
   "stage12-entity-nova-eruption": {
     "id": "stage12-entity-nova-eruption",
@@ -2684,8 +2684,8 @@
     "nameEn": "Nova Eruption",
     "nameKo": "신성 폭발",
     "meta": "Epic · click x35.0 · `NOVA`",
-    "bodyEn": "White dwarf accretes hydrogen from binary companion until shell reaches fusion conditions: explosive H burning ejects 10⁻⁴ to 10⁻⁵ M_☉, brightening WD by 10⁴-10⁶× for weeks. Recurring novae: WD remains intact, eruption repeats every decades-millennia. Distinct from Type Ia SN (which destroys WD). Recent: T Coronae Borealis recurrent nova predicted to erupt in 2024-2025 — visible to naked eye, last seen 1946. Important laboratories for nuclear astrophysics.",
-    "bodyKo": "백색왜성이 쌍성 동반자에서 수소를 부착해 껍질이 융합 조건에 도달할 때까지: 폭발적 H 연소가 10⁻⁴에서 10⁻⁵ M_☉ 방출, WD를 몇 주 동안 10⁴-10⁶× 밝게. 재발 신성: WD 그대로, 분출이 수십 년-천 년마다 반복. Ia형 SN(WD 파괴)과 구별. 최근: T 북관자리 재발 신성이 2024-2025년 분출 예측 — 육안으로 보임, 마지막 1946년. 핵 천체물리학의 중요 실험실."
+    "bodyEn": "A nova erupts when a white dwarf accretes hydrogen from a binary companion until the bottom of the accumulated shell finally hits fusion conditions. The hydrogen burns explosively, ejecting between 10⁻⁴ and 10⁻⁵ solar masses of material at high speed and brightening the system by a factor of 10⁴ to 10⁶ for a few weeks. Crucially, the white dwarf itself survives the burst, and accretion eventually resumes — these are \"recurrent novae,\" repeating their eruptions on intervals of decades to millennia depending on the accretion rate. This is fundamentally different from a Type Ia supernova, in which the whole white dwarf is destroyed. The recurrent nova T Coronae Borealis was, at the time of writing, predicted to erupt sometime in 2024–2025; it was last seen in 1946 and at peak should be naked-eye bright. Novae are also important laboratories for nuclear astrophysics: the runaway reactions in their burning shells produce specific radioisotopes (²²Na, ²⁶Al, ⁷Be) whose gamma-ray signatures are targets for missions like INTEGRAL.",
+    "bodyKo": "신성(nova)은 백색왜성이 쌍성 동반자에게서 수소를 받아 차곡차곡 쌓다가, 쌓인 껍질의 아래쪽이 마침내 핵융합이 가능한 온도와 밀도에 도달할 때 일어난다. 이때 쌓여 있던 수소가 폭발적으로 타면서 약 10⁻⁴~10⁻⁵ 태양 질량의 물질이 빠르게 우주로 분출되고, 시스템 전체의 밝기가 몇 주 동안 10⁴~10⁶배까지 치솟는다. 중요한 점은 백색왜성 자체는 이 폭발에서 살아남는다는 것이다. 이후 동반자에게서 다시 가스를 받기 시작하므로, 수십 년~수천 년 간격으로 같은 폭발이 반복되는 \"재발 신성(recurrent nova)\"이 만들어진다. 이게 백색왜성이 통째로 파괴되는 Ia형 초신성과 결정적으로 다른 점이다. 재발 신성 \"북관자리 T(T Coronae Borealis)\"는 이 글을 쓰는 시점 기준으로 2024~2025년 중에 폭발할 것으로 예측되고 있는데, 마지막 폭발이 1946년이었으니 이번이 약 80년 만이다. 폭발하면 잠시지만 육안으로도 보일 만큼 밝아진다. 신성은 또한 핵 천체물리학의 중요한 \"실험실\"이다. 폭주 반응 속에서 ²²Na, ²⁶Al, ⁷Be 같은 특정 방사성 동위원소가 만들어지고, 거기서 나오는 감마선 신호는 INTEGRAL 같은 우주망원경의 주요 관측 대상이 된다."
   },
   "stage12-entity-magnetar": {
     "id": "stage12-entity-magnetar",
@@ -2696,8 +2696,8 @@
     "nameEn": "Magnetar",
     "nameKo": "마그네타",
     "meta": "Epic · crit(flat) x2.5 · `⊛M`",
-    "bodyEn": "Neutron star with extreme magnetic field (10¹⁴-10¹⁵ Gauss — quadrillion times Earth's). Approximately 30 known in Milky Way. Magnetic field decay drives X-ray + gamma-ray bursts. Soft Gamma Repeaters (SGRs) and Anomalous X-ray Pulsars (AXPs) are magnetars. SGR 1806-20 (2004) flare so powerful it ionized upper Earth atmosphere from 50,000 light-years away. Fast Radio Burst (FRB) progenitors: recent evidence ties some FRBs to magnetars (especially repeating FRB 180916, 121102).",
-    "bodyKo": "극단적 자기장의 중성자별(10¹⁴-10¹⁵ 가우스 — 지구의 1,000조 배). 우리 은하에 약 30개 알려짐. 자기장 감쇠가 X선 + 감마선 폭발 일으킴. 연성 감마 반복기(SGR)와 변칙 X선 펄서(AXP)가 마그네타. SGR 1806-20(2004) 플레어가 너무 강력해서 50,000광년 떨어진 지구 상층 대기 이온화. 빠른 라디오 폭발(FRB) 선조: 최근 증거가 일부 FRB를 마그네타에 연결(특히 반복 FRB 180916, 121102)."
+    "bodyEn": "A magnetar is a neutron star with an absolutely extreme magnetic field — around 10¹⁴ to 10¹⁵ gauss, roughly a quadrillion times Earth's surface field. Roughly thirty are currently known in the Milky Way. Their fields slowly decay, and the energy released drives sporadic but enormous X-ray and gamma-ray bursts. Observational classes called \"soft gamma repeaters\" (SGRs) and \"anomalous X-ray pulsars\" (AXPs) are both now thought to be magnetars seen in different states. The December 2004 flare from SGR 1806-20, about 50,000 light-years away, was powerful enough to briefly ionize the upper layers of Earth's atmosphere — the strongest flash of energy ever observed reaching us from outside the Solar System. Magnetars are also a leading candidate progenitor for at least some fast radio bursts (FRBs), millisecond-long radio flashes detected from across the universe; the case is strongest for the repeating sources FRB 180916 and FRB 121102.",
+    "bodyKo": "마그네타는 자기장이 어마어마하게 강한 중성자별로, 그 세기가 약 10¹⁴~10¹⁵ 가우스에 이른다. 지구 표면 자기장의 약 1000조 배다. 현재 우리 은하 안에 알려진 마그네타는 약 30개 정도다. 자기장이 시간에 걸쳐 천천히 풀려나가면서 풀려난 에너지가, 산발적이지만 매우 강력한 X선·감마선 폭발을 일으킨다. 관측적으로 \"연성 감마 반복기(SGR)\"와 \"비정상 X선 펄서(AXP)\"로 불려온 두 천체 부류는, 오늘날엔 모두 마그네타의 서로 다른 상태로 이해된다. 2004년 12월 약 5만 광년 떨어진 \"SGR 1806-20\"에서 일어난 거대 플레어는, 지구 상층 대기를 잠시지만 이온화시킬 정도로 강력했다. 태양계 밖에서 우리에게 도달한 에너지 폭발 중 지금까지 관측된 가장 강한 것이다. 마그네타는 \"빠른 라디오 폭발(FRB)\" — 우주의 먼 곳에서 잡히는, 단 밀리초 동안 깜빡이는 강한 전파 폭발 — 의 적어도 일부에 대해서도 유력한 기원 후보로 떠올라 있다. 특히 같은 위치에서 여러 번 폭발이 잡힌 \"반복 FRB\"인 FRB 180916·121102의 경우 마그네타 기원 시나리오가 가장 강하게 지지된다."
   },
   "stage12-entity-gravitational-wave": {
     "id": "stage12-entity-gravitational-wave",
@@ -2708,8 +2708,8 @@
     "nameEn": "Gravitational Wave",
     "nameKo": "중력파",
     "meta": "Epic · time x5.0 · `◌~`",
-    "bodyEn": "Spacetime ripples predicted by Einstein (1916); first directly detected by LIGO (September 14, 2015 — GW150914, binary BH merger 1.3 Bly away). Caused by accelerating massive objects (compact binaries, NS-NS, BH-BH, BH-NS mergers). Strain at Earth: ΔL/L ~ 10⁻²¹ (i.e., LIGO measures mirror separation of 4 km to 1/1000 the diameter of a proton). 2017 Nobel (Weiss, Barish, Thorne). LIGO/Virgo/KAGRA O4 run (2023-2024) detected 80+ events. Future: LISA space mission (2030s) detects mHz GWs from supermassive BH mergers; PTAs already see nHz background (NANOGrav 2023).",
-    "bodyKo": "아인슈타인 예측(1916)의 시공간 잔물결; LIGO가 직접 처음 검출(2015년 9월 14일 — GW150914, 13억 광년 떨어진 쌍 BH 합병). 가속하는 무거운 천체(컴팩트 쌍성, NS-NS, BH-BH, BH-NS 합병)에 의해 발생. 지구에서의 변형: ΔL/L ~ 10⁻²¹(즉 LIGO는 4 km 거울 분리를 양성자 지름의 1/1000까지 측정). 2017 노벨상(와이스, 배리시, 손). LIGO/Virgo/KAGRA O4 운행(2023-2024)이 80+ 사건 검출. 미래: LISA 우주 임무(2030년대)가 거대 BH 합병에서 mHz GW 검출; PTA가 이미 nHz 배경 관측(NANOGrav 2023)."
+    "bodyEn": "Gravitational waves are ripples in spacetime itself, predicted by Einstein in 1916 as a consequence of general relativity. They were first directly detected on September 14, 2015 by LIGO — the Laser Interferometer Gravitational-Wave Observatory in the U.S. — when the signal GW150914 came in from the merger of two black holes about 1.3 billion light-years away. Gravitational waves are produced whenever very massive objects accelerate sharply, especially in compact binaries: neutron-star pairs, black-hole pairs, and mixed pairs as they spiral in and merge. The wave's strain at Earth is tiny — typically ΔL/L of order 10⁻²¹, meaning LIGO has to measure the separation between its 4-kilometer mirrors to a precision about one thousandth the size of a proton. Rainer Weiss, Barry Barish, and Kip Thorne shared the 2017 Nobel Prize for the project's success. By the end of LIGO/Virgo/KAGRA's 2023–2024 \"O4\" observing run, the collaboration had detected more than 80 events. Future facilities will broaden the picture further: ESA's space-based LISA mission (targeting the 2030s) will detect milli-hertz waves from supermassive black-hole mergers, and pulsar timing arrays such as NANOGrav have already reported in 2023 a stochastic nano-hertz background that may be the combined hum of all such mergers across the universe.",
+    "bodyKo": "중력파는 시공간 자체에 이는 잔물결로, 1916년에 아인슈타인이 일반 상대성 이론에서 예측했다. 직접 검출은 한참 뒤인 2015년 9월 14일에 이뤄졌는데, 미국의 레이저 간섭계 중력파 관측소(LIGO)가 약 13억 광년 떨어진 곳에서 일어난 두 블랙홀의 합병 신호 \"GW150914\"를 잡아냈다. 중력파는 매우 무거운 천체가 강하게 가속할 때 생기고, 특히 \"컴팩트 쌍성\" — 중성자별 쌍, 블랙홀 쌍, 또는 그 혼합 쌍 — 이 안쪽으로 나선을 그리며 합쳐질 때 강하게 만들어진다. 지구에서 측정되는 변형은 어마어마하게 작아서, 길이 변화율 ΔL/L이 약 10⁻²¹ 수준이다. LIGO가 4 km 떨어진 두 거울 사이의 거리를 양성자 지름의 약 1000분의 1까지 정밀하게 재야 한다는 뜻이다. 이 사업의 성공으로 라이너 와이스, 배리 배리시, 킵 손은 2017년 노벨 물리학상을 공동 수상했다. 2023~2024년에 진행된 LIGO·Virgo·일본 KAGRA의 \"O4\" 관측에서 협력단은 이미 80건이 넘는 사건을 검출했다. 앞으로는 영역이 더 넓어진다. ESA가 2030년대에 발사를 목표로 하는 우주 기반 \"LISA\" 임무는 거대 블랙홀 합병에서 나오는 밀리헤르츠 영역 중력파를 잡으려 하고, \"펄서 타이밍 배열(PTA)\"인 NANOGrav 등은 2023년에 나노헤르츠 영역의 \"확률적 배경\"을 보고했다. 이는 우주 전체에 흩어진 거대 블랙홀 합병들의 합쳐진 \"웅웅거림\"일 가능성이 높다."
   },
   "stage12-entity-type-ia-supernova": {
     "id": "stage12-entity-type-ia-supernova",
@@ -2720,8 +2720,8 @@
     "nameEn": "Type Ia Supernova",
     "nameKo": "Ia형 초신성",
     "meta": "Legendary · multiplier x50.0 · `SNIa`",
-    "bodyEn": "Thermonuclear explosion of CO white dwarf when it accretes mass past Chandrasekhar limit (~1.4 M_☉). Complete disruption — no remnant. Peak luminosity ~5 × 10⁹ L_☉ (10 billion times brighter than Sun!). Standard candles: Ia SNe have consistent peak luminosity (Phillips relation, 1993), letting cosmologists measure distances. Used by Perlmutter, Riess, Schmidt (1998 — Nobel 2011) to discover accelerating expansion + dark energy. JWST and Roman Space Telescope continuing to extend Ia SN cosmology to z > 2.",
-    "bodyKo": "찬드라세카르 한계(~1.4 M_☉) 너머 질량을 부착할 때 CO 백색왜성의 열핵 폭발. 완전 파괴 — 잔해 없음. 정점 광도 ~5 × 10⁹ L_☉(태양보다 100억 배 밝음!). 표준 촛불: Ia SN은 일관된 정점 광도를 가짐(필립스 관계, 1993), 우주론자들이 거리를 측정할 수 있게 함. 펄머터·라이스·슈미트(1998 — 2011 노벨상)가 가속 팽창 + 암흑에너지 발견에 사용. JWST와 로먼 우주 망원경이 Ia SN 우주론을 z > 2까지 계속 확장."
+    "bodyEn": "A Type Ia supernova is the thermonuclear destruction of a white dwarf that has accreted enough mass — typically from a binary companion — to push it past the Chandrasekhar limit of about 1.4 solar masses. The whole white dwarf burns explosively and is completely destroyed; no compact remnant remains. The peak luminosity is around 5 × 10⁹ solar luminosities, roughly 10 billion times brighter than the Sun. Crucially, Type Ia supernovae have a remarkably consistent peak brightness, with the precise value tied to their light-curve shape (the \"Phillips relation,\" 1993). That makes them excellent \"standard candles,\" letting cosmologists measure cosmic distances by comparing their apparent brightness to their known intrinsic brightness. Saul Perlmutter, Adam Riess, and Brian Schmidt used Type Ia supernovae in 1998 to discover that the expansion of the universe is accelerating — the discovery of dark energy, for which they shared the 2011 Nobel Prize in Physics. JWST and the upcoming Nancy Grace Roman Space Telescope are now extending Type Ia cosmology to redshifts beyond z = 2.",
+    "bodyKo": "Ia형 초신성은 백색왜성이 동반자에게서 물질을 받아 챈드라세카르 한계(약 1.4 태양 질량)를 넘어선 순간 일어나는 \"열핵 폭발\"이다. 백색왜성 전체가 폭발적으로 타들어 가며 완전히 파괴되고, 어떤 잔해도 남기지 않는다. 최대 광도가 약 5 × 10⁹ 태양 광도, 즉 태양보다 약 100억 배 밝다. 결정적으로, Ia형 초신성은 최대 밝기가 놀랄 만큼 일정하고, 그 값이 빛의 시간 변화 곡선(\"광도 곡선\")의 모양과 단단히 연결되어 있다(\"필립스 관계\", 1993). 그래서 이 초신성은 매우 좋은 \"표준 촛불(standard candle)\" 역할을 한다. 본래 밝기와 우리가 보는 밝기를 비교하기만 하면 우주적 거리를 직접 잴 수 있기 때문이다. 펄머터(Perlmutter), 리스(Riess), 슈미트(Schmidt)는 1998년에 Ia형 초신성을 이용해 우주의 팽창이 점점 빨라지고 있다는 사실 — 즉 \"암흑에너지\"의 존재 — 을 발견했고, 이 업적으로 2011년 노벨 물리학상을 공동 수상했다. 오늘날에는 JWST와 곧 발사될 \"낸시 그레이스 로먼(Nancy Grace Roman) 우주망원경\"이 Ia형 초신성 우주론을 적색편이 z = 2 너머까지 확장하고 있다."
   },
   "stage12-entity-core-collapse-sn": {
     "id": "stage12-entity-core-collapse-sn",
@@ -2732,8 +2732,8 @@
     "nameEn": "Core Collapse SN",
     "nameKo": "핵붕괴 초신성",
     "meta": "Legendary · multiplier x50.0 · `SNII`",
-    "bodyEn": "Massive stars (>8 M_☉) end as core-collapse supernovae. Iron core grows past 1.4 M_☉, electron degeneracy fails, core collapses in ~1 second to neutron star or black hole. Gravitational binding energy ~10⁴⁶ J released — 99% as neutrinos, 1% as kinetic energy, 0.01% as light. SN 1987A (Large Magellanic Cloud) was nearest naked-eye SN since 1604 — confirmed neutrino emission (Kamiokande, IMB, Baksan). Produces r-process elements partially (debate ongoing — NS mergers may dominate). Modern: JWST + Hubble follow SNe across cosmic history.",
-    "bodyKo": "무거운 별(>8 M_☉)이 핵붕괴 초신성으로 끝남. 철 핵이 1.4 M_☉를 넘어 성장, 전자 축퇴 실패, 핵이 ~1초에 중성자별 또는 블랙홀로 붕괴. 중력 결합 에너지 ~10⁴⁶ J 방출 — 99% 중성미자, 1% 운동 에너지, 0.01% 빛. SN 1987A(대마젤란 은하)가 1604년 이래 가장 가까운 육안 SN — 중성미자 방출 확인(가미오칸데, IMB, 바크산). r-과정 원소 부분적 생성(논쟁 진행 중 — NS 합병이 지배할 수 있음). 현대: JWST + 허블이 우주 역사 전체에 걸쳐 SN 추적."
+    "bodyEn": "Stars heavier than about 8 solar masses end their lives in core-collapse supernovae. Once the central iron core grows past about 1.4 solar masses, electron degeneracy pressure can no longer support it, and the core collapses in roughly one second into either a neutron star or a stellar-mass black hole. The gravitational binding energy released is enormous — on the order of 10⁴⁶ joules. About 99% of that energy escapes as neutrinos, around 1% goes into the kinetic energy of the expanding ejecta, and only about 0.01% appears as visible light. Even so, that 0.01% is enough to outshine an entire galaxy for weeks. SN 1987A in the Large Magellanic Cloud was the closest naked-eye supernova since 1604, and detectors in Japan (Kamiokande), the U.S. (IMB), and Russia (Baksan) caught its neutrino burst — the first time neutrinos were detected from outside the Solar System. Core-collapse supernovae are also a (partial) source of \"r-process\" heavy elements forged by rapid neutron capture; whether they or merging neutron stars dominate that production is still debated. JWST and Hubble continue to follow new supernovae across cosmic history.",
+    "bodyKo": "태양 질량의 약 8배가 넘는 별은 \"핵 붕괴 초신성\"으로 일생을 마감한다. 중심의 철 핵이 약 1.4 태양 질량을 넘어서면 전자 축퇴 압력이 더 이상 핵을 지탱하지 못하고, 약 1초 만에 핵이 중성자별이나 항성 질량 블랙홀로 무너져 내린다. 이때 풀려나는 중력 결합 에너지는 약 10⁴⁶ J에 이른다. 어마어마한 양인데, 그 가운데 99%가 중성미자 형태로, 약 1%가 분출 물질의 운동 에너지로, 그리고 단지 0.01% 정도만 빛으로 새어 나온다. 그래도 그 0.01%만으로도 폭발하는 별 한 개가 몇 주 동안 자기가 속한 은하 전체보다 밝게 빛난다. 1987년에 대마젤란운에서 일어난 SN 1987A는 1604년 이래 인류가 육안으로 본 가장 가까운 초신성이었고, 일본의 \"가미오칸데\", 미국의 \"IMB\", 러시아의 \"바크산\" 검출기가 그 중성미자 폭발을 잡아냈다. 태양계 밖에서 온 중성미자가 검출된 인류 최초의 사건이다. 핵 붕괴 초신성은 \"빠른 중성자 포획(r-과정)\"으로 만들어지는 무거운 원소의 부분적 원천이기도 한데, 이쪽이 주도적이냐 중성자별 합병이 주도적이냐는 아직 활발한 논쟁의 대상이다. JWST와 허블은 지금도 우주 역사 전체에 걸쳐 새 초신성을 잇따라 추적하고 있다."
   },
   "stage12-milestone-000-the-sun-ages": {
     "id": "stage12-milestone-000-the-sun-ages",
@@ -2744,8 +2744,8 @@
     "progress": 0,
     "titleEn": "The Sun Ages",
     "titleKo": "태양의 노화",
-    "bodyEn": "Sun in ~5 Gyr. Hydrogen exhausted in core (~10 Gyr total main-sequence lifetime). H-shell burning around inert He core. Luminosity increasing ~10% per Gyr already from now. Earth's oceans evaporate ~1 Gyr from present. Habitable zone moves outward.",
-    "bodyKo": "태양 ~50억 년 후. 핵에서 수소 고갈(~100억 년 총 주계열 수명). 불활성 He 핵 주위 H-껍질 연소. 광도가 이미 지금부터 Gyr당 ~10% 증가. 지구 바다는 현재로부터 ~10억 년 후 증발. 거주 가능 영역이 바깥으로 이동."
+    "bodyEn": "About 5 billion years from now. The Sun has used up the hydrogen in its core; its total main-sequence lifetime is around 10 billion years. Hydrogen fusion continues in a shell around the now-inert helium core. The Sun's luminosity has actually been creeping up at about 10% per billion years for a long time already. Earth's oceans evaporate roughly a billion years from the present as the gentle brightening accumulates, and the Sun's habitable zone keeps drifting outward.",
+    "bodyKo": "지금으로부터 약 50억 년 뒤. 태양은 핵에 있던 수소를 다 쓴 상태다(주계열 단계의 전체 수명이 약 100억 년이다). 수소 융합은 이제 \"불활성\"이 된 헬륨 핵 주위 껍질에서 이어진다. 사실 태양 광도는 이미 오래전부터 1억 년에 약 1% 정도씩 천천히 올라가고 있다. 그 점진적인 밝아짐이 쌓이면서, 지구의 바다는 현재로부터 약 10억 년쯤 뒤에 증발한다. 태양의 거주 가능 영역은 계속해서 바깥쪽으로 밀려난다."
   },
   "stage12-milestone-010-solar-brightening": {
     "id": "stage12-milestone-010-solar-brightening",
@@ -2756,8 +2756,8 @@
     "progress": 10,
     "titleEn": "Solar Brightening",
     "titleKo": "태양 밝아짐",
-    "bodyEn": "Sun's H-shell burns hotter; luminosity rises to ~1.4 L_today. Earth too hot for liquid water on surface. Mars enters habitable zone temporarily. Hydrogen-helium core inflates envelope; subgiant phase begins.",
-    "bodyKo": "태양의 H-껍질이 더 뜨겁게 연소; 광도가 ~1.4 L_today로 상승. 지구가 표면 액체 물에 너무 뜨거움. 화성이 잠시 거주 가능 영역 진입. 수소-헬륨 핵이 외피를 부풀림; 부거성 단계 시작."
+    "bodyEn": "The Sun's hydrogen shell burns at higher temperatures than the old core did, and total luminosity climbs to about 1.4 times today's value. Earth is now too hot to keep liquid water on its surface. Mars, ironically, briefly enters the new habitable zone. The hydrogen-helium core inflates the envelope, and the Sun enters its \"subgiant\" phase — somewhat brighter, somewhat redder, on its way to becoming a red giant.",
+    "bodyKo": "태양의 수소 껍질이 이전 핵보다 더 뜨거운 온도에서 타기 시작하면서, 전체 광도는 오늘날의 약 1.4배까지 올라간다. 이 시점이면 지구는 표면에 액체 물을 유지하기에 너무 뜨겁다. 역설적으로 화성이 새로운 거주 가능 영역에 잠시 들어선다. 수소-헬륨 핵이 외피를 부풀리면서 태양은 \"부거성(subgiant)\" 단계로 들어선다. 좀 더 밝아지고 좀 더 붉어지는, 적색거성으로 향하는 길이다."
   },
   "stage12-milestone-020-red-giant-begins": {
     "id": "stage12-milestone-020-red-giant-begins",
@@ -2768,8 +2768,8 @@
     "progress": 20,
     "titleEn": "Red Giant Begins",
     "titleKo": "적색거성 시작",
-    "bodyEn": "Sun expands dramatically — radius ~50× current, luminosity ~1000× current. Surface temperature drops to ~3000 K (red color). Core helium fusion begins via helium flash. Inner planets cooked.",
-    "bodyKo": "태양이 극적으로 팽창 — 반지름 현재의 ~50×, 광도 현재의 ~1000×. 표면 온도가 ~3000 K로 떨어짐(붉은색). 헬륨 섬광을 통해 핵 헬륨 융합 시작. 안쪽 행성들 익혀짐."
+    "bodyEn": "The Sun expands dramatically — its radius grows to roughly 50 times today's value, and its luminosity to about 1,000 times. The surface temperature drops to around 3,000 kelvin, giving it the characteristic red color of a red giant. Inside the core, the helium flash ignites helium fusion. The inner planets — Mercury and Venus, and most likely Earth — get cooked.",
+    "bodyKo": "태양이 극적으로 부풀어 오른다. 반지름은 지금의 약 50배, 광도는 약 1000배에 이른다. 표면 온도는 약 3000 K로 떨어지고, 그 결과 적색거성 특유의 붉은빛을 띤다. 핵 안에서는 헬륨 섬광이 일어나며 헬륨 융합이 점화된다. 안쪽 행성들 — 수성, 금성, 그리고 거의 확실히 지구까지 — 이 그대로 \"익혀진다\"."
   },
   "stage12-milestone-032-mercury-lost": {
     "id": "stage12-milestone-032-mercury-lost",
@@ -2780,8 +2780,8 @@
     "progress": 32,
     "titleEn": "Mercury Lost",
     "titleKo": "수성 소실",
-    "bodyEn": "Sun's expanding envelope engulfs Mercury (~0.39 AU). Mercury — never having had atmosphere or magnetic field anyway — is vaporized in solar plasma. First planet to be destroyed.",
-    "bodyKo": "태양의 팽창하는 외피가 수성을 삼킴(~0.39 AU). 수성 — 어차피 대기나 자기장이 없었던 — 이 태양 플라스마에서 증발. 파괴된 첫 행성."
+    "bodyEn": "The Sun's expanding envelope swallows Mercury at about 0.39 AU. Mercury — which never had a real atmosphere or magnetic field to begin with — simply vaporizes inside the solar plasma. It is the first planet to be destroyed by its own star.",
+    "bodyKo": "태양의 부푼 외피가 약 0.39 AU 자리에 있던 수성을 통째로 삼킨다. 어차피 의미 있는 대기도 자기장도 가진 적 없는 수성은, 태양 플라스마 안에서 그대로 증발해버린다. 자기 별에게 파괴되는 첫 행성이다."
   },
   "stage12-milestone-040-venus-lost": {
     "id": "stage12-milestone-040-venus-lost",
@@ -2792,8 +2792,8 @@
     "progress": 40,
     "titleEn": "Venus Lost",
     "titleKo": "금성 소실",
-    "bodyEn": "Sun reaches Venus orbit (~0.72 AU). Venus's already-hellish surface is incinerated; thick CO₂ atmosphere boils away. Earth-Sun distance becomes ~0.99 AU (Earth's orbit migrates outward slightly as Sun loses mass).",
-    "bodyKo": "태양이 금성 궤도 도달(~0.72 AU). 금성의 이미 지옥 같은 표면이 소각; 두꺼운 CO₂ 대기가 끓어 사라짐. 지구-태양 거리가 ~0.99 AU가 됨(태양이 질량 잃으면서 지구 궤도 약간 바깥으로 이동)."
+    "bodyEn": "The Sun reaches Venus's orbit at about 0.72 AU. Venus's already hellish surface is incinerated, and its thick carbon-dioxide atmosphere boils away into space. As the Sun loses mass via its strong wind, Earth's orbit actually drifts slightly outward, ending up around 0.99 AU — but not nearly enough to save it.",
+    "bodyKo": "태양이 약 0.72 AU의 금성 궤도에 닿는다. 이미 지옥 같던 금성의 표면이 그대로 소각되고, 두꺼운 이산화탄소 대기가 우주로 끓어 사라진다. 한편 태양이 강한 항성풍으로 질량을 잃으면서, 지구 궤도는 약간 바깥쪽으로 이동해 약 0.99 AU 근처에 자리잡지만, 지구를 구할 만큼은 아니다."
   },
   "stage12-milestone-048-earth-burns": {
     "id": "stage12-milestone-048-earth-burns",
@@ -2804,8 +2804,8 @@
     "progress": 48,
     "titleEn": "Earth Burns",
     "titleKo": "지구의 불타는 운명",
-    "bodyEn": "Sun grows past 1 AU. Earth's oceans long gone; now even rocks vaporize. Atmosphere stripped; surface re-molten. The biosphere ended billions of years ago, but any traces of human civilization (e.g., Voyager records, lunar artifacts) are obliterated.",
-    "bodyKo": "태양이 1 AU를 넘어 성장. 지구 바다는 오래 전 사라짐; 이제 암석조차 증발. 대기 박탈; 표면 재용융. 생물권은 수십억 년 전 끝났지만 인간 문명의 흔적(예: 보이저 기록, 달 인공물)이 말살."
+    "bodyEn": "The Sun grows past 1 AU. Earth's oceans have been gone for billions of years by now; at this point even the rocks vaporize. The atmosphere is stripped clean, the surface is remelted into a magma ocean. The biosphere ended a billion or more years before this moment, and any remaining traces of human civilization — from Voyager records to lunar artifacts on the Moon's surface — are obliterated.",
+    "bodyKo": "태양이 1 AU를 넘어서 자란다. 지구의 바다는 이미 수십억 년 전에 사라진 상태이고, 이 시점에는 암석마저 증발한다. 대기는 완전히 벗겨지고, 표면은 다시 마그마 바다로 녹아내린다. 생물권은 이 순간보다 10억 년 이상 전에 이미 끝났고, 보이저의 기록판부터 달 표면에 남아 있던 인공 흔적까지, 인류 문명의 잔재도 모두 지워진다."
   },
   "stage12-milestone-056-earth-lost": {
     "id": "stage12-milestone-056-earth-lost",
@@ -2816,8 +2816,8 @@
     "progress": 56,
     "titleEn": "Earth Lost",
     "titleKo": "지구 소실",
-    "bodyEn": "Whether Earth is engulfed or survives outside Sun's expanded envelope is uncertain (depends on mass loss rate). Most calculations: Earth swallowed by ~7.6 Gyr from now. If outside: drag forces in Sun's outer atmosphere likely spiral Earth inward over Myr. Either way: Earth ceases to exist as planet.",
-    "bodyKo": "지구가 삼켜질지 태양의 팽창된 외피 밖에서 살아남을지는 불확실(질량 손실률에 의존). 대부분 계산: 지구는 지금부터 ~76억 년에 삼켜짐. 밖에 있어도: 태양 외부 대기의 끌림 힘이 Myr에 걸쳐 지구를 안으로 나선화시킬 가능성. 어느 쪽이든: 지구가 행성으로 존재하기를 멈춤."
+    "bodyEn": "Whether Earth actually gets engulfed or just barely survives outside the Sun's expanded envelope is uncertain — it depends on exactly how much mass the Sun loses on its way up the red-giant branch. Most current calculations have Earth swallowed about 7.6 billion years from now. Even if it stays outside the photosphere, drag from the Sun's outer atmosphere will likely spiral Earth inward over the following few million years. Either way, Earth ceases to exist as a planet.",
+    "bodyKo": "지구가 실제로 태양에 삼켜지는지, 태양 외피 바깥에서 가까스로 살아남는지는 사실 확실하지 않다. 태양이 적색거성으로 향하는 동안 얼마나 많은 질량을 잃느냐에 달려 있기 때문이다. 현재 대부분 계산은 지구가 지금으로부터 약 76억 년 뒤에 통째로 삼켜진다고 본다. 설령 광구(光球) 바깥에 남는다 해도, 태양 외부 대기의 끌림(드래그)이 이어지는 수백만 년에 걸쳐 지구를 안쪽으로 끌어들일 것이다. 어느 쪽이든 지구는 더 이상 하나의 행성으로 존재하지 못한다."
   },
   "stage12-milestone-066-mars-scorched": {
     "id": "stage12-milestone-066-mars-scorched",
@@ -2828,8 +2828,8 @@
     "progress": 66,
     "titleEn": "Mars Scorched",
     "titleKo": "화성 그을림",
-    "bodyEn": "Solar radiation incinerates Mars's surface. Whatever water ice existed in polar caps and subsurface is gone. The classic \"Mars colonization\" futures envisioned by humanity are erased. Outer planets begin warming significantly.",
-    "bodyKo": "태양 복사가 화성 표면을 소각. 극관과 지하에 존재했던 어떤 물 얼음도 사라짐. 인류가 상상한 고전적 \"화성 식민화\" 미래가 지워짐. 외곽 행성들이 상당히 따뜻해지기 시작."
+    "bodyEn": "Solar radiation now incinerates Mars's surface. Whatever water ice had been hiding in the polar caps and just below the dusty surface is gone. The classic \"Mars colony\" futures so often imagined by humanity are wiped out. Meanwhile, the outer planets are warming significantly for the first time.",
+    "bodyKo": "이제 태양 복사가 화성 표면을 직접 소각한다. 극관에 있던 얼음과 먼지 아래 숨어 있던 지하 얼음까지 모두 사라진다. 인류가 그토록 자주 그려왔던 \"화성 식민지\"의 미래도 이 시점에서 함께 지워진다. 한편 외곽 행성들은 그동안 차가웠던 표면이 처음으로 본격적으로 따뜻해진다."
   },
   "stage12-milestone-074-outer-worlds-stripped": {
     "id": "stage12-milestone-074-outer-worlds-stripped",
@@ -2840,8 +2840,8 @@
     "progress": 74,
     "titleEn": "Outer Worlds Stripped",
     "titleKo": "외곽 세계 박탈",
-    "bodyEn": "Sun reaches asymptotic giant branch (AGB) maximum size. Jupiter (5.2 AU) and Saturn (9.5 AU) heat up; their gaseous envelopes partially evaporate. Icy moons (Europa, Titan, Enceladus) become temporarily hot — liquid surface water might briefly exist before being lost. Last possible habitable epochs in solar system.",
-    "bodyKo": "태양이 점근거성가지(AGB) 최대 크기 도달. 목성(5.2 AU)과 토성(9.5 AU)이 가열; 그들의 가스 외피가 부분적으로 증발. 얼음 위성(유로파, 타이탄, 엔셀라두스)이 일시적으로 뜨거워짐 — 액체 표면 물이 잃기 전 잠시 존재할 수 있음. 태양계의 마지막 가능한 거주 가능 시대."
+    "bodyEn": "The Sun reaches its maximum size on the asymptotic giant branch (AGB). Jupiter at 5.2 AU and Saturn at 9.5 AU heat up sharply, and their gaseous envelopes start to partially evaporate. The icy moons — Europa, Titan, Enceladus — briefly find themselves warm enough that liquid surface water might exist for a geologically short window before being lost. These are, in a sense, the last possible habitable epochs of the Solar System.",
+    "bodyKo": "태양이 점근거성가지(AGB) 단계의 최대 크기에 도달한다. 5.2 AU의 목성과 9.5 AU의 토성이 급격히 데워지고, 그들의 가스 외피 일부가 증발하기 시작한다. 그동안 차갑게 얼어 있던 위성들 — 유로파, 타이탄, 엔켈라두스 — 은 잠깐이지만 표면에 액체 물이 존재할 수 있을 만큼 따뜻해진다. 곧 그 물도 다시 잃지만, 어떤 의미에서는 태양계가 \"마지막으로 거주 가능했던 짧은 시기\"라고 할 수 있다."
   },
   "stage12-milestone-082-megastructures-fail": {
     "id": "stage12-milestone-082-megastructures-fail",
@@ -2852,8 +2852,8 @@
     "progress": 82,
     "titleEn": "Megastructures Fail",
     "titleKo": "거대구조 붕괴",
-    "bodyEn": "Any Dyson swarms or megastructures built by civilizations are destroyed by Sun's expansion. The energy regime shifts: civilizations capable of moving must do so by now or accept extinction. Realistically, post-Sun-death civilizations would have migrated to other stars or stellar remnants long ago.",
-    "bodyKo": "문명이 만든 어떤 다이슨 군집이나 거대구조도 태양의 팽창에 의해 파괴됨. 에너지 체제 이동: 이동 가능한 문명은 지금 해야 하거나 멸종 수용. 현실적으로 태양 사후 문명은 오래 전 다른 별이나 항성 잔해로 이주했을 것."
+    "bodyEn": "Any Dyson swarms or other star-scale megastructures still built around the Sun are torn apart by its expansion. The whole energy regime of the inner Solar System shifts. From this point on, any civilization that cannot relocate has to accept extinction — and realistically, any civilization that had survived this long would already have migrated to other stars or to stellar remnants billions of years earlier.",
+    "bodyKo": "태양 주위에 만들어져 있던 다이슨 군집이나 그밖의 \"별 규모\" 거대 구조물들은 모두 태양의 팽창에 휘말려 부서진다. 안쪽 태양계의 에너지 환경이 통째로 뒤바뀐다. 이 시점부터는, 자리를 옮길 수 없는 문명은 멸종을 받아들일 수밖에 없다. 그러나 현실적으로는 여기까지 살아남을 정도의 문명이라면 이미 수십억 년 전에 다른 별이나 항성 잔해 쪽으로 이주를 마쳤을 것이다."
   },
   "stage12-milestone-090-envelope-ejection": {
     "id": "stage12-milestone-090-envelope-ejection",
@@ -2864,8 +2864,8 @@
     "progress": 90,
     "titleEn": "Envelope Ejection",
     "titleKo": "외피 방출",
-    "bodyEn": "AGB pulsations eject Sun's outer envelope (~50% of mass) into space via stellar winds + thermal pulses. Material expands at 10-30 km/s; over ~10⁴ years, forms a beautiful planetary nebula. Central hot WD progenitor ionizes ejected material. Sun's spectacular swan song visible across galaxy.",
-    "bodyKo": "AGB 맥동이 태양의 외피(~질량의 50%)를 항성풍 + 열 펄스를 통해 우주로 방출. 물질이 10-30 km/s로 팽창; ~10⁴년에 걸쳐 아름다운 행성상 성운 형성. 중심 뜨거운 WD 선조가 방출 물질을 이온화. 태양의 장관의 백조의 노래가 은하 전체에 걸쳐 보임."
+    "bodyEn": "AGB pulsations and intense winds push the Sun's outer envelope — about half of its remaining mass — outward into space. The ejected material expands at 10–30 kilometers per second and, over about 10⁴ years, forms a beautiful planetary nebula. At the center, the now-exposed hot white-dwarf progenitor ionizes the gas around it, making the whole thing glow. It is, in a real sense, the Sun's spectacular swan song, visible across our galaxy.",
+    "bodyKo": "AGB 단계의 맥동과 강한 항성풍이 태양의 외피 — 그 시점에 남아 있는 질량의 약 절반 — 를 우주로 밀어낸다. 방출된 물질은 10~30 km/s로 팽창하면서, 약 10⁴년에 걸쳐 아름다운 행성상 성운으로 펼쳐진다. 한가운데에서는 이제 막 드러난 뜨거운 \"백색왜성의 선조\"가 주위 가스를 이온화시켜, 성운 전체가 환하게 빛난다. 우리 은하 전체에서 보일 만큼 장관인, 그야말로 태양의 \"백조의 노래\"다."
   },
   "stage12-milestone-096-white-dwarf": {
     "id": "stage12-milestone-096-white-dwarf",
@@ -2876,8 +2876,8 @@
     "progress": 96,
     "titleEn": "White Dwarf",
     "titleKo": "백색왜성",
-    "bodyEn": "Sun's exposed C/O core: 0.55 M_☉, radius ~6,000 km (similar to Earth), surface temperature ~100,000 K (very hot WD initially). Electron degeneracy pressure supports against gravity. Will cool over trillions of years; eventually black dwarf.",
-    "bodyKo": "태양의 노출된 C/O 핵: 0.55 M_☉, 반지름 ~6,000 km(지구와 유사), 표면 온도 ~100,000 K(초기에 매우 뜨거운 WD). 전자 축퇴 압력이 중력에 대해 지지. 수조 년에 걸쳐 식음; 결국 흑색왜성."
+    "bodyEn": "What remains is the Sun's exposed carbon-oxygen core: about 0.55 solar masses packed into a sphere roughly the size of Earth (radius about 6,000 km), with an initial surface temperature near 100,000 kelvin — a very hot, freshly-uncovered white dwarf. Electron degeneracy pressure supports it against gravity. From here it will cool over trillions of years, eventually fading into a theoretical \"black dwarf,\" though the universe is still nowhere near old enough for that final stage.",
+    "bodyKo": "남은 것은 태양의 노출된 탄소-산소 핵이다. 약 0.55 태양 질량이 지구 정도 크기의 구(반지름 약 6000 km)에 압축되어 있고, 처음에는 표면 온도가 약 10만 K에 이른다 — 갓 모습을 드러낸, 매우 뜨거운 백색왜성이다. 중력에 맞서 그것을 떠받치는 것은 전자 축퇴 압력이다. 이 시점부터 백색왜성은 수조 년에 걸쳐 천천히 식어가, 결국 이론적으로 \"흑색왜성(black dwarf)\"이라 부르는 단계에 이른다. 다만 우주는 아직 어떤 별이라도 그 마지막 단계까지 식기에는 한참 어리다."
   },
   "stage12-milestone-100-after-the-sun": {
     "id": "stage12-milestone-100-after-the-sun",
@@ -2888,8 +2888,8 @@
     "progress": 100,
     "titleEn": "After the Sun",
     "titleKo": "태양 이후",
-    "bodyEn": "~12-13 Gyr from now. Sun is a cooling white dwarf. Outer planets (Jupiter, Saturn, etc.) orbit in cold darkness. Solar system continues, but without star — just gravitational rubble. Galactic star formation also winding down. The era of \"main sequence stars\" — when most stars burn hydrogen — is ending. The universe is entering geriatric phase.",
-    "bodyKo": "지금으로부터 ~12-13 Gyr. 태양이 식어가는 백색왜성. 외곽 행성(목성, 토성 등)이 차가운 어둠 속에서 궤도. 태양계는 계속되지만 별 없이 — 중력 잔해일 뿐. 은하 별 형성도 잦아드는 중. \"주계열성\" 시대 — 대부분의 별이 수소를 태우는 — 가 끝나가는 중. 우주가 노년기에 진입."
+    "bodyEn": "About 12 to 13 billion years from now. The Sun is a quietly cooling white dwarf. The outer planets — Jupiter, Saturn, Uranus, Neptune — keep orbiting in cold darkness, lit by what's left of the white dwarf rather than by anything we'd call sunlight. The Solar System continues to exist as a system, but without a real star at the center, just gravitationally bound rubble. Across the wider galaxy, star formation is winding down too. The long \"era of main-sequence stars,\" when most of the cosmos's stars steadily fused hydrogen, is ending. The universe is entering its old age.",
+    "bodyKo": "지금으로부터 약 120억~130억 년 뒤. 태양은 조용히 식어가는 백색왜성이 되어 있다. 바깥쪽 행성들 — 목성·토성·천왕성·해왕성 — 은 차가운 어둠 속에서 여전히 궤도를 돈다. 다만 그들을 비추는 것은 이미 \"햇빛\"이라기보다 식어가는 백색왜성의 잔불에 가깝다. 태양계는 시스템으로서는 여전히 존재하지만, 중심에 진짜 \"별\"이 없는, 그저 중력으로 묶인 잔해 무더기에 가깝다. 더 넓은 은하 차원에서도 별 형성이 잦아들고 있다. 우주의 별 대부분이 수소를 꾸준히 태우던 긴 \"주계열성 시대\"가 막을 내리고 있는 셈이다. 우주는 본격적으로 노년기에 접어든다."
   },
   "stage13-entity-brown-dwarf": {
     "id": "stage13-entity-brown-dwarf",
