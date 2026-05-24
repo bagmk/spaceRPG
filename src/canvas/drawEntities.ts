@@ -2883,41 +2883,48 @@ function drawEntityGlyph(
       break;
     }
     case 'nucleus':
-    case 'quark': {
-      // Cluster of tightly bound sub-particles vibrating
-      const count = item.glyph === 'quark' ? 3 : 4;
+    case 'quark':
+    case 'nucleus': {
+      // Quark triplet with color charge differentiation by name
+      const isNucleus = item.glyph === 'nucleus';
+      const count = isNucleus ? 4 : 3;
+      const nameL2 = item.name.toLowerCase();
+      // Color charges differ per quark type
+      const qcColors = nameL2.includes('up') ? ['#ff4444', '#ff8844', '#ffcc44']
+        : nameL2.includes('down') ? ['#4466ff', '#44aaff', '#44ddff']
+        : nameL2.includes('strange') ? ['#44cc66', '#88ee44', '#ccff66']
+        : ['#ff6666', '#66dd66', '#6688ff']; // default RGB triplet
+      const orbitR2 = s * (isNucleus ? 0.35 : 0.32);
       for (let i = 0; i < count; i++) {
         const baseA = (i / count) * Math.PI * 2;
-        const vibrate = Math.sin(now * 0.006 + i * 2.3 + item.seed) * s * 0.12;
-        const r = s * 0.28 + vibrate;
-        const px = Math.cos(baseA + spin * 0.3) * r;
-        const py = Math.sin(baseA + spin * 0.3) * r;
-        const dotSize = s * (0.22 + unit(item.seed, i + 50) * 0.12);
-        // Slight color variation per sub-particle
-        const alpha = 0.6 + unit(item.seed, i + 60) * 0.3;
-        ctx.fillStyle = hexToRgba(item.color, alpha);
+        const vibrate = Math.sin(now * 0.006 + i * 2.3 + item.seed) * s * 0.08;
+        const r2 = orbitR2 + vibrate;
+        const px = Math.cos(baseA + spin * 0.4) * r2;
+        const py = Math.sin(baseA + spin * 0.4) * r2;
+        const dotSize = s * (isNucleus ? 0.2 : 0.24);
+        ctx.fillStyle = qcColors[i % qcColors.length];
         fillCircle(ctx, px, py, dotSize);
       }
-      // Binding force lines
-      if (item.glyph === 'quark') {
-        ctx.strokeStyle = hexToRgba(item.color, 0.25);
-        ctx.lineWidth = 0.5;
-        strokeCircle(ctx, 0, 0, s * 0.5);
-      }
-      break;
-    }
-    case 'atom':
-    case 'lepton': {
-      // Electron clouds — multiple electrons on different orbits
-      const orbits = item.glyph === 'atom' ? 2 : 1;
+      // Confinement ring
       ctx.strokeStyle = hexToRgba(item.color, 0.2);
       ctx.lineWidth = 0.5;
-      for (let o = 0; o < orbits; o++) {
-        const tilt = o * (Math.PI / (orbits + 1));
+      ctx.setLineDash([2, 2]);
+      strokeCircle(ctx, 0, 0, s * (isNucleus ? 0.55 : 0.5));
+      ctx.setLineDash([]);
+      // Center binding glow
+      ctx.fillStyle = hexToRgba(item.color, 0.15);
+      fillCircle(ctx, 0, 0, s * 0.15);
+      break;
+    }
+    case 'atom': {
+      // Full atom — nucleus + 2 electron orbits
+      ctx.strokeStyle = hexToRgba(item.color, 0.2);
+      ctx.lineWidth = 0.5;
+      for (let o = 0; o < 2; o++) {
+        const tilt = o * (Math.PI / 3);
         ctx.beginPath();
         ctx.ellipse(0, 0, s * (0.85 + o * 0.25), s * (0.35 + o * 0.1), tilt, 0, Math.PI * 2);
         ctx.stroke();
-        // Electron on orbit
         const eAngle = spin * (1.5 + o * 0.7);
         const ex = Math.cos(eAngle) * s * (0.85 + o * 0.25);
         const ey = Math.sin(eAngle) * s * (0.35 + o * 0.1);
@@ -2926,9 +2933,51 @@ function drawEntityGlyph(
         ctx.fillStyle = '#ffffff';
         fillCircle(ctx, rotX, rotY, s * 0.1);
       }
-      // Nucleus
       ctx.fillStyle = hexToRgba(item.color, 0.7);
       fillCircle(ctx, 0, 0, s * 0.22);
+      break;
+    }
+    case 'lepton': {
+      const nameL2 = item.name.toLowerCase();
+      const isNeutrino = nameL2.includes('neutrino') || nameL2.includes('ν');
+      if (isNeutrino) {
+        // Neutrino — ghostly, almost invisible dashed orbit, tiny flickering dot
+        ctx.strokeStyle = hexToRgba(item.color, 0.12);
+        ctx.lineWidth = 0.4;
+        ctx.setLineDash([2, 4]);
+        strokeCircle(ctx, 0, 0, s * 0.7);
+        ctx.setLineDash([]);
+        // Ghost dot — flickers
+        const ghostAlpha = 0.15 + Math.sin(now * 0.008 + item.seed) * 0.12;
+        ctx.fillStyle = hexToRgba('#ccddff', ghostAlpha);
+        const nAngle = spin * 2.2;
+        fillCircle(ctx, Math.cos(nAngle) * s * 0.65, Math.sin(nAngle) * s * 0.25, s * 0.08);
+        // Faint center
+        ctx.fillStyle = hexToRgba(item.color, 0.08);
+        fillCircle(ctx, 0, 0, s * 0.12);
+      } else {
+        // Electron — solid orbit with bright electron dot
+        ctx.strokeStyle = hexToRgba(item.color, 0.25);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s * 0.85, s * 0.35, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        const eAngle = spin * 1.8;
+        const ex = Math.cos(eAngle) * s * 0.85;
+        const ey = Math.sin(eAngle) * s * 0.35;
+        // Electron with trail
+        ctx.fillStyle = '#ffffff';
+        fillCircle(ctx, ex, ey, s * 0.12);
+        ctx.fillStyle = hexToRgba('#aaccff', 0.3);
+        fillCircle(ctx, ex, ey, s * 0.22);
+        // Charge symbol (-)
+        ctx.strokeStyle = hexToRgba('#ffffff', 0.5);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.08, 0);
+        ctx.lineTo(s * 0.08, 0);
+        ctx.stroke();
+      }
       break;
     }
     case 'radiation': {
@@ -2945,13 +2994,12 @@ function drawEntityGlyph(
       break;
     }
     case 'wave':
-    case 'field':
-    case 'boson': {
-      // Animated sine wave with phase
+    case 'field': {
+      // Animated sine wave
       ctx.lineWidth = 0.8;
       ctx.strokeStyle = hexToRgba(item.color, 0.6);
-      const waves = item.glyph === 'wave' ? 1 : 2;
-      for (let w = 0; w < waves; w++) {
+      const waveCount = item.glyph === 'wave' ? 1 : 2;
+      for (let w = 0; w < waveCount; w++) {
         ctx.beginPath();
         for (let i = -20; i <= 20; i++) {
           const t = i / 20;
@@ -2962,9 +3010,64 @@ function drawEntityGlyph(
         }
         ctx.stroke();
       }
-      if (item.glyph !== 'wave') {
+      if (item.glyph === 'field') {
         ctx.fillStyle = hexToRgba(item.color, 0.4 * pulse);
         fillCircle(ctx, 0, 0, s * 0.15);
+      }
+      break;
+    }
+    case 'boson': {
+      const nameL2 = item.name.toLowerCase();
+      if (nameL2.includes('gluon')) {
+        // Gluon — figure-8 / twisted loop (color force carrier)
+        ctx.strokeStyle = hexToRgba('#ff8844', 0.5);
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const t = (i / 40) * Math.PI * 2;
+          const x = Math.sin(t) * s * 0.6;
+          const y = Math.sin(t * 2 + spin) * s * 0.3;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // Color charge dots at the loops
+        ctx.fillStyle = '#ff6666';
+        fillCircle(ctx, 0, s * 0.25, s * 0.1);
+        ctx.fillStyle = '#6688ff';
+        fillCircle(ctx, 0, -s * 0.25, s * 0.1);
+      } else if (nameL2.includes('w ') || nameL2.includes('w±') || nameL2.includes('z ')) {
+        // W/Z Boson — zigzag lightning bolt (weak force)
+        ctx.strokeStyle = hexToRgba('#ffdd44', 0.6);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        const segments = 5;
+        const zigLen = s * 0.85;
+        for (let i = 0; i <= segments; i++) {
+          const frac = i / segments;
+          const x = -zigLen + frac * zigLen * 2;
+          const y = ((i % 2 === 0) ? -1 : 1) * s * 0.3 * (1 - Math.abs(frac - 0.5) * 1.2);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // Spark at center
+        ctx.fillStyle = hexToRgba('#ffee88', 0.5 * pulse);
+        fillCircle(ctx, 0, 0, s * 0.12);
+      } else {
+        // Generic boson — two crossing sine waves
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = hexToRgba(item.color, 0.5);
+        for (let w = 0; w < 2; w++) {
+          ctx.beginPath();
+          for (let i = -20; i <= 20; i++) {
+            const t = i / 20;
+            const xp = t * s * 1.1;
+            const yp = Math.sin(t * 6 + spin * 2 + w * Math.PI) * s * 0.35 * (1 - Math.abs(t));
+            if (i === -20) ctx.moveTo(xp, yp); else ctx.lineTo(xp, yp);
+          }
+          ctx.stroke();
+        }
+        ctx.fillStyle = hexToRgba(item.color, 0.35 * pulse);
+        fillCircle(ctx, 0, 0, s * 0.12);
       }
       break;
     }
@@ -3228,15 +3331,42 @@ function drawEntityGlyph(
       }
       break;
     }
-    case 'void':
+    case 'void': {
+      // Unstable vacuum bubble — pulsing sphere with fracture lines
+      const voidPulse = 1 + Math.sin(spin * 1.5) * 0.15;
+      const bubbleR = s * 0.55 * voidPulse;
+      // Dark interior
+      ctx.fillStyle = hexToRgba('#08061a', 0.85);
+      fillCircle(ctx, 0, 0, bubbleR);
+      // Shimmering membrane
+      ctx.strokeStyle = hexToRgba(item.color, 0.35 + Math.sin(spin * 2) * 0.15);
+      ctx.lineWidth = 1.0;
+      strokeCircle(ctx, 0, 0, bubbleR);
+      // Fracture cracks — unstable vacuum about to pop
+      for (let i = 0; i < 4; i++) {
+        const crackA = spin * 0.4 + i * 1.57;
+        const crackLen = bubbleR * (0.4 + Math.sin(now * 0.004 + i * 2) * 0.2);
+        ctx.strokeStyle = hexToRgba('#cc88ff', 0.2 + Math.sin(now * 0.005 + i) * 0.1);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(crackA) * crackLen, Math.sin(crackA) * crackLen);
+        ctx.stroke();
+      }
+      // Energy leak at crack tips
+      ctx.fillStyle = hexToRgba('#aa77ff', 0.25 * voidPulse);
+      fillCircle(ctx, 0, 0, bubbleR * 0.2);
+      break;
+    }
     case 'singularity': {
-      // Dark center with fading concentric rings
+      // Crushing collapse — shrinking rings
       ctx.fillStyle = '#02030a';
-      fillCircle(ctx, 0, 0, s * 0.55);
+      fillCircle(ctx, 0, 0, s * 0.45);
       for (let r = 1; r <= 3; r++) {
-        ctx.strokeStyle = hexToRgba(item.color, 0.15 / r);
-        ctx.lineWidth = 0.5;
-        strokeCircle(ctx, 0, 0, s * (0.6 + r * 0.2) * (1 + Math.sin(spin + r) * 0.05));
+        const shrink = 1 - Math.sin(spin * 0.5 + r) * 0.08;
+        ctx.strokeStyle = hexToRgba(item.color, 0.2 / r);
+        ctx.lineWidth = 0.6;
+        strokeCircle(ctx, 0, 0, s * (0.5 + r * 0.18) * shrink);
       }
       break;
     }

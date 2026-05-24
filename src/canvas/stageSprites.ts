@@ -243,12 +243,50 @@ function drawSpriteInflation(
   color: string,
   t: number,
 ): void {
-  const blur = Math.max(2, r * 1.8);
-  ctx.rotate(t * 0.5);
-  ctx.fillStyle = color;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
-  ctx.fillStyle = hexToRgba(color, 0.35);
-  ctx.fillRect(-blur * 0.2, -r * 0.5, blur, r);
+  const s = Math.max(2.5, r * 2.2);
+  // Quantum foam bubble — pulsating energy ripple
+  // Size varies per particle via t phase offset
+  const sizeVar = 0.8 + Math.sin(t * 0.7) * 0.4; // 0.4–1.2x variation
+  const sz = s * sizeVar;
+  const pulse = 0.7 + Math.sin(t * 3) * 0.3;
+  const breathe = 0.8 + Math.sin(t * 1.7) * 0.2;
+
+  // Outer energy ripple ring (expanding spacetime)
+  ctx.strokeStyle = hexToRgba(color, 0.15 * pulse);
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, sz * 1.4 * breathe, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Second ripple ring offset
+  ctx.strokeStyle = hexToRgba(color, 0.08 * pulse);
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  ctx.arc(0, 0, sz * 1.8 * breathe, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Inner vacuum fluctuation — soft glowing blob
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * pulse);
+  grad.addColorStop(0, hexToRgba('#ffffff', 0.45 * pulse));
+  grad.addColorStop(0.35, hexToRgba(color, 0.3 * pulse));
+  grad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, sz * pulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Energy sparks orbiting (virtual particle pairs)
+  for (let i = 0; i < 4; i++) {
+    const a = t * 2.5 + (i / 4) * Math.PI * 2;
+    const orbitR = sz * (0.5 + Math.sin(t * 1.3 + i * 2) * 0.3);
+    const sx = Math.cos(a) * orbitR;
+    const sy = Math.sin(a) * orbitR;
+    const sparkR = sz * (0.06 + Math.sin(t * 4 + i) * 0.04);
+    ctx.fillStyle = hexToRgba('#ffffff', 0.35 + Math.sin(t * 3 + i * 1.5) * 0.2);
+    ctx.beginPath();
+    ctx.arc(sx, sy, sparkR, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawSpriteBaryon(
