@@ -2790,7 +2790,9 @@ function drawEntityGlyph(
   // Per-entity size variation based on seed (±15%)
   const sizeVar = 0.85 + unit(item.seed, 10) * 0.3;
   const s = size * sizeVar;
-  const spin = now * 0.001 + item.sourceIndex * 0.7 + item.copyIndex * 0.23;
+  // Spin speed varies per entity — some fast, some slow, some reversed
+  const spinSpeed = (0.001 + unit(item.seed, 11) * 0.003) * (unit(item.seed, 12) > 0.4 ? 1 : -1);
+  const spin = now * spinSpeed + item.sourceIndex * 0.7 + item.copyIndex * 0.23;
   const pulse = 1 + Math.sin(now * 0.002 + item.copyIndex) * 0.08;
   // Slight color hue shift per entity copy
   const hueShift = (item.copyIndex * 17 + item.sourceIndex * 31) % 360;

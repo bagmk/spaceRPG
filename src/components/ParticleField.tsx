@@ -7,6 +7,24 @@ import { drawParticles } from '../canvas/drawParticles';
 import { drawRogues } from '../canvas/drawRogues';
 import { drawStars } from '../canvas/drawStars';
 import { drawWake } from '../canvas/drawWake';
+import {
+  createMoteCluster,
+  createParticles,
+  createStars,
+  createWorld,
+  randomBetween,
+  resetForStage,
+  spawnParticleAtEdge,
+} from '../canvas/world';
+import {
+  capWorldCollections,
+  getBlackHoleRadius,
+  getClusterTargetRadius,
+  getCosmicStageProgress,
+  getEffectiveMaxMass,
+  getHawkingPhotonColor,
+  getMoteRadius,
+} from '../canvas/clusterGeom';
 import { ROGUE_TYPES, TUNING } from '../game/constants';
 import { getProgress } from '../game/formulas';
 import { getMechanic } from '../game/mechanics';
@@ -70,106 +88,6 @@ interface ParticleFieldProps {
 export interface ParticleFieldHandle {
   /** Advance physics + render one frame. Driven by GameScreen's master rAF loop. */
   tick: (now: number, dt: number) => void;
-}
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-function createWorld(width: number, height: number, stage: Stage): CanvasWorld {
-  const world: CanvasWorld = {
-    coreVX: 0,
-    coreVY: 0,
-    driftAngle: Math.random() * Math.PI * 2,
-    stars: createStars(width, height),
-    particles: createParticles(width, height, stage),
-    flyers: [],
-    bursts: [],
-    wakeTrails: [],
-    rogues: [],
-    shockwaves: [],
-    rogueCooldown: TUNING.FIRST_ENCOUNTER_DELAY_MS,
-    nextId: 1,
-    cluster: createMoteCluster(),
-    moteNeighborCache: new Map<number, number[]>(),
-    moteLastNeighborRefresh: 0,
-    moteLastAutoSpawnAt: 0,
-    mechanicState: {},
-  };
-  getMechanic(stage.mechanic).init?.(world);
-  return world;
-}
-
-function createMoteCluster(): MoteCluster {
-  return {
-    motes: [],
-    nextMoteId: 1,
-    physicalRadius: TUNING.MOTE_CLUSTER_MIN_RADIUS,
-    diskTilt: TUNING.BLACKHOLE_DISK_TILT,
-    diskRotation: 0,
-    earthRotation: 0,
-    moonAngleOffset: 0,
-    moonNudgeImpulse: 0,
-  };
-}
-
-function createStars(width: number, height: number): Star[] {
-  return TUNING.STAR_LAYERS.flatMap((layer) =>
-    Array.from({ length: layer.count }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: randomBetween(layer.rMin, layer.rMax),
-      a: randomBetween(layer.alphaMin, layer.alphaMax),
-      depth: layer.depth,
-      twinkle: Math.random() * Math.PI * 2,
-    })),
-  );
-}
-
-function spawnParticleAtEdge(
-  particle: AmbientParticle,
-  width: number,
-  height: number,
-): AmbientParticle {
-  const cx = width / 2;
-  const cy = height / 2;
-  const angle = Math.random() * Math.PI * 2;
-  const radius =
-    Math.max(width, height) * TUNING.PARTICLE_EDGE_RADIUS_FRAC +
-    Math.random() * TUNING.PARTICLE_EDGE_VARIANCE;
-  const tangentialVelocity = 0.9 + Math.random() * 0.7;
-  const direction = Math.random() < 0.5 ? 1 : -1;
-  return {
-    ...particle,
-    x: cx + Math.cos(angle) * radius,
-    y: cy + Math.sin(angle) * radius,
-    vx: -Math.sin(angle) * tangentialVelocity * direction,
-    vy: Math.cos(angle) * tangentialVelocity * direction,
-  };
-}
-
-function createParticles(width: number, height: number, stage: Stage): AmbientParticle[] {
-  return Array.from({ length: TUNING.AMBIENT_PARTICLE_COUNT }, () => {
-    const particle = spawnParticleAtEdge(
-      {
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: 0,
-        vy: 0,
-        r: Math.random() * 2 + 0.5,
-        color: stage.particleColors[Math.floor(Math.random() * stage.particleColors.length)],
-        phase: Math.random() * Math.PI * 2,
-        alpha: Math.random() * 0.5 + 0.4,
-      },
-      width,
-      height,
-    );
-    return {
-      ...particle,
-      x: Math.random() * width,
-      y: Math.random() * height,
-    };
-  });
 }
 
 function pickRogueType(): RogueTypeKey {
@@ -249,77 +167,6 @@ function createCurvedFlyer(
     auto: isAuto,
     spriteId,
   };
-}
-
-function getCosmicStageProgress(stage: Stage, cosmicClockSec: number): number {
-  const stageStart = STAGES[stage.id - 2]?.cosmicTimeSec ?? 1e-34;
-  if (cosmicClockSec <= stageStart) return 0;
-  const startLog = Math.log10(stageStart);
-  const endLog = Math.log10(stage.cosmicTimeSec);
-  const span = endLog - startLog;
-  if (span <= 0) return 1;
-  return Math.max(0, Math.min(1, (Math.log10(cosmicClockSec) - startLog) / span));
-}
-
-function getMoteRadius(mass: number): number {
-  return TUNING.MOTE_BASE_RADIUS + Math.sqrt(mass) * TUNING.MOTE_RADIUS_PER_MASS;
-}
-
-function getClusterTargetRadius(stage: Stage, moteCount: number, progress: number): number {
-  const growth = Math.sqrt(Math.max(1, moteCount));
-  switch (stage.clusterMode) {
-    case 'galaxy':
-      return Math.min(
-        TUNING.GALAXY_DISK_MAX_RADIUS,
-        TUNING.GALAXY_DISK_MIN_RADIUS +
-          growth * TUNING.GALAXY_DISK_GROW_PER_SQRT_MOTE +
-          progress * 42,
-      );
-    case 'planetary':
-      return Math.min(
-        TUNING.PLANETARY_ORBIT_MAX_RADIUS,
-        TUNING.PLANETARY_ORBIT_MIN_RADIUS +
-          growth * TUNING.PLANETARY_ORBIT_GROW_PER_SQRT_MOTE +
-          progress * 30,
-      );
-    case 'redGiant':
-      return Math.min(
-        TUNING.MOTE_CLUSTER_MAX_RADIUS + 48,
-        58 + growth * (TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE + 2.4) + progress * 76,
-      );
-    case 'remnant':
-      return Math.min(136, 32 + growth * 5.8 + progress * 20);
-    case 'heatDeath':
-      return Math.min(TUNING.MOTE_CLUSTER_MAX_RADIUS + 70, 48 + growth * 9.4 + progress * 55);
-    case 'blackHole':
-      return Math.min(
-        TUNING.BLACKHOLE_DISK_OUTER_MAX,
-        TUNING.BLACKHOLE_DISK_OUTER_BASE + moteCount * TUNING.BLACKHOLE_DISK_GROW_PER_MOTE,
-      );
-    case 'lifeSurface':
-      return TUNING.LIFE_SURFACE_R;
-    case 'inflation':
-    case 'baryogenesis':
-    case 'qgPlasma':
-    case 'nucleosynthesis':
-    case 'recombination':
-    case 'darkAge':
-    case 'firstStars':
-    case 'reionization':
-      return Math.min(
-        TUNING.MOTE_CLUSTER_MAX_RADIUS,
-        TUNING.MOTE_CLUSTER_MIN_RADIUS +
-          growth * TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE +
-          progress * 28,
-      );
-    default:
-      return Math.min(
-        TUNING.MOTE_CLUSTER_MAX_RADIUS,
-        TUNING.MOTE_CLUSTER_MIN_RADIUS +
-          growth * TUNING.MOTE_CLUSTER_GROW_PER_SQRT_MOTE +
-          progress * 28,
-      );
-  }
 }
 
 function pickStageColor(stage: Stage): string {
@@ -405,10 +252,6 @@ function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote, 
       target.color = '#65e88f';
     }
   }
-}
-
-function getEffectiveMaxMass(progress01: number): number {
-  return 12 + Math.floor(progress01 * 100);
 }
 
 function createSurfaceMote(cluster: MoteCluster, stage: Stage, cx: number, cy: number, now: number): Mote {
@@ -588,33 +431,6 @@ function spawnAutoMote(
     mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
   }
   addMoteToCluster(cluster, stage, mote, maxMassCap);
-}
-
-function resetForStage(world: CanvasWorld, width: number, height: number, stage: Stage): CanvasWorld {
-  const nextWorld = {
-    ...createWorld(width, height, stage),
-    nextId: world.nextId,
-  };
-  return nextWorld;
-}
-
-function capWorldCollections(world: CanvasWorld): void {
-  world.bursts = world.bursts.slice(-TUNING.BURST_MAX);
-  world.flyers = world.flyers.slice(-TUNING.FLYER_MAX);
-  world.wakeTrails = world.wakeTrails.slice(-TUNING.WAKE_TRAIL_MAX);
-  world.shockwaves = world.shockwaves.slice(-TUNING.SHOCKWAVE_MAX);
-  // Don't cap rogues — they're managed by expire/despawn/collision logic
-}
-
-function getBlackHoleRadius(width: number, height: number, progress: number): number {
-  const initialRadius = Math.min(width, height) * 0.3;
-  return initialRadius * Math.pow(1 - progress, 0.7) + 5 * Math.pow(progress, 1.5);
-}
-
-function getHawkingPhotonColor(progress: number): string {
-  if (progress > 0.85) return '#fff7db';
-  if (progress > 0.55) return '#ffd8a0';
-  return '#bba3ff';
 }
 
 function stepClusterPhysics(
