@@ -603,7 +603,7 @@ function capWorldCollections(world: CanvasWorld): void {
   world.flyers = world.flyers.slice(-TUNING.FLYER_MAX);
   world.wakeTrails = world.wakeTrails.slice(-TUNING.WAKE_TRAIL_MAX);
   world.shockwaves = world.shockwaves.slice(-TUNING.SHOCKWAVE_MAX);
-  world.rogues = world.rogues.slice(-TUNING.ROGUE_MAX);
+  // Don't cap rogues — they're managed by expire/despawn/collision logic
 }
 
 function getBlackHoleRadius(width: number, height: number, progress: number): number {
