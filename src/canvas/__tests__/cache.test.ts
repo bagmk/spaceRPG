@@ -26,8 +26,9 @@ function mockCtx(): CanvasRenderingContext2D {
 function mockSpriteEnv(): void {
   // Stub the minimum DOM we touch: document.createElement('canvas')
   // returning an object with width/height + getContext.
-  // @ts-expect-error test-only global
-  globalThis.document = {
+  // The runtime types are way wider than what spriteCache touches;
+  // cast through `unknown` to keep this test-local hack contained.
+  const fakeDoc = {
     createElement: vi.fn(() => ({
       width: 0,
       height: 0,
@@ -38,6 +39,7 @@ function mockSpriteEnv(): void {
       })),
     })),
   };
+  (globalThis as unknown as { document: unknown }).document = fakeDoc;
 }
 
 beforeEach(() => {

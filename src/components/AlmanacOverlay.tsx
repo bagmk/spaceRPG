@@ -72,6 +72,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                 type="button"
                 data-stage-id={s.id}
                 className={`almanac-pill almanac-pill--${state} ${selectedId === s.id ? 'almanac-pill--active' : ''}`}
+                style={{ '--pill-accent': s.accent } as React.CSSProperties}
                 onClick={() => setSelectedId(s.id)}
               >
                 <span className="almanac-pill-num">{String(s.id).padStart(2, '0')}</span>
@@ -82,7 +83,8 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
         </div>
 
         <div className="almanac-content" ref={contentRef}>
-          <div className="almanac-info" ref={infoRef}>
+          <div className="almanac-info" ref={infoRef} style={{ '--stage-accent': stageMeta?.accent ?? '#8090b0' } as React.CSSProperties}>
+            <div className="almanac-info__bg-num">{String(selectedId).padStart(2, '0')}</div>
             <h2 className="almanac-stage-name">
               {isFuture(selectedId)
                 ? <span className="almanac-locked-name">{localizedStageName}</span>
@@ -93,22 +95,21 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
               <p className="almanac-locked-body">{t(language, 'almanacLockedEra')}</p>
             ) : (
               <>
-                <p className="resource-subhead">{pickLang(almanac?.short, language)}</p>
-                <p>{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
-                {almanac?.uncertaintyNote ? (
-                  <p className="almanac-note">{`${t(language, 'almanacNote')}: ${pickLang(almanac.uncertaintyNote, language)}`}</p>
-                ) : null}
+                <p className="almanac-short">{pickLang(almanac?.short, language)}</p>
+                <p className="almanac-body">{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
                 {almanac?.cosmicEra ? (
                   <div className="almanac-era">
-                    <div className="q-stage">{t(language, 'almanacEraInfo')}</div>
-                    <div>{`${t(language, 'almanacEraTime')}: ${pickLang(almanac.cosmicEra.timeRange, language)}`}</div>
-                    <div>{`${t(language, 'almanacEraTemp')}: ${pickLang(almanac.cosmicEra.temperature, language)}`}</div>
-                    <div>{`${t(language, 'almanacEraKey')}: ${pickLang(almanac.cosmicEra.keyParticles, language)}`}</div>
-                    <p>{pickLang(almanac.cosmicEra.realWorldScale, language)}</p>
+                    <div className="almanac-era__row"><span className="almanac-era__icon">⏱</span><span className="almanac-era__label">{t(language, 'almanacEraTime')}</span><span>{pickLang(almanac.cosmicEra.timeRange, language)}</span></div>
+                    <div className="almanac-era__row"><span className="almanac-era__icon">🌡</span><span className="almanac-era__label">{t(language, 'almanacEraTemp')}</span><span>{pickLang(almanac.cosmicEra.temperature, language)}</span></div>
+                    <div className="almanac-era__row"><span className="almanac-era__icon">⚛</span><span className="almanac-era__label">{t(language, 'almanacEraKey')}</span><span>{pickLang(almanac.cosmicEra.keyParticles, language)}</span></div>
+                    {almanac.cosmicEra.realWorldScale ? <p className="almanac-era__scale">{pickLang(almanac.cosmicEra.realWorldScale, language)}</p> : null}
                   </div>
                 ) : null}
+                {almanac?.uncertaintyNote ? (
+                  <p className="almanac-note">{pickLang(almanac.uncertaintyNote, language)}</p>
+                ) : null}
                 {almanac?.funFact ? (
-                  <p className="resource-subhead">{pickLang(almanac.funFact, language)}</p>
+                  <p className="almanac-funfact">💡 {pickLang(almanac.funFact, language)}</p>
                 ) : null}
               </>
             )}

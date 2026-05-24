@@ -2654,19 +2654,49 @@ button.stat-header-item {
 
 .almanac-era {
   display: grid;
-  gap: 6px;
-  margin: 16px 0;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--fg);
-  font-size: 12px;
-  line-height: 1.45;
+  gap: 0;
+  margin: 14px 0;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 15%, transparent);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.almanac-era p {
-  margin: 6px 0 0;
-  color: var(--muted);
+.almanac-era__row {
+  display: grid;
+  grid-template-columns: 24px 56px 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.almanac-era__row:last-of-type {
+  border-bottom: none;
+}
+
+.almanac-era__icon {
+  font-size: 12px;
+  text-align: center;
+}
+
+.almanac-era__label {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.almanac-era__scale {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .singularity-tree {
@@ -4013,11 +4043,16 @@ button.stat-header-item {
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.almanac-pill--past { color: rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.12); }
-.almanac-pill--current { color: var(--accent); border-color: var(--accent); }
+.almanac-pill--past { color: rgba(255,255,255,0.55); border-color: color-mix(in srgb, var(--pill-accent, #fff) 20%, transparent); }
+.almanac-pill--current { color: var(--pill-accent, var(--accent)); border-color: var(--pill-accent, var(--accent)); }
 .almanac-pill--future { color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.06); }
-.almanac-pill--active { background: rgba(255,140,60,0.12); border-color: var(--accent) !important; color: var(--fg) !important; }
-.almanac-pill:hover:not(.almanac-pill--active) { border-color: rgba(255,255,255,0.25); color: var(--fg); }
+.almanac-pill--active {
+  background: color-mix(in srgb, var(--pill-accent, #ff8c3c) 12%, transparent);
+  border-color: var(--pill-accent, var(--accent)) !important;
+  color: var(--fg) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pill-accent, #ff8c3c) 20%, transparent);
+}
+.almanac-pill:hover:not(.almanac-pill--active) { border-color: color-mix(in srgb, var(--pill-accent, #fff) 35%, transparent); color: var(--fg); }
 .almanac-pill-num { font-size: 11px; letter-spacing: 0.05em; }
 .almanac-pill-lock { font-size: 8px; opacity: 0.6; }
 .almanac-content {
@@ -4029,16 +4064,53 @@ button.stat-header-item {
   min-height: 0;
 }
 .almanac-info {
+  position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
   padding-right: 8px;
 }
+.almanac-info__bg-num {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-family: var(--mono);
+  font-size: 72px;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--stage-accent, #8090b0) 8%, transparent);
+  pointer-events: none;
+  line-height: 1;
+}
 .almanac-info h2 {
   margin: 6px 0 10px;
   font-family: var(--serif);
-  font-size: clamp(20px, 3vw, 30px);
+  font-size: clamp(22px, 3vw, 32px);
   font-weight: 400;
+  color: var(--fg);
+  border-left: 3px solid var(--stage-accent, #8090b0);
+  padding-left: 12px;
+}
+.almanac-short {
+  color: color-mix(in srgb, var(--stage-accent, #8090b0) 70%, rgba(255,255,255,0.5));
+  font-size: 12px;
+  font-style: italic;
+  margin: 0 0 12px;
+}
+.almanac-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(236, 232, 217, 0.85);
+}
+.almanac-funfact {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(255, 215, 80, 0.06);
+  border-left: 2px solid rgba(255, 215, 80, 0.3);
+  font-size: 12px;
+  color: rgba(255, 230, 160, 0.8);
+  line-height: 1.5;
 }
 .almanac-stage-label {
   font-size: 10px;

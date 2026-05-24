@@ -66,6 +66,28 @@ export function spawnParticleAtEdge(
   };
 }
 
+// In-place variant: mutates particle position/velocity without allocating
+// a new object. Used in the hot tickFrame loop to avoid GC pressure.
+// Other fields (r, color, phase, etc.) are preserved.
+export function resetParticleAtEdge(
+  particle: AmbientParticle,
+  width: number,
+  height: number,
+): void {
+  const cx = width / 2;
+  const cy = height / 2;
+  const angle = Math.random() * Math.PI * 2;
+  const radius =
+    Math.max(width, height) * TUNING.PARTICLE_EDGE_RADIUS_FRAC +
+    Math.random() * TUNING.PARTICLE_EDGE_VARIANCE;
+  const tangentialVelocity = 0.9 + Math.random() * 0.7;
+  const direction = Math.random() < 0.5 ? 1 : -1;
+  particle.x = cx + Math.cos(angle) * radius;
+  particle.y = cy + Math.sin(angle) * radius;
+  particle.vx = -Math.sin(angle) * tangentialVelocity * direction;
+  particle.vy = Math.cos(angle) * tangentialVelocity * direction;
+}
+
 export function createParticles(width: number, height: number, stage: Stage): AmbientParticle[] {
   return Array.from({ length: TUNING.AMBIENT_PARTICLE_COUNT }, () => {
     const particle = spawnParticleAtEdge(

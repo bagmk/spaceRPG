@@ -15,6 +15,7 @@ import {
   randomBetween,
   resetForStage,
   spawnParticleAtEdge,
+  resetParticleAtEdge,
 } from '../canvas/world';
 import {
   capWorldCollections,
@@ -25,6 +26,20 @@ import {
   getHawkingPhotonColor,
   getMoteRadius,
 } from '../canvas/clusterGeom';
+import {
+  addMoteToCluster,
+  createBaseMote,
+  createBurstSet,
+  createCurvedFlyer,
+  createPhotonMote,
+  createShockwave,
+  createSurfaceMote,
+  enrichExistingMote,
+  pickRogueType,
+  pickStageColor,
+  spawnAutoMote,
+  spawnMotesAtClick,
+} from '../canvas/spawn';
 import { ROGUE_TYPES, TUNING } from '../game/constants';
 import { getProgress } from '../game/formulas';
 import { getMechanic } from '../game/mechanics';
@@ -88,349 +103,6 @@ interface ParticleFieldProps {
 export interface ParticleFieldHandle {
   /** Advance physics + render one frame. Driven by GameScreen's master rAF loop. */
   tick: (now: number, dt: number) => void;
-}
-
-function pickRogueType(): RogueTypeKey {
-  const keys = Object.keys(ROGUE_TYPES) as RogueTypeKey[];
-  const totalWeight = keys.reduce((sum, key) => sum + ROGUE_TYPES[key].weight, 0);
-  let roll = Math.random() * totalWeight;
-  for (const key of keys) {
-    roll -= ROGUE_TYPES[key].weight;
-    if (roll <= 0) {
-      return key;
-    }
-  }
-  return 'minor';
-}
-
-function createShockwave(
-  color: string,
-  x?: number,
-  y?: number,
-  maxRadius?: number,
-  lifeMs?: number,
-  lineWidth?: number,
-): Shockwave {
-  return { startedAt: performance.now(), color, x, y, maxRadius, lifeMs, lineWidth };
-}
-
-function createBurstSet(
-  x: number,
-  y: number,
-  count: number,
-  color: string,
-  speedBase: number,
-  stageId?: number,
-  radiusScale = 1,
-): Burst[] {
-  return Array.from({ length: count }, (_, index) => {
-    const angle = (index / count) * Math.PI * 2 + Math.random() * 0.4;
-    const speed = speedBase + Math.random() * 3;
-    return {
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      turn: (Math.random() < 0.5 ? -1 : 1) * (0.012 + Math.random() * 0.018),
-      r: (2 + Math.random() * 2.5) * radiusScale,
-      life: 1,
-      color,
-      spriteId: stageId,
-    };
-  });
-}
-
-function createCurvedFlyer(
-  startX: number,
-  startY: number,
-  targetX: number,
-  targetY: number,
-  isAuto: boolean,
-  spriteId: number,
-): Flyer {
-  const midX = (startX + targetX) / 2;
-  const midY = (startY + targetY) / 2;
-  const offsetMagnitude = Math.hypot(targetX - startX, targetY - startY) * 0.4;
-  const offsetAngle = Math.atan2(targetY - startY, targetX - startX) + Math.PI / 2;
-  const sign = Math.random() < 0.5 ? 1 : -1;
-  return {
-    x: startX,
-    y: startY,
-    startX,
-    startY,
-    controlX: midX + Math.cos(offsetAngle) * offsetMagnitude * sign,
-    controlY: midY + Math.sin(offsetAngle) * offsetMagnitude * sign,
-    targetX,
-    targetY,
-    t: 0,
-    life: 1,
-    auto: isAuto,
-    spriteId,
-  };
-}
-
-function pickStageColor(stage: Stage): string {
-  return stage.particleColors[Math.floor(Math.random() * stage.particleColors.length)] ?? stage.accent;
-}
-
-function createBaseMote(
-  cluster: MoteCluster,
-  stage: Stage,
-  x: number,
-  y: number,
-  vx: number,
-  vy: number,
-  now: number,
-): Mote {
-  const hue = Math.random();
-  return {
-    id: cluster.nextMoteId++,
-    x,
-    y,
-    vx,
-    vy,
-    mass: TUNING.MOTE_BASE_MASS,
-    r: getMoteRadius(TUNING.MOTE_BASE_MASS),
-    color: pickStageColor(stage),
-    hue,
-    age: 0,
-    bornAt: now,
-    spin: Math.random() * Math.PI * 2,
-    spinVel: (Math.random() - 0.5) * 0.08,
-  };
-}
-
-function addMoteToCluster(cluster: MoteCluster, _stage: Stage, mote: Mote, _maxMassCap: number): void {
-  if (cluster.motes.length >= TUNING.MOTE_MAX) {
-    enrichExistingMote(cluster, _stage, mote, _maxMassCap);
-    return;
-  }
-  cluster.motes.push(mote);
-}
-
-function enrichExistingMote(cluster: MoteCluster, stage: Stage, incoming: Mote, maxMassCap: number): void {
-  if (cluster.motes.length === 0) {
-    cluster.motes.push(incoming);
-    return;
-  }
-
-  let target =
-    stage.clusterMode === 'lifeSurface'
-      ? cluster.motes[Math.floor(Math.random() * cluster.motes.length)]
-      : cluster.motes[0];
-
-  if (stage.clusterMode !== 'lifeSurface') {
-    let bestDistance = Number.POSITIVE_INFINITY;
-    cluster.motes.forEach((mote) => {
-      const dx = mote.x - incoming.x;
-      const dy = mote.y - incoming.y;
-      const distance = dx * dx + dy * dy;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        target = mote;
-      }
-    });
-  }
-
-  const totalMass = Math.min(maxMassCap, target.mass + incoming.mass * 0.55);
-  const blend = incoming.mass / Math.max(target.mass + incoming.mass, 1);
-  target.x += (incoming.x - target.x) * blend * 0.25;
-  target.y += (incoming.y - target.y) * blend * 0.25;
-  target.vx += incoming.vx * 0.35;
-  target.vy += incoming.vy * 0.35;
-  target.mass = totalMass;
-  target.r = getMoteRadius(totalMass);
-  target.age = Math.max(target.age, incoming.age);
-
-  if (stage.clusterMode === 'lifeSurface') {
-    if (incoming.surfaceLat !== undefined && Math.random() < 0.35) {
-      target.surfaceLat = incoming.surfaceLat;
-      target.surfaceLon = incoming.surfaceLon;
-    }
-    if (Math.random() < 0.7) {
-      target.surfaceKind = 'plant';
-      target.color = '#65e88f';
-    }
-  }
-}
-
-function createSurfaceMote(cluster: MoteCluster, stage: Stage, cx: number, cy: number, now: number): Mote {
-  const count = cluster.motes.length;
-  const roll = Math.random();
-  const surfaceKind: Mote['surfaceKind'] =
-    count > 90 && roll > 0.78 ? 'city' : count > 38 && roll > 0.86 ? 'water' : 'plant';
-  return {
-    ...createBaseMote(cluster, stage, cx, cy, 0, 0, now),
-    surfaceLat: (Math.random() - 0.5) * Math.PI * 0.86,
-    surfaceLon: Math.random() * Math.PI * 2,
-    surfaceKind,
-    color:
-      surfaceKind === 'city'
-        ? '#ffeeaa'
-        : surfaceKind === 'water'
-          ? '#9de8ff'
-          : '#65e88f',
-  };
-}
-
-function createPhotonMote(
-  cluster: MoteCluster,
-  stage: Stage,
-  cx: number,
-  cy: number,
-  now: number,
-  clickX?: number,
-  clickY?: number,
-): Mote {
-  const clickAngle = Math.atan2((clickY ?? cy) - cy, (clickX ?? cx + 1) - cx);
-  const angle =
-    Math.random() < 0.45
-      ? clickAngle + (Math.random() - 0.5) * 1.6
-      : Math.random() * Math.PI * 2;
-  const outer = Math.max(TUNING.BLACKHOLE_DISK_OUTER_BASE, cluster.physicalRadius);
-  const spawnR = outer * (0.78 + Math.random() * 0.38);
-  const x = cx + Math.cos(angle) * spawnR;
-  const y = cy + Math.sin(angle) * spawnR;
-  const mote = createBaseMote(
-    cluster,
-    stage,
-    x,
-    y,
-    -Math.sin(angle) * 1.4,
-    Math.cos(angle) * 1.4,
-    now,
-  );
-  mote.color = Math.random() > 0.42 ? stage.coreColor : '#fff0c8';
-  mote.orbitRadius = Math.random() * Math.max(36, outer - TUNING.BLACKHOLE_DISK_INNER);
-  mote.orbitAngle = angle;
-  mote.spiralPhase = Math.random() * Math.PI * 2;
-  return mote;
-}
-
-function spawnMotesAtClick(
-  cluster: MoteCluster,
-  stage: Stage,
-  clickX: number,
-  clickY: number,
-  cx: number,
-  cy: number,
-  width: number,
-  height: number,
-  isCrit: boolean,
-  clickEmissionCount: number,
-  maxMassCap: number,
-  now: number,
-): void {
-  const count =
-    ((isCrit ? TUNING.MOTE_PER_CLICK * 2 : TUNING.MOTE_PER_CLICK) + (isCrit ? 1 : 0)) *
-    Math.max(1, clickEmissionCount);
-  for (let i = 0; i < count; i += 1) {
-    if (stage.clusterMode === 'lifeSurface') {
-      // Spawn motes OUTSIDE earth radius so they're visible
-      const earthR = TUNING.LIFE_SURFACE_R;
-      const spawnAngle = Math.atan2(clickY - cy, clickX - cx) + (Math.random() - 0.5) * 1.2;
-      const spawnR = earthR * (1.15 + Math.random() * 0.6);
-      const mx = cx + Math.cos(spawnAngle) * spawnR;
-      const my = cy + Math.sin(spawnAngle) * spawnR;
-      const mote = createBaseMote(cluster, stage, mx, my,
-        (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, now);
-      mote.color = `hsl(${190 + Math.random() * 30}, ${60 + Math.random() * 20}%, ${75 + Math.random() * 15}%)`;
-      mote.surfaceKind = 'water';
-      addMoteToCluster(cluster, stage, mote, maxMassCap);
-      continue;
-    }
-    if (stage.clusterMode === 'blackHole') {
-      addMoteToCluster(
-        cluster,
-        stage,
-        createPhotonMote(cluster, stage, cx, cy, now, clickX, clickY),
-        maxMassCap,
-      );
-      continue;
-    }
-
-    const clickAngle = Math.atan2(clickY - cy, clickX - cx);
-    const angle =
-      Math.random() < 0.32
-        ? clickAngle + (Math.random() - 0.5) * Math.PI * 1.35
-        : Math.random() * Math.PI * 2;
-    const clusterRadius = Math.max(TUNING.MOTE_CLUSTER_MIN_RADIUS, cluster.physicalRadius);
-    const spawnSpread = Math.max(8, Math.max(width, height) * TUNING.MOTE_SPAWN_RADIUS_FRAC * 0.05);
-    const radius = clusterRadius * (0.16 + Math.random() * 0.94);
-    const x = cx + Math.cos(angle) * radius + (Math.random() - 0.5) * spawnSpread;
-    const y = cy + Math.sin(angle) * radius + (Math.random() - 0.5) * spawnSpread;
-    const mote = createBaseMote(
-      cluster,
-      stage,
-      x,
-      y,
-      Math.cos(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
-      Math.sin(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
-      now,
-    );
-    if (stage.clusterMode === 'planetary') {
-      const growthRadius = getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
-      mote.orbitRadius = 48 + Math.random() * Math.max(38, growthRadius - 36);
-      mote.orbitAngle = Math.atan2(y - cy, x - cx);
-    }
-    if (stage.clusterMode === 'galaxy') {
-      const dx = x - cx;
-      const dy = y - cy;
-      const d = Math.max(1, Math.hypot(dx, dy));
-      mote.vx += (-dy / d) * 1.15;
-      mote.vy += (dx / d) * 1.15;
-      mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
-      mote.spiralPhase = Math.random() * Math.PI * 2;
-    }
-    addMoteToCluster(cluster, stage, mote, maxMassCap);
-  }
-}
-
-function spawnAutoMote(
-  cluster: MoteCluster,
-  stage: Stage,
-  cx: number,
-  cy: number,
-  maxMassCap: number,
-  now: number,
-): void {
-  if (stage.clusterMode === 'lifeSurface') {
-    const earthR = TUNING.LIFE_SURFACE_R;
-    const angle = Math.random() * Math.PI * 2;
-    const spawnR = earthR * (1.1 + Math.random() * 0.5);
-    const mx = cx + Math.cos(angle) * spawnR;
-    const my = cy + Math.sin(angle) * spawnR;
-    const mote = createBaseMote(cluster, stage, mx, my,
-      (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, now);
-    mote.color = `hsl(${190 + Math.random() * 30}, ${60 + Math.random() * 20}%, ${75 + Math.random() * 15}%)`;
-    mote.surfaceKind = 'water';
-    addMoteToCluster(cluster, stage, mote, maxMassCap);
-    return;
-  }
-  if (stage.clusterMode === 'blackHole') {
-    addMoteToCluster(cluster, stage, createPhotonMote(cluster, stage, cx, cy, now), maxMassCap);
-    return;
-  }
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 28 + Math.random() * 86;
-  const mote = createBaseMote(
-    cluster,
-    stage,
-    cx + Math.cos(angle) * radius,
-    cy + Math.sin(angle) * radius,
-    -Math.sin(angle) * 0.7,
-    Math.cos(angle) * 0.7,
-    now,
-  );
-  if (stage.clusterMode === 'planetary') {
-    const growthRadius = getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
-    mote.orbitRadius = 48 + Math.random() * Math.max(38, growthRadius - 36);
-    mote.orbitAngle = angle;
-  }
-  if (stage.clusterMode === 'galaxy') {
-    mote.orbitRadius = 28 + Math.random() * getClusterTargetRadius(stage, cluster.motes.length + 1, 0);
-  }
-  addMoteToCluster(cluster, stage, mote, maxMassCap);
 }
 
 function stepClusterPhysics(
@@ -1316,12 +988,22 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         });
       }
     }
-    world.wakeTrails = world.wakeTrails.filter((trail) => {
-      trail.x += trail.vx;
-      trail.y += trail.vy;
-      trail.life -= TUNING.WAKE_LIFE_DECAY * motionScale;
-      return trail.life > 0;
-    });
+    // In-place: write-index compaction to avoid per-frame array allocation.
+    {
+      const arr = world.wakeTrails;
+      let w = 0;
+      for (let r = 0; r < arr.length; r++) {
+        const trail = arr[r];
+        trail.x += trail.vx;
+        trail.y += trail.vy;
+        trail.life -= TUNING.WAKE_LIFE_DECAY * motionScale;
+        if (trail.life > 0) {
+          if (w !== r) arr[w] = trail;
+          w++;
+        }
+      }
+      arr.length = w;
+    }
 
     const gravity = imploding
       ? TUNING.IMPLOSION_GRAVITY * gravityMod
@@ -1331,44 +1013,51 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     const captureRadius = coreRadius + (transitionSucking ? 18 : 4);
     const dampening = imploding || transitionSucking ? 0.97 : TUNING.PARTICLE_DAMPENING;
 
-    world.particles = world.particles.map((particle) => {
-      const dx = cx - particle.x;
-      const dy = cy - particle.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 1) {
-        return spawnParticleAtEdge(particle, width, height);
-      }
-      if (distance < captureRadius && !imploding) {
-        return spawnParticleAtEdge(particle, width, height);
-      }
-      const softenedDistance = Math.max(distance, TUNING.PARTICLE_CAPTURE_SOFTENING);
-      const force = gravity / (softenedDistance * 0.3 + 8);
-      particle.vx += (dx / distance) * force;
-      particle.vy += (dy / distance) * force;
-      if (pointerPressure) {
-        applyPointerPressureToAmbientParticle(particle, pointerPressure, physicsDtScale);
-      }
-      particle.vx *= dampening;
-      particle.vy *= dampening;
-      const particleSpeed = Math.hypot(particle.vx, particle.vy);
+    // In-place: mutate particles instead of allocating a fresh array each frame.
+    // Respawn paths use resetParticleAtEdge() to mutate the existing object.
+    {
+      const arr = world.particles;
       const maxVelocity = imploding ? 18 : TUNING.PARTICLE_MAX_V;
-      if (particleSpeed > maxVelocity) {
-        particle.vx = (particle.vx / particleSpeed) * maxVelocity;
-        particle.vy = (particle.vy / particleSpeed) * maxVelocity;
+      for (let i = 0; i < arr.length; i++) {
+        const particle = arr[i];
+        const dx = cx - particle.x;
+        const dy = cy - particle.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance < 1) {
+          resetParticleAtEdge(particle, width, height);
+          continue;
+        }
+        if (distance < captureRadius && !imploding) {
+          resetParticleAtEdge(particle, width, height);
+          continue;
+        }
+        const softenedDistance = Math.max(distance, TUNING.PARTICLE_CAPTURE_SOFTENING);
+        const force = gravity / (softenedDistance * 0.3 + 8);
+        particle.vx += (dx / distance) * force;
+        particle.vy += (dy / distance) * force;
+        if (pointerPressure) {
+          applyPointerPressureToAmbientParticle(particle, pointerPressure, physicsDtScale);
+        }
+        particle.vx *= dampening;
+        particle.vy *= dampening;
+        const particleSpeed = Math.hypot(particle.vx, particle.vy);
+        if (particleSpeed > maxVelocity) {
+          particle.vx = (particle.vx / particleSpeed) * maxVelocity;
+          particle.vy = (particle.vy / particleSpeed) * maxVelocity;
+        }
+        particle.x += particle.vx * motionScale;
+        particle.y += particle.vy * motionScale;
+        particle.phase += frameDt * 0.0015;
+        if (
+          particle.x < -TUNING.PARTICLE_RESPAWN_MARGIN ||
+          particle.x > width + TUNING.PARTICLE_RESPAWN_MARGIN ||
+          particle.y < -TUNING.PARTICLE_RESPAWN_MARGIN ||
+          particle.y > height + TUNING.PARTICLE_RESPAWN_MARGIN
+        ) {
+          resetParticleAtEdge(particle, width, height);
+        }
       }
-      particle.x += particle.vx * motionScale;
-      particle.y += particle.vy * motionScale;
-      particle.phase += frameDt * 0.0015;
-      if (
-        particle.x < -TUNING.PARTICLE_RESPAWN_MARGIN ||
-        particle.x > width + TUNING.PARTICLE_RESPAWN_MARGIN ||
-        particle.y < -TUNING.PARTICLE_RESPAWN_MARGIN ||
-        particle.y > height + TUNING.PARTICLE_RESPAWN_MARGIN
-      ) {
-        return spawnParticleAtEdge(particle, width, height);
-      }
-      return particle;
-    });
+    }
 
     if (
       !interactionLocked &&
@@ -1387,40 +1076,56 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       world.cluster.motes.forEach((mote) => applyPointerPressureToMote(mote, stage, pointerPressure, physicsDtScale));
     }
 
-    world.flyers = world.flyers.filter((flyer) => {
-      const speed = flyer.auto ? 0.0011 : 0.0015;
-      flyer.t = Math.min(1.1, flyer.t + frameDt * speed);
-      if (flyer.t >= 1) {
-        return false;
+    {
+      const arr = world.flyers;
+      let w = 0;
+      for (let r = 0; r < arr.length; r++) {
+        const flyer = arr[r];
+        const speed = flyer.auto ? 0.0011 : 0.0015;
+        flyer.t = Math.min(1.1, flyer.t + frameDt * speed);
+        if (flyer.t >= 1) continue;
+        const oneMinusT = 1 - flyer.t;
+        flyer.x =
+          oneMinusT * oneMinusT * flyer.startX +
+          2 * oneMinusT * flyer.t * flyer.controlX +
+          flyer.t * flyer.t * flyer.targetX;
+        flyer.y =
+          oneMinusT * oneMinusT * flyer.startY +
+          2 * oneMinusT * flyer.t * flyer.controlY +
+          flyer.t * flyer.t * flyer.targetY;
+        flyer.life -=
+          (flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY) * motionScale;
+        if (flyer.life > 0) {
+          if (w !== r) arr[w] = flyer;
+          w++;
+        }
       }
-      const oneMinusT = 1 - flyer.t;
-      flyer.x =
-        oneMinusT * oneMinusT * flyer.startX +
-        2 * oneMinusT * flyer.t * flyer.controlX +
-        flyer.t * flyer.t * flyer.targetX;
-      flyer.y =
-        oneMinusT * oneMinusT * flyer.startY +
-        2 * oneMinusT * flyer.t * flyer.controlY +
-        flyer.t * flyer.t * flyer.targetY;
-      flyer.life -=
-        (flyer.auto ? TUNING.FLYER_AUTO_LIFE_DECAY : TUNING.FLYER_CLICK_LIFE_DECAY) * motionScale;
-      return flyer.life > 0;
-    });
+      arr.length = w;
+    }
 
-    world.bursts = world.bursts.filter((burst) => {
-      if (burst.turn) {
-        const vx = burst.vx;
-        const vy = burst.vy;
-        burst.vx = vx * Math.cos(burst.turn) - vy * Math.sin(burst.turn);
-        burst.vy = vx * Math.sin(burst.turn) + vy * Math.cos(burst.turn);
+    {
+      const arr = world.bursts;
+      let w = 0;
+      for (let r = 0; r < arr.length; r++) {
+        const burst = arr[r];
+        if (burst.turn) {
+          const vx = burst.vx;
+          const vy = burst.vy;
+          burst.vx = vx * Math.cos(burst.turn) - vy * Math.sin(burst.turn);
+          burst.vy = vx * Math.sin(burst.turn) + vy * Math.cos(burst.turn);
+        }
+        burst.x += burst.vx;
+        burst.y += burst.vy;
+        burst.vx *= TUNING.BURST_VELOCITY_DECAY;
+        burst.vy *= TUNING.BURST_VELOCITY_DECAY;
+        burst.life -= TUNING.BURST_DECAY * motionScale;
+        if (burst.life > 0) {
+          if (w !== r) arr[w] = burst;
+          w++;
+        }
       }
-      burst.x += burst.vx;
-      burst.y += burst.vy;
-      burst.vx *= TUNING.BURST_VELOCITY_DECAY;
-      burst.vy *= TUNING.BURST_VELOCITY_DECAY;
-      burst.life -= TUNING.BURST_DECAY * motionScale;
-      return burst.life > 0;
-    });
+      arr.length = w;
+    }
 
     if (
       transitionElapsed !== null &&
@@ -1454,69 +1159,85 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       }
     }
 
-    const nextRogues: Rogue[] = [];
-    world.rogues.forEach((rogue) => {
-      if (pointerPressure) {
-        applyPointerAttractionToRogue(rogue, pointerPressure, physicsDtScale);
+    // In-place: keep semantics identical (collide / expire / despawn → drop).
+    // Use labeled drop blocks instead of forEach early-returns.
+    {
+      const arr = world.rogues;
+      let w = 0;
+      rogueLoop: for (let r = 0; r < arr.length; r++) {
+        const rogue = arr[r];
+        if (pointerPressure) {
+          applyPointerAttractionToRogue(rogue, pointerPressure, physicsDtScale);
+        }
+        rogue.x += rogue.vx - world.coreVX;
+        rogue.y += rogue.vy - world.coreVY;
+        rogue.age += frameDt;
+        rogue.rotation += frameDt * 0.001;
+        const dx = cx - rogue.x;
+        const dy = cy - rogue.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance < coreRadius + rogue.r) {
+          const burstCount =
+            rogue.typeKey === 'massive'
+              ? TUNING.MASSIVE_COLLISION_BURST_COUNT
+              : rogue.typeKey === 'major'
+                ? TUNING.MAJOR_COLLISION_BURST_COUNT
+                : TUNING.MINOR_COLLISION_BURST_COUNT;
+          world.bursts.push(
+            ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4, stage.id),
+          );
+          world.shockwaves.push(createShockwave(stage.accent));
+          onCollision({
+            x: cx,
+            y: cy - 20,
+            bonus: rogue.bonus,
+            entropyBonus: rogue.entropyBonus,
+            tier: rogue.typeKey,
+            name: rogue.name,
+          });
+          continue rogueLoop;
+        }
+        const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
+        if (onScreen && !rogue.spotted) {
+          rogue.spotted = true;
+          onEncounter({ name: rogue.name, color: rogue.color });
+        }
+        // Once pointer attracts a rogue, keep it alive much longer
+        const attractDist = pointerPressure
+          ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y)
+          : Infinity;
+        const inRange = pointerPressure && attractDist < pointerPressure.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
+        if (inRange) {
+          (rogue as any)._attracted = true;
+          (rogue as any)._lastAttractTime = now;
+        }
+        const wasAttracted = (rogue as any)._attracted;
+        const gracePeriod = wasAttracted ? 8000 : 0; // 8s grace after last attraction
+        const timeSinceAttract = now - ((rogue as any)._lastAttractTime ?? 0);
+        const isProtected = wasAttracted && timeSinceAttract < gracePeriod;
+        if (!isProtected && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
+          continue rogueLoop;
+        }
+        if (!isProtected && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
+          continue rogueLoop;
+        }
+        if (w !== r) arr[w] = rogue;
+        w++;
       }
-      rogue.x += rogue.vx - world.coreVX;
-      rogue.y += rogue.vy - world.coreVY;
-      rogue.age += frameDt;
-      rogue.rotation += frameDt * 0.001;
-      const dx = cx - rogue.x;
-      const dy = cy - rogue.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < coreRadius + rogue.r) {
-        const burstCount =
-          rogue.typeKey === 'massive'
-            ? TUNING.MASSIVE_COLLISION_BURST_COUNT
-            : rogue.typeKey === 'major'
-              ? TUNING.MAJOR_COLLISION_BURST_COUNT
-              : TUNING.MINOR_COLLISION_BURST_COUNT;
-        world.bursts.push(
-          ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4, stage.id),
-        );
-        world.shockwaves.push(createShockwave(stage.accent));
-        onCollision({
-          x: cx,
-          y: cy - 20,
-          bonus: rogue.bonus,
-          entropyBonus: rogue.entropyBonus,
-          tier: rogue.typeKey,
-          name: rogue.name,
-        });
-        return;
+      arr.length = w;
+    }
+    {
+      const arr = world.shockwaves;
+      let w = 0;
+      for (let r = 0; r < arr.length; r++) {
+        const shockwave = arr[r];
+        if (now - shockwave.startedAt <= TUNING.SHOCKWAVE_FADE_MS) {
+          if (w !== r) arr[w] = shockwave;
+          w++;
+        }
       }
-      const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
-      if (onScreen && !rogue.spotted) {
-        rogue.spotted = true;
-        onEncounter({ name: rogue.name, color: rogue.color });
-      }
-      // Once pointer attracts a rogue, keep it alive much longer
-      const attractDist = pointerPressure
-        ? Math.hypot(rogue.x - pointerPressure.x, rogue.y - pointerPressure.y)
-        : Infinity;
-      const inRange = pointerPressure && attractDist < pointerPressure.radius * POINTER_ROGUE_ATTRACTION_RADIUS_MULT;
-      if (inRange) {
-        (rogue as any)._attracted = true;
-        (rogue as any)._lastAttractTime = now;
-      }
-      const wasAttracted = (rogue as any)._attracted;
-      const gracePeriod = wasAttracted ? 8000 : 0; // 8s grace after last attraction
-      const timeSinceAttract = now - ((rogue as any)._lastAttractTime ?? 0);
-      const isProtected = wasAttracted && timeSinceAttract < gracePeriod;
-      if (!isProtected && rogue.age > TUNING.ROGUE_EXPIRE_MS) {
-        return;
-      }
-      if (!isProtected && Math.hypot(rogue.x - cx, rogue.y - cy) > Math.max(width, height) * TUNING.ROGUE_DESPAWN_DISTANCE_FRAC) {
-        return;
-      }
-      nextRogues.push(rogue);
-    });
-    world.rogues = nextRogues;
-    world.shockwaves = world.shockwaves.filter(
-      (shockwave) => now - shockwave.startedAt <= TUNING.SHOCKWAVE_FADE_MS,
-    );
+      arr.length = w;
+    }
     capWorldCollections(world);
 
     ctx.clearRect(0, 0, width, height);

@@ -52,6 +52,8 @@ import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
 import { getPrestigeMultiplier, PRESTIGE_UPGRADES, type PrestigeUpgradeId } from '../game/prestige';
 import { useBoostNotifications } from '../hooks/useBoostNotifications';
+import { useAudioUnlockOnPointer } from '../hooks/useAudioUnlockOnPointer';
+import { useSaveErrorToast } from '../hooks/useSaveErrorToast';
 
 interface FloatingEntry {
   id: number;
@@ -222,23 +224,8 @@ export function GameScreen({
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [encounterEntries, setEncounterEntries] = useState<EncounterEntry[]>([]);
   const [shakeClass, setShakeClass] = useState('');
-  const [saveErrorVisible, setSaveErrorVisible] = useState(false);
-  useEffect(() => {
-    const handler = () => {
-      setSaveErrorVisible(true);
-      setTimeout(() => setSaveErrorVisible(false), 5000);
-    };
-    window.addEventListener('cc-save-failed', handler);
-    return () => window.removeEventListener('cc-save-failed', handler);
-  }, []);
-  useEffect(() => {
-    // First in-game pointer interaction unlocks the AudioContext — covers
-    // deeplink/Resume users who never pressed an intro button. unlock() is
-    // idempotent, so leaving the listener attached is harmless.
-    const handler = () => soundManager?.unlock();
-    window.addEventListener('pointerdown', handler);
-    return () => window.removeEventListener('pointerdown', handler);
-  }, [soundManager]);
+  const saveErrorVisible = useSaveErrorToast();
+  useAudioUnlockOnPointer(soundManager);
   const logicAccumulator = useRef(0);
   const lastWhooshAt = useRef(0);
   const particleFieldRef = useRef<ParticleFieldHandle>(null);
