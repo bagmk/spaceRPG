@@ -277,12 +277,12 @@ function drawSpriteInflation(
 
   // Energy sparks orbiting (virtual particle pairs)
   for (let i = 0; i < 4; i++) {
-    const a = t * 2.5 + (i / 4) * Math.PI * 2;
-    const orbitR = sz * (0.5 + Math.sin(t * 1.3 + i * 2) * 0.3);
+    const a = t * 0.8 + (i / 4) * Math.PI * 2;
+    const orbitR = sz * (0.5 + Math.sin(t * 0.6 + i * 2) * 0.3);
     const sx = Math.cos(a) * orbitR;
     const sy = Math.sin(a) * orbitR;
-    const sparkR = sz * (0.06 + Math.sin(t * 4 + i) * 0.04);
-    ctx.fillStyle = hexToRgba('#ffffff', 0.35 + Math.sin(t * 3 + i * 1.5) * 0.2);
+    const sparkR = sz * (0.12 + Math.sin(t * 1.5 + i) * 0.06);
+    ctx.fillStyle = hexToRgba('#ffffff', 0.35 + Math.sin(t * 1.2 + i * 1.5) * 0.2);
     ctx.beginPath();
     ctx.arc(sx, sy, sparkR, 0, Math.PI * 2);
     ctx.fill();
