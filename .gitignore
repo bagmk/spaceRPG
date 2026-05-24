@@ -43,3 +43,7 @@ dist/
 REFACTOR_PROMPT*.md
 REFACTOR_TEST*.md
 .claude/worktrees/
+
+# Vite/Vitest dev artifacts
+*.timestamp-*.mjs
+.cc-write-test

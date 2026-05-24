@@ -61,9 +61,17 @@ describe('gameReducer', () => {
       tier: 'major',
       name: 'test',
     });
-    expect(next.quanta).toBe(40);
+    // Reward = min(rawBonus, cap) where
+    //   rawBonus = max(action.bonus, clickScaledBonus)
+    //   cap     = max(stage.threshold * 0.02 * tierCapMult, scaledClickBonus)
+    // For stage 0 (threshold=2000, tierCapMult=2 for major) the cap is 80.
+    // Floor invariant: result >= clickScaledBonus (= clickPower 1 * majorMult 40 = 40).
+    // 80 > 40, so floor still holds.
+    expect(next.quanta).toBe(80);
     expect(next.skillPoints).toBe(0);
-    expect(next.entropy).toBe(70);
+    // entropy = boostedBonus*0.5 + max(action.entropyBonus, tierFloor=50) * mult
+    //         = 80*0.5 + 50*1 = 90
+    expect(next.entropy).toBe(90);
   });
 
   it('requires both quanta and time gauge before condensing', () => {
