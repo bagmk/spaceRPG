@@ -3546,9 +3546,9 @@ export function drawEntities(
 
   interface StageDynamics { gravity: number; repulsion: number; centerPull: number; dampening: number; maxSpeed: number }
   const STAGE_DYNAMICS: Record<number, StageDynamics> = {
-    1:  { gravity: 1.4, repulsion: 5.0, centerPull: 0.0015, dampening: 0.998, maxSpeed: 5.0 },
-    2:  { gravity: 1.2, repulsion: 4.5, centerPull: 0.0012, dampening: 0.998, maxSpeed: 4.5 },
-    3:  { gravity: 1.0, repulsion: 4.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 4.0 },
+    1:  { gravity: 1.6, repulsion: 5.0, centerPull: 0.003, dampening: 0.996, maxSpeed: 5.5 },
+    2:  { gravity: 1.4, repulsion: 4.5, centerPull: 0.0025, dampening: 0.996, maxSpeed: 5.0 },
+    3:  { gravity: 1.2, repulsion: 4.0, centerPull: 0.002, dampening: 0.997, maxSpeed: 4.5 },
     4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
     5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.5 },
     6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 0.999, maxSpeed: 3.0 },
@@ -3581,12 +3581,14 @@ export function drawEntities(
     if (!body) {
       const phase = unit(item.seed, 1) * Math.PI * 2;
       const r = 80 + unit(item.seed, 3) * 120;
-      const tangentSpeed = 1.5 + unit(item.seed, 5) * 1.5;
+      const tangentSpeed = 1.0 + unit(item.seed, 5) * 2.5;
+      // Random orbit direction — 50% clockwise, 50% counter-clockwise
+      const dir = unit(item.seed, 7) > 0.5 ? 1 : -1;
       body = {
         x: cx + Math.cos(phase) * r,
         y: cy + Math.sin(phase) * r,
-        vx: -Math.sin(phase) * tangentSpeed,
-        vy: Math.cos(phase) * tangentSpeed,
+        vx: -Math.sin(phase) * tangentSpeed * dir,
+        vy: Math.cos(phase) * tangentSpeed * dir,
         lastSeen: now,
       };
       bodyCache.set(key, body);
