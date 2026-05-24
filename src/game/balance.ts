@@ -179,7 +179,7 @@ export const SKILL_TOTAL_CROSS_NODE_COUNT = 24;
 // ── Intro / Big Bang timing ──────────────────────────────────────────────────
 
 /** Time the "Let there be light" line is held before the big bang flash (ms). */
-export const INTRO_GENESIS_MS = 2600;
+export const INTRO_GENESIS_MS = 3600;
 /** Duration of the big-bang → game-screen transition (ms). */
 export const INTRO_BIG_BANG_TO_GAME_MS = 760;
 

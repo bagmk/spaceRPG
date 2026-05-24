@@ -620,16 +620,28 @@ button.stat-header-item {
 }
 
 .stage-transition-wash {
-  position: absolute;
-  inset: 0;
+  /* Centered via margin (NOT transform) so animation transform:scale stays free.
+     Box is 2x larger than vmax in every direction → can never reveal edges
+     no matter the viewport aspect ratio. */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* Absolute size larger than any reasonable viewport so radial/conic
+     gradients never reveal their square edges. Fallback to 200vmax if the
+     viewport is somehow gigantic. */
+  width: min(4000px, 200vmax);
+  height: min(4000px, 200vmax);
+  margin-left: calc(min(4000px, 200vmax) / -2);
+  margin-top: calc(min(4000px, 200vmax) / -2);
   pointer-events: none;
   opacity: 0;
   background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.12) 30%, rgba(255, 170, 102, 0.18) 52%, rgba(5, 5, 5, 0) 76%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 170, 102, 0.08), rgba(5, 5, 5, 0));
-  mix-blend-mode: screen;
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.12) 30%, rgba(255, 170, 102, 0.18) 52%, rgba(5, 5, 5, 0) 76%);
+  /* mix-blend-mode removed: it limits painting to the backdrop of the nearest
+     stacking-context ancestor, which produced viewport-square clipping. */
   transition: opacity 0.18s linear;
   z-index: 4;
+  transform-origin: center center;
 }
 
 .stage-transition-wash.active {
@@ -638,14 +650,20 @@ button.stat-header-item {
 }
 
 .stage-reveal-fade {
+  /* Centered via margin so transform:scale anims stay clean. */
   position: fixed;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: min(4000px, 200vmax);
+  height: min(4000px, 200vmax);
+  margin-left: calc(min(4000px, 200vmax) / -2);
+  margin-top: calc(min(4000px, 200vmax) / -2);
   z-index: 18;
   pointer-events: none;
   opacity: 0;
   background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16) 30%, rgba(0, 0, 0, 0.5) 72%, rgba(0, 0, 0, 0) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.18));
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16) 30%, rgba(0, 0, 0, 0.5) 72%, rgba(0, 0, 0, 0) 100%);
+  transform-origin: center center;
 }
 
 .stage-reveal-fade.active {
@@ -708,6 +726,539 @@ button.stat-header-item {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* =========================================================================
+ * Per-stage cinematic transitions (Task #23 v2)
+ * Each stage's "leaving" event has its own multi-stage choreography:
+ * shell-level shake + scale + filter, wash overlay, ray overlay,
+ * and a matching reveal-fade for the *new* stage being entered.
+ * ========================================================================= */
+
+/* Default container behavior during a transition */
+.app-shell.transitioning {
+  transition: none;
+  /* While the field zooms/shrinks/blurs, any viewport edge that becomes
+     exposed should show the stage's core tint, not pure black. */
+  background: radial-gradient(circle at center, var(--core, #050505) 0%, rgba(5, 5, 8, 0.85) 60%, rgba(0, 0, 0, 0.95) 100%);
+}
+.app-shell.transitioning .field {
+  will-change: transform, filter, opacity;
+}
+.app-shell.transitioning .stage-info,
+.app-shell.transitioning .panel,
+.app-shell.transitioning .timeline,
+.app-shell.transitioning .hud,
+.app-shell.transitioning .hud-condense {
+  pointer-events: none;
+}
+
+/* Ray overlay: an extra layer rendered above the wash for selected styles */
+.stage-transition-rays {
+  /* Centered via margin so transform:scale anims stay clean. */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(4000px, 200vmax);
+  height: min(4000px, 200vmax);
+  margin-left: calc(min(4000px, 200vmax) / -2);
+  margin-top: calc(min(4000px, 200vmax) / -2);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  transform-origin: center center;
+}
+
+/* =========================================================================
+ * 1. BANG (1 → 2): a true Big Bang
+ *    sequence: shell crunches inward → single white point detonates →
+ *    blinding flash + violent shake → light shreds outward into new view
+ * ========================================================================= */
+/* IMPORTANT: never animate transform/filter on .app-shell itself --
+   that creates a stacking context and traps fixed-positioned wash inside it.
+   All shell-level motion is folded into the .field animation instead. */
+.app-shell.transitioning--bang .field { animation: fieldBang 1.2s cubic-bezier(0.5, 0, 0.1, 1) forwards; }
+@keyframes fieldBang {
+  0%   { transform: scale(1) translate(0, 0); filter: brightness(1) contrast(1) blur(0); }
+  10%  { transform: scale(0.93) translate(0, 0); filter: brightness(0.55) contrast(1.2); }
+  18%  { transform: scale(0.92) translate(0, 0); filter: brightness(0.4) blur(2px); }
+  22%  { transform: scale(1.08) translate(-6px, 4px); filter: brightness(2.6) contrast(0.7); }
+  26%  { transform: scale(1.15) translate(10px, -6px); filter: blur(0) brightness(2.4); }
+  34%  { transform: scale(1.08) translate(-12px, 8px); filter: brightness(1.9); }
+  46%  { transform: scale(1.05) translate(12px, -8px); filter: brightness(1.5); }
+  60%  { transform: scale(1.04) translate(-4px, 2px); filter: blur(0) brightness(1.3); }
+  78%  { transform: scale(1.02) translate(2px, -1px); filter: brightness(1.1); }
+  100% { transform: scale(1) translate(0, 0); filter: none; }
+}
+.stage-transition-wash--bang.active {
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 1) 0%, rgba(255, 240, 200, 0.95) 8%, rgba(255, 180, 100, 0.6) 22%, rgba(255, 100, 50, 0.2) 45%, rgba(5, 5, 5, 0) 70%);
+  animation: washBang 1.2s cubic-bezier(0.3, 0.0, 0.1, 1) forwards;
+}
+@keyframes washBang {
+  0%   { opacity: 0; transform: scale(0); }
+  16%  { opacity: 0; transform: scale(0.02); }
+  22%  { opacity: 1; transform: scale(0.5); }
+  35%  { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(3.5); }
+}
+.stage-transition-rays--bang.active {
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 240, 200, 0) 0deg, rgba(255, 240, 200, 0.65) 4deg, rgba(255, 240, 200, 0) 12deg);
+  animation: raysBang 1.2s ease-out forwards;
+}
+@keyframes raysBang {
+  0%   { opacity: 0; transform: scale(0.1) rotate(0deg); }
+  25%  { opacity: 0.95; transform: scale(0.6) rotate(40deg); }
+  100% { opacity: 0; transform: scale(2.4) rotate(180deg); }
+}
+.stage-reveal-fade--bang.active {
+  background: radial-gradient(circle at center, rgba(255, 240, 200, 0.9), rgba(220, 120, 60, 0.4) 30%, rgba(0, 0, 0, 0.55) 75%, rgba(0, 0, 0, 0) 100%);
+  animation: revealFromWhite 1.0s ease-out forwards;
+}
+@keyframes revealFromWhite {
+  0%   { opacity: 1; }
+  60%  { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+/* =========================================================================
+ * 2. CONDENSE (2 → 3): matter wins, plasma settles
+ *    sequence: warm golden light pulls inward, field briefly compressed
+ * ========================================================================= */
+.app-shell.transitioning--condense .field { animation: fieldCondense 1.0s cubic-bezier(0.3, 0.7, 0.2, 1) forwards; }
+@keyframes fieldCondense {
+  0%   { transform: scale(1); filter: brightness(1); }
+  40%  { transform: scale(0.94); filter: brightness(1.5) saturate(1.4); }
+  70%  { transform: scale(1.01); filter: brightness(1.1); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.stage-transition-wash--condense.active {
+  background: radial-gradient(circle at center, rgba(255, 200, 100, 0.85) 0%, rgba(220, 130, 50, 0.4) 35%, rgba(5, 5, 5, 0) 75%);
+  animation: washImplode 1.0s cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+@keyframes washImplode {
+  0%   { opacity: 0; transform: scale(1.8); }
+  35%  { opacity: 0.95; transform: scale(1.0); }
+  70%  { opacity: 0.85; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(0.1); }
+}
+.stage-reveal-fade--condense.active {
+  background: radial-gradient(circle at center, rgba(220, 150, 80, 0.55), rgba(120, 60, 30, 0.18) 50%, rgba(0, 0, 0, 0.45) 85%);
+  animation: revealCrossfade 0.85s ease-out forwards;
+}
+
+/* =========================================================================
+ * 3. FORGE (3 → 4): hadronization + first nuclei
+ *    sequence: golden flashes (3 pulses) as particles snap together
+ * ========================================================================= */
+.app-shell.transitioning--forge .field { animation: fieldForge 1.1s steps(1, end) forwards; }
+@keyframes fieldForge {
+  0%, 100% { filter: brightness(1); }
+  10%, 30%, 50% { filter: brightness(1.8) saturate(1.6); }
+  20%, 40%, 60% { filter: brightness(1); }
+}
+.stage-transition-wash--forge.active {
+  background:
+    radial-gradient(circle at center, rgba(255, 230, 130, 0.9) 0%, rgba(255, 170, 60, 0.5) 25%, rgba(180, 70, 30, 0.15) 55%, rgba(5, 5, 5, 0) 80%);
+  animation: washForge 1.1s steps(6, end) forwards;
+}
+@keyframes washForge {
+  0%   { opacity: 0; transform: scale(1.2); }
+  16%  { opacity: 0.95; transform: scale(0.6); }
+  33%  { opacity: 0.2; transform: scale(0.55); }
+  50%  { opacity: 0.95; transform: scale(0.55); }
+  66%  { opacity: 0.2; transform: scale(0.5); }
+  83%  { opacity: 0.85; transform: scale(0.48); }
+  100% { opacity: 0; transform: scale(0.42); }
+}
+.stage-transition-rays--forge.active {
+  background: radial-gradient(circle at center, rgba(255, 220, 140, 0.4) 0%, transparent 40%);
+  animation: pulseTwice 1.1s ease-out forwards;
+}
+@keyframes pulseTwice {
+  0%, 30%, 60%, 100% { opacity: 0; }
+  15%, 45%, 75% { opacity: 1; }
+}
+.stage-reveal-fade--forge.active {
+  background: radial-gradient(circle at center, rgba(255, 200, 110, 0.55), rgba(160, 70, 30, 0.18) 50%, rgba(0, 0, 0, 0.45) 85%);
+  animation: revealCrossfade 0.85s ease-out forwards;
+}
+
+/* =========================================================================
+ * 4. COOL (4 → 5): plasma cools to neutral atoms
+ *    sequence: NO shake. Slow hue shift to blue, saturation drop,
+ *    a thin frost overlay drifts in from edges
+ * ========================================================================= */
+.app-shell.transitioning--cool .field { animation: fieldCool 1.3s ease-in-out forwards; }
+@keyframes fieldCool {
+  0%   { filter: hue-rotate(0deg) saturate(1) brightness(1); transform: scale(1); }
+  60%  { filter: hue-rotate(40deg) saturate(0.5) brightness(0.85); transform: scale(0.995); }
+  100% { filter: hue-rotate(0deg) saturate(1) brightness(1); transform: scale(1); }
+}
+.stage-transition-wash--cool.active {
+  background:
+    radial-gradient(ellipse 110% 40% at center 0%, rgba(180, 220, 255, 0.35), rgba(0, 0, 0, 0) 80%),
+    radial-gradient(ellipse 110% 40% at center 100%, rgba(180, 220, 255, 0.35), rgba(0, 0, 0, 0) 80%);
+  animation: washCool 1.3s ease-in-out forwards;
+}
+@keyframes washCool {
+  0%   { opacity: 0; transform: scale(1.2); }
+  50%  { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+.stage-reveal-fade--cool.active {
+  background: linear-gradient(180deg, rgba(180, 210, 255, 0.5), rgba(40, 60, 100, 0.25) 50%, rgba(0, 0, 10, 0.55) 100%);
+  animation: revealCrossfade 1.0s ease-out forwards;
+}
+
+/* =========================================================================
+ * 5. RELEASE (5 → 6): light freed - CMB photons escape
+ *    sequence: brief darkness, then expanding ring(s) of light from center
+ * ========================================================================= */
+.app-shell.transitioning--release .field { animation: fieldRelease 1.3s ease-out forwards; }
+@keyframes fieldRelease {
+  0%   { filter: brightness(1); }
+  18%  { filter: brightness(0.25) saturate(0.5); }
+  35%  { filter: brightness(2.0); }
+  100% { filter: brightness(1); }
+}
+.stage-transition-wash--release.active {
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(255, 240, 200, 0.7) 35%, rgba(255, 220, 150, 0.95) 42%, rgba(255, 240, 200, 0.7) 49%, rgba(0, 0, 0, 0) 80%);
+  animation: washRing 1.3s cubic-bezier(0.2, 0.5, 0.2, 1) forwards;
+}
+@keyframes washRing {
+  0%   { opacity: 0; transform: scale(0.05); }
+  10%  { opacity: 0; transform: scale(0.1); }
+  25%  { opacity: 1; transform: scale(0.4); }
+  60%  { opacity: 0.85; transform: scale(1.3); }
+  100% { opacity: 0; transform: scale(2.4); }
+}
+.stage-transition-rays--release.active {
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(255, 230, 180, 0.4) 60%, rgba(255, 230, 180, 0.7) 68%, rgba(0, 0, 0, 0) 90%);
+  animation: washRing 1.3s ease-out 0.15s forwards;
+}
+.stage-reveal-fade--release.active {
+  background: radial-gradient(circle at center, rgba(255, 230, 160, 0.65), rgba(120, 70, 30, 0.18) 45%, rgba(0, 0, 0, 0.5) 80%);
+  animation: revealCrossfade 0.95s ease-out forwards;
+}
+
+/* =========================================================================
+ * 6. IGNITE (6 → 7): a single tiny point lights up into the first star
+ *    sequence: dark → tiny white spark → starburst rays explode outward
+ * ========================================================================= */
+.app-shell.transitioning--ignite .field { animation: fieldIgnite 1.2s ease-out forwards; }
+@keyframes fieldIgnite {
+  0%   { filter: brightness(0.7); transform: scale(1); }
+  20%  { filter: brightness(0.4); transform: scale(0.98); }
+  35%  { filter: brightness(3); transform: scale(1.05); }
+  60%  { filter: brightness(1.4); transform: scale(1); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.stage-transition-wash--ignite.active {
+  background: radial-gradient(circle at center, rgba(255, 250, 220, 1) 0%, rgba(255, 200, 100, 0.8) 5%, rgba(255, 130, 50, 0.3) 18%, rgba(5, 5, 5, 0) 50%);
+  animation: washStarPop 1.2s ease-out forwards;
+}
+@keyframes washStarPop {
+  0%   { opacity: 0; transform: scale(0); }
+  20%  { opacity: 0; transform: scale(0.02); }
+  30%  { opacity: 1; transform: scale(0.3); }
+  60%  { opacity: 0.6; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+.stage-transition-rays--ignite.active {
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 240, 180, 0) 0deg, rgba(255, 240, 180, 0.9) 1deg, rgba(255, 240, 180, 0) 5deg);
+  animation: raysStarburst 1.2s ease-out forwards;
+}
+@keyframes raysStarburst {
+  0%, 28%  { opacity: 0; transform: scale(0.1) rotate(0deg); }
+  35%      { opacity: 1; transform: scale(0.5) rotate(15deg); }
+  100%     { opacity: 0; transform: scale(2) rotate(90deg); }
+}
+.stage-reveal-fade--ignite.active {
+  background: radial-gradient(circle at center, rgba(255, 230, 160, 0.7), rgba(160, 60, 20, 0.25) 35%, rgba(0, 0, 0, 0.55) 78%);
+  animation: revealCrossfade 0.85s ease-out forwards;
+}
+
+/* =========================================================================
+ * 7. BLOOM (7 → 8): reionization - UV blooms across the cosmos
+ *    sequence: violet bubbles expand from multiple points, overlap into wash
+ * ========================================================================= */
+.app-shell.transitioning--bloom .field { animation: fieldBloom 1.2s ease-in-out forwards; }
+@keyframes fieldBloom {
+  0%   { filter: brightness(0.85) saturate(0.8); }
+  50%  { filter: brightness(1.3) saturate(1.5) hue-rotate(-20deg); }
+  100% { filter: brightness(1) saturate(1); }
+}
+.stage-transition-wash--bloom.active {
+  background:
+    radial-gradient(circle at 30% 40%, rgba(200, 180, 255, 0.5), transparent 25%),
+    radial-gradient(circle at 70% 60%, rgba(180, 140, 240, 0.5), transparent 25%),
+    radial-gradient(circle at 50% 50%, rgba(140, 100, 220, 0.4), transparent 40%);
+  animation: washBloom 1.2s ease-out forwards;
+}
+@keyframes washBloom {
+  0%   { opacity: 0; transform: scale(0.3); }
+  35%  { opacity: 0.7; transform: scale(0.9); }
+  65%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.stage-reveal-fade--bloom.active {
+  background: radial-gradient(circle at center, rgba(190, 170, 240, 0.55), rgba(70, 40, 130, 0.2) 45%, rgba(0, 0, 0, 0.5) 80%);
+  animation: revealCrossfade 0.85s ease-out forwards;
+}
+
+/* =========================================================================
+ * 8. WEAVE (8 → 9): cosmic web forms - filaments sweep across
+ *    sequence: bright line traces sweep horizontally + vertically
+ * ========================================================================= */
+.app-shell.transitioning--weave .field { animation: fieldWeave 1.2s ease-in-out forwards; }
+@keyframes fieldWeave {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: saturate(1); }
+  50%      { transform: scale(1.02) rotate(0.5deg); filter: saturate(1.4) brightness(1.2); }
+}
+.stage-transition-wash--weave.active {
+  background:
+    linear-gradient(0deg, transparent 48%, rgba(140, 200, 255, 0.6) 49%, rgba(140, 200, 255, 0.9) 50%, rgba(140, 200, 255, 0.6) 51%, transparent 52%),
+    linear-gradient(90deg, transparent 48%, rgba(140, 200, 255, 0.6) 49%, rgba(140, 200, 255, 0.9) 50%, rgba(140, 200, 255, 0.6) 51%, transparent 52%);
+  animation: washWeave 1.2s ease-out forwards;
+}
+@keyframes washWeave {
+  0%   { opacity: 0; transform: scale(0.5) rotate(-3deg); }
+  30%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  60%  { opacity: 0.6; transform: scale(1.1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.4) rotate(3deg); }
+}
+.stage-transition-rays--weave.active {
+  background:
+    repeating-linear-gradient(45deg, transparent 0%, transparent 4%, rgba(120, 180, 255, 0.18) 4.2%, transparent 4.4%),
+    repeating-linear-gradient(-45deg, transparent 0%, transparent 4%, rgba(120, 180, 255, 0.18) 4.2%, transparent 4.4%);
+  animation: fadeInOut 1.2s ease-out forwards;
+}
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  40%, 70% { opacity: 1; }
+}
+.stage-reveal-fade--weave.active {
+  background: radial-gradient(ellipse at center, rgba(120, 180, 255, 0.45), rgba(40, 70, 130, 0.2) 50%, rgba(0, 0, 0, 0.5) 80%);
+  animation: revealCrossfade 0.9s ease-out forwards;
+}
+
+/* =========================================================================
+ * 9. KINDLE (9 → 10): one new Sun lights up gently
+ *    sequence: small warm spark grows softly, no shake
+ * ========================================================================= */
+.app-shell.transitioning--kindle .field { animation: fieldKindle 1.1s ease-out forwards; }
+@keyframes fieldKindle {
+  0%   { filter: brightness(0.7); }
+  40%  { filter: brightness(1.6) saturate(1.4); }
+  100% { filter: brightness(1); }
+}
+.stage-transition-wash--kindle.active {
+  background: radial-gradient(circle at center, rgba(255, 240, 180, 0.85) 0%, rgba(255, 200, 100, 0.5) 18%, rgba(220, 120, 40, 0.2) 45%, rgba(5, 5, 5, 0) 80%);
+  animation: washKindle 1.1s ease-out forwards;
+}
+@keyframes washKindle {
+  0%   { opacity: 0; transform: scale(0.25); }
+  40%  { opacity: 1; transform: scale(0.85); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+.stage-reveal-fade--kindle.active {
+  background: radial-gradient(circle at center, rgba(255, 220, 150, 0.65), rgba(160, 90, 40, 0.22) 40%, rgba(0, 0, 0, 0.5) 80%);
+  animation: revealCrossfade 0.85s ease-out forwards;
+}
+
+/* =========================================================================
+ * 10. BLOOM-BLUE (10 → 11): life blossoms - green/blue gentle bloom
+ *     sequence: cells/dots blossom from center outward
+ * ========================================================================= */
+.app-shell.transitioning--bloom-blue .field { animation: fieldBloomBlue 1.2s ease-in-out forwards; }
+@keyframes fieldBloomBlue {
+  0%   { filter: saturate(0.8); transform: scale(1); }
+  50%  { filter: saturate(1.6) hue-rotate(15deg); transform: scale(1.01); }
+  100% { filter: saturate(1); transform: scale(1); }
+}
+.stage-transition-wash--bloom-blue.active {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(140, 240, 200, 0.7) 0%, rgba(80, 200, 200, 0.4) 25%, rgba(40, 120, 160, 0.15) 55%, rgba(5, 10, 20, 0) 80%);
+  animation: washBloom 1.2s ease-out forwards;
+}
+.stage-transition-rays--bloom-blue.active {
+  background:
+    radial-gradient(circle at 28% 35%, rgba(160, 240, 200, 0.45), transparent 18%),
+    radial-gradient(circle at 72% 65%, rgba(120, 220, 220, 0.45), transparent 18%),
+    radial-gradient(circle at 65% 25%, rgba(180, 250, 210, 0.4), transparent 14%);
+  animation: fadeInOut 1.2s ease-out forwards;
+}
+.stage-reveal-fade--bloom-blue.active {
+  background: radial-gradient(circle at center, rgba(160, 230, 200, 0.5), rgba(40, 110, 130, 0.2) 45%, rgba(0, 0, 0, 0.5) 80%);
+  animation: revealCrossfade 0.9s ease-out forwards;
+}
+
+/* =========================================================================
+ * 11. SWANSONG (11 → 12): Sun swells, sheds envelope, fades
+ *     sequence: gentle swell outward (red giant) → soft scatter
+ * ========================================================================= */
+.app-shell.transitioning--swansong .field { animation: fieldSwansong 1.3s cubic-bezier(0.3, 0, 0.5, 1) forwards; }
+@keyframes fieldSwansong {
+  0%   { transform: scale(1); filter: brightness(1) saturate(1); }
+  50%  { transform: scale(1.06); filter: brightness(1.35) saturate(1.7) hue-rotate(-15deg); }
+  80%  { transform: scale(1.02); filter: brightness(1.1) saturate(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.stage-transition-wash--swansong.active {
+  background: radial-gradient(circle at center, rgba(255, 140, 80, 0.7) 0%, rgba(220, 80, 60, 0.45) 30%, rgba(120, 30, 30, 0.2) 60%, rgba(5, 5, 5, 0) 85%);
+  animation: washSwansong 1.3s cubic-bezier(0.3, 0, 0.5, 1) forwards;
+}
+@keyframes washSwansong {
+  0%   { opacity: 0; transform: scale(0.5); }
+  40%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+.stage-reveal-fade--swansong.active {
+  background: radial-gradient(circle at center, rgba(255, 150, 90, 0.55), rgba(120, 40, 30, 0.22) 45%, rgba(0, 0, 0, 0.55) 80%);
+  animation: revealCrossfade 0.95s ease-out forwards;
+}
+
+/* =========================================================================
+ * 12. FADE-RED (12 → 13): the last starlight - slow drain
+ *     sequence: hue → red → desaturate → dim, almost no motion
+ * ========================================================================= */
+.app-shell.transitioning--fade-red .field { animation: fieldFadeRed 1.2s ease-in-out forwards; }
+@keyframes fieldFadeRed {
+  0%   { filter: brightness(1) saturate(1) hue-rotate(0deg); }
+  50%  { filter: brightness(0.7) saturate(0.7) hue-rotate(-25deg); }
+  100% { filter: brightness(0.85) saturate(0.85) hue-rotate(0deg); }
+}
+.stage-transition-wash--fade-red.active {
+  background: radial-gradient(circle at center, rgba(220, 90, 80, 0.6) 0%, rgba(140, 40, 50, 0.3) 40%, rgba(10, 5, 5, 0) 85%);
+  animation: washFade 1.2s ease-in-out forwards;
+}
+@keyframes washFade {
+  0%   { opacity: 0; transform: scale(1.1); }
+  40%  { opacity: 0.85; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.92); }
+}
+.stage-reveal-fade--fade-red.active {
+  background: radial-gradient(circle at center, rgba(160, 60, 50, 0.4), rgba(80, 20, 20, 0.25) 50%, rgba(0, 0, 0, 0.7) 85%);
+  animation: revealCrossfade 1.0s ease-out forwards;
+}
+
+/* =========================================================================
+ * 13. FADE-DARK (13 → 14): into the dark - lights go out
+ *     sequence: brightness drains from edges inward, then center
+ * ========================================================================= */
+.app-shell.transitioning--fade-dark .field { animation: fieldFadeDark 1.4s ease-in forwards; }
+@keyframes fieldFadeDark {
+  0%   { filter: brightness(1) saturate(1); }
+  60%  { filter: brightness(0.4) saturate(0.4); }
+  100% { filter: brightness(0.55) saturate(0.6); }
+}
+.stage-transition-wash--fade-dark.active {
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.2) 35%, rgba(0, 0, 0, 0.7) 70%);
+  animation: washVignette 1.4s ease-in forwards;
+}
+@keyframes washVignette {
+  0%   { opacity: 0; transform: scale(1.5); }
+  50%  { opacity: 0.7; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+.stage-reveal-fade--fade-dark.active {
+  background: radial-gradient(circle at center, rgba(30, 40, 60, 0.6), rgba(10, 15, 25, 0.45) 50%, rgba(0, 0, 0, 0.85) 90%);
+  animation: revealCrossfade 1.1s ease-out forwards;
+}
+
+/* =========================================================================
+ * 14. PULL-IN (14 → 15): everything pulled toward black hole
+ *     sequence: field zooms IN toward center with rotation + vignette closes
+ * ========================================================================= */
+.app-shell.transitioning--pull-in .field { animation: fieldPullIn 1.4s cubic-bezier(0.6, 0, 0.95, 0.3) forwards; }
+@keyframes fieldPullIn {
+  0%   { transform: scale(1) rotate(0deg); filter: brightness(1); }
+  60%  { transform: scale(0.5) rotate(8deg); filter: brightness(0.6) blur(1px); }
+  90%  { transform: scale(0.15) rotate(15deg); filter: brightness(0.3) blur(3px); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+.stage-transition-wash--pull-in.active {
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.95) 12%, rgba(20, 20, 35, 0.5) 35%, rgba(0, 0, 0, 0) 75%);
+  animation: washPullIn 1.4s cubic-bezier(0.6, 0, 0.95, 0.3) forwards;
+}
+@keyframes washPullIn {
+  0%   { opacity: 0; transform: scale(2.5); }
+  60%  { opacity: 0.95; transform: scale(0.7); }
+  95%  { opacity: 1; transform: scale(0.1); }
+  100% { opacity: 0; transform: scale(0.05); }
+}
+.stage-transition-rays--pull-in.active {
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(100, 130, 200, 0) 0deg, rgba(100, 130, 200, 0.18) 3deg, rgba(100, 130, 200, 0) 8deg);
+  animation: raysSpiral 1.4s cubic-bezier(0.6, 0, 0.95, 0.3) forwards;
+}
+@keyframes raysSpiral {
+  0%   { opacity: 0; transform: scale(2.5) rotate(0deg); }
+  50%  { opacity: 0.85; transform: scale(1) rotate(180deg); }
+  100% { opacity: 0; transform: scale(0.1) rotate(540deg); }
+}
+.stage-reveal-fade--pull-in.active {
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.95), rgba(10, 10, 20, 0.7) 30%, rgba(0, 0, 0, 0.45) 100%);
+  animation: revealCrossfade 1.1s ease-out forwards;
+}
+
+/* =========================================================================
+ * 15. EVAPORATE (15 → 16): Hawking dissolution - pixels shimmer away
+ *     sequence: blur + jitter, edges dissolve into mist, then total fade
+ * ========================================================================= */
+/* All motion folded into .field; .app-shell stays transform-free so the
+   fixed-positioned wash overlay stays anchored to the viewport. */
+.app-shell.transitioning--evaporate .field { animation: fieldEvaporate 1.5s ease-out forwards; }
+@keyframes fieldEvaporate {
+  0%   { transform: scale(1) translate(0, 0); filter: blur(0) brightness(1); opacity: 1; }
+  15%  { transform: scale(1.01) translate(0.6px, -0.6px); filter: blur(1px) brightness(1.15); opacity: 0.9; }
+  30%  { transform: scale(1.02) translate(-0.6px, 0.6px); filter: blur(2px) brightness(1.2); opacity: 0.8; }
+  45%  { transform: scale(1.035) translate(0.6px, 0.6px); filter: blur(3.5px) brightness(1.05); opacity: 0.65; }
+  60%  { transform: scale(1.05) translate(-0.6px, -0.6px); filter: blur(5px) brightness(0.9); opacity: 0.5; }
+  75%  { transform: scale(1.07) translate(0.6px, -0.6px); filter: blur(6.5px) brightness(0.75); opacity: 0.35; }
+  100% { transform: scale(1.1) translate(0, 0); filter: blur(8px) brightness(0.6); opacity: 0.2; }
+}
+.stage-transition-wash--evaporate.active {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(180, 200, 240, 0.4), transparent 20%),
+    radial-gradient(circle at 70% 70%, rgba(180, 200, 240, 0.4), transparent 20%),
+    radial-gradient(circle at center, rgba(140, 160, 220, 0.3) 0%, transparent 65%);
+  animation: washEvap 1.5s ease-out forwards;
+}
+@keyframes washEvap {
+  0%   { opacity: 0; transform: scale(0.9); }
+  30%  { opacity: 0.95; transform: scale(1.05); }
+  70%  { opacity: 0.5; transform: scale(1.3); filter: blur(4px); }
+  100% { opacity: 0; transform: scale(1.8); filter: blur(10px); }
+}
+.stage-reveal-fade--evaporate.active {
+  background: radial-gradient(circle at center, rgba(160, 180, 220, 0.45), rgba(40, 50, 80, 0.25) 50%, rgba(0, 0, 0, 0.75) 85%);
+  animation: revealCrossfade 1.2s ease-out forwards;
+}
+
+/* =========================================================================
+ * 16. FINAL (16): heat death - whisper fade
+ *     sequence: very slow brightness drop, complete stillness
+ * ========================================================================= */
+.app-shell.transitioning--final .field { animation: fieldFinal 1.6s ease-in-out forwards; }
+@keyframes fieldFinal {
+  0%   { filter: brightness(1) saturate(1); }
+  100% { filter: brightness(0.25) saturate(0.2); }
+}
+.stage-transition-wash--final.active {
+  background: radial-gradient(circle at center, rgba(20, 20, 30, 0.85), rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 100%);
+  animation: washFade 1.6s ease-out forwards;
+}
+.stage-reveal-fade--final.active {
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.4) 100%);
+  animation: revealCrossfade 1.5s ease-out forwards;
 }
 
 .game-canvas-hitbox,
@@ -1309,6 +1860,8 @@ button.stat-header-item {
   line-height: 1.3;
   text-align: center;
   font-weight: 400;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   text-wrap: balance;
   word-break: keep-all;
   overflow-wrap: normal;
@@ -1421,8 +1974,11 @@ button.stat-header-item {
   display: block;
   font-family: var(--serif);
   font-style: italic;
-  font-size: clamp(32px, 7vw, 82px);
+  font-size: clamp(20px, 4.5vw, 48px);
   font-weight: 400;
+  white-space: pre-line;
+  line-height: 1.6;
+  word-break: keep-all;
 }
 
 .genesis-line small {
@@ -6997,6 +7553,41 @@ button.stat-header-item {
   color: #a0e0c0;
   border-color: rgba(100, 220, 160, 0.45);
   background: rgba(80, 200, 140, 0.1);
+}
+
+/* ── Audio toggle buttons (BGM / SFX) ── */
+.settings-audio-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 0.2s ease;
+  position: relative;
+}
+.settings-audio-btn .audio-icon {
+  font-size: 14px;
+  opacity: 0.35;
+  filter: grayscale(1);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.settings-audio-btn--on {
+  border-color: rgba(100, 220, 160, 0.5);
+  background: rgba(80, 200, 140, 0.12);
+  box-shadow: 0 0 8px rgba(100, 220, 160, 0.2);
+}
+.settings-audio-btn--on .audio-icon {
+  opacity: 1;
+  filter: none;
+}
+.settings-audio-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .settings-lang-toggle {

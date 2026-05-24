@@ -18,12 +18,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#ff6b3d', '#ffb27d', '#ffe7c2'],
     clickUpgradeName: 'Expansion Pulse',
     autoUpgradeName: 'Vacuum Surge',
+    condenseLabel: 'Big Bang!',
+    condenseLabelKo: '빅뱅!',
+    transitionStyle: 'bang',
     quote:
-      'The universe is the ultimate free lunch.',
-    quoteAttr: 'Alan Guth',
+      'The universe is getting ready to be born. Even before the Big Bang, a tiny speck stretches enormously and gets everything set up.',
+    quoteAttr: '',
     quoteKo:
-      '우주는 궁극의 공짜 점심이다.',
-    quoteAttrKo: '앨런 거스',
+      '우주가 태어날 준비를 합니다. 아직 빅뱅은 일어나지 않았지만, 작은 한 점이 어마어마하게 부풀어 오르며 모든 것을 준비합니다.',
+    quoteAttrKo: '',
   },
   {
     id: 2,
@@ -40,12 +43,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#ff8a47', '#ffcf70', '#fff0c9'],
     clickUpgradeName: 'Charge Bias',
     autoUpgradeName: 'Survivor Cascade',
+    condenseLabel: 'Matter Survives',
+    condenseLabelKo: '물질이 살아남다',
+    transitionStyle: 'condense',
     quote:
-      'The cosmos is all that is or ever was or ever will be.',
-    quoteAttr: 'Carl Sagan, Cosmos (1980)',
+      'Matter and antimatter crash into each other and disappear together. The tiny bit of matter that survives will become absolutely everything — you included.',
+    quoteAttr: '',
     quoteKo:
-      '코스모스는 지금 있는 모든 것이며, 과거에 있었던 모든 것이며, 앞으로 있을 모든 것이다.',
-    quoteAttrKo: '칼 세이건, 《코스모스》 (1980)',
+      '물질과 반물질이 서로 부딪쳐 사라집니다. 그 가운데 살아남은 아주 작은 물질이, 앞으로 우주의 모든 것이 됩니다. 당신을 포함해서요.',
+    quoteAttrKo: '',
   },
   {
     id: 3,
@@ -62,12 +68,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#ff4a2f', '#ffa523', '#ffe9bf'],
     clickUpgradeName: 'Gluon Bond',
     autoUpgradeName: 'Plasma Pump',
+    condenseLabel: 'Forge First Nuclei',
+    condenseLabelKo: '첫 원자핵의 탄생',
+    transitionStyle: 'forge',
     quote:
-      'Nature uses only the longest threads to weave her patterns, so each small piece of her fabric reveals the organization of the entire tapestry.',
-    quoteAttr: 'Richard Feynman, The Character of Physical Law (1965)',
+      'The universe is still too hot for any atom to exist — just a furiously boiling soup. Come see the cosmos at its most blazing moment.',
+    quoteAttr: '',
     quoteKo:
-      '자연은 오직 가장 긴 실만으로 그 패턴을 짜므로, 천의 아주 작은 조각 하나하나가 전체 구조를 드러낸다.',
-    quoteAttrKo: '리처드 파인만, 《물리 법칙의 특성》 (1965)',
+      '우주는 아직 원자 하나도 만들 수 없을 만큼 뜨겁습니다. 펄펄 끓어오르는 우주의 가장 뜨거운 순간을 함께 보세요.',
+    quoteAttrKo: '',
   },
   {
     id: 4,
@@ -84,12 +93,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#ff9c2f', '#ffd05b', '#fff0ba'],
     clickUpgradeName: 'Fusion Pulse',
     autoUpgradeName: 'Helium Forge',
+    condenseLabel: 'Cool the Cosmos',
+    condenseLabelKo: '우주의 냉각',
+    transitionStyle: 'cool',
     quote:
-      'Hydrogen is a light, odorless gas which, given enough time, turns into people.',
-    quoteAttr: 'Fred Hoyle',
+      'Just three minutes after the Big Bang. The universe cools enough to make its very first nuclei — hydrogen, helium, and a little bit of lithium.',
+    quoteAttr: '',
     quoteKo:
-      '수소는 가볍고 무색무취의 기체인데, 충분한 시간이 주어지면 사람이 된다.',
-    quoteAttrKo: '프레드 호일',
+      '빅뱅이 일어나고 단 3분. 우주가 조금 식어, 처음으로 수소와 헬륨 같은 원자의 씨앗을 만들어냅니다.',
+    quoteAttrKo: '',
   },
   {
     id: 5,
@@ -106,12 +118,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#2f7bc1', '#67c0ff', '#d9f2ff'],
     clickUpgradeName: 'Electron Capture',
     autoUpgradeName: 'Photon Release',
+    condenseLabel: 'Set Light Free',
+    condenseLabelKo: '빛의 해방',
+    transitionStyle: 'release',
     quote:
-      'The more the universe seems comprehensible, the more it also seems pointless.',
-    quoteAttr: 'Steven Weinberg, The First Three Minutes (1977)',
+      'Hundreds of thousands of years later, the universe finally clears up. The first light set free that day is still flowing over our heads today.',
+    quoteAttr: '',
     quoteKo:
-      '우주가 이해 가능해 보일수록, 더욱 무의미해 보인다.',
-    quoteAttrKo: '스티븐 와인버그, 《최초의 3분》 (1977)',
+      '수십만 년이 지나고 나서야 우주가 처음으로 맑아집니다. 그때 풀려난 첫 빛은 지금도 우리 머리 위를 흐르고 있어요.',
+    quoteAttrKo: '',
   },
   {
     id: 6,
@@ -128,12 +143,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#182237', '#3d4f73', '#92a4c8'],
     clickUpgradeName: 'Cold Drift',
     autoUpgradeName: 'Silent Accretion',
+    condenseLabel: 'Ignite the First Star',
+    condenseLabelKo: '첫 별의 탄생',
+    transitionStyle: 'ignite',
     quote:
-      'We have peered into a new world and have seen that it is more mysterious and more complex than we had imagined.',
-    quoteAttr: 'Vera Rubin',
+      'The cosmos is truly dark. Not a single star yet — just gas and silence — while gravity quietly sets the stage for what is coming.',
+    quoteAttr: '',
     quoteKo:
-      '우리는 새로운 세계를 들여다보았으며, 그것이 상상했던 것보다 훨씬 신비롭고 복잡하다는 것을 알았다.',
-    quoteAttrKo: '베라 루빈',
+      '우주가 정말 어둡습니다. 별은 아직 단 하나도 없고, 그저 가스와 침묵뿐. 중력이 조용히 다음 시대를 준비하고 있습니다.',
+    quoteAttrKo: '',
     silenceBeforeMs: 5000,
   },
   {
@@ -151,12 +169,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#d6ddff', '#fffef2', '#ffd9a5'],
     clickUpgradeName: 'Protostar Spark',
     autoUpgradeName: 'Population Igniter',
+    condenseLabel: 'Light the Cosmos',
+    condenseLabelKo: '우주의 재점화',
+    transitionStyle: 'bloom',
     quote:
-      'The nitrogen in our DNA, the calcium in our teeth, the iron in our blood were made in the interiors of collapsing stars. We are made of star-stuff.',
-    quoteAttr: 'Carl Sagan, Cosmos (1980)',
+      'The very first stars were enormous and made almost entirely of hydrogen. Welcome to the oldest starlight the universe has ever made.',
+    quoteAttr: '',
     quoteKo:
-      '우리 DNA의 질소, 이빨의 칼슘, 피의 철분은 붕괴하는 별의 내부에서 만들어졌다. 우리는 별의 재료다.',
-    quoteAttrKo: '칼 세이건, 《코스모스》 (1980)',
+      '처음 태어난 별들은 거의 수소로만 이루어진 거대한 별이었습니다. 우주에서 가장 오래된 별빛, 첫 별의 시대로 환영합니다.',
+    quoteAttrKo: '',
   },
   {
     id: 8,
@@ -173,12 +194,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#4aa7de', '#8ed8ff', '#ecfbff'],
     clickUpgradeName: 'Ionizing Front',
     autoUpgradeName: 'Luminous Sweep',
+    condenseLabel: 'Weave the Web',
+    condenseLabelKo: '은하의 탄생',
+    transitionStyle: 'weave',
     quote:
-      'With increasing distance, our knowledge fades. Eventually, we reach the dim boundary — the utmost limits of our telescopes.',
-    quoteAttr: 'Edwin Hubble, The Realm of the Nebulae (1936)',
+      'Stars are being born everywhere, and their light fills the universe again. After a long darkness, the cosmos gets bright once more.',
+    quoteAttr: '',
     quoteKo:
-      '거리가 멀어질수록 우리의 지식은 사라진다. 결국 우리는 망원경의 최외곽 한계, 어스름한 경계에 다다른다.',
-    quoteAttrKo: '에드윈 허블, 《성운의 왕국》 (1936)',
+      '별들이 곳곳에서 태어나며, 그 빛이 다시 우주를 가득 채웁니다. 오랜 어둠 끝에, 우주가 다시 환해지는 시간.',
+    quoteAttrKo: '',
   },
   {
     id: 9,
@@ -195,12 +219,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#3548b6', '#6d8fff', '#d9ddff'],
     clickUpgradeName: 'Quasar Beam',
     autoUpgradeName: 'Web Spinner',
+    condenseLabel: 'Kindle a New Sun',
+    condenseLabelKo: '태양의 탄생',
+    transitionStyle: 'kindle',
     quote:
-      'If you\'re religious, it\'s like looking at God.',
-    quoteAttr: 'George Smoot, on the COBE CMB data (1992)',
+      'Stars gather into galaxies, and galaxies gather into giant groups. The shape of the universe we see today is being built right now.',
+    quoteAttr: '',
     quoteKo:
-      '종교적인 사람이라면, 이것은 신을 보는 것과 같다.',
-    quoteAttrKo: '조지 스무트, COBE 우주배경복사 관측 결과에 대해 (1992)',
+      '별들이 모여 은하가 되고, 은하들이 다시 거대한 무리를 이룹니다. 우리가 오늘 보는 우주의 모양이, 바로 지금 만들어집니다.',
+    quoteAttrKo: '',
   },
   {
     id: 10,
@@ -217,12 +244,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#b77a35', '#f7c86e', '#fff0d1'],
     clickUpgradeName: 'Planetesimal Pull',
     autoUpgradeName: 'Accretion Disk',
+    condenseLabel: 'Seed Life',
+    condenseLabelKo: '생명의 시작',
+    transitionStyle: 'bloom-blue',
     quote:
-      'Look again at that dot. That\'s here. That\'s home. That\'s us.',
-    quoteAttr: 'Carl Sagan, Pale Blue Dot (1994)',
+      'Among countless stars, one ordinary one switches on — and planets start forming around it. The story of our Solar System begins here.',
+    quoteAttr: '',
     quoteKo:
-      '저 점을 다시 보라. 저기가 여기다. 저기가 집이다. 저기가 우리다.',
-    quoteAttrKo: '칼 세이건, 《창백한 푸른 점》 (1994)',
+      '수많은 별 가운데 평범한 별 하나가 켜지고, 그 주위로 행성들이 만들어지기 시작합니다. 우리 태양계의 이야기가 여기서 시작됩니다.',
+    quoteAttrKo: '',
   },
   {
     id: 11,
@@ -239,12 +269,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#245f45', '#68d8a4', '#d7ffec'],
     clickUpgradeName: 'Living Spark',
     autoUpgradeName: 'Evolutionary Pressure',
+    condenseLabel: "Star's Last Breath",
+    condenseLabelKo: '별의 최후',
+    transitionStyle: 'swansong',
     quote:
-      'There is grandeur in this view of life... from so simple a beginning endless forms most beautiful and most wonderful have been, and are being, evolved.',
-    quoteAttr: 'Charles Darwin, On the Origin of Species (1859)',
+      'On a small blue planet, a single tiny cell gets going. That little thread eventually leads to oceans, forests, and us — looking back up at the cosmos.',
+    quoteAttr: '',
     quoteKo:
-      '이 생명의 관점에는 위엄이 있다... 이처럼 단순한 시작으로부터 가장 아름답고 경이로운 무한한 형태들이 진화해 왔으며, 지금도 진화하고 있다.',
-    quoteAttrKo: '찰스 다윈, 《종의 기원》 (1859)',
+      '푸른 작은 행성 위, 단 하나의 작은 세포에서 시작됩니다. 그 가느다란 흐름이 결국 바다, 숲, 그리고 우주를 올려다보는 우리에게로 이어집니다.',
+    quoteAttrKo: '',
   },
   {
     id: 12,
@@ -261,12 +294,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#ad2d1f', '#ff633f', '#ffd0ac'],
     clickUpgradeName: 'Last Light',
     autoUpgradeName: 'Red Giant Wind',
+    condenseLabel: 'Last Starlight',
+    condenseLabelKo: '마지막 별빛',
+    transitionStyle: 'fade-red',
     quote:
-      'Things fall apart; the centre cannot hold.',
-    quoteAttr: 'W.B. Yeats, The Second Coming (1919)',
+      'Even stars come to an end. Some quietly fade away; others go out in the biggest explosions the universe knows.',
+    quoteAttr: '',
     quoteKo:
-      '모든 것이 흩어진다; 중심은 버틸 수 없다.',
-    quoteAttrKo: 'W.B. 예이츠, 《재림》 (1919)',
+      '별에게도 마지막이 찾아옵니다. 어떤 별은 조용히 식어 사라지고, 어떤 별은 우주에서 가장 큰 폭발로 자기를 흩뿌립니다.',
+    quoteAttrKo: '',
   },
   {
     id: 13,
@@ -283,12 +319,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#2a3044', '#7e88a5', '#d9deef'],
     clickUpgradeName: 'White Dwarf Cooler',
     autoUpgradeName: 'Iron Star Compression',
+    condenseLabel: 'Into the Dark',
+    condenseLabelKo: '어둠 속으로',
+    transitionStyle: 'fade-dark',
     quote:
-      'No matter how far we go into the future, there will always be new things happening, new information coming in, new worlds to explore.',
-    quoteAttr: 'Freeman Dyson, Infinite in All Directions (1988)',
+      'No new stars are being born any more. One by one, the last stars flicker out — the long farewell of the cosmos.',
+    quoteAttr: '',
     quoteKo:
-      '미래가 아무리 멀어도, 항상 새로운 일이 일어나고, 새로운 정보가 오고, 탐험할 새로운 세계가 있을 것이다.',
-    quoteAttrKo: '프리먼 다이슨, 《모든 방향으로의 무한》 (1988)',
+      '이제 우주에 새 별은 태어나지 않습니다. 마지막 별들이 하나씩 꺼져 가는, 우주의 긴 작별의 시간.',
+    quoteAttrKo: '',
   },
   {
     id: 14,
@@ -305,12 +344,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#26133b', '#7c54b9', '#d8befd'],
     clickUpgradeName: 'Decay Catalyst',
     autoUpgradeName: 'Quantum Tunneling Loop',
+    condenseLabel: 'Black Hole Era',
+    condenseLabelKo: '블랙홀의 시대',
+    transitionStyle: 'pull-in',
     quote:
-      'Science cannot solve the ultimate mystery of nature. And that is because, in the last analysis, we ourselves are a part of the mystery that we are trying to solve.',
-    quoteAttr: 'Max Planck, Where Is Science Going? (1932)',
+      'All starlight is gone. Only the leftovers of dead stars drift through the cold dark. This is the cosmos at its loneliest.',
+    quoteAttr: '',
     quoteKo:
-      '과학은 자연의 궁극적인 신비를 풀 수 없다. 결국 우리 자신이 우리가 풀려는 신비의 일부이기 때문이다.',
-    quoteAttrKo: '막스 플랑크, 《과학은 어디로 가는가?》 (1932)',
+      '별빛이 모두 사라집니다. 죽은 별의 잔해들만 차가운 어둠 속을 떠다니는, 우주가 가장 외로워지는 시간.',
+    quoteAttrKo: '',
   },
   {
     id: 15,
@@ -327,12 +369,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#12091b', '#352446', '#7d6a91'],
     clickUpgradeName: 'Hawking Radiator',
     autoUpgradeName: 'Event Horizon Drain',
+    condenseLabel: 'Evaporate',
+    condenseLabelKo: '마지막 증발',
+    transitionStyle: 'evaporate',
     quote:
-      'Not only does God play dice, but he sometimes throws them where they cannot be seen.',
-    quoteAttr: 'Stephen Hawking',
+      'Only black holes are left now. Stay with them through their long, slow goodbye.',
+    quoteAttr: '',
     quoteKo:
-      '신은 주사위를 던질 뿐 아니라, 때로는 볼 수 없는 곳으로 던진다.',
-    quoteAttrKo: '스티븐 호킹',
+      '이제 우주에 남은 것은 블랙홀뿐입니다. 블랙홀의 길고 느린 마지막을 함께 지켜보세요.',
+    quoteAttrKo: '',
   },
   {
     id: 16,
@@ -349,12 +394,15 @@ const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'back
     particleColors: ['#050608', '#3c4050', '#8b92a8'],
     clickUpgradeName: 'Vacuum Flicker',
     autoUpgradeName: 'Final Divergence',
+    condenseLabel: 'End of All',
+    condenseLabelKo: '모든 것의 끝',
+    transitionStyle: 'final',
     quote:
-      'This is the way the world ends / Not with a bang but a whimper.',
-    quoteAttr: 'T.S. Eliot, The Hollow Men (1925)',
+      'What happens at the very end of the universe? Only a faint, cooled-down trickle of light remains. Come and see how the story closes.',
+    quoteAttr: '',
     quoteKo:
-      '세상은 이렇게 끝난다 / 쾅 소리가 아니라 흐느낌으로.',
-    quoteAttrKo: 'T.S. 엘리엇, 《텅 빈 사람들》 (1925)',
+      '우주의 끝에는 어떤 일이 일어날까요? 남은 것은 식어버린 희미한 빛뿐. 마지막 이야기를 함께해 주세요.',
+    quoteAttrKo: '',
     silenceBeforeMs: 7000,
   },
 ];

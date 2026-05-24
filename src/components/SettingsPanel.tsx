@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { t, type Lang } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
+import type { SoundManager } from '../game/audio';
 
 interface SettingsPanelProps {
   bgmMuted: boolean;
   sfxMuted: boolean;
   language: Lang;
+  soundManager?: SoundManager | null;
   onToggleBgm: () => void;
   onToggleSfx: () => void;
   onToggleLanguage: () => void;
@@ -18,6 +20,7 @@ export function SettingsPanel({
   bgmMuted,
   sfxMuted,
   language,
+  soundManager,
   onToggleBgm,
   onToggleSfx,
   onToggleLanguage,
@@ -52,10 +55,11 @@ export function SettingsPanel({
           <span className="settings-label">{t(language, 'settingsBgm')}</span>
           <button
             type="button"
-            className={`settings-toggle ${!bgmMuted ? 'settings-toggle--on' : ''}`}
-            onClick={onToggleBgm}
+            className={`settings-audio-btn ${!bgmMuted ? 'settings-audio-btn--on' : ''}`}
+            onClick={() => { onToggleBgm(); if (bgmMuted) soundManager?.playToggle(true); }}
+            aria-label={bgmMuted ? 'BGM off' : 'BGM on'}
           >
-            {bgmMuted ? t(language, 'settingsOff') : t(language, 'settingsOn')}
+            <span className="audio-icon">{bgmMuted ? '🔈' : '🔈'}</span>
           </button>
         </div>
 
@@ -63,10 +67,11 @@ export function SettingsPanel({
           <span className="settings-label">{t(language, 'settingsSfx')}</span>
           <button
             type="button"
-            className={`settings-toggle ${!sfxMuted ? 'settings-toggle--on' : ''}`}
-            onClick={onToggleSfx}
+            className={`settings-audio-btn ${!sfxMuted ? 'settings-audio-btn--on' : ''}`}
+            onClick={() => { onToggleSfx(); if (sfxMuted) window.setTimeout(() => soundManager?.playToggle(true), 30); }}
+            aria-label={sfxMuted ? 'SFX off' : 'SFX on'}
           >
-            {sfxMuted ? t(language, 'settingsOff') : t(language, 'settingsOn')}
+            <span className="audio-icon">{sfxMuted ? '🔈' : '🔈'}</span>
           </button>
         </div>
 
@@ -74,11 +79,11 @@ export function SettingsPanel({
           <span className="settings-label">{t(language, 'settingsLanguage')}</span>
           <button
             type="button"
-            className="settings-lang-toggle"
+            className="settings-audio-btn settings-audio-btn--on"
             onClick={onToggleLanguage}
             title={t(language, language === 'en' ? 'settingsLangSwitchToKo' : 'settingsLangSwitchToEn')}
           >
-            {language === 'en' ? '🇺🇸 EN' : '🇰🇷 KO'}
+            <span className="audio-icon" style={{ filter: 'none', opacity: 1 }}>{language === 'en' ? '🇺🇸' : '🇰🇷'}</span>
           </button>
         </div>
 
@@ -87,10 +92,10 @@ export function SettingsPanel({
             <span className="settings-label">{language === 'ko' ? '랭킹' : 'Ranking'}</span>
             <button
               type="button"
-              className="settings-toggle"
+              className="settings-audio-btn settings-audio-btn--on"
               onClick={() => { onClose(); onOpenLeaderboard(); }}
             >
-              🏆
+              <span className="audio-icon" style={{ filter: 'none', opacity: 1 }}>🏆</span>
             </button>
           </div>
         ) : null}

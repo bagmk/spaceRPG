@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
@@ -876,9 +877,18 @@ export function GameScreen({
             <span className="hud-action-label">{t(language, 'hudSettings')}</span>
           </button>
         </div>
-        <div className={`stage-transition-wash stage-transition-wash--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} />
-        <div className={`stage-transition-rays stage-transition-rays--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} aria-hidden="true" />
-        <div className={`stage-reveal-fade stage-reveal-fade--${enterStyle} ${transitionPhase === 'revealing' ? 'active' : ''}`} />
+        {/* Render transition overlays via Portal directly into document.body so
+            they are completely independent of .app-shell's stacking/containing/
+            clipping context. This guarantees the fixed-positioned wash/rays/fade
+            are anchored to the true viewport with no square-edge artifacts. */}
+        {typeof document !== 'undefined' && createPortal(
+          <>
+            <div className={`stage-transition-wash stage-transition-wash--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} />
+            <div className={`stage-transition-rays stage-transition-rays--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} aria-hidden="true" />
+            <div className={`stage-reveal-fade stage-reveal-fade--${enterStyle} ${transitionPhase === 'revealing' ? 'active' : ''}`} />
+          </>,
+          document.body,
+        )}
         <ScaleIndicator stageId={displayStage.id} language={language} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />

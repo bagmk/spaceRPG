@@ -3584,8 +3584,8 @@
     "progress": 0,
     "titleEn": "Black Hole Era",
     "titleKo": "블랙홀 시대",
-    "bodyEn": "~10⁴⁰ years from now. Baryons gone. BHs (10⁶⁷-10¹⁰⁰ year lifetimes) inherit universe. They contain virtually all remaining mass. Cosmic photon density: ~10⁻³⁵ /m³ — vastly diluted by expansion. Temperature of CMB: ~10⁻¹⁵ K. Universe is BH-dominated, expanding via dark energy.",
-    "bodyKo": "지금부터 ~10⁴⁰년. 중입자 사라짐. BH(10⁶⁷-10¹⁰⁰년 수명)가 우주 물려받음. 거의 모든 남은 질량 포함. 우주 광자 밀도: ~10⁻³⁵ /m³ — 팽창으로 막대히 희석. CMB 온도: ~10⁻¹⁵ K. 우주가 BH-지배, 암흑에너지로 팽창."
+    "bodyEn": "About 10⁴⁰ years from now. Baryons are gone. Black holes — with Hawking lifetimes ranging from about 10⁶⁷ years for stellar-mass holes up to about 10¹⁰⁰ years for supermassive ones — now inherit the universe. They hold essentially all of the remaining mass. The cosmic photon density has fallen to about 10⁻³⁵ photons per cubic meter, hugely diluted by expansion, and the leftover cosmic microwave background has redshifted down to roughly 10⁻¹⁵ kelvin. The universe is black-hole-dominated and continues to expand under dark energy.",
+    "bodyKo": "지금으로부터 약 10⁴⁰년 뒤. 중입자는 모두 사라졌다. 항성 질량 블랙홀은 호킹 수명 약 10⁶⁷년, 거대 블랙홀은 약 10¹⁰⁰년인 — 블랙홀들이 이제 우주를 물려받는다. 남아 있는 \"질량\"의 거의 전부가 그들 안에 있다. 우주 광자 밀도는 약 10⁻³⁵ /m³까지 떨어져 있고, 옛 우주배경복사도 적색편이를 거듭해 약 10⁻¹⁵ K로 식어 있다. 우주는 블랙홀이 지배하는 상태로, 여전히 암흑에너지에 떠밀려 팽창을 계속한다."
   },
   "stage15-milestone-010-dark-survivors": {
     "id": "stage15-milestone-010-dark-survivors",
@@ -3596,8 +3596,8 @@
     "progress": 10,
     "titleEn": "Dark Survivors",
     "titleKo": "어둠의 생존자",
-    "bodyEn": "BHs are the deepest gravitational wells — they don't decay (except via Hawking). Each is its own micro-universe with event horizon. Mass distribution: ~stellar BHs dominate by count, SMBHs dominate by mass. Cosmic expansion separates them: by 10⁵⁰ years, no two BHs are causally connected.",
-    "bodyKo": "BH가 가장 깊은 중력 우물 — 붕괴 안 함(호킹 제외). 각각이 사건의 지평선을 가진 자기 마이크로 우주. 질량 분포: 항성 BH가 개수로 지배, SMBH가 질량으로 지배. 우주 팽창이 그들을 분리: 10⁵⁰년까지 어떤 두 BH도 인과적으로 연결 안 됨."
+    "bodyEn": "Black holes are the deepest gravitational wells in the universe, and except for Hawking evaporation (which is enormously slow), they don't decay. Each one is essentially its own micro-universe behind an event horizon. By number, stellar-mass black holes dominate the population; by total mass, supermassive black holes dominate. Cosmic expansion just keeps pushing them apart: by 10⁵⁰ years from now, no two black holes are causally connected to each other any more — light has no chance to travel between them.",
+    "bodyKo": "블랙홀은 우주에서 가장 깊은 중력 우물이고, 호킹 증발(엄청나게 느리지만)을 빼면 따로 \"붕괴\"하지 않는다. 각 블랙홀은 사건의 지평선 뒤에 자리잡은, 사실상 자기 자신만의 작은 우주에 가깝다. 개수로 따지면 항성 질량 블랙홀이 단연 많고, 질량 총량으로 따지면 SMBH가 압도적이다. 우주 팽창은 그 사이를 끊임없이 멀어지게 만들고, 지금으로부터 약 10⁵⁰년이 지나면 어떤 두 블랙홀도 더 이상 인과적으로 연결되지 않는다. 그 사이를 빛이 가로질러 갈 시간 자체가 없는 상태가 되는 것이다."
   },
   "stage15-milestone-025-slow-spirals": {
     "id": "stage15-milestone-025-slow-spirals",
@@ -3608,8 +3608,8 @@
     "progress": 25,
     "titleEn": "Slow Spirals",
     "titleKo": "느린 나선",
-    "bodyEn": "Within local volumes (~Mpc scales), nearby BHs slowly spiral inward via GW emission. Timescale depends on initial separation: closer pairs merge faster. Binary BH at 1 ly separation: merges in ~10²⁰ years. Most BHs end up isolated, but a small fraction merges into super-massive BHs.",
-    "bodyKo": "국소 부피(~Mpc 척도) 안에서 가까운 BH가 GW 방출을 통해 천천히 안으로 나선. 시간 척도가 초기 분리에 의존: 더 가까운 쌍이 더 빨리 합병. 1광년 분리의 쌍 BH: ~10²⁰년에 합병. 대부분 BH가 고립되지만, 작은 분율이 초-거대 BH로 합병."
+    "bodyEn": "Inside local volumes — roughly megaparsec scales — nearby black holes slowly spiral toward each other through gravitational-wave emission. How long that takes depends sensitively on initial separation: a binary at one-light-year separation merges in about 10²⁰ years. Most black holes end up isolated and never merge with another, but a small fraction does, and those mergers produce ever more massive black holes.",
+    "bodyKo": "약 메가파섹(Mpc) 정도까지의 국소 영역 안에서는, 가까이 있는 블랙홀들이 중력파 방출을 통해 천천히 서로를 향해 나선을 그리며 다가간다. 그 시간 척도는 초기 분리에 매우 민감하다. 처음 거리가 1광년인 쌍이라면 합병까지 약 10²⁰년이 걸린다. 블랙홀 대부분은 결국 다른 블랙홀과 만나지 못하고 \"고립된 상태\"로 끝나지만, 그래도 일부 분율은 합병에 성공하고, 그 결과로 점점 더 무거운 블랙홀들이 만들어진다."
   },
   "stage15-milestone-040-merger": {
     "id": "stage15-milestone-040-merger",
@@ -3620,8 +3620,8 @@
     "progress": 40,
     "titleEn": "Merger",
     "titleKo": "병합",
-    "bodyEn": "Last waves of BH-BH mergers across the universe. Final mergers produce most massive BHs (combined from many parents). LISA + future GW detectors would see these, but by then no instruments exist. Universe is dark except for these brief GW chirps (no electromagnetic counterpart — BH-BH mergers emit no light).",
-    "bodyKo": "우주 전체에 걸친 BH-BH 합병의 마지막 물결. 최종 합병이 가장 무거운 BH 생산(많은 부모에서 결합). LISA + 미래 GW 검출기가 이를 볼 것이지만, 그때쯤엔 어떤 기기도 존재하지 않음. 우주가 이 짧은 GW 첩 외엔 어둠(전자기 대응 없음 — BH-BH 합병이 빛 방출 안 함)."
+    "bodyEn": "The last sustained wave of black-hole mergers sweeps across the universe. The final mergers produce the most massive black holes of all, combining the masses of many separate parents into single objects. LISA and any later gravitational-wave observatories would in principle see these mergers — but by then no such instruments will exist. The universe is dark, lit only briefly by the gravitational-wave chirps of these mergers, with no electromagnetic counterpart: black-hole–black-hole mergers emit essentially no light.",
+    "bodyKo": "이 시기, 우주 전체에 걸쳐 \"마지막으로 본격적인\" 블랙홀-블랙홀 합병의 물결이 휩쓸고 지나간다. 마지막 합병들은 가장 무거운 블랙홀을 만들어 낸다. 여러 갈래의 \"부모 블랙홀\"들이 합쳐져 단일한 거대 블랙홀이 되는 식이다. 원리상 LISA나 그 이후의 중력파 관측소가 이를 볼 수 있겠지만, 이 시점이면 그런 어떤 기기도 더 이상 존재하지 않는다. 우주는 그저 어둠 속에서, 이 합병들이 내는 짧은 중력파 \"첩\"으로만 잠시 \"빛난다\". 전자기파 동반 신호는 없다. 블랙홀끼리의 합병은 가시광선 영역에서는 사실상 빛을 거의 내지 않기 때문이다."
   },
   "stage15-milestone-058-fewer-larger": {
     "id": "stage15-milestone-058-fewer-larger",
@@ -3632,8 +3632,8 @@
     "progress": 58,
     "titleEn": "Fewer, Larger",
     "titleKo": "더 적고 더 큰",
-    "bodyEn": "Mergers reduce BH count while increasing average mass. By ~10⁶⁰ years: ~10²⁰ BHs in observable universe (vs ~10²² today). Each more massive than original. Hawking lifetime ∝ M³ — larger BHs live exponentially longer. The cosmos becomes a constellation of few giant BHs.",
-    "bodyKo": "합병이 BH 수 줄이면서 평균 질량 증가. ~10⁶⁰년까지: 관측 가능 우주에 ~10²⁰ BH(오늘날 ~10²² 대비). 각각이 원래보다 더 무거움. 호킹 수명 ∝ M³ — 더 큰 BH가 지수 함수적으로 더 오래 산다. 우주가 몇 개의 거대 BH의 별자리가 됨."
+    "bodyEn": "Successive mergers reduce the black-hole count while increasing the average mass. By about 10⁶⁰ years from now, the observable universe contains roughly 10²⁰ black holes (compared with about 10²² in the current era). Each one is more massive than the typical original. Because Hawking lifetime scales as the cube of mass, more massive black holes live exponentially longer; the cosmos has effectively become a constellation of a few giant black holes.",
+    "bodyKo": "합병이 거듭될수록 블랙홀의 개수는 줄고, 평균 질량은 늘어난다. 지금으로부터 약 10⁶⁰년 뒤가 되면, 관측 가능한 우주 안의 블랙홀 수는 약 10²⁰개까지 줄어 있다(현재 시대의 약 10²²개에 비해 적어진 값이다). 각각의 블랙홀은 원래의 \"전형적\" 블랙홀보다 훨씬 더 무겁다. 호킹 수명이 질량의 세제곱에 비례하기 때문에, 더 무거운 블랙홀은 지수함수적으로 더 오래 산다. 우주는 사실상 \"몇 개의 거대 블랙홀로 이루어진 별자리\"로 변해버린 셈이다."
   },
   "stage15-milestone-075-lonely-horizons": {
     "id": "stage15-milestone-075-lonely-horizons",
@@ -3644,8 +3644,8 @@
     "progress": 75,
     "titleEn": "Lonely Horizons",
     "titleKo": "외로운 지평선",
-    "bodyEn": "~10⁸⁰ years. Cosmic expansion has separated BHs to vast distances; mergers essentially stopped. Each BH evaporates in isolation. CMB has redshifted to undetectable. Hawking temperature of SMBH (~10⁻¹⁵ K) finally exceeds ambient temperature; BHs net-emit.",
-    "bodyKo": "~10⁸⁰년. 우주 팽창이 BH를 광대한 거리로 분리; 합병 본질적으로 멈춤. 각 BH가 고립되어 증발. CMB가 검출 불가로 적색편이. SMBH의 호킹 온도(~10⁻¹⁵ K)가 마침내 주변 온도 초과; BH가 순 방출."
+    "bodyEn": "About 10⁸⁰ years from now. Cosmic expansion has separated the remaining black holes by vast distances, and further mergers have essentially stopped. Each black hole evaporates in isolation. The cosmic microwave background has redshifted to undetectable temperatures, and the Hawking temperature of a supermassive black hole (around 10⁻¹⁵ K) finally exceeds the ambient temperature — for the first time, even the supermassive holes become net emitters of Hawking radiation.",
+    "bodyKo": "지금으로부터 약 10⁸⁰년 뒤. 우주 팽창이 남아 있는 블랙홀들을 어마어마한 거리로 떨어뜨려 놓았고, 추가 합병은 사실상 멈췄다. 모든 블랙홀이 \"고립된 채로\" 자기 호킹 증발을 진행한다. 우주배경복사는 더 이상 검출이 불가능할 만큼 적색편이된 상태이고, SMBH의 호킹 온도(약 10⁻¹⁵ K)가 마침내 그 주변 온도를 처음으로 추월한다. 이제는 거대 블랙홀까지도 \"순 호킹 복사 방출체\"가 된 것이다."
   },
   "stage15-milestone-088-hawking-radiation": {
     "id": "stage15-milestone-088-hawking-radiation",
@@ -3656,8 +3656,8 @@
     "progress": 88,
     "titleEn": "Hawking Radiation",
     "titleKo": "호킹 복사",
-    "bodyEn": "Net Hawking emission begins. Stellar BHs evaporate first (10⁶⁷ years), then intermediate, then supermassive. Universe is bathed in faint Hawking radiation — last source of photons in cosmos. Hawking flux density: vanishingly small but non-zero. The universe's only remaining light is from dying BHs.",
-    "bodyKo": "순 호킹 방출 시작. 항성 BH가 먼저 증발(10⁶⁷년), 그 다음 중간, 그 다음 거대. 우주가 희미한 호킹 복사에 잠김 — 우주의 마지막 광자 원천. 호킹 플럭스 밀도: 사라질 정도로 작지만 0이 아님. 우주의 남은 빛은 죽어가는 BH로부터만."
+    "bodyEn": "The era of net Hawking emission begins in earnest. Stellar-mass black holes evaporate first — around 10⁶⁷ years from now — followed by the intermediate-mass holes and finally the supermassives. The universe is bathed in extremely faint Hawking radiation, the last meaningful source of photons left anywhere in the cosmos. The total flux density is vanishingly small, but it is not zero. The only light left in the universe is coming from dying black holes.",
+    "bodyKo": "이 시기부터 본격적인 \"순 호킹 방출\"의 시대가 열린다. 항성 질량 블랙홀이 가장 먼저 — 지금부터 약 10⁶⁷년 뒤 — 증발을 마치고, 그 뒤를 중간 질량 블랙홀, 마지막으로 거대 블랙홀이 따른다. 우주는 극도로 희미한 호킹 복사에 잠긴다. 그 복사가, 이때 우주 어디에도 남지 않은 \"의미 있는 광자 원천\"의 사실상 마지막 형태다. 전체 플럭스 밀도는 사라질 정도로 작지만 정확히 0은 아니다. 우주에 남아 있는 유일한 빛이, \"죽어가는 블랙홀\"에서 새어 나오는 빛인 셈이다."
   },
   "stage15-milestone-096-final-evaporation": {
     "id": "stage15-milestone-096-final-evaporation",
@@ -3668,8 +3668,8 @@
     "progress": 96,
     "titleEn": "Final Evaporation",
     "titleKo": "마지막 증발",
-    "bodyEn": "~10¹⁰⁰-10¹⁰⁶ years. Last BHs reaching Planck scale. Each releases final flash of high-energy radiation as it evaporates. The most massive BH evaporates last, ~10¹⁰⁶ years from now. Cosmic radiation density rises briefly as massive BHs evaporate, then drops as cosmic expansion dilutes everything.",
-    "bodyKo": "~10¹⁰⁰-10¹⁰⁶년. 마지막 BH가 플랑크 척도 도달. 증발하면서 각각 고에너지 복사의 최종 섬광 방출. 가장 무거운 BH가 마지막에 증발, 지금부터 ~10¹⁰⁶년. 무거운 BH가 증발하면서 우주 복사 밀도가 잠시 상승, 그 다음 우주 팽창이 모든 것 희석시키며 떨어짐."
+    "bodyEn": "From about 10¹⁰⁰ to 10¹⁰⁶ years from now. The last black holes shrink down toward the Planck scale, each one ending its life with a final flash of high-energy radiation. The most massive remaining black hole evaporates last, about 10¹⁰⁶ years from now. The cosmic radiation density briefly rises as these massive holes give up their stored energy, then keeps falling again as cosmic expansion dilutes everything.",
+    "bodyKo": "지금으로부터 약 10¹⁰⁰~10¹⁰⁶년 사이. 마지막까지 살아남았던 블랙홀들이 플랑크 척도까지 줄어들고, 각각이 자기 생애를 \"고에너지 복사의 마지막 섬광\"으로 마감한다. 가장 무거운 블랙홀이 가장 마지막에 증발하는데, 그 시점은 지금부터 약 10¹⁰⁶년 뒤다. 무거운 블랙홀들이 \"저장해두었던 에너지\"를 한꺼번에 풀어놓으면서, 우주 복사 밀도는 잠시 살짝 올라간다. 그러나 그 직후부터는 우주 팽창이 다시 모든 것을 묽게 만들면서, 복사 밀도도 도로 떨어진다."
   },
   "stage15-milestone-100-black-holes-end": {
     "id": "stage15-milestone-100-black-holes-end",
@@ -3680,8 +3680,8 @@
     "progress": 100,
     "titleEn": "Black Holes End",
     "titleKo": "블랙홀의 종말",
-    "bodyEn": "~10¹⁰⁶ years. Last BH evaporated. Universe contains: photons (low energy), neutrinos, electrons + positrons (some annihilating), maybe Planck remnants. No structures, no gravity wells, no anything macroscopic. Diluted by 10¹⁰⁶ years of accelerated expansion. The Black Hole Era ends. Universe enters Dark Era — the longest era of all.",
-    "bodyKo": "~10¹⁰⁶년. 마지막 BH 증발. 우주가 포함: 광자(저에너지), 중성미자, 전자 + 양전자(일부 소멸 중), 어쩌면 플랑크 잔해. 구조 없음, 중력 우물 없음, 거시적 어떤 것도 없음. 10¹⁰⁶년의 가속 팽창으로 희석. 블랙홀 시대 종료. 우주가 어둠 시대 진입 — 모든 시대 중 가장 긴."
+    "bodyEn": "About 10¹⁰⁶ years from now. The very last black hole has evaporated. The universe now contains low-energy photons, neutrinos, electrons and positrons (some of which are still annihilating each other), and possibly Planck remnants. There are no structures left, no gravity wells, no macroscopic anything — and what little remains is being diluted by 10¹⁰⁶ years of accelerated expansion. The Black Hole Era ends, and the universe enters its longest era of all: the Dark Era.",
+    "bodyKo": "지금으로부터 약 10¹⁰⁶년 뒤. 마지막 블랙홀까지 모두 증발했다. 이제 우주에는 저에너지의 광자, 중성미자, 전자와 양전자(이들 가운데 일부는 여전히 서로 소멸 중이다), 그리고 어쩌면 \"플랑크 잔해\" 정도만 남아 있다. 어떤 구조도 없고, 중력 우물도 없고, 거시적이라고 할 만한 어떤 것도 더 이상 없다. 그나마 남은 것들조차 10¹⁰⁶년에 걸친 가속 팽창 끝에 매우 묽게 흩어진 상태다. 블랙홀 시대가 끝나고, 우주는 모든 시대 가운데 가장 긴 \"어둠 시대(Dark Era)\"로 들어선다."
   },
   "stage16-entity-relic-electron": {
     "id": "stage16-entity-relic-electron",
@@ -3692,8 +3692,8 @@
     "nameEn": "Relic Electron",
     "nameKo": "잔존 전자",
     "meta": "Common · auto x2.0 · `e⁻∞`",
-    "bodyEn": "Electrons left from proton decay (positrons annihilated mostly). Cosmic electron density today: ~0.2/cm³. In Dark Era after expansion: ~10⁻⁸⁰ /m³. Electrons are stable (lifetime > 6.6 × 10²⁸ years experimental lower bound). They might be eternal — or decay into something exotic over astronomical timescales. Last leptonic survivors of cosmic history.",
-    "bodyKo": "양성자 붕괴에서 남은 전자(양전자는 대부분 소멸). 오늘날 우주 전자 밀도: ~0.2/cm³. 팽창 후 어둠 시대에서: ~10⁻⁸⁰ /m³. 전자는 안정(실험 하한 수명 > 6.6 × 10²⁸년). 영원할 수도 있고 — 천문학적 시간 척도에서 이국적인 것으로 붕괴할 수도. 우주 역사의 마지막 경입자 생존자."
+    "bodyEn": "The relic electrons in the late universe are the ones left over after proton decay — most of the positrons produced alongside them have already annihilated with electrons billions of years earlier. The cosmic electron density today is around 0.2 per cubic centimeter; after Dark-Era expansion it drops to roughly 10⁻⁸⁰ per cubic meter. Electrons themselves are extremely stable: the current experimental lower bound on the electron lifetime is more than 6.6 × 10²⁸ years, and they may in fact be exactly stable forever. They might also, on truly astronomical timescales, decay into something exotic. Either way, surviving electrons are the last leptonic survivors of cosmic history.",
+    "bodyKo": "늦은 우주의 잔존 전자는 양성자 붕괴 이후 \"남게 된\" 전자들이다. 그 시기에 함께 만들어진 양전자들은 이미 수십억 년 전쯤 대부분 전자와 짝을 이뤄 소멸한 상태다. 오늘날 우주 전자 밀도는 1 cm³당 약 0.2개 정도이지만, 어둠 시대의 팽창을 거치고 나면 약 10⁻⁸⁰ /m³ 수준까지 떨어진다. 전자 자체는 굉장히 안정한 입자다. 현재까지의 실험적 하한선은 \"전자 수명이 6.6 × 10²⁸년 이상\"이고, 실제로는 정확히 \"영원히\" 안정할 가능성도 있다. 다만 정말 천문학적인 시간 척도에서는 어떤 이국적 입자로 붕괴할 가능성도 배제할 수 없다. 어느 쪽이든 살아남은 전자들은 우주 역사의 가장 마지막까지 버티는 \"마지막 경입자 생존자\"다."
   },
   "stage16-entity-lone-photon": {
     "id": "stage16-entity-lone-photon",
@@ -3704,8 +3704,8 @@
     "nameEn": "Lone Photon",
     "nameKo": "외로운 광자",
     "meta": "Common · click x15.0 · `γ`",
-    "bodyEn": "Final radiation: CMB photons (~2.7 K today), Hawking radiation from past BHs, occasional annihilation photons. Density: ~411/cm³ today, will be ~10⁻¹⁰⁰ /m³ in Dark Era. Each photon redshifts toward infinite wavelength as space expands. After 10¹⁵⁰ years: photon wavelengths exceed observable universe size. They become invisible by any means.",
-    "bodyKo": "최종 복사: CMB 광자(오늘 ~2.7 K), 과거 BH의 호킹 복사, 가끔 소멸 광자. 밀도: 오늘 ~411/cm³, 어둠 시대에 ~10⁻¹⁰⁰ /m³. 공간 팽창에 따라 각 광자가 무한 파장으로 적색편이. 10¹⁵⁰년 후: 광자 파장이 관측 가능 우주 크기 초과. 어떤 수단으로도 보이지 않게 됨."
+    "bodyEn": "The last photons in the universe come from a mix of sources: cosmic microwave background photons (today around 2.7 K), Hawking radiation from black holes that have already evaporated, and occasional photons from particle annihilations. The number density today is around 411 photons per cubic centimeter; in the Dark Era it drops to something like 10⁻¹⁰⁰ per cubic meter. As space keeps expanding, each individual photon's wavelength keeps stretching toward infinity through redshift. By around 10¹⁵⁰ years from now, a photon's wavelength will exceed the size of the observable universe itself, and at that point it becomes undetectable by any conceivable means.",
+    "bodyKo": "우주에 남은 마지막 광자들은 여러 출처에서 온 것들이 섞여 있다. 오늘날 약 2.7 K인 우주배경복사 광자, 이미 증발해버린 블랙홀에서 나왔던 호킹 복사, 그리고 입자 소멸에서 가끔 만들어진 광자들이다. 오늘날 우주 광자 밀도는 1 cm³당 약 411개지만, \"어둠 시대\"에는 약 10⁻¹⁰⁰ /m³까지 떨어진다. 공간이 계속 팽창하면서 각각의 광자는 적색편이를 거듭해, 파장이 점점 무한대 쪽으로 늘어난다. 지금으로부터 약 10¹⁵⁰년 뒤가 되면, 한 광자의 파장이 관측 가능 우주의 크기 자체를 넘어선다. 그 시점이 되면, 어떤 방법으로도 그 광자를 잡아낼 수 없게 된다."
   },
   "stage16-entity-relic-positron": {
     "id": "stage16-entity-relic-positron",
@@ -3716,8 +3716,8 @@
     "nameEn": "Relic Positron",
     "nameKo": "잔존 양전자",
     "meta": "Common · crit(flat) x0.5 · `e⁺∞`",
-    "bodyEn": "Positrons from proton decay (most annihilated with electrons billions of years earlier). Surviving positrons: ~rare. Distance to nearest positron in Dark Era: cosmic-scale (each electron-positron pair separated by expanding void). Eventually, with infinite time, all positrons + electrons annihilate via slow quantum tunneling — even at zero density.",
-    "bodyKo": "양성자 붕괴에서 양전자(대부분 수십억 년 전 전자와 소멸). 생존 양전자: ~드묾. 어둠 시대 가장 가까운 양전자까지 거리: 우주 척도(각 전자-양전자 쌍이 팽창하는 보이드에 의해 분리). 결국 무한 시간으로, 모든 양전자 + 전자가 느린 양자 터널링을 통해 소멸 — 0 밀도에서조차."
+    "bodyEn": "Relic positrons are the survivors from proton decay, after most of their kind have already annihilated with electrons over the preceding billions of years. The few left over are very rare: in the Dark Era, the typical distance between a positron and the nearest other positron is cosmic-scale, because each electron-positron pair is separated by enormous expanding voids. Eventually, over truly infinite time, even those scattered positrons and electrons annihilate with each other through slow quantum tunneling — possible even at vanishingly low density, simply because quantum mechanics gives any process with non-zero probability eventually a chance to happen.",
+    "bodyKo": "잔존 양전자는 양성자 붕괴에서 만들어졌다가 \"그래도 살아남은\" 양전자들이다. 그 종족 대부분은 이미 수십억 년에 걸쳐 전자와 짝지어 소멸한 상태이고, 남은 양전자는 매우 드물다. 어둠 시대가 되면 가장 가까운 다음 양전자까지의 거리가 \"우주적 규모\"가 된다. 전자-양전자 쌍 하나하나가 끝없이 팽창하는 거대한 보이드에 의해 따로 떨어져 있기 때문이다. 다만 정말로 무한한 시간이 흐르면, 그 흩어진 양전자와 전자들도 결국 \"느린 양자 터널링\"을 통해 서로를 만나 소멸한다. 밀도가 사실상 0에 가깝다고 해도, 양자역학은 0이 아닌 확률을 가진 모든 과정에 결국 한 번은 기회를 주기 때문이다."
   },
   "stage16-entity-relic-neutrino": {
     "id": "stage16-entity-relic-neutrino",
@@ -3728,8 +3728,8 @@
     "nameEn": "Relic Neutrino",
     "nameKo": "잔존 중성미자",
     "meta": "Common · time x2.0 · `ν∞`",
-    "bodyEn": "Cosmic neutrino background plus neutrinos from proton decay, BH evaporation, supernovae. Total neutrino density: ~336/cm³ today (CνB), supplemented by ~10⁻⁵ × CνB from secondary sources. Neutrinos are very long-lived (perhaps eternal). They likely outlast photons in cosmological visibility budget. The last detectable \"thing\" in some cosmologies.",
-    "bodyKo": "우주 중성미자 배경 + 양성자 붕괴, BH 증발, 초신성에서의 중성미자. 총 중성미자 밀도: 오늘 ~336/cm³(CνB), 2차 원천에서 ~10⁻⁵ × CνB 보충. 중성미자는 매우 오래 산다(아마 영원). 우주론적 가시성 예산에서 광자를 능가할 가능성. 일부 우주론에서 마지막 검출 가능한 \"것\"."
+    "bodyEn": "Relic neutrinos in the very late universe are a combination of the cosmic neutrino background (CνB) — leftover from when neutrinos decoupled at about one second after the Big Bang — together with smaller contributions from later proton decay, black-hole evaporation, and supernovae. Today the CνB density is around 336 per cubic centimeter, with the secondary contributions adding only about 10⁻⁵ of that. Neutrinos are very long-lived — possibly literally eternal, since no decay channel has been confirmed. In some cosmological scenarios they outlast photons in the \"is anything still here?\" budget, since extremely stretched photons become essentially undetectable. In that case, the relic neutrino background is the very last detectable \"something\" remaining in the universe.",
+    "bodyKo": "아주 늦은 우주에서 남아 있는 잔존 중성미자는 두 가지가 섞여 있다. 빅뱅 후 약 1초가 되었을 때 분리되어 나온 \"우주 중성미자 배경(CνB)\"이 주된 부분이고, 거기에 더해 양성자 붕괴, 블랙홀 증발, 초신성 등에서 나중에 추가된 소량의 \"2차 중성미자\"가 보태진다. 오늘날 CνB 밀도는 1 cm³당 약 336개이고, 2차 원천에서 오는 부분은 그 약 10⁻⁵ 정도다. 중성미자는 매우 오래 사는 입자로, 확인된 붕괴 채널이 아직 없기 때문에 사실상 영원히 살아 있을 가능성도 있다. 어떤 시나리오에서는, 광자가 적색편이로 거의 검출 불가능해진 뒤에도 중성미자가 \"우주에 아직 무언가 남아 있는가\"라는 질문에서 마지막까지 살아남는다. 그 경우 이 잔존 중성미자 배경이 우주에 남은 \"마지막 검출 가능한 무언가\"가 되는 셈이다."
   },
   "stage16-entity-cosmic-background-photon": {
     "id": "stage16-entity-cosmic-background-photon",
@@ -3740,8 +3740,8 @@
     "nameEn": "Cosmic Background Photon",
     "nameKo": "우주 배경 광자",
     "meta": "Rare · auto x3.0 · `CBG`",
-    "bodyEn": "CMB photons + Hawking radiation + radiation from earlier eras, all mixed together. As expansion continues, they all redshift toward arbitrary low energy. By 10²⁰⁰ years, photon wavelengths exceed any conceivable cosmic structure. The \"cosmic background\" becomes ultra-low frequency — no longer microwave, but kilometre-wavelength radio. Then much longer.",
-    "bodyKo": "CMB 광자 + 호킹 복사 + 이전 시대의 복사, 모두 함께 섞임. 팽창 계속되면서 모두 임의의 낮은 에너지로 적색편이. 10²⁰⁰년까지 광자 파장이 어떤 상상 가능 우주 구조 초과. \"우주 배경\"이 초저주파가 됨 — 더 이상 마이크로파가 아니라 킬로미터 파장 라디오. 그 다음 훨씬 더 길게."
+    "bodyEn": "The \"cosmic background photons\" in the deep future are a single mixed bath of the original CMB photons, Hawking radiation from long-evaporated black holes, and stray radiation left over from earlier cosmic eras. As cosmic expansion grinds on, all of them redshift together toward arbitrarily low energies. By around 10²⁰⁰ years from now, the photons' wavelengths exceed the size of any conceivable cosmic structure. The \"cosmic background\" is no longer microwave; it has shifted into kilometer-wavelength radio, then to even longer wavelengths after that.",
+    "bodyKo": "먼 미래의 \"우주 배경 광자\"는 따로따로 구별되지 않는 한 덩어리의 \"광자 욕조\"가 된다. 원래의 CMB 광자, 이미 오래전 증발해버린 블랙홀에서 나왔던 호킹 복사, 그리고 더 이전 시대들에서 떠돌다 남은 잡스러운 복사들이 모두 한데 섞여 있다. 우주 팽창이 계속되면서 이 모든 광자가 함께 점점 더 낮은 에너지로 적색편이된다. 지금으로부터 약 10²⁰⁰년 뒤가 되면, 광자 파장이 어떤 \"우주적 구조\"라 부를 만한 것보다도 훨씬 더 커진다. 이때의 \"우주 배경\"은 더 이상 마이크로파가 아니다. 파장이 킬로미터 단위인 라디오파로, 그 다음에는 더 더 긴 영역으로 옮겨가 있다."
   },
   "stage16-entity-thermal-equilibrium": {
     "id": "stage16-entity-thermal-equilibrium",
@@ -3752,8 +3752,8 @@
     "nameEn": "Thermal Equilibrium",
     "nameKo": "열적 평형",
     "meta": "Rare · click x22.0 · `ΔT→0`",
-    "bodyEn": "With no structure or active processes, universe approaches thermal equilibrium — every region at same temperature (very low: 10⁻³⁰ K or lower). Heat death: maximum entropy state, no temperature gradients, no work extractable. Boltzmann's H-theorem (1872) shows this is statistical inevitability. The universe is calm, uniform, and frozen.",
-    "bodyKo": "구조나 활성 과정 없이 우주가 열적 평형에 접근 — 모든 영역이 같은 온도(매우 낮음: 10⁻³⁰ K 이하). 열적 죽음: 최대 엔트로피 상태, 온도 기울기 없음, 추출 가능한 일 없음. 볼츠만의 H-정리(1872)가 이게 통계적 불가피임 보여줌. 우주가 고요하고, 균일하고, 동결."
+    "bodyEn": "With no structures and no active processes left, the universe approaches thermal equilibrium: every region settles to the same temperature — extremely low, on the order of 10⁻³⁰ kelvin or below. At that point there are no temperature gradients to drive heat flow, and there is no usable work that can be extracted from anything. This is the textbook \"heat death\": maximum entropy, perfect uniformity. Boltzmann's H-theorem from 1872 already showed that a closed system being driven toward this state is a statistical inevitability, not a contingent outcome. The universe ends up calm, uniform, and frozen.",
+    "bodyKo": "어떤 구조도, 어떤 능동적 과정도 더 이상 남지 않으면, 우주는 \"열적 평형\"에 가까워진다. 모든 영역의 온도가 같아지는데, 그 값이 매우 낮다 — 약 10⁻³⁰ K 이하다. 이 시점에서는 열의 흐름을 만들어줄 온도 기울기가 없고, 그래서 어디서도 일을 끌어낼 수 없다. 이게 교과서에 나오는 \"열적 죽음(heat death)\"이다. 최대 엔트로피, 그리고 거의 완벽한 균일성이다. 볼츠만의 1872년 \"H-정리\"는 이미, 닫힌 시스템이 이런 상태로 끌려가는 일이 우연이 아니라 통계적 필연임을 보여주었다. 우주는 결국 고요하고, 균일하고, 동결된 상태로 마무리된다."
   },
   "stage16-entity-max-entropy": {
     "id": "stage16-entity-max-entropy",
@@ -3764,8 +3764,8 @@
     "nameEn": "Max Entropy",
     "nameKo": "최대 엔트로피",
     "meta": "Rare · time x1.5 · `S_max`",
-    "bodyEn": "Thermodynamic ultimate fate. Universe's total entropy maximized; no useful energy can flow. ΔS = 0 from this point on (within any macroscopic system). Computation, life, observation: all require entropy gradients. Without them, no process — no thoughts. Cosmic stasis. Yet, quantum fluctuations continue at vanishingly small rates — Poincaré recurrence theorem says eventually any state reoccurs, including the Big Bang.",
-    "bodyKo": "열역학적 궁극의 운명. 우주 총 엔트로피 최대화; 유용한 에너지가 흐를 수 없음. 이 시점부터 ΔS = 0(어떤 거시적 시스템 내). 계산, 생명, 관측: 모두 엔트로피 기울기 요구. 없이는 어떤 과정도 없음 — 어떤 사고도 없음. 우주 정체. 그러나 양자 요동이 사라질 정도로 작은 비율로 계속 — 푸앵카레 재귀 정리가 결국 어떤 상태든, 빅뱅 포함, 다시 발생한다고 말한다."
+    "bodyEn": "At the universe's thermodynamic endpoint, the total entropy has been maximized: no useful energy can flow anywhere, and within any large enough region the change in entropy ΔS goes to zero. Computation, life, and observation all depend on entropy gradients — pockets of low entropy that processes can \"feed off.\" Without gradients, no process can run, and there are literally no thoughts anywhere in the cosmos. It is total stasis. And yet quantum fluctuations technically never quite stop, just at vanishingly tiny rates. Poincaré's recurrence theorem says that, given a finite-state system and enough time, any earlier configuration eventually recurs — including, in principle, something Big-Bang-like. So even cosmic stasis has a deeply strange afterlife.",
+    "bodyKo": "우주의 열역학적 종착점에서, 총 엔트로피는 최대화되어 있다. 어디에서도 \"쓸 만한 에너지\"가 흐를 수 없게 되고, 충분히 큰 영역 안에서는 엔트로피 변화 ΔS가 사실상 0이 된다. 계산, 생명, 관측 같은 활동은 모두 \"엔트로피 기울기\" — 어떤 과정이 \"빨아먹을\" 수 있는 낮은 엔트로피의 주머니 — 가 있어야만 가능하다. 그 기울기가 사라지면 어떤 과정도 진행될 수 없고, 우주 어디에도 사고가 진행되지 않는다. 완전한 정지 상태다. 그러나 양자 요동은 사실 결코 정확히 0이 되지 않는다 — 사라질 정도로 작은 비율로 계속 일어난다. 푸앵카레의 \"재귀 정리\"는 유한한 상태 공간을 가진 시스템에 충분한 시간이 주어지면, 과거의 어떤 배열이든 결국 다시 등장한다고 말한다. 원리상 빅뱅과 비슷한 상태마저 그렇다. 그래서 \"우주적 정지\"에도, 깊고 이상한 \"사후의 이야기\"가 따라붙는다."
   },
   "stage16-entity-de-sitter-vacuum": {
     "id": "stage16-entity-de-sitter-vacuum",
@@ -3776,8 +3776,8 @@
     "nameEn": "De Sitter Vacuum",
     "nameKo": "드 시터 진공",
     "meta": "Epic · auto x8.0 · `Λ∞`",
-    "bodyEn": "With matter diluted away, cosmic energy is dominated by dark energy (cosmological constant Λ). Spacetime metric becomes pure de Sitter: exponential expansion forever. Each comoving observer sees their own cosmological horizon at distance c/H_∞ ≈ 16 billion light years (set by Λ). Beyond horizon: causally inaccessible forever. Universe IS its own boundary.",
-    "bodyKo": "물질이 희석되어 사라지면서 우주 에너지가 암흑에너지(우주상수 Λ)에 의해 지배. 시공간 계량이 순수 드 시터가 됨: 영원한 지수 함수적 팽창. 각 공동 운동 관측자가 거리 c/H_∞ ≈ 160억 광년의 자신의 우주론적 지평선 봄(Λ로 설정). 지평선 너머: 영원히 인과적으로 접근 불가. 우주가 자신의 경계."
+    "bodyEn": "Once matter has been thinned away by expansion, the cosmic energy budget is dominated by dark energy (i.e. the cosmological constant Λ). The geometry of spacetime then approaches a pure \"de Sitter\" form: exponential expansion forever, with no slowdown. Each comoving observer ends up with their own cosmological horizon at a distance of about c/H_∞ ≈ 16 billion light-years (set by Λ). Anything beyond that horizon is causally inaccessible — light leaving from there never arrives. In that sense, every observer's universe finally becomes its own boundary.",
+    "bodyKo": "물질이 팽창에 의해 충분히 묽어진 뒤에는, 우주의 에너지 예산이 암흑에너지(즉 우주상수 Λ)에 의해 지배된다. 그러면 시공간의 기하 자체가 점점 \"순수한 드 시터\" 형태에 가까워진다. 영원한 지수함수적 팽창이고, 어떤 감속도 없다. 그 결과 각각의 공동 운동(comoving) 관측자는 자기만의 \"우주론적 지평선\"을 가지게 되는데, 그 거리는 약 c/H_∞ ≈ 160억 광년 정도(Λ가 정한다)다. 그 지평선 너머에 있는 것은 영원히 인과적으로 접근할 수 없다 — 거기서 떠난 빛이 결코 도착하지 못한다. 어떤 의미에서, 그때부터는 각 관측자에게 있어 우주가 곧 자기 자신의 경계가 된다."
   },
   "stage16-entity-quantum-fluctuation-final": {
     "id": "stage16-entity-quantum-fluctuation-final",
@@ -3788,8 +3788,8 @@
     "nameEn": "Quantum Fluctuation Final",
     "nameKo": "최후의 양자 요동",
     "meta": "Epic · time x3.0 · `δE∞`",
-    "bodyEn": "Even at thermal equilibrium, quantum vacuum fluctuates. Energy ΔE for time ℏ/ΔE. In de Sitter universe, Gibbons-Hawking temperature T_dS = ℏH/(2πk_B) ≈ 10⁻³⁰ K — vacuum has slight thermal character. Boltzmann brain hypothesis: with infinite time, conscious experiences could spontaneously fluctuate into existence. \"Brains\" with memories of being a person in 2024 might pop into existence sometimes (very rarely).",
-    "bodyKo": "열적 평형에서도 양자 진공이 요동. 시간 ℏ/ΔE 동안 에너지 ΔE. 드 시터 우주에서 깁본스-호킹 온도 T_dS = ℏH/(2πk_B) ≈ 10⁻³⁰ K — 진공이 약간의 열적 성격 가짐. 볼츠만 뇌 가설: 무한 시간으로 의식 경험이 자발적으로 존재 요동 가능. 2024년에 사람이었던 기억을 가진 \"뇌\"가 가끔 (매우 드물게) 존재로 튀어나올 수 있음."
+    "bodyEn": "Even at thermal equilibrium, the quantum vacuum keeps fluctuating: it allows brief borrowings of energy ΔE for time ℏ/ΔE. In a de Sitter universe, the Gibbons–Hawking temperature T_dS = ℏH/(2πk_B) ≈ 10⁻³⁰ K gives the vacuum a slight thermal character. The most dramatic consequence is the \"Boltzmann brain\" hypothesis: with literally infinite time, conscious experiences could in principle assemble themselves out of vacuum fluctuations, fully formed. A \"brain\" — for example, one with memories of having been a particular person in 2024 — could pop into existence somewhere, very rarely. This is widely regarded as a serious problem for cosmologies that include infinite quiet stretches.",
+    "bodyKo": "열적 평형 상태에서도 양자 진공은 가만히 있지 않는다. 에너지 ΔE를 시간 ℏ/ΔE 동안 잠시 \"빌려 쓰는\" 식의 요동이 끊임없이 일어난다. 드 시터 우주에서는 \"깁본스-호킹 온도\" T_dS = ℏH/(2πk_B) ≈ 10⁻³⁰ K가 정의되어, 진공 자체가 아주 약하게나마 열적 성격을 띤다. 이로부터 나오는 가장 극적인 결과가 \"볼츠만 뇌(Boltzmann brain)\" 가설이다. 정말로 무한한 시간이 흐른다면, 진공 요동만으로도 의식적인 경험이 통째로 \"조립\"되어 등장할 수 있다는 것이다. 예를 들어 \"2024년의 어떤 한 사람이었다\"는 기억을 가진 뇌 하나가 매우 드물게 우주 어딘가에서 \"갑자기\" 존재할 수도 있다. 이 가설은 \"끝없이 조용한 시기\"를 포함하는 우주론 모형들에 심각한 문제를 일으키는 것으로 널리 받아들여지고 있다."
   },
   "stage16-entity-thermal-death": {
     "id": "stage16-entity-thermal-death",
@@ -3800,8 +3800,8 @@
     "nameEn": "Thermal Death",
     "nameKo": "열적 죽음",
     "meta": "Legendary · multiplier x50.0 · `ΔS=0`",
-    "bodyEn": "Heat Death scenario: universe expands forever, entropy maximizes, no usable energy. Predicted by Lord Kelvin (1862) — long before modern cosmology. With dark energy, universe approaches de Sitter limit: empty, cold, eternal. Some calculations: vacuum decay (Higgs metastability) could end this state earlier, replacing it with new physics. Most likely ultimate state based on current cosmological understanding.",
-    "bodyKo": "열적 죽음 시나리오: 우주가 영원히 팽창, 엔트로피 최대화, 사용 가능한 에너지 없음. 켈빈 경(1862)이 예측 — 현대 우주론 훨씬 전. 암흑에너지로 우주가 드 시터 한계에 접근: 비어 있고, 차갑고, 영원. 일부 계산: 진공 붕괴(힉스 준안정성)가 이 상태를 더 일찍 끝낼 수 있음, 새 물리로 대체. 현재 우주론적 이해에 기반한 가장 가능성 높은 궁극 상태."
+    "bodyEn": "The \"heat death\" scenario is the textbook end state of the universe: cosmic expansion continues forever, entropy gets maximized, and no usable energy is left to drive anything. Lord Kelvin proposed it in 1862, long before modern cosmology was settled. With dark energy in the mix, the universe approaches a \"de Sitter\" limit — empty, cold, and eternal. Some calculations leave room for a sudden ending instead. If the Higgs vacuum is only metastable, a true-vacuum bubble could nucleate somewhere and replace our state with new physics, ending the heat-death state earlier than expected. Based on what we currently know about cosmology, however, heat death remains the single most likely ultimate fate.",
+    "bodyKo": "\"열적 죽음(heat death)\"은 교과서에 자주 등장하는 우주의 종착점 시나리오다. 우주 팽창이 영원히 계속되고, 엔트로피가 최대화되어, 더 이상 어떤 것도 굴릴 수 있는 \"쓸 만한 에너지\"가 남지 않는 상태다. 켈빈 경이 이미 1862년에 — 현대 우주론이 자리잡기 한참 전에 — 이 개념을 제시했다. 암흑에너지를 함께 고려하면, 우주는 결국 비어 있고 차갑고 영원한 \"드 시터 한계\"로 다가간다. 한편 일부 계산은 좀 더 갑작스러운 결말도 열어둔다. 만약 힉스 진공이 \"준안정(metastable)\"이라면, 어딘가에서 \"진정한 진공의 거품\"이 핵 생성되어 우리 진공을 새로운 물리로 갈아치울 수 있고, 그러면 열적 죽음 상태가 예상보다 먼저 끝나버릴 수도 있다. 그럼에도 불구하고, 지금 우리가 가진 우주론 지식에 비춰 보면 \"열적 죽음\"이 여전히 가장 유력한 최종 운명이다."
   },
   "stage16-entity-dark-energy-spike": {
     "id": "stage16-entity-dark-energy-spike",
@@ -3812,8 +3812,8 @@
     "nameEn": "Dark Energy Spike",
     "nameKo": "암흑에너지 폭주",
     "meta": "Legendary · multiplier x50.0 · `Λ↑`",
-    "bodyEn": "Alternative scenario: Big Rip. If dark energy equation of state w < -1 (\"phantom dark energy\"), expansion accelerates without bound. Eventually rips apart galaxies (~10⁹ years before end), solar systems (months), planets (hours), atoms (final seconds). Caldwell-Kamionkowski-Weinberg (2003) calculation. DESI 2024 Year 1 data hinted at evolving w(z) possibly crossing into phantom regime — controversial. If real, ultimate fate is violent, not heat death.",
-    "bodyKo": "대안 시나리오: 빅 립. 암흑에너지 상태방정식 w < -1(\"팬텀 암흑에너지\")이라면 팽창이 한계 없이 가속. 결국 은하(끝 ~10⁹년 전), 태양계(몇 달), 행성(몇 시간), 원자(최종 몇 초) 찢어 분리. 콜드웰-카미온코프스키-와인버그(2003) 계산. DESI 2024 1년차 데이터가 진화하는 w(z)가 팬텀 영역으로 교차할 가능성 시사 — 논란. 실재 시 궁극 운명은 열적 죽음이 아닌 격렬함."
+    "bodyEn": "An alternative ending called the \"Big Rip\" would occur if dark energy turns out to be \"phantom\" — having an equation-of-state parameter w less than −1. In that case, cosmic expansion accelerates without bound and the cosmological horizon shrinks. Eventually it gets small enough to tear apart galaxies (about 10⁹ years before the end in some scenarios), then solar systems (within months), then planets (hours), and finally atoms in the last second. Robert Caldwell, Marc Kamionkowski, and Nevin Weinberg worked out the timeline in 2003. The DESI 2024 Year 1 results hinted at an evolving w(z) that could possibly cross into the phantom regime, but the result is controversial and not yet definitive. If real, the universe ends not in heat death but in a violent rip.",
+    "bodyKo": "\"빅 립(Big Rip)\"이라 불리는 대안적 결말은, 암흑에너지가 \"팬텀 암흑에너지\" — 즉 상태방정식 매개변수 w가 −1보다 작은 — 인 경우에 일어난다. 그러면 우주 팽창은 한계 없이 가속되고, 우주론적 지평선이 도리어 점점 줄어든다. 그 지평선이 충분히 작아지면, 일정 시점에는 은하를(끝나기 약 10⁹년 전쯤, 일부 시나리오에서) 갈가리 찢고, 그 다음 태양계를(몇 달 안에) 찢고, 행성을(몇 시간 안에) 찢고, 마지막 몇 초 동안 원자까지 분해해버린다. 로버트 콜드웰·마크 카미온코프스키·네빈 와인버그가 2003년에 이 시간표를 정밀하게 계산해두었다. 2024년 DESI 1년차 결과는 w(z)가 시간에 따라 변화해 팬텀 영역으로 넘어갈 가능성을 시사했지만, 이 결과는 아직 논쟁의 한가운데에 있고 확정된 것은 아니다. 만약 정말 그렇다면, 우주의 끝은 열적 죽음이 아니라 격렬한 \"찢김\"이 된다."
   },
   "stage16-entity-gravitational-singularity": {
     "id": "stage16-entity-gravitational-singularity",
@@ -3824,8 +3824,8 @@
     "nameEn": "Gravitational Singularity",
     "nameKo": "중력 특이점",
     "meta": "Legendary · multiplier x50.0 · `ρ→∞`",
-    "bodyEn": "Big Crunch: if dark energy weakens and gravity wins, universe could re-contract. All matter falls into singular point (reverse of Big Bang). Penrose-Hawking singularity theorems (1965-70) prove this is mathematically inevitable if conditions hold. Current data: dark energy is constant or growing, so Big Crunch unlikely. But if w(z) evolves dramatically (DESI hint), reversal possible. Or: bouncing cosmologies (LQC, Penrose CCC) connect crunch to new Big Bang.",
-    "bodyKo": "빅 크런치: 암흑에너지 약해지고 중력 이기면 우주 재수축 가능. 모든 물질이 특이점으로 떨어짐(빅뱅의 역). 펜로즈-호킹 특이점 정리(1965-70)가 조건 유지 시 수학적으로 불가피함을 증명. 현재 데이터: 암흑에너지가 일정하거나 증가, 빅 크런치 가능성 낮음. 하지만 w(z)가 극적으로 진화하면(DESI 단서) 역전 가능. 또는: 튕기는 우주론(LQC, 펜로즈 CCC)이 크런치를 새 빅뱅과 연결."
+    "bodyEn": "The \"Big Crunch\" scenario imagines a different ending: if dark energy weakens enough for gravity to overcome it, cosmic expansion could reverse and the universe could re-contract, eventually collapsing into a singularity — essentially a Big Bang run in reverse. Penrose and Hawking's singularity theorems from 1965–1970 prove that, under fairly general conditions, such collapse must end in a true mathematical singularity. Current observations, however, suggest dark energy is roughly constant or even slightly growing, which makes a Big Crunch unlikely. But if w(z) really does evolve dramatically (as DESI hints), a reversal is back in play. \"Bouncing cosmology\" models — loop quantum cosmology, Penrose's CCC — connect such a crunch to the seeds of a new Big Bang, so even a Big Crunch may not be a real ending.",
+    "bodyKo": "\"빅 크런치(Big Crunch)\"는 또 다른 결말 시나리오다. 만약 암흑에너지의 영향이 약해져서 중력이 결국 그것을 이긴다면, 우주 팽창은 역전되어 다시 수축으로 돌아설 수 있다. 그러면 모든 물질이 마침내 한 \"특이점\"으로 떨어진다 — 본질적으로 빅뱅을 거꾸로 돌린 결말이다. 1965~1970년에 펜로즈와 호킹이 정립한 \"특이점 정리\"는, 꽤 일반적인 조건이 만족되는 한 이런 식의 붕괴가 수학적으로 진짜 특이점에 도달할 수밖에 없음을 증명한다. 현재 관측은 암흑에너지가 대체로 일정하거나 약간 증가하는 쪽에 가깝기 때문에, 당장 빅 크런치 시나리오의 가능성은 낮다. 그러나 만약 w(z)가 정말로 극적으로 변화한다면(DESI가 보여준 단서대로), \"역전\" 가능성이 다시 살아난다. 그리고 \"튕기는 우주론\"(LQC, 펜로즈 CCC 등) 모형들은 그런 크런치를 새 빅뱅의 씨앗과 연결한다. 그러므로 \"빅 크런치\"조차 진짜 끝이 아닐 수도 있다."
   },
   "stage16-entity-true-vacuum-bubble": {
     "id": "stage16-entity-true-vacuum-bubble",
@@ -3836,8 +3836,8 @@
     "nameEn": "True Vacuum Bubble",
     "nameKo": "진정한 진공 거품",
     "meta": "Legendary · multiplier x50.0 · `◉→`",
-    "bodyEn": "Vacuum Decay: if our vacuum is metastable (current Higgs+top mass calculations suggest it is, with half-life ~10¹³⁹ years), bubble of true vacuum could nucleate at any moment. Bubble wall expands at near-c, destroying everything inside (physics laws change). Coleman-De Luccia (1980) mathematics. Andreassen-Frost-Schwartz (2018) calculation with latest Higgs/top masses. Cosmic horror with elegant math: you never see it coming — bubble wall arrives with the light announcing it.",
-    "bodyKo": "진공 붕괴: 우리 진공이 준안정이라면(현재 힉스+탑 질량 계산이 그러함 시사, 반감기 ~10¹³⁹년), 진정한 진공의 거품이 어느 순간이든 핵 생성 가능. 거품 벽이 거의 c로 팽창, 안의 모든 것 파괴(물리 법칙 변함). 콜먼-디 루치아(1980) 수학. 안드레아센-프로스트-슈워츠(2018) 최신 힉스/탑 질량 계산. 우아한 수학의 우주적 공포: 절대 미리 볼 수 없음 — 거품 벽이 그것을 알리는 빛과 함께 도착."
+    "bodyEn": "\"Vacuum decay\" is the doomsday scenario in which our vacuum turns out to be only metastable, not truly stable. Current calculations using the measured Higgs and top quark masses suggest exactly this: the vacuum has a finite half-life, around 10¹³⁹ years. If so, somewhere a bubble of \"true vacuum\" could spontaneously nucleate at any moment. That bubble's wall then expands at essentially the speed of light, destroying everything inside as it passes (because the laws of physics on its interior are different from ours). The mathematics behind this picture was developed by Sidney Coleman and Frank De Luccia in 1980, and Andreassen, Frost, and Schwartz updated the calculation in 2018 with the latest Higgs and top masses. It is cosmic horror dressed in elegant math: you never see it coming, because the bubble wall arrives at the same time as the light that announces it.",
+    "bodyKo": "\"진공 붕괴(vacuum decay)\"는 우리 우주의 진공이 사실은 \"진정으로 안정한\" 것이 아니라 \"준안정\"이라는 시나리오다. 측정된 힉스 보손과 톱쿼크 질량을 사용한 현재 계산은 실제로 그런 그림을 시사한다. 진공이 유한한 \"반감기\" — 약 10¹³⁹년 — 를 가진다는 것이다. 그렇다면 어디선가, 어느 순간에든 \"진정한 진공의 거품\"이 자발적으로 핵 생성될 수 있다. 그 거품의 벽은 거의 빛의 속도로 팽창하면서, 그 안쪽의 모든 것을 파괴한다(거품 안쪽에서는 물리 법칙 자체가 우리 것과 달라져 있기 때문이다). 이 그림의 수학은 1980년에 시드니 콜먼과 프랭크 디 루치아가 정립했고, 2018년에는 안드레아센·프로스트·슈워츠가 가장 최신의 힉스·톱 질량 값으로 그 계산을 갱신했다. 우아한 수학으로 포장된 우주적 공포다. 절대 미리 알 수 없다. 거품 벽이, 그 거품의 존재를 알리는 \"빛\"과 정확히 같은 시점에 도착하기 때문이다."
   },
   "stage16-entity-quantum-bounce": {
     "id": "stage16-entity-quantum-bounce",
@@ -3848,8 +3848,8 @@
     "nameEn": "Quantum Bounce",
     "nameKo": "양자 반동",
     "meta": "Legendary · multiplier x50.0 · `⟳`",
-    "bodyEn": "Loop Quantum Cosmology (LQC): quantum effects prevent singularity. Instead of Big Bang, \"Big Bounce\" — previous universe collapsed and re-expanded. Our universe = the bounce. Similar in Penrose's Conformal Cyclic Cosmology (CCC): infinite \"aeons\" follow each other, each ending in thermal death + dark energy expansion, then conformally rescaling to new Big Bang. Searches for \"Hawking points\" (CCC predictions in CMB) ongoing — controversial results so far. Eternal cycle vs eternal heat death: deep cosmological question.",
-    "bodyKo": "고리 양자 우주론(LQC): 양자 효과가 특이점 방지. 빅뱅 대신 \"빅 바운스\" — 이전 우주가 붕괴하고 재팽창. 우리 우주 = 바운스. 펜로즈의 등각 순환 우주론(CCC)도 유사: 무한 \"이언\"이 서로 따름, 각각 열적 죽음 + 암흑에너지 팽창에서 끝남, 그 다음 새 빅뱅으로 등각 재척도. \"호킹 점\"(CMB의 CCC 예측) 탐색 진행 중 — 지금까지 논란의 결과. 영원한 순환 vs 영원한 열적 죽음: 깊은 우주론적 질문."
+    "bodyEn": "Loop Quantum Cosmology (LQC) is a quantum-gravity framework in which discreteness of spacetime at the smallest scales prevents singularities — there is no Big Bang point, only a \"Big Bounce.\" In that picture, our universe is the bounce: a previous universe collapsed to extreme density and then re-expanded, becoming what we now see. Roger Penrose's Conformal Cyclic Cosmology (CCC) tells a similar story differently: an infinite sequence of \"aeons,\" each ending in thermal death plus dark-energy expansion, then being rescaled (conformally) into the seed of the next Big Bang. Searches for \"Hawking points\" in the CMB — anomalous warm spots that CCC predicts as scars from the previous aeon — have been ongoing, but results so far are controversial. Eternal cycles versus eternal heat death is one of the deepest open questions in cosmology.",
+    "bodyKo": "\"고리 양자 우주론(LQC)\"은 가장 작은 척도에서 시공간이 \"불연속\"이라는 양자 중력 틀로, 그 결과 특이점이 형성되지 않는다고 본다. 즉 \"빅뱅\"이라는 한 점은 없고, \"빅 바운스(Big Bounce)\"만 있다는 그림이다. 이 시나리오에서 우리 우주는 사실 \"그 바운스\"에 해당한다. 이전 우주가 극단적인 밀도까지 붕괴했다가 다시 팽창해 오늘 우리가 보는 우주가 되었다는 것이다. 로저 펜로즈의 \"등각 순환 우주론(CCC)\"도 비슷한 이야기를 약간 다른 방식으로 한다. 무한히 이어지는 \"이언(aeon)\"들이 있는데, 각각의 이언은 열적 죽음과 암흑에너지 팽창으로 끝나고, 그 다음 등각 변환을 거쳐 다음 이언의 빅뱅 씨앗이 된다. CCC가 예측하는 \"호킹 포인트(Hawking point)\" — 이전 이언이 남긴 흔적으로, CMB에 약간 따뜻한 점으로 나타날 거라는 — 를 찾는 연구가 이어지고 있지만, 지금까지의 결과는 논쟁적이다. \"영원한 순환\"과 \"영원한 열적 죽음\" 중 어느 쪽이 맞는가는, 우주론에서 가장 깊은 열린 질문 중 하나다."
   },
   "stage16-milestone-000-the-dark-era": {
     "id": "stage16-milestone-000-the-dark-era",
@@ -3860,8 +3860,8 @@
     "progress": 0,
     "titleEn": "The Dark Era",
     "titleKo": "어둠의 시대",
-    "bodyEn": "~10¹⁰⁶ years from now. All BHs evaporated. Universe contains: rare photons, neutrinos, leptons. Density approaches zero exponentially due to dark energy. Temperature: 10⁻³⁰ K (Gibbons-Hawking limit). Structure: none. Adams-Laughlin \"Dark Era\" begins. Will last forever (or until new physics intervenes).",
-    "bodyKo": "지금부터 ~10¹⁰⁶년. 모든 BH 증발. 우주가 포함: 드문 광자, 중성미자, 경입자. 밀도가 암흑에너지로 인해 지수 함수적으로 0에 접근. 온도: 10⁻³⁰ K(깁본스-호킹 한계). 구조: 없음. 아담스-러플린 \"어둠 시대\" 시작. 영원히 지속(또는 새 물리 개입 전까지)."
+    "bodyEn": "About 10¹⁰⁶ years from now. Every black hole has finished evaporating. The universe now contains only rare photons, neutrinos, and stray leptons, and the overall density approaches zero exponentially because of ongoing dark-energy-driven expansion. Temperature has effectively dropped to the Gibbons–Hawking limit, around 10⁻³⁰ K. There are no remaining macroscopic structures. The \"Dark Era\" in Adams and Laughlin's \"Five Ages of the Universe\" picture begins here, and it will last forever — unless some new physics intervenes.",
+    "bodyKo": "지금으로부터 약 10¹⁰⁶년 뒤. 모든 블랙홀이 증발을 마쳤다. 이제 우주에 남은 것은 드문드문 흩어진 광자, 중성미자, 그리고 떠도는 경입자뿐이고, 전체 밀도는 암흑에너지가 이끄는 가속 팽창 때문에 지수함수적으로 0에 가까워진다. 온도는 사실상 \"깁본스-호킹 한계\" 부근까지 떨어졌고 — 약 10⁻³⁰ K 수준이다. 거시적 구조라고 부를 만한 것은 더 이상 없다. 애덤스와 러플린의 \"우주의 다섯 시대\" 구도에서 말하는 \"어둠 시대(Dark Era)\"가 이 지점에서 시작되고, 새로운 물리가 끼어들지 않는 한 영원히 지속된다."
   },
   "stage16-milestone-010-final-flash": {
     "id": "stage16-milestone-010-final-flash",
@@ -3872,8 +3872,8 @@
     "progress": 10,
     "titleEn": "Final Flash",
     "titleKo": "마지막 섬광",
-    "bodyEn": "Last BH evaporation flash, ~10¹⁰⁶ years. After: no more energetic events anywhere in cosmos. Universe enters quiet phase. The cosmos's brightest moments are all behind it: Big Bang, first stars, AGN outbursts, BH mergers, supernovae — all in the past.",
-    "bodyKo": "마지막 BH 증발 섬광, ~10¹⁰⁶년. 후: 우주 어디에도 더 이상 에너지 있는 사건 없음. 우주가 조용한 단계 진입. 우주의 가장 밝은 순간들이 모두 뒤에: 빅뱅, 첫 별, AGN 폭발, BH 합병, 초신성 — 모두 과거."
+    "bodyEn": "The last black-hole evaporation flash goes off around 10¹⁰⁶ years from now. After that, there are no more energetic events anywhere in the cosmos. The universe enters a genuinely quiet phase. All of the cosmos's brightest moments are now firmly in the past: the Big Bang itself, the first stars, AGN outbursts, every black-hole merger, every supernova. Nothing of that scale will happen again.",
+    "bodyKo": "마지막 블랙홀의 증발 섬광이 지금으로부터 약 10¹⁰⁶년 뒤에 일어난다. 그 이후로는 우주 어디에서도 더 이상 \"에너지 큰 사건\"이 일어나지 않는다. 우주는 본격적으로 조용한 단계에 들어선다. 우주가 가장 밝게 빛났던 순간들 — 빅뱅 그 자체, 첫 별들, AGN의 폭발, 블랙홀들의 합병, 모든 초신성 — 은 이제 단단히 \"과거\"로 자리잡는다. 그 정도 규모의 일은 두 번 다시 일어나지 않는다."
   },
   "stage16-milestone-025-no-bound-structures": {
     "id": "stage16-milestone-025-no-bound-structures",
@@ -3884,8 +3884,8 @@
     "progress": 25,
     "titleEn": "No Bound Structures",
     "titleKo": "결합된 구조 없음",
-    "bodyEn": "No structures of any kind. No stars, no planets, no galaxies, no clusters, no BHs. Just diluted particles drifting through expanding space. Cosmic horizon (16 Gly) limits each comoving observer's universe. Within horizon: a few hundred particles, very far apart.",
-    "bodyKo": "어떤 종류의 구조도 없음. 별 없음, 행성 없음, 은하 없음, 은하단 없음, BH 없음. 팽창하는 공간을 통해 표류하는 희석된 입자만. 우주 지평선(160억 광년)이 각 공동 운동 관측자의 우주 제한. 지평선 안: 수백 입자, 매우 멀리 떨어짐."
+    "bodyEn": "No bound structures of any kind remain. No stars, no planets, no galaxies, no clusters, no black holes — just diluted particles drifting through ever-expanding space. The cosmological horizon (about 16 billion light-years for each comoving observer) sets the size of the universe an observer can ever interact with. Inside any one such horizon: a few hundred particles, all of them very far apart.",
+    "bodyKo": "이 시점이면 어떤 종류의 \"결합된 구조\"도 남아 있지 않다. 별도, 행성도, 은하도, 은하단도, 블랙홀도 없다. 그저 끝없이 팽창하는 공간을 가로지르며 표류하는, 매우 묽어진 입자들뿐이다. 각 공동 운동 관측자에게는 약 160억 광년 정도의 \"우주론적 지평선\"이 그가 평생 상호작용할 수 있는 우주의 크기를 정한다. 그런 지평선 하나 안에 남아 있는 것은 고작 수백 개 정도의 입자이고, 그것들은 모두 서로 까마득히 멀리 떨어져 있다."
   },
   "stage16-milestone-040-rare-particles": {
     "id": "stage16-milestone-040-rare-particles",
@@ -3896,8 +3896,8 @@
     "progress": 40,
     "titleEn": "Rare Particles",
     "titleKo": "희박한 입자",
-    "bodyEn": "Particles per cubic Gpc: ~10⁻³⁰. Particles separated by cosmic-scale distances. Any two particles unlikely to interact for ~10¹⁰⁰⁰ years. Universe is essentially empty. The few remaining particles are in thermal equilibrium with Gibbons-Hawking horizon temperature.",
-    "bodyKo": "Gpc 세제곱당 입자: ~10⁻³⁰. 입자가 우주 척도 거리로 분리. 임의의 두 입자가 ~10¹⁰⁰⁰년 동안 상호작용할 가능성 없음. 우주가 본질적으로 비어 있음. 남은 몇 안 되는 입자는 깁본스-호킹 지평선 온도와 열적 평형."
+    "bodyEn": "The particle density has dropped to something like 10⁻³⁰ per cubic gigaparsec. Particles are separated by truly cosmic distances, and any two of them are unlikely to interact for around 10¹⁰⁰⁰ years. The universe is essentially empty. The few remaining particles sit in thermal equilibrium with the cosmological horizon at the Gibbons–Hawking temperature.",
+    "bodyKo": "입자 밀도는 1 Gpc³(기가파섹의 세제곱)당 약 10⁻³⁰개 수준까지 떨어진다. 입자들은 \"진정한 의미의 우주 척도 거리\"만큼 서로 떨어져 있고, 임의의 두 입자가 다시 상호작용할 가능성은 약 10¹⁰⁰⁰년 정도 동안 사실상 없다고 봐도 된다. 우주는 본질적으로 비어 있다. 남아 있는 몇 안 되는 입자는 우주론적 지평선의 깁본스-호킹 온도와 열적 평형을 이룬 채로 떠 있다."
   },
   "stage16-milestone-060-distances-lose-meaning": {
     "id": "stage16-milestone-060-distances-lose-meaning",
@@ -3908,8 +3908,8 @@
     "progress": 60,
     "titleEn": "Distances Lose Meaning",
     "titleKo": "거리의 의미 상실",
-    "bodyEn": "Comoving observers separated by faster-than-light recession. No causal contact. Information cannot travel between regions. Each Gpc-scale region is its own \"universe.\" Concept of \"the universe\" splits into observer-dependent local cosmos. Lorentz invariance preserved, but practical communication impossible.",
-    "bodyKo": "공동 운동 관측자가 광속 초과 후퇴로 분리. 인과적 접촉 없음. 정보가 영역 사이 이동 불가. 각 Gpc 척도 영역이 자신의 \"우주\". \"우주\"라는 개념이 관측자 의존 국소 우주로 분리. 로런츠 불변성 보존, 하지만 실용적 소통 불가능."
+    "bodyEn": "Comoving observers are now receding from each other faster than light because of accelerated expansion, so no causal contact is possible between them. Information simply cannot travel between regions any more. Each gigaparsec-scale patch of the universe is, for all practical purposes, its own separate \"universe.\" The very idea of a single shared cosmos splits into observer-dependent local cosmoses. Lorentz invariance is still perfectly preserved, but any practical communication between regions is impossible.",
+    "bodyKo": "공동 운동 관측자들은 이제 가속 팽창에 의해 서로에게서 광속보다 빠르게 멀어지고 있어서, 그들 사이에 인과적 접촉은 더 이상 불가능하다. 정보가 한 영역에서 다른 영역으로 이동할 수가 없다. 사실상 1 기가파섹 척도의 영역마다 \"자기만의 우주\"가 된 셈이다. \"공유되는 하나의 우주\"라는 개념 자체가 \"관측자마다 다른 국소 우주\"의 모음으로 갈라진다. 로런츠 불변성은 여전히 완벽히 보존되지만, 실용적인 의미의 통신은 완전히 불가능해진다."
   },
   "stage16-milestone-075-memory-echo": {
     "id": "stage16-milestone-075-memory-echo",
@@ -3920,8 +3920,8 @@
     "progress": 75,
     "titleEn": "Memory Echo",
     "titleKo": "기억의 메아리",
-    "bodyEn": "Poincaré recurrence: with infinite time, any initial state recurs (in finite-state systems). For universe with bounded entropy (de Sitter has finite entropy ~10¹²², Bekenstein bound), Poincaré recurrence time ~10^(10^120) years. Within that time: any past state reappears, including living people, civilizations, the original Big Bang. Eternal recurrence (Nietzsche realized this philosophically).",
-    "bodyKo": "푸앵카레 재귀: 무한 시간으로 어떤 초기 상태든 재발(유한-상태 시스템에서). 경계된 엔트로피의 우주(드 시터가 유한 엔트로피 ~10¹²² 보유, 베켄슈타인 한계)에서 푸앵카레 재귀 시간 ~10^(10^120)년. 그 시간 안에: 어떤 과거 상태든 재등장, 살아있는 사람, 문명, 원래 빅뱅 포함. 영원한 재귀(니체가 철학적으로 깨달은)."
+    "bodyEn": "Poincaré's recurrence theorem says that, in a system with finitely many possible states and enough time, every state eventually recurs. For a universe with bounded entropy — and de Sitter space does have finite entropy, around 10¹²² in the Bekenstein bound — the Poincaré recurrence time is around 10^(10^120) years. Within that staggering interval, any earlier state must eventually reappear, including living people, civilizations, and even something Big-Bang-like. \"Eternal recurrence,\" the idea Nietzsche reached philosophically, falls out of the same theorem cosmologically.",
+    "bodyKo": "푸앵카레의 \"재귀 정리\"는, 가능한 상태가 유한한 시스템에 충분한 시간이 주어지면 결국 어떤 상태든 다시 나타난다고 말한다. 엔트로피가 유한한 우주 — 그리고 드 시터 공간은 베켄슈타인 한계 안에서 약 10¹²² 정도의 유한 엔트로피를 갖는다 — 의 경우, 그 재귀 시간은 약 10^(10^120)년에 이른다. 가늠하기조차 어려운 이 시간 안에서, 과거의 어떤 상태든 결국 다시 한 번 등장하지 않을 수 없다. 살아 있는 사람들, 문명들, 심지어 빅뱅과 비슷한 상태마저 포함해서다. 니체가 철학적으로 도달했던 \"영원회귀\"가, 우주론에서는 바로 이 정리의 결과로 나타나는 셈이다."
   },
   "stage16-milestone-088-almost-nothing": {
     "id": "stage16-milestone-088-almost-nothing",
@@ -3932,8 +3932,8 @@
     "progress": 88,
     "titleEn": "Almost Nothing",
     "titleKo": "거의 무(無)",
-    "bodyEn": "Universe is closer to perfect vacuum than ever before. Even individual atom occupies entire cosmic horizon volume in some sense (de Broglie wavelength >> cosmic horizon for low-momentum particles). Quantum mechanics no longer makes intuitive sense at these scales. The cosmos is gentle, vast, almost-empty.",
-    "bodyKo": "우주가 이전 어느 때보다 완벽한 진공에 가까움. 개별 원자조차 어떤 의미에서 전체 우주 지평선 부피 차지(저운동량 입자에 드 브로이 파장 >> 우주 지평선). 양자역학이 이 척도에서 더 이상 직관적으로 의미 없음. 우주가 점잖고, 광대하고, 거의-빈."
+    "bodyEn": "The universe is now closer to a perfect vacuum than at any other point in its history. In a real sense, even a single atom occupies the entire volume inside the cosmological horizon — for very low-momentum particles, the de Broglie wavelength (the quantum-mechanical \"size\" of a particle, given by Planck's constant divided by momentum) exceeds the cosmic horizon itself. At these scales quantum mechanics no longer matches our everyday intuition at all. The cosmos has become gentle, vast, and almost-empty.",
+    "bodyKo": "이 시점의 우주는, 우주 역사 전체를 통틀어 \"완벽한 진공\"에 가장 가까운 상태에 있다. 어떤 의미에서는 원자 하나가 우주론적 지평선 안 전체 부피를 \"차지\"한다고 말해도 큰 무리가 아니다. 운동량이 매우 작은 입자의 경우, 그 입자의 양자역학적 \"크기\"인 \"드 브로이 파장\"(플랑크 상수를 운동량으로 나눈 값) 자체가 우주 지평선 크기를 넘어버리기 때문이다. 이런 척도에서는 양자역학이 우리의 일상 직관과 더 이상 맞지 않는다. 우주는 점잖고, 광대하고, \"거의 텅 빈\" 상태가 되어 있다."
   },
   "stage16-milestone-100-the-end": {
     "id": "stage16-milestone-100-the-end",
@@ -3944,8 +3944,8 @@
     "progress": 100,
     "titleEn": "The End",
     "titleKo": "마지막",
-    "bodyEn": "Cosmic story ends here, or begins again. Possibilities:\n(1) **Heat Death**: eternal de Sitter expansion, no further changes\n(2) **Big Rip**: phantom dark energy rips spacetime apart (some DESI hints 2024)\n(3) **Big Crunch**: gravity reverses, universe recollapses\n(4) **Big Bounce**: quantum gravity prevents singularity, new universe begins\n(5) **Vacuum Decay**: metastable Higgs vacuum tunnels to true vacuum, physics resets\n\nCurrently most likely: Heat Death. Most exciting: Big Bounce or Vacuum Decay. Most dramatic: Big Rip. Most cyclic: Penrose CCC.\n\nThe universe ends not with a bang, but with a whisper. Or perhaps, with another bang. Or with new physics we haven't yet imagined. The story remains unwritten.",
-    "bodyKo": "우주 이야기가 여기서 끝나거나 다시 시작한다. 가능성:\n(1) **열적 죽음**: 영원한 드 시터 팽창, 더 이상 변화 없음\n(2) **빅 립**: 팬텀 암흑에너지가 시공간을 찢어 분리(2024 일부 DESI 단서)\n(3) **빅 크런치**: 중력 역전, 우주 재붕괴\n(4) **빅 바운스**: 양자 중력이 특이점 방지, 새 우주 시작\n(5) **진공 붕괴**: 준안정 힉스 진공이 진정한 진공으로 터널링, 물리 재설정\n\n현재 가장 가능성 높음: 열적 죽음. 가장 흥미: 빅 바운스나 진공 붕괴. 가장 극적: 빅 립. 가장 순환적: 펜로즈 CCC.\n\n우주는 폭발이 아닌 속삭임으로 끝난다. 어쩌면 또 다른 폭발과 함께. 또는 우리가 아직 상상하지 못한 새 물리와 함께. 이야기는 여전히 쓰이지 않은 채로 남는다."
+    "bodyEn": "Here the cosmic story either ends, or quietly begins again. The current main possibilities are: (1) **Heat Death** — eternal de Sitter expansion with no further changes; (2) **Big Rip** — phantom dark energy literally tears spacetime apart (some DESI 2024 hints point this way); (3) **Big Crunch** — gravity eventually reverses and the universe recollapses; (4) **Big Bounce** — a quantum-gravity mechanism prevents a true singularity and a new universe begins; (5) **Vacuum Decay** — our metastable Higgs vacuum tunnels into a true vacuum, and the laws of physics reset everywhere it touches. By current evidence, Heat Death is the most likely outcome. The most exciting are Big Bounce or Vacuum Decay; the most dramatic is the Big Rip; the most cyclic is Penrose's CCC. The universe ends, in one famous phrasing, not with a bang but with a whisper. Perhaps with another bang. Perhaps with new physics we haven't yet imagined. The story remains unwritten.",
+    "bodyKo": "여기서 우주의 이야기가 끝나거나, 혹은 조용히 다시 시작된다. 현재 거론되는 주된 가능성은 이렇다. (1) **열적 죽음(Heat Death)** — 영원한 드 시터 팽창, 그 이상 어떤 변화도 없음. (2) **빅 립(Big Rip)** — 팬텀 암흑에너지가 시공간을 말 그대로 찢어버림(2024년 DESI 결과의 일부 단서가 이 방향을 가리킨다). (3) **빅 크런치(Big Crunch)** — 결국 중력이 역전을 일으켜 우주가 다시 수축. (4) **빅 바운스(Big Bounce)** — 양자 중력적 메커니즘이 진짜 특이점을 막아주고, 새 우주가 그 자리에서 시작. (5) **진공 붕괴(Vacuum Decay)** — 우리 우주의 준안정 힉스 진공이 \"진정한 진공\"으로 터널링해 들어가고, 거기에 닿는 모든 곳에서 물리 법칙이 새로 \"리셋\"됨. 현재 증거를 종합하면 가장 가능성이 높은 결말은 여전히 열적 죽음이다. 가장 흥미로운 결말은 빅 바운스나 진공 붕괴, 가장 극적인 결말은 빅 립, 그리고 가장 \"순환적인\" 결말은 펜로즈의 CCC다. 어느 유명한 문장을 빌리자면, 우주는 \"꽝\" 하는 폭발이 아니라 속삭임으로 끝난다. 어쩌면 또 한 번의 폭발과 함께 끝날 수도 있고, 어쩌면 우리가 아직 상상조차 못 한 새로운 물리와 함께 끝날 수도 있다. 이야기는 여전히, 아직 쓰이지 않은 채 남아 있다."
   },
   "stage11-entity-earth-formation": {
     "id": "stage11-entity-earth-formation",

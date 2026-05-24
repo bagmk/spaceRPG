@@ -45,7 +45,30 @@ export interface Stage {
   zoomDirection: 'in' | 'out' | 'none';
   silenceBeforeMs?: number;
   endingId?: EndingId;
+  /** Label for the Condense button when leaving this stage. Overrides the generic "Condense". */
+  condenseLabel?: string;
+  condenseLabelKo?: string;
+  /** Visual flavor for the stage-exit transition (controls shake + wash colors). */
+  transitionStyle?: TransitionStyle;
 }
+
+export type TransitionStyle =
+  | 'bang'        // 1→2: Big Bang - sharp white expansion
+  | 'condense'    // 2→3: matter wins, plasma settles
+  | 'forge'       // 3→4: hadrons forge into nuclei
+  | 'cool'        // 4→5: hot plasma cools
+  | 'release'     // 5→6: light freed, expanding ring
+  | 'ignite'      // 6→7: first star pop, warm flash
+  | 'bloom'       // 7→8: UV blooms across cosmos
+  | 'weave'       // 8→9: web/filaments spin out
+  | 'kindle'      // 9→10: small warm spark
+  | 'bloom-blue'  // 10→11: blue-green life blossom
+  | 'swansong'    // 11→12: red giant swell + soft fade
+  | 'fade-red'    // 12→13: last red dwarf fades
+  | 'fade-dark'   // 13→14: stars gone, dim
+  | 'pull-in'    // 14→15: collapse inward to BH era
+  | 'evaporate'   // 15→16: hawking dissolve outward
+  | 'final';      // 16: ending
 
 export type StageMechanicId =
   | 'click_basic'

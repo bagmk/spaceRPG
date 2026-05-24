@@ -43,8 +43,11 @@ export const STRINGS = {
   introNewBang:  { en: 'NEW BIG BANG', ko: '새 빅뱅' },
   introAtlas:    { en: 'MULTIVERSE ATLAS', ko: '다중우주 도감' },
   introTagline:  { en: 'From the first instant\nto the end of time.', ko: '첫 순간부터\n시간의 끝까지.' },
-  introLetThere: { en: 'Let there be light', ko: '빛이 있으라' },
-  introGenesis:  { en: 'Genesis 1:3', ko: '창세기 1:3' },
+  introLetThere: {
+    en: 'Formless and void.\nDarkness over the deep.\nLet there be light — and there was light.',
+    ko: '혼돈하고 공허하며\n흑암이 깊음 위에 있었다.\n빛이 있으라 하니\n빛이 있었다.',
+  },
+  introGenesis:  { en: 'Genesis 1:2–3', ko: '창세기 1:2–3' },
 
   // ── Reset confirm modal ───────────────────────────────────────
   resetTitle:    { en: 'Delete save?', ko: '저장 데이터를 삭제할까요?' },
