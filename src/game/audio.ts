@@ -248,53 +248,89 @@ export class SoundManager {
       return;
     }
     try {
+      const now = ctx.currentTime;
       const volume = dbToGain(TUNING.COLLISION_VOLUME_DB - 3);
-      const duration = 1.8;
-      const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let index = 0; index < data.length; index += 1) {
-        const fade = 1 - index / data.length;
-        data[index] = (Math.random() * 2 - 1) * fade;
-      }
 
+      // 1. Impact — deep sub-bass thump
+      const impact = ctx.createOscillator();
+      impact.type = 'sine';
+      const impactGain = ctx.createGain();
+      impact.frequency.setValueAtTime(120, now);
+      impact.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+      impactGain.gain.setValueAtTime(volume * 1.2, now);
+      impactGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      impact.connect(impactGain);
+      impactGain.connect(master);
+      impact.start(now);
+      impact.stop(now + 0.5);
+
+      // 2. Noise burst — filtered crash
+      const noiseDur = 1.2;
+      const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * noiseDur), ctx.sampleRate);
+      const noiseData = noiseBuf.getChannelData(0);
+      for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length);
+      }
       const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
+      noise.buffer = noiseBuf;
       const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = 'lowpass';
-      noiseFilter.frequency.setValueAtTime(520, ctx.currentTime);
-      noiseFilter.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + duration);
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(800, now);
+      noiseFilter.frequency.exponentialRampToValueAtTime(200, now + noiseDur);
+      noiseFilter.Q.value = 1.5;
       const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(volume * 0.75, ctx.currentTime);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      noiseGain.gain.setValueAtTime(volume * 0.5, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseDur);
       noise.connect(noiseFilter);
       noiseFilter.connect(noiseGain);
       noiseGain.connect(master);
-      noise.start();
+      noise.start(now);
 
+      // 3. Rising chord — ascending tones (triumph feel)
+      const chordNotes = [220, 330, 440, 554];
+      chordNotes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        const gain = ctx.createGain();
+        const delay = 0.15 + i * 0.12;
+        osc.frequency.setValueAtTime(freq, now + delay);
+        osc.frequency.linearRampToValueAtTime(freq * 1.5, now + delay + 1.0);
+        gain.gain.setValueAtTime(0.0001, now + delay);
+        gain.gain.linearRampToValueAtTime(volume * 0.12, now + delay + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 1.2);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(now + delay);
+        osc.stop(now + delay + 1.3);
+      });
+
+      // 4. Shimmer — high sparkle tail
+      const shimmer = ctx.createOscillator();
+      shimmer.type = 'triangle';
+      const shimmerGain = ctx.createGain();
+      shimmer.frequency.setValueAtTime(1200, now + 0.3);
+      shimmer.frequency.exponentialRampToValueAtTime(2400, now + 1.0);
+      shimmer.frequency.exponentialRampToValueAtTime(3200, now + 2.0);
+      shimmerGain.gain.setValueAtTime(0.0001, now + 0.3);
+      shimmerGain.gain.linearRampToValueAtTime(volume * 0.06, now + 0.6);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+      shimmer.connect(shimmerGain);
+      shimmerGain.connect(master);
+      shimmer.start(now + 0.3);
+      shimmer.stop(now + 2.3);
+
+      // 5. Sub rumble tail
       const rumble = ctx.createOscillator();
       rumble.type = 'sine';
       const rumbleGain = ctx.createGain();
-      rumble.frequency.setValueAtTime(82, ctx.currentTime);
-      rumble.frequency.exponentialRampToValueAtTime(28, ctx.currentTime + duration);
-      rumbleGain.gain.setValueAtTime(volume, ctx.currentTime);
-      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      rumble.frequency.setValueAtTime(55, now + 0.1);
+      rumble.frequency.exponentialRampToValueAtTime(25, now + 2.5);
+      rumbleGain.gain.setValueAtTime(volume * 0.4, now + 0.1);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
       rumble.connect(rumbleGain);
       rumbleGain.connect(master);
-      rumble.start();
-      rumble.stop(ctx.currentTime + duration);
-
-      const light = ctx.createOscillator();
-      light.type = 'triangle';
-      const lightGain = ctx.createGain();
-      light.frequency.setValueAtTime(440, ctx.currentTime + 0.16);
-      light.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.62);
-      lightGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      lightGain.gain.linearRampToValueAtTime(volume * 0.18, ctx.currentTime + 0.22);
-      lightGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
-      light.connect(lightGain);
-      lightGain.connect(master);
-      light.start(ctx.currentTime + 0.05);
-      light.stop(ctx.currentTime + 1.25);
+      rumble.start(now + 0.1);
+      rumble.stop(now + 2.5);
     } catch (err) {
       this.logAudioError(err);
     }
@@ -411,6 +447,56 @@ export class SoundManager {
         this.playTonedBurst(freq + Math.random() * 30, 0.3, base * (1 - index * 0.12));
       }, index * 90);
     });
+  }
+
+  /** Soft "pop" for opening panels (almanac, entity lab). */
+  playUIOpen(): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 4);
+      // Rising two-tone chime: C6 → E6
+      this.playTonedBurst(1047, 0.12, vol);
+      window.setTimeout(() => this.playTonedBurst(1318, 0.10, vol * 0.7), 60);
+    } catch (err) { this.logAudioError(err); }
+  }
+
+  /** Gentle toggle switch sound. */
+  playToggle(on: boolean): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 5);
+      // On: rising "bip", Off: falling "bop"
+      const freq = on ? 880 : 660;
+      const freq2 = on ? 1174 : 494;
+      this.playTonedBurst(freq, 0.07, vol);
+      window.setTimeout(() => this.playTonedBurst(freq2, 0.09, vol * 0.6), 45);
+    } catch (err) { this.logAudioError(err); }
+  }
+
+  /** Soft "thud" for closing panels. */
+  playUIClose(): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 6);
+      // Falling single tone: G5
+      this.playTonedBurst(784, 0.09, vol);
+    } catch (err) { this.logAudioError(err); }
+  }
+
+  /** Bright "ding" for entity level-up / purchase. */
+  playEntityLevelUp(): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 2);
+      // Ascending arpeggio: C6 → E6 → G6
+      this.playTonedBurst(1047, 0.14, vol);
+      window.setTimeout(() => this.playTonedBurst(1318, 0.12, vol * 0.8), 50);
+      window.setTimeout(() => this.playTonedBurst(1568, 0.18, vol * 0.65), 110);
+    } catch (err) { this.logAudioError(err); }
   }
 
   dispose(): void {
