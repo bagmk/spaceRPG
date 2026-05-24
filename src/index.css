@@ -4080,28 +4080,66 @@ button.stat-header-item {
 .almanac-pill:hover:not(.almanac-pill--active) { border-color: color-mix(in srgb, var(--pill-accent, #fff) 35%, transparent); color: var(--fg); }
 .almanac-pill-num { font-size: 11px; letter-spacing: 0.05em; }
 .almanac-pill-lock { font-size: 8px; opacity: 0.6; }
-.almanac-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  overflow: hidden;
+.almanac-scroll {
   flex: 1;
-  min-height: 0;
-}
-.almanac-info {
-  position: relative;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
-  padding-right: 8px;
 }
+.almanac-scroll::-webkit-scrollbar { width: 4px; }
+.almanac-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.almanac-desc {
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 16px;
+}
+
+.almanac-milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.almanac-milestones__title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 8px;
+}
+.almanac-ms {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.almanac-ms--locked { opacity: 0.35; }
+.almanac-ms__text { flex: 1; min-width: 0; }
+.almanac-ms__title { font-size: 12px; font-weight: 600; color: var(--fg); }
+.almanac-ms--locked .almanac-ms__title { color: rgba(255,255,255,0.4); font-weight: 400; }
+.almanac-ms__msg { font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.4; margin-top: 2px; }
+.almanac-ms__more {
+  all: unset;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(180,150,255,0.25);
+  color: rgba(180,150,255,0.7);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.almanac-ms__more:hover {
+  background: rgba(180,150,255,0.1);
+  color: #d0b8ff;
+}
+
 .almanac-info__bg-num {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  font-family: var(--mono);
-  font-size: 72px;
   font-weight: 900;
   color: color-mix(in srgb, var(--stage-accent, #8090b0) 8%, transparent);
   pointer-events: none;

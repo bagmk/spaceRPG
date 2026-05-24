@@ -2900,8 +2900,8 @@
     "nameEn": "Brown Dwarf",
     "nameKo": "갈색왜성",
     "meta": "Common · auto x1.5 · `🟫`",
-    "bodyEn": "Failed stars: 13-80 Jupiter masses (0.013-0.08 M_☉), unable to sustain H fusion. Burn deuterium briefly (first 10⁸ years), then cool forever. Coolest known: WISE 0855-0714 (Y-dwarf, ~250 K, 7.2 ly away — colder than Earth). First confirmed BD: Teide 1 (1995). Spectral classes L, T, Y (cooler than M-dwarfs). JWST is revealing atmospheric chemistry of nearby BDs in detail. In long-term universe: BDs evolve into \"frozen stars\" — among last objects to retain identity.",
-    "bodyKo": "실패한 별: 13-80 목성 질량(0.013-0.08 M_☉), H 융합 지속 불가. 중수소 잠시 연소(첫 10⁸년), 그 다음 영원히 식음. 알려진 가장 차가운: WISE 0855-0714(Y-왜성, ~250 K, 7.2 광년 — 지구보다 차가움). 첫 확인된 BD: 테이데 1(1995). 스펙트럼 클래스 L, T, Y(M-왜성보다 차가움). JWST가 근처 BD 대기 화학을 상세히 드러내는 중. 장기 우주에서: BD가 \"동결 별\"로 진화 — 정체성 유지하는 마지막 천체 중 하나."
+    "bodyEn": "Brown dwarfs are objects with between 13 and 80 Jupiter masses (about 0.013 to 0.08 solar masses) — heavier than planets but not heavy enough for the core to sustain hydrogen fusion. So they live, fail to ignite as proper stars, briefly burn deuterium for their first 10⁸ years or so, and then cool forever. The coolest currently known is WISE 0855-0714, a so-called Y-dwarf about 7.2 light-years from us, with a temperature near 250 kelvin — colder than the average temperature of Earth. The first confirmed brown dwarf was Teide 1, identified in 1995. Brown dwarfs are classified into spectral types L, T, and Y in order of decreasing temperature, extending the standard stellar sequence past the coolest M-dwarfs. JWST is now revealing the atmospheric chemistry of nearby brown dwarfs in unprecedented detail. In the very long-term future, brown dwarfs slowly become \"frozen stars\" and end up among the very last objects in the universe that still retain an obvious identity.",
+    "bodyKo": "갈색왜성은 질량이 목성 13~80배(약 0.013~0.08 태양 질량) 사이인 천체로, 행성보다는 무겁지만 핵에서 수소 융합을 지속할 만큼 무겁지는 않다. 그래서 별이 되려다 실패한 채, 처음 약 10⁸년 동안만 \"중수소\"를 살짝 태운 뒤로는 영원히 식어가기만 한다. 현재 알려진 가장 차가운 갈색왜성은 약 7.2광년 거리에 있는 \"WISE 0855-0714\"라는 Y형 왜성으로, 표면 온도가 약 250 K — 지구 평균 기온보다 차가운 수준 — 에 불과하다. 1995년에 확인된 \"테이데 1(Teide 1)\"이 인류가 처음 확정한 갈색왜성이고, 갈색왜성은 온도가 낮아지는 순서대로 L·T·Y의 스펙트럼 형으로 분류되어, 가장 차가운 M형 별들에서 이어지는 항성 스펙트럼 계열을 그 너머까지 확장한다. JWST는 이제 가까운 갈색왜성들의 대기 화학을 전례 없는 해상도로 풀어내는 중이다. 아주 먼 미래의 우주에서는, 갈색왜성이 천천히 \"동결된 별(frozen star)\"로 굳어가면서, 끝까지 정체성을 유지하는 거의 마지막 천체 중 하나로 남게 된다."
   },
   "stage13-entity-cold-gas-remnant": {
     "id": "stage13-entity-cold-gas-remnant",
@@ -2912,8 +2912,8 @@
     "nameEn": "Cold Gas Remnant",
     "nameKo": "차가운 가스 잔재",
     "meta": "Common · click x15.0 · `~H`",
-    "bodyEn": "Diffuse hydrogen/helium left between/around galaxies after star formation ends. As universe expands, gas cools to CMB temperature (~2.7 K) then below. Eventually most gas locked in stellar remnants or expelled to intergalactic voids. Over 10¹⁴ years, gas reservoir for star formation depletes — no more new stars can form. Cold remnant gas drifts forever, gradually merging into supercluster gravitational wells.",
-    "bodyKo": "별 형성 종료 후 은하 사이/주위 남은 희박한 수소/헬륨. 우주가 팽창하면서 가스가 CMB 온도(~2.7 K)로, 그 다음 그 아래로 식음. 결국 대부분 가스가 항성 잔해에 갇히거나 은하간 보이드로 방출. 10¹⁴년에 걸쳐 별 형성용 가스 저장소 고갈 — 더 이상 새 별 형성 불가. 차가운 잔재 가스가 영원히 표류, 점진적으로 초은하단 중력 우물에 합병."
+    "bodyEn": "After most star formation has ended, the universe is still threaded by diffuse hydrogen and helium between and around galaxies. As the universe keeps expanding, that gas cools to and then below the temperature of the cosmic microwave background (currently about 2.7 kelvin). Most of it eventually gets locked up inside stellar remnants — once gas falls into a galaxy and lights up a star, it ends as a white dwarf or neutron star — or is blown out into the empty intergalactic voids by stellar feedback. Over roughly 10¹⁴ years, the reservoir of gas available for fresh star formation drops below the threshold needed, and no new stars can form. The cold remnant gas then drifts forever, gradually being pulled into the deepest gravitational wells of superclusters or expanding away with the rest of the universe.",
+    "bodyKo": "별 형성이 대부분 끝난 뒤에도 우주에는 은하 사이와 그 주변에 희박한 수소·헬륨 가스가 여전히 깔려 있다. 우주가 계속 팽창하면 이 가스는 먼저 우주배경복사 온도(현재 약 2.7 K) 수준으로, 이어 그보다 더 차갑게 식어간다. 그 대부분은 결국 항성 잔해 안에 갇히거나(가스가 은하로 떨어져 한 번 별을 만들고 나면, 그 별은 결국 백색왜성이나 중성자별로 끝난다) 항성 피드백에 떠밀려 \"은하 사이의 빈 공간\"으로 분출된다. 약 10¹⁴년이 지나면 새 별 형성에 필요한 가스 저장량이 임계 이하로 떨어지고, 더 이상 새 별이 만들어질 수 없게 된다. 남은 차가운 잔재 가스는 이후 영원히 표류하면서, 초은하단의 가장 깊은 중력 우물 쪽으로 천천히 빨려 들어가거나, 나머지 우주와 함께 팽창에 실려 멀어져 간다."
   },
   "stage13-entity-cooling-white-dwarf": {
     "id": "stage13-entity-cooling-white-dwarf",
@@ -2924,8 +2924,8 @@
     "nameEn": "Cooling White Dwarf",
     "nameKo": "식어가는 백색왜성",
     "meta": "Common · crit(flat) x0.4 · `WD↓`",
-    "bodyEn": "WDs cool via thermal radiation over billions of years. Born at 100,000 K, cool to red (~5000 K) in ~1 Gyr, then very slowly. Cooling timescale to 0 K: theoretically infinite, practically ~10¹⁵ years (longer than current universe age). C/O nuclei crystallize as WD cools below 10⁴ K — Sirius B already crystallized in core (2019, Gaia data). Universe's first WDs (~12 Gyr old) are just now reaching deep red phase. By 10¹⁴ years, all WDs frozen to \"black dwarf\" state.",
-    "bodyKo": "WD가 열 복사를 통해 수십억 년에 걸쳐 식음. 100,000 K로 태어나, ~10억 년에 붉음(~5000 K)으로 식음, 그 다음 매우 천천히. 0 K까지 냉각 시간 척도: 이론적으로 무한, 실용적으로 ~10¹⁵년(현재 우주 나이보다 김). WD가 10⁴ K 아래로 식으면서 C/O 핵이 결정화 — 시리우스 B가 이미 핵에서 결정화(2019, 가이아 데이터). 우주의 첫 WD(~120억 년)가 이제 막 깊은 빨강 단계 도달. 10¹⁴년까지 모든 WD가 \"흑색왜성\" 상태로 동결."
+    "bodyEn": "White dwarfs cool over billions of years simply by radiating away their leftover heat. A freshly exposed white dwarf can start out near 100,000 kelvin, fade to a deep red around 5,000 kelvin in roughly a billion years, and then keep cooling much more slowly. The time it would take a white dwarf to reach absolute zero is technically infinite, but practically the cooling timescale down to invisibly cold temperatures is around 10¹⁵ years — far longer than the current age of the universe. Once the white dwarf's interior drops below about 10⁴ kelvin, the carbon and oxygen nuclei in its core line up into a crystal lattice. Gaia satellite data analyzed in 2019 found direct evidence that Sirius B already has a crystallized core. The universe's very first white dwarfs, formed roughly 12 billion years ago, are only now reaching their deep-red phase. By around 10¹⁴ years from now, every white dwarf in existence will have frozen out to the theoretical \"black dwarf\" state.",
+    "bodyKo": "백색왜성은 단순히 남아 있던 열을 우주로 복사해 보내며 수십억 년에 걸쳐 식는다. 갓 노출된 백색왜성은 표면 온도가 약 10만 K에 이르기도 하는데, 약 10억 년이 흐르면 짙은 붉은빛(약 5000 K)까지 식고, 그 뒤로는 훨씬 천천히 식어간다. 절대 0도까지 식는 데 걸리는 시간은 이론상 무한대지만, \"실용적으로 거의 보이지 않을 정도로 식는 데\" 걸리는 시간은 약 10¹⁵년으로, 현재 우주 나이보다 훨씬 길다. 내부 온도가 약 10⁴ K 아래로 떨어지면 백색왜성 핵 안의 탄소·산소 원자핵들이 결정 격자를 이루어 \"결정화\"되기 시작한다. 2019년에 가이아 위성 데이터를 분석한 연구는, 시리우스 B의 핵이 이미 결정화된 상태라는 직접 증거를 제시했다. 우주에서 처음 만들어진 백색왜성들 — 약 120억 년 전부터 식어온 — 은 이제 막 \"짙은 붉은빛\" 단계에 진입하는 중이다. 지금으로부터 약 10¹⁴년 뒤가 되면, 사실상 모든 백색왜성이 이론적인 \"흑색왜성\" 상태로 얼어붙어 있을 것이다."
   },
   "stage13-entity-stellar-graveyard": {
     "id": "stage13-entity-stellar-graveyard",
@@ -2936,8 +2936,8 @@
     "nameEn": "Stellar Graveyard",
     "nameKo": "항성의 묘지",
     "meta": "Common · time x3.0 · `⬜`",
-    "bodyEn": "Population of stellar corpses in galaxies. Milky Way contains ~10¹⁰ WDs (1 per ~10 main-sequence stars), ~10⁸ NSs, ~10⁷-10⁸ stellar-mass BHs. Most isolated, drifting through galaxy. As galaxies age, remnant population grows; eventually they outnumber living stars. By 10¹⁴ years, only stellar corpses remain — galaxy is graveyard. Modern LIGO detections of NS-NS and BH-BH mergers are gravitational signals from this graveyard.",
-    "bodyKo": "은하의 항성 시체 인구. 우리 은하가 ~10¹⁰ WD(주계열성 ~10개당 1개), ~10⁸ NS, ~10⁷-10⁸ 항성-질량 BH 포함. 대부분 고립, 은하를 통해 표류. 은하가 노화하면서 잔해 인구 성장; 결국 살아있는 별을 능가. 10¹⁴년까지 항성 시체만 남음 — 은하가 묘지. 현대 LIGO의 NS-NS, BH-BH 합병 검출이 이 묘지에서의 중력 신호."
+    "bodyEn": "The \"stellar graveyard\" is the growing population of stellar corpses inside galaxies. The Milky Way already contains roughly 10¹⁰ white dwarfs (about one for every ten still-living main-sequence stars), around 10⁸ neutron stars, and somewhere between 10⁷ and 10⁸ stellar-mass black holes. Most of them drift through the galaxy in isolation, no longer doing the work of stars. As a galaxy ages, this remnant population just keeps growing, until eventually the dead outnumber the living. By roughly 10¹⁴ years from now, only stellar corpses will be left — the galaxy will be, in a literal sense, a graveyard. Modern LIGO detections of neutron-star and black-hole mergers are gravitational-wave signals coming from this graveyard.",
+    "bodyKo": "\"항성의 묘지\"는 은하 안에 점점 늘어나는 항성 시체들의 집단을 가리킨다. 이미 우리 은하 안에만 백색왜성이 약 10¹⁰개 들어 있다(아직 살아 있는 주계열성 약 10개당 1개꼴이다). 중성자별은 약 10⁸개, 항성 질량 블랙홀은 10⁷~10⁸개 정도다. 대부분은 더 이상 \"별다운 일\"을 하지 못한 채 은하 곳곳을 외롭게 표류한다. 은하가 늙어갈수록 이 잔해 인구는 계속 늘어나고, 어느 시점부터는 죽은 천체가 살아 있는 별보다 많아진다. 지금으로부터 약 10¹⁴년 뒤가 되면 살아 있는 별은 사실상 사라지고 항성 시체들만 남는다. 그때의 은하는 말 그대로의 \"묘지\"가 된다. 오늘날 LIGO가 검출하는 중성자별 합병과 블랙홀 합병 신호는, 이미 만들어져 있는 이 묘지에서 들려오는 중력파 메시지다."
   },
   "stage13-entity-galaxy-halo-dispersal": {
     "id": "stage13-entity-galaxy-halo-dispersal",
@@ -2948,8 +2948,8 @@
     "nameEn": "Galaxy Halo Dispersal",
     "nameKo": "은하 헤일로 흩어짐",
     "meta": "Rare · auto x4.0 · `○○`",
-    "bodyEn": "Random gravitational encounters between stars eventually \"evaporate\" galaxies — high-velocity escapees leave, while remaining stars sink deeper. Timescale: ~10¹⁹-10²⁰ years for stellar evaporation of typical galaxy. Eventually only a SMBH + bound remnants left at galactic center. Most stellar matter ends up as intergalactic wanderers in vast voids. Gravitational dynamics is patient: it works on cosmic timescales.",
-    "bodyKo": "별 사이의 무작위 중력 조우가 결국 은하를 \"증발\" — 고속 탈출자가 떠나고, 남은 별은 더 깊이 가라앉음. 시간 척도: 전형적 은하의 항성 증발에 ~10¹⁹-10²⁰년. 결국 은하 중심에 SMBH + 결합 잔해만 남음. 대부분의 항성 물질이 광대한 보이드의 은하간 방랑자로 끝남. 중력 동역학은 인내심 있다: 우주적 시간 척도에서 작동한다."
+    "bodyEn": "Random gravitational encounters between stars in a galaxy don't just shuffle orbits — over long enough times, they actually \"evaporate\" the galaxy. A few stars in each encounter pick up enough kinetic energy to escape entirely, while the ones left behind lose energy and sink deeper into the galactic potential. For a typical galaxy, the stellar-evaporation timescale is around 10¹⁹ to 10²⁰ years. Eventually the only thing left at the center is the supermassive black hole, surrounded by a small core of tightly bound remnants. Most of the original stellar material ends up as intergalactic wanderers, scattered across the vast empty voids between galaxy groups. Gravitational dynamics is in no hurry: it just works patiently on cosmic timescales.",
+    "bodyKo": "은하 안에서 별과 별이 무작위로 가까이 지나치는 중력 조우는 단순히 궤도를 흔드는 데 그치지 않는다. 충분히 긴 시간을 두고 보면, 그것이 은하 자체를 \"증발\"시키는 메커니즘이 된다. 매 조우마다 일부 별은 충분한 운동 에너지를 얻어 은하를 영영 떠나고, 남은 별들은 거꾸로 에너지를 잃어 더 깊은 중력 우물 속으로 가라앉는다. 전형적인 은하라면 이 \"항성 증발\"의 시간 척도는 약 10¹⁹~10²⁰년 정도다. 결국 중심에는 초대질량 블랙홀과 그 주위의 단단히 결합된 작은 잔해 핵만 남는다. 원래 은하를 채우고 있던 항성 물질의 대부분은 은하군과 은하군 사이의 광대한 빈 공간 — 보이드 — 으로 흩어진 \"은하간 방랑자\"가 된다. 중력 동역학은 결코 서두르지 않는다. 그저 우주적 시간 척도에서 인내심 있게 일을 해낼 뿐이다."
   },
   "stage13-entity-gravitational-slingshot": {
     "id": "stage13-entity-gravitational-slingshot",
@@ -2960,8 +2960,8 @@
     "nameEn": "Gravitational Slingshot",
     "nameKo": "중력 새총",
     "meta": "Rare · click x22.0 · `↗`",
-    "bodyEn": "Three-body or multi-body encounters can eject stars at high velocity. Hypervelocity stars (V>500 km/s) escape galaxy, drifting forever through intergalactic space. ~1000 known in Milky Way (Brown et al. 2005-). Source: tidal disruption by SMBH (Hills mechanism 1988), close encounter with binary BH, supernova kick to neutron stars. Over 10¹⁹ years, slingshots evaporate stellar populations. Some stars achieve relativistic velocities — true \"rogue stars\" between galaxies.",
-    "bodyKo": "삼체 또는 다체 조우가 별을 고속으로 방출 가능. 초고속 별(V>500 km/s)이 은하 탈출, 영원히 은하간 공간을 통해 표류. 우리 은하에 ~1,000개 알려짐(브라운 등 2005-). 원천: SMBH의 조석 파괴(힐스 메커니즘 1988), 쌍 BH와의 가까운 조우, 중성자별에 대한 초신성 킥. 10¹⁹년에 걸쳐 새총이 항성 인구 증발. 일부 별이 상대론적 속도 달성 — 은하 사이의 진정한 \"방랑 별\"."
+    "bodyEn": "Three- and many-body gravitational encounters can fling stars out at very high speeds. \"Hypervelocity stars,\" with velocities above about 500 kilometers per second, escape their host galaxy entirely and end up drifting forever through intergalactic space. About 1,000 are now known in the Milky Way's halo, starting with the systematic surveys of Brown and collaborators from 2005 onward. The slingshot can come from several sources: tidal disruption of a binary star by the central supermassive black hole (the Hills mechanism, 1988), a close pass with a binary black hole, or a strong asymmetric kick to a newborn neutron star at the moment of its supernova. Integrated over very long times — on the order of 10¹⁹ years — these slingshot ejections gradually evaporate whole galactic stellar populations. A few stars even reach mildly relativistic speeds, becoming true \"rogue stars\" wandering between galaxies.",
+    "bodyKo": "별 셋 이상이 중력적으로 가까이 부딪치는 \"다체 조우\"는 가끔 별을 매우 빠른 속도로 튕겨낸다. 속도가 약 초속 500 km를 넘어 \"초고속 별(hypervelocity star)\"이 되면, 그 별은 자기 모은하의 중력에서 완전히 벗어나 영원히 은하 사이 공간을 떠돌게 된다. 우리 은하 헤일로에서는 2005년 이후 브라운(Brown) 연구진을 비롯한 본격적인 탐색에 의해 약 1000개가 알려져 있다. 새총을 일으키는 원인은 여럿이다. 은하 중심의 초대질량 블랙홀이 쌍성을 조석으로 갈라놓을 때 한쪽 별이 튕겨 나가는 \"힐스 메커니즘\"(1988), 쌍성 블랙홀에 가까이 지나는 별, 그리고 막 태어나는 중성자별이 비대칭 초신성 폭발로 받는 강한 \"킥\" 등이 그렇다. 약 10¹⁹년 단위의 아주 긴 시간으로 적분하면, 이런 새총 이주가 은하 전체의 항성 인구를 서서히 \"증발\"시킨다. 일부 별은 가벼운 상대론적 속도까지 가속되어, 은하와 은하 사이를 영영 표류하는 진정한 \"방랑 별\"이 된다."
   },
   "stage13-entity-pulsar": {
     "id": "stage13-entity-pulsar",
@@ -2972,8 +2972,8 @@
     "nameEn": "Pulsar",
     "nameKo": "펄사",
     "meta": "Rare · crit(flat) x1.0 · `⊛~`",
-    "bodyEn": "Rapidly rotating neutron stars emitting beamed radiation. First discovered 1967 (Jocelyn Bell + Hewish, Nobel 1974 to Hewish only — Bell controversially excluded). Period range: 1.4 ms (millisecond pulsars) to ~12 s. Periods so stable they rival atomic clocks. PSR B1937+21 first MSP; binary pulsars (Hulse-Taylor 1974, Nobel 1993) confirmed GR predicted gravitational wave emission. Modern: Pulsar Timing Arrays (NANOGrav, EPTA, PPTA) use pulsar networks to detect nanohertz GW background (2023 detection).",
-    "bodyKo": "빔 복사 방출하는 빠르게 회전하는 중성자별. 1967년 처음 발견(조슬린 벨 + 휴이시, 휴이시만 1974 노벨상 — 벨이 논란 속에 제외). 주기 범위: 1.4 ms(밀리초 펄서)에서 ~12 s. 주기가 너무 안정해 원자 시계와 경쟁. PSR B1937+21이 첫 MSP; 쌍성 펄서(헐스-테일러 1974, 1993 노벨상)가 GR 예측 중력파 방출 확인. 현대: 펄사 타이밍 어레이(NANOGrav, EPTA, PPTA)가 펄사 네트워크 사용해 나노헤르츠 GW 배경 검출(2023 검출)."
+    "bodyEn": "A pulsar is a rapidly rotating neutron star that emits beams of radiation from its magnetic poles; as the beams sweep across the sky, we see them as regular pulses. Pulsars were first discovered in 1967 by Jocelyn Bell Burnell, then a PhD student, together with her supervisor Antony Hewish. The 1974 Nobel Prize was awarded for the discovery, but only to Hewish — a famously controversial omission. Their rotation periods run from 1.4 milliseconds (the so-called millisecond pulsars, or MSPs) up to about 12 seconds, and their long-term timing stability is so good that it rivals the best atomic clocks. PSR B1937+21 was the first MSP discovered, and the 1974 discovery of the binary pulsar by Russell Hulse and Joseph Taylor — for which they won the 1993 Nobel Prize — provided the first indirect proof that gravitational waves carry energy away, exactly as general relativity predicts. Today, \"pulsar timing arrays\" such as NANOGrav (North America), the European Pulsar Timing Array (EPTA), and the Parkes Pulsar Timing Array (PPTA) use whole networks of millisecond pulsars to look for tiny correlated wobbles caused by gravitational waves in the nanohertz band — and in 2023 they reported the first detection of such a low-frequency gravitational-wave background.",
+    "bodyKo": "펄서는 빠르게 자전하는 중성자별이 자기 양 극으로 좁은 복사 빔을 쏘는 천체다. 그 빔이 하늘을 휩쓸면서 우리에게는 매우 규칙적인 \"펄스\"로 보인다. 펄서는 1967년에 박사과정 중이던 조슬린 벨 버넬이 지도교수 앤서니 휴이시와 함께 처음 발견했다. 1974년 노벨 물리학상은 이 발견에 주어졌지만 휴이시에게만 돌아갔고, 이는 학계에서 두고두고 회자되는 유명한 \"누락\"으로 남아 있다. 펄서의 자전 주기는 1.4 밀리초(밀리초 펄서, MSP)부터 약 12초까지 다양한데, 장기 타이밍 안정성이 너무 좋아서 최고급 원자시계와 견줄 정도다. PSR B1937+21이 처음 발견된 밀리초 펄서이고, 1974년에 러셀 헐스와 조지프 테일러가 발견한 \"쌍성 펄서\"는 이후 1993년 노벨 물리학상으로 이어졌다. 이 펄서의 궤도 변화가 일반 상대성 이론이 예측한 \"중력파에 의한 에너지 손실\"을 처음으로 간접 입증해주었기 때문이다. 오늘날에는 \"펄서 타이밍 배열(PTA)\" — 북미의 NANOGrav, 유럽의 EPTA, 호주의 PPTA — 이 밀리초 펄서들의 네트워크를 묶어 나노헤르츠 영역의 중력파가 일으키는 미세하고 서로 상관된 타이밍 흔들림을 찾고 있다. 그리고 2023년, 마침내 이 저주파 \"중력파 배경\"의 첫 검출을 보고했다."
   },
   "stage13-entity-black-dwarf": {
     "id": "stage13-entity-black-dwarf",
@@ -2984,8 +2984,8 @@
     "nameEn": "Black Dwarf",
     "nameKo": "흑색왜성",
     "meta": "Rare · time x3.0 · `●°`",
-    "bodyEn": "Theoretical end-state of WDs: cooled below 1000 K, no longer radiating visibly. Theoretical because universe is too young: cooling timescale 10¹⁵-10¹⁷ years exceeds current age (1.4×10¹⁰ years). First BDs will exist around 10¹⁵ years from now — about 10⁵× current age. Once formed, BD remains for proton decay timescale (~10³⁴+ years). They are nearly invisible: only detectable by gravitational interactions in distant future cosmology.",
-    "bodyKo": "WD의 이론적 끝 상태: 1000 K 아래로 식음, 가시광선 복사 안 함. 이론적인 이유는 우주가 너무 어림: 냉각 시간 척도 10¹⁵-10¹⁷년이 현재 나이(1.4×10¹⁰년) 초과. 첫 BD가 지금부터 ~10¹⁵년 후 존재할 것 — 현재 나이의 ~10⁵×. 일단 형성되면 BD가 양성자 붕괴 시간 척도(~10³⁴+년)까지 남음. 거의 보이지 않음: 먼 미래 우주론의 중력 상호작용으로만 검출 가능."
+    "bodyEn": "A \"black dwarf\" is the theoretical end state of a white dwarf that has cooled below about 1,000 kelvin — too cold to emit any meaningful visible light. The reason no black dwarfs actually exist yet is simple: the cooling timescale required is roughly 10¹⁵ to 10¹⁷ years, while the universe is only about 1.4 × 10¹⁰ years old. The first true black dwarfs will appear somewhere around 10¹⁵ years from now — roughly 100,000 times the current age of the universe. Once formed, a black dwarf is essentially eternal on stellar-physics timescales: it just sits there until proton decay (if it happens) eventually erodes it on a 10³⁴-plus-year timescale. Black dwarfs are almost invisible — they emit essentially no light — and in any far-future cosmology they would mostly be detectable only by their gravitational pull on whatever else still moves around them.",
+    "bodyKo": "\"흑색왜성(black dwarf)\"은 백색왜성이 식다 못해 표면 온도가 약 1000 K 아래로 떨어진, 가시광선으로는 사실상 보이지 않는 상태를 가리키는 이론적 끝점이다. 실제로는 아직 어떤 흑색왜성도 존재하지 않는데, 이유는 단순하다. 백색왜성이 그 정도까지 식는 데 필요한 시간이 약 10¹⁵~10¹⁷년인데, 우주의 나이는 아직 약 1.4 × 10¹⁰년에 불과하기 때문이다. 첫 진짜 흑색왜성은 지금으로부터 약 10¹⁵년 뒤 — 현재 우주 나이의 약 10만 배에 해당하는 시점 — 에 등장할 것이다. 일단 만들어진 흑색왜성은 항성 물리의 시간 척도에서 사실상 영원하다. 양성자 붕괴가 정말로 일어난다면 약 10³⁴년 이상의 시간 척도에서 그 영향이 미치는 정도가 끝이다. 흑색왜성은 거의 보이지 않는 천체다. 사실상 빛을 내지 않기 때문에, 먼 미래 우주론에서 이들을 알아채는 거의 유일한 방법은 \"그 주위에서 아직 움직이는 무언가에 가하는 중력적 영향\"을 통해서다."
   },
   "stage13-entity-iron-star": {
     "id": "stage13-entity-iron-star",
@@ -2996,8 +2996,8 @@
     "nameEn": "Iron Star",
     "nameKo": "철 별",
     "meta": "Epic · auto x8.0 · `Fe★`",
-    "bodyEn": "Hypothetical end-state for stellar remnants: over 10¹⁵⁰⁰ years, quantum tunneling could convert all WDs to iron stars (all nuclei → Fe-56, lowest binding energy per nucleon). Mass concentrates as quantum mechanical fusion overcomes Coulomb barriers (extraordinarily slowly). Adams & Laughlin (1997) \"A Dying Universe\" discussed this. After iron stars: further quantum tunneling could lead to black holes ~10^(10^76) years from now.",
-    "bodyKo": "항성 잔해의 가상 끝 상태: 10¹⁵⁰⁰년에 걸쳐 양자 터널링이 모든 WD를 철 별로 변환 가능(모든 핵 → Fe-56, 핵자당 가장 낮은 결합 에너지). 양자역학적 융합이 쿨롱 장벽을 극복하면서 질량 집중(굉장히 천천히). 아담스 & 러플린(1997) \"죽어가는 우주\"가 논의. 철 별 후: 추가 양자 터널링이 지금부터 ~10^(10^76)년에 블랙홀로 이어질 수 있음."
+    "bodyEn": "An \"iron star\" is a hypothetical extremely-far-future end state of stellar remnants. The idea, popularized by Fred Adams and Gregory Laughlin in their 1997 paper \"A Dying Universe,\" is that on timescales of order 10¹⁵⁰⁰ years, quantum tunneling could very slowly drive the nuclei inside cooled white dwarfs to fuse and shift toward iron-56 — which has the lowest binding energy per nucleon and is therefore the most thermodynamically stable nucleus. The Coulomb barrier between nuclei is enormous, but with literally infinite patience, quantum tunneling lets fusion happen anyway, just at an absurdly slow rate. After iron stars, even further quantum tunneling could in principle compress them into black holes on timescales of order 10^(10^76) years — numbers so large that the question of whether the universe could even survive that long to allow it is itself an open one.",
+    "bodyKo": "\"철 별(iron star)\"은 항성 잔해들이 도달할 수 있는 극단적인 먼 미래의 가설적 종착점이다. 1997년에 프레드 애덤스와 그레고리 러플린이 발표한 글 \"죽어가는 우주(A Dying Universe)\"가 이 개념을 널리 알렸다. 약 10¹⁵⁰⁰년이라는, 도저히 가늠하기 힘든 시간 척도에서, \"양자 터널링\"이 식어버린 백색왜성 안의 원자핵들을 아주 천천히 융합시켜 결국 모두 \"철-56\"으로 옮겨 놓는다는 발상이다. 철-56은 핵자 하나당 결합 에너지가 가장 낮아 열역학적으로 가장 안정한 핵이다. 핵 사이의 정전기적(쿨롱) 장벽은 거대하지만, 정말로 무한에 가까운 시간을 들이면 양자 터널링이 어쨌든 융합을 가능케 하고, 그것이 매우 느린 속도로 진행되어 간다. 이 \"철 별\" 단계 이후에도 또 다른 양자 터널링이 작동해, 원리상 약 10^(10^76)년 정도의 시간 척도에서 철 별이 통째로 블랙홀로 압축될 수 있다. 다만 그렇게 거대한 숫자에서는 \"그때까지 우주가 정말 살아남아 있을 수 있는가\"라는 질문 자체가 별개의 미해결 문제다."
   },
   "stage13-entity-binary-bh-merger": {
     "id": "stage13-entity-binary-bh-merger",
@@ -3008,8 +3008,8 @@
     "nameEn": "Binary BH Merger",
     "nameKo": "쌍 블랙홀 병합",
     "meta": "Epic · click x35.0 · `⚫⚫`",
-    "bodyEn": "Two BHs spiral inward via GW emission, merge in violent event releasing ~3-5% of total mass as GW energy. First detection: GW150914 (September 2015, LIGO) — 36 M_☉ + 29 M_☉ → 62 M_☉ + 3 M_☉ in GW. Nobel 2017 (Weiss, Barish, Thorne). LIGO/Virgo/KAGRA O4 (2023-2024) detected ~80 events. Future LISA (2030s) will see SMBH mergers across cosmic history. GW astronomy: the youngest branch of observational cosmology.",
-    "bodyKo": "두 BH가 GW 방출을 통해 안으로 나선, 총 질량의 ~3-5%를 GW 에너지로 방출하는 격렬한 사건에서 합병. 첫 검출: GW150914(2015년 9월, LIGO) — 36 M_☉ + 29 M_☉ → 62 M_☉ + GW에서 3 M_☉. 2017 노벨상(와이스, 배리시, 손). LIGO/Virgo/KAGRA O4(2023-2024)가 ~80 사건 검출. 미래 LISA(2030년대)가 우주 역사 전체에 걸쳐 SMBH 합병 볼 것. GW 천문학: 관측 우주론의 가장 어린 가지."
+    "bodyEn": "Two black holes orbiting each other gradually lose energy through gravitational-wave emission and spiral inward, eventually merging in a violent event that releases about 3–5% of the system's total mass directly as gravitational-wave energy. The first such event detected was GW150914 on September 14, 2015, by LIGO: a merger about 1.3 billion light-years away between a 36-solar-mass and a 29-solar-mass black hole that left behind a 62-solar-mass remnant, with the missing roughly 3 solar masses carried away as gravitational waves. Rainer Weiss, Barry Barish, and Kip Thorne shared the 2017 Nobel Prize for the project's success. By the end of LIGO/Virgo/KAGRA's 2023–2024 O4 observing run, the collaboration had detected about 80 such merger events. In the next decade, ESA's space-based LISA mission (targeting the 2030s) is expected to begin detecting mergers of supermassive black holes across cosmic history — a regime where signals are stronger but at much lower frequencies. Gravitational-wave astronomy is the youngest branch of observational cosmology.",
+    "bodyKo": "두 블랙홀이 서로를 공전하면, 그 시스템은 점차 에너지를 중력파 형태로 우주에 흘려보내며 안쪽으로 나선을 그리며 다가가고, 결국 격렬한 합병으로 시스템 총 질량의 약 3~5%를 곧장 중력파 에너지로 방출한다. 인류가 처음 검출한 사건은 2015년 9월 14일 LIGO가 잡은 GW150914였다. 약 13억 광년 거리에서 36 태양 질량짜리 블랙홀과 29 태양 질량짜리 블랙홀이 합쳐져, 합쳐진 결과는 62 태양 질량의 블랙홀이었고, 사라진 약 3 태양 질량이 중력파로 우주에 풀려나갔다. 이 사업의 성공으로 라이너 와이스, 배리 배리시, 킵 손이 2017년 노벨 물리학상을 공동 수상했다. 2023~2024년에 진행된 LIGO·Virgo·일본 KAGRA의 \"O4\" 관측에서, 협력단은 이런 종류의 합병 사건을 약 80건 검출했다. 향후 십수 년 안에는 ESA가 2030년대를 목표로 추진 중인 우주 기반 \"LISA\" 임무가 신호는 더 강하지만 주파수는 훨씬 낮은 거대 블랙홀 합병들을 우주 역사 전반에서 검출하기 시작할 전망이다. 중력파 천문학은 관측 우주론의 가장 어린 가지다."
   },
   "stage13-entity-supermassive-bh": {
     "id": "stage13-entity-supermassive-bh",
@@ -3020,8 +3020,8 @@
     "nameEn": "Supermassive BH",
     "nameKo": "초대질량 블랙홀",
     "meta": "Epic · crit(flat) x3.0 · `⚫³`",
-    "bodyEn": "Mass 10⁶-10¹⁰ M_☉. Centerpiece of every galaxy. Sgr A* (4.15 × 10⁶ M_☉), M87* (6.5 × 10⁹ M_☉) imaged by EHT. In Stelliferous Era end, SMBHs dominate galaxies as stars die. Through ~10²⁰ years, SMBHs swallow remaining stellar matter via stellar dynamics. Eventually become only persistent structure. Hawking evaporation timescale for 10⁹ M_☉ SMBH: ~10¹⁰⁰ years.",
-    "bodyKo": "질량 10⁶-10¹⁰ M_☉. 모든 은하의 중심부. Sgr A*(4.15 × 10⁶ M_☉), M87*(6.5 × 10⁹ M_☉)이 EHT에 의해 이미징. 항성 시대 종말에 별이 죽으면서 SMBH가 은하를 지배. ~10²⁰년에 걸쳐 SMBH가 항성 동역학을 통해 남은 항성 물질을 삼킴. 결국 유일한 지속 구조가 됨. 10⁹ M_☉ SMBH의 호킹 증발 시간 척도: ~10¹⁰⁰년."
+    "bodyEn": "Supermassive black holes (SMBHs) have masses between 10⁶ and 10¹⁰ solar masses and sit at the center of essentially every reasonably large galaxy. The two best-imaged examples are Sagittarius A* at the heart of our own galaxy, with about 4.15 × 10⁶ solar masses, and M87* in the galaxy M87, at about 6.5 × 10⁹ solar masses; both have been imaged by the Event Horizon Telescope. As the Stelliferous Era winds down and stars die off, SMBHs become the dominant gravitational players inside their galaxies. Over the next 10²⁰ years or so, they accrete and absorb most of the remaining stellar debris through long, slow gravitational encounters, eventually becoming the only persistent structures around. The Hawking evaporation timescale for a 10⁹-solar-mass supermassive black hole is staggeringly long — about 10¹⁰⁰ years — so they outlive almost everything else in the observable universe.",
+    "bodyKo": "거대 질량 블랙홀(SMBH)은 질량이 10⁶~10¹⁰ 태양 질량에 이르고, 어느 정도 큰 은하라면 거의 어김없이 중심에 하나씩 자리잡고 있다. 가장 잘 영상화된 두 사례가 우리 은하 중심의 \"사거자리 A*(Sgr A*)\"로 질량은 약 4.15 × 10⁶ M_☉이고, 다른 하나는 은하 M87 중심의 \"M87*\"로 약 6.5 × 10⁹ M_☉이다. 두 천체 모두 사건의 지평선 망원경(EHT)이 직접 촬영했다. 항성 시대가 막바지에 다다라 별들이 잇따라 죽어 나가면, 그 은하 안에서 SMBH가 가장 큰 중력적 주연이 된다. 이후 약 10²⁰년에 걸쳐 SMBH는 길고 천천히 진행되는 중력 상호작용을 통해 남은 항성 잔해 대부분을 자기 안으로 거둬들이고, 결국 그 영역에서 거의 유일하게 살아남는 \"지속적 구조\"가 된다. 10⁹ M_☉ 짜리 SMBH가 호킹 복사로 완전히 증발하는 데 걸리는 시간은 압도적으로 길어, 약 10¹⁰⁰년에 이른다. 따라서 SMBH는 관측 가능한 우주 안에서 사실상 다른 거의 모든 것을 살아남는다."
   },
   "stage13-entity-stellar-mass-bh": {
     "id": "stage13-entity-stellar-mass-bh",
@@ -3032,8 +3032,8 @@
     "nameEn": "Stellar Mass BH",
     "nameKo": "항성질량 블랙홀",
     "meta": "Epic · time x5.0 · `⚫`",
-    "bodyEn": "Stellar BHs: 3-100 M_☉, formed from massive star core collapse. ~10⁸ in Milky Way. LIGO detections expanded mass spectrum: some BHs >50 M_☉ challenged \"pair instability mass gap\" predictions; BHs <3 M_☉ blurred neutron star vs BH boundary. Cygnus X-1 (1971) was first confirmed stellar BH. Modern catalog: ~100 confirmed via X-ray binaries, ~200 via GW. Over 10²⁰ years, stellar BHs swallowed by SMBHs or scattered to intergalactic space.",
-    "bodyKo": "항성 BH: 3-100 M_☉, 무거운 별 핵 붕괴에서 형성. 우리 은하에 ~10⁸. LIGO 검출이 질량 스펙트럼 확장: 일부 BH >50 M_☉가 \"쌍 불안정 질량 간격\" 예측에 도전; <3 M_☉ BH가 중성자별 vs BH 경계 흐림. 백조자리 X-1(1971)이 첫 확인된 항성 BH. 현대 카탈로그: X선 쌍성으로 ~100 확인, GW로 ~200. 10²⁰년에 걸쳐 항성 BH가 SMBH에 삼켜지거나 은하간 공간으로 산란."
+    "bodyEn": "Stellar-mass black holes are the kind formed from the core collapse of single massive stars or from the merger of stellar remnants; they weigh between roughly 3 and 100 solar masses. The Milky Way is thought to host around 10⁸ of them. LIGO's detections have stretched our picture of the mass spectrum: several of the merging black holes seen so far exceed 50 solar masses, posing a problem for predictions of the so-called \"pair-instability mass gap\" between roughly 50 and 130 solar masses; and a few candidates lighter than 3 solar masses blur the line between heavy neutron stars and light black holes. Cygnus X-1, identified in 1971 through its bright X-ray emission, was the first confirmed stellar-mass black hole. The current catalog has on the order of 100 confirmed via X-ray binaries and about 200 via gravitational-wave observations. Over the next 10²⁰ years, most stellar-mass black holes will eventually be swallowed by their galaxy's central supermassive black hole or scattered out into intergalactic space by gravitational encounters.",
+    "bodyKo": "항성 질량 블랙홀은 무거운 별 하나가 핵 붕괴를 일으키거나, 항성 잔해들끼리 합병해서 만들어지는 부류로, 질량 범위가 약 3~100 태양 질량 정도다. 우리 은하 안에만 약 10⁸개가 있을 것으로 추정된다. LIGO의 검출은 그동안 우리가 알고 있던 질량 분포를 크게 흔들어 놓았다. 합병에 참여한 일부 블랙홀이 50 태양 질량을 넘어, 약 50~130 태양 질량 사이가 비어 있어야 한다는 \"쌍 불안정 질량 공백\" 예측에 도전한다. 또 3 태양 질량보다 가벼운 후보들이 등장하면서, \"무거운 중성자별\"과 \"가벼운 블랙홀\" 사이의 경계도 흐려졌다. 1971년에 강한 X선 방출 덕분에 정체가 확인된 \"백조자리 X-1(Cygnus X-1)\"이 인류가 처음으로 확정한 항성 질량 블랙홀이었다. 현재 카탈로그를 보면, X선 쌍성으로 확정된 사례가 약 100개, 중력파로 확정된 사례가 약 200개 수준이다. 앞으로 약 10²⁰년에 걸쳐, 항성 질량 블랙홀 대부분은 자기 은하 중심의 거대 블랙홀에 삼켜지거나 중력 산란을 통해 은하 사이의 빈 공간으로 튕겨 나가게 된다."
   },
   "stage13-entity-last-red-dwarf": {
     "id": "stage13-entity-last-red-dwarf",
@@ -3044,8 +3044,8 @@
     "nameEn": "Last Red Dwarf",
     "nameKo": "마지막 적색왜성",
     "meta": "Legendary · multiplier x50.0 · `🔴✦`",
-    "bodyEn": "Red dwarfs (M-type, <0.6 M_☉) live longest: 100 Gyr - 17 trillion years. Burn H slowly; never expand to red giant phase (just become He WD directly). The last red dwarf will turn off ~10¹⁴ years from now. Then no nuclear fusion anywhere in universe — Stelliferous Era over. Total real-time star formation duration: ~10¹⁴ years out of universe's eventual ~10¹⁰⁰+ years lifespan. Stars are a brief opening chapter.",
-    "bodyKo": "적색왜성(M형, <0.6 M_☉)이 가장 오래 산다: 1000억 년 - 17조 년. H를 천천히 연소; 적색거성 단계로 팽창하지 않음(He WD로 직접 됨). 마지막 적색왜성이 지금부터 ~10¹⁴년 후 꺼질 것. 그러면 우주 어디에도 핵 융합 없음 — 항성 시대 끝. 총 실시간 별 형성 지속: 우주의 최종 ~10¹⁰⁰+ 년 수명 중 ~10¹⁴년. 별은 짧은 첫 장."
+    "bodyEn": "Red dwarfs — M-type stars with less than about 0.6 solar masses — are the longest-lived stars in the universe. They burn hydrogen so slowly that their main-sequence lifetimes range from about 100 billion years up to roughly 17 trillion years, and unlike heavier stars they never expand into a red-giant phase — at the end of their lives they just settle directly into helium white dwarfs. The very last red dwarf will fizzle out about 10¹⁴ years from now. Once it does, there will be no ongoing nuclear fusion anywhere in the universe, and the Stelliferous Era — the cosmic chapter when stars dominate — will be over. Putting it into perspective: roughly 10¹⁴ years of star-forming history out of the universe's eventual ~10¹⁰⁰-plus-year lifespan means stars are just a brief opening chapter.",
+    "bodyKo": "적색왜성 — 질량이 태양의 약 0.6배보다 작은 M형 별들 — 은 우주에서 가장 오래 사는 별이다. 수소를 워낙 느리게 태우기 때문에 주계열성으로서의 수명이 약 1000억 년에서 길게는 17조 년에 이르고, 더 무거운 별과 달리 마지막에 \"적색거성\" 단계로 부풀지도 않는다. 생애 끝에서는 그대로 \"헬륨 백색왜성\"으로 자리를 잡는다. 우주 안의 마지막 적색왜성은 지금으로부터 약 10¹⁴년 뒤쯤 꺼질 것이다. 그 순간 우주 어디에서도 \"진행 중인 핵 융합\"이 사라진다. 별이 우주를 주도하던 \"항성 시대(Stelliferous Era)\"가 그 시점에서 막을 내리는 셈이다. 비율로 보면 인상적이다. 우주의 최종 수명이 ~10¹⁰⁰년 이상이라고 본다면, 약 10¹⁴년에 불과한 별 형성과 별 활동의 시기는 그 길고 긴 일대기에서 사실 \"짧은 첫 장\"에 해당한다."
   },
   "stage13-entity-total-darkness": {
     "id": "stage13-entity-total-darkness",
@@ -3056,8 +3056,8 @@
     "nameEn": "Total Darkness",
     "nameKo": "완전한 어둠",
     "meta": "Legendary · multiplier x50.0 · `░`",
-    "bodyEn": "~10¹⁴ years from now: no new stars form, existing stars all dead. Only stellar remnants (WDs cooling to BD, NSs cooling, BHs) and intergalactic gas remain. CMB has cooled to ~10⁻⁷ K. Universe is essentially dark — only Hawking radiation and rare particle decays produce photons. Civilizations, if any survived, must rely entirely on stored energy or BH accretion for power.",
-    "bodyKo": "지금부터 ~10¹⁴년: 새 별 형성 없음, 기존 별 모두 죽음. 항성 잔해(BD로 식는 WD, 식는 NS, BH)와 은하간 가스만 남음. CMB가 ~10⁻⁷ K로 식음. 우주가 본질적으로 어두움 — 호킹 복사와 드문 입자 붕괴만 광자 생성. 문명이 살아남았다면 동력을 위해 저장 에너지나 BH 부착에 전적으로 의존해야 함."
+    "bodyEn": "About 10¹⁴ years from now, no new stars form anywhere and all existing stars are dead. What's left is a population of stellar remnants — white dwarfs cooling toward black-dwarf status, slowly cooling neutron stars, and black holes — plus thin intergalactic gas. By this point the cosmic microwave background, redshifted by the universe's continued expansion, has cooled to around 10⁻⁷ kelvin. The universe is essentially dark; the only sources of photons left are Hawking radiation from black holes and the very rare visible decays of particles. Any civilizations that have somehow survived to this era have to rely entirely on stored energy reserves or on extracting power from black-hole accretion — there is no more starlight to live on.",
+    "bodyKo": "지금으로부터 약 10¹⁴년 뒤가 되면, 어디에서도 새로운 별이 만들어지지 않고 기존 별들은 모두 죽어 있다. 남는 것은 항성 잔해들 — 흑색왜성을 향해 식어가는 백색왜성, 천천히 식어가는 중성자별, 그리고 블랙홀 — 과 매우 희박한 은하간 가스뿐이다. 우주의 팽창에 의해 적색편이가 진행된 우주배경복사는 이 시점에 약 10⁻⁷ K까지 식어 있다. 우주는 사실상 어둠 그 자체다. 그때 남아 있는 거의 유일한 광자 원천은 블랙홀의 호킹 복사와, 매우 드물게 일어나는 입자 붕괴의 가시광 정도다. 만약 이 시기까지 어떤 문명이 어떻게든 살아남았다면, 그 문명은 저장해둔 에너지나 블랙홀 강착을 통해 끌어낼 수 있는 에너지에 전적으로 의존해야 한다. 별빛으로 먹고살 수 있는 시대는 이미 한참 전에 끝난 뒤다."
   },
   "stage13-milestone-000-the-long-stellar-era": {
     "id": "stage13-milestone-000-the-long-stellar-era",
@@ -3068,8 +3068,8 @@
     "progress": 0,
     "titleEn": "The Long Stellar Era",
     "titleKo": "긴 항성 시대",
-    "bodyEn": "Universe age ~13.8 Gyr. Sun (along with ~10⁻⁷ of all stars) currently shining. Star formation rate density peaked at z=2 (10 Gyr ago) and has been declining. Future: 99% of all stars that will ever exist will have formed by ~10¹³ years from now. Past that, only rare gas pockets sustain trickle star formation. Most light universe will ever produce has already been produced.",
-    "bodyKo": "우주 나이 ~138억 년. 태양(과 모든 별의 ~10⁻⁷)이 현재 빛남. 별 형성률 밀도가 z=2(100억 년 전)에 정점, 감소 중. 미래: 앞으로 존재할 모든 별의 99%가 지금부터 ~10¹³년 후에 형성됐을 것. 그 이후엔 드문 가스 주머니만 똑똑 별 형성 지속. 우주가 만들 모든 빛의 대부분이 이미 만들어졌다."
+    "bodyEn": "The universe is now about 13.8 billion years old. The Sun — together with the roughly 10⁻⁷ fraction of stars currently in their main-sequence phase — is shining. The cosmic star-formation-rate density peaked at redshift around 2, roughly 10 billion years ago, and has been declining ever since. Looking ahead, the universe will produce about 99% of all the stars it ever makes by roughly 10¹³ years from now; after that, only rare leftover pockets of gas keep a trickle of star formation going. In other words, the bulk of all light the universe will ever produce has, on a cosmic-history scale, already been produced.",
+    "bodyKo": "지금 우주는 약 138억 년이 되었다. 태양(과 별 전체의 약 10⁻⁷에 해당하는 \"지금 주계열성으로서 빛나고 있는 별들\")이 한창 빛을 내고 있다. 우주 전체의 별 형성률 밀도는 적색편이 약 2, 즉 약 100억 년 전에 정점을 찍고는 이후 줄곧 내리막이다. 앞으로의 그림을 길게 보면, 우주가 앞으로도 만들어낼 모든 별의 약 99%는 지금부터 ~10¹³년이 지나기 전에 이미 다 태어나 있을 것이다. 그 이후로는 드물게 남은 가스 주머니가 \"가늘게 똑똑 떨어지는\" 별 형성을 이어갈 뿐이다. 다시 말해, 우주가 만들 모든 빛의 대부분은, 우주 역사 전체로 보면 이미 다 만들어진 셈이다."
   },
   "stage13-milestone-010-star-formation-slows": {
     "id": "stage13-milestone-010-star-formation-slows",
@@ -3080,8 +3080,8 @@
     "progress": 10,
     "titleEn": "Star Formation Slows",
     "titleKo": "별 형성 둔화",
-    "bodyEn": "~10¹¹ years from now (~100 Gyr universe age). Cool intergalactic gas exhausted; remaining gas in galaxy halos at very low density. Star formation rate drops to <1% of current. Smaller galaxies merge into larger; the Local Group becomes a single elliptical galaxy (\"Milkomeda\"). Distant galaxies redshift out of view due to dark energy acceleration.",
-    "bodyKo": "지금부터 ~10¹¹년(우주 나이 ~1000억 년). 차가운 은하간 가스 고갈; 은하 헤일로의 남은 가스가 매우 낮은 밀도. 별 형성률이 현재의 <1%로 떨어짐. 더 작은 은하가 더 큰 은하로 합병; 국부 은하군이 단일 타원 은하가 됨(\"밀코메다\"). 멀리 떨어진 은하가 암흑에너지 가속으로 시야에서 적색편이."
+    "bodyEn": "About 10¹¹ years from now — when the universe is around 100 billion years old. The cool intergalactic gas reservoir that fed earlier star formation is largely exhausted, and what's left in galaxy halos sits at extremely low density. The cosmic star-formation rate drops below 1% of today's value. Smaller galaxies have been merging into larger ones for a long time, and the Local Group has already collapsed into a single elliptical galaxy nicknamed \"Milkomeda.\" Meanwhile, dark-energy-driven accelerated expansion is pushing most distant galaxies past the redshift horizon, where they recede so fast that their light can no longer reach us.",
+    "bodyKo": "지금으로부터 약 10¹¹년 뒤, 우주 나이로 약 1000억 년이 된 시점. 옛날에 별 형성을 떠받쳐주던 차가운 은하간 가스 저장소는 사실상 거의 다 고갈된 상태이고, 은하 헤일로에 조금 남아 있는 가스도 밀도가 매우 낮다. 우주 전체의 별 형성률은 오늘날 값의 1% 아래로 떨어진다. 작은 은하들은 이미 오래전부터 더 큰 은하 안으로 합쳐져 왔고, 우리 \"국부 은하군\"도 이 시점에는 \"밀코메다(Milkomeda)\"라 불리는 단일 타원 은하로 합쳐져 있다. 동시에 암흑에너지가 이끄는 가속 팽창은 멀리 떨어진 은하들을 \"적색편이 지평선\" 너머로 밀어내고 있어, 그 은하들은 너무 빠르게 멀어져 더 이상 우리에게 빛을 보내올 수 없게 된다."
   },
   "stage13-milestone-025-bright-stars-fade-first": {
     "id": "stage13-milestone-025-bright-stars-fade-first",
@@ -3092,8 +3092,8 @@
     "progress": 25,
     "titleEn": "Bright Stars Fade First",
     "titleKo": "밝은 별이 먼저 사라짐",
-    "bodyEn": "Massive stars die first — they burn fastest. By ~10¹² years, all O, B, A stars long dead. G-type (Sun-like) stars dying or already WDs. Galaxy color shifts redder over time. Stars that remain are M-dwarfs (~75% of all stars) — they live ~10¹³ years each. The reign of bright stars ends.",
-    "bodyKo": "무거운 별이 먼저 죽음 — 가장 빨리 탐. ~10¹²년까지 모든 O, B, A 별이 오래 전 죽음. G형(태양 같은) 별이 죽거나 이미 WD. 시간이 갈수록 은하 색이 더 붉어짐. 남은 별은 M-왜성(모든 별의 ~75%) — 각각 ~10¹³년 산다. 밝은 별의 통치가 끝남."
+    "bodyEn": "Massive stars die first because they burn through their fuel fastest. By about 10¹² years from now, all O-, B-, and A-type stars are long gone. The G-type Sun-like stars are dying off or have already become white dwarfs. The overall color of galaxies shifts steadily redder over time. The stars that are still actually fusing hydrogen are mostly M-dwarfs — roughly 75% of all stars by number — each of which has a main-sequence lifetime of about 10¹³ years. The reign of bright stars is effectively over.",
+    "bodyKo": "무거운 별이 가장 먼저 죽는다. 연료를 가장 빨리 태우기 때문이다. 지금으로부터 약 10¹²년이 지나면 O형·B형·A형 별은 이미 오래전에 모두 죽어 있다. 태양 같은 G형 별들도 사라지는 중이거나 이미 백색왜성이 되었다. 그 결과 은하 전체의 색이 시간이 흐를수록 점점 더 붉어진다. 이제 \"진짜로 수소를 융합하고 있는 별\"의 자리에 남는 건 거의 다 M형 적색왜성이다. 별 전체의 약 75%가 여기에 속하고, 각각의 주계열 수명은 약 10¹³년에 이른다. 그러나 \"밝게 빛나는 별\"의 시대는 이 시점에서 사실상 막을 내린다."
   },
   "stage13-milestone-050-old-stars-remain": {
     "id": "stage13-milestone-050-old-stars-remain",
@@ -3104,8 +3104,8 @@
     "progress": 50,
     "titleEn": "Old Stars Remain",
     "titleKo": "늙은 별만 남음",
-    "bodyEn": "~10¹³ years. Universe is dominated by red dwarfs, brown dwarfs, and stellar corpses. The few stars left are billions of years old, slowly fusing H. Galaxies have become diffuse — many stars escape through gravitational evaporation. Civilizations would need to be extremely efficient or live near very long-lived M-dwarfs.",
-    "bodyKo": "~10¹³년. 우주는 적색왜성, 갈색왜성, 항성 시체가 지배. 남은 몇 안 되는 별은 수십억 년 된, H를 천천히 융합. 은하가 희박해짐 — 많은 별이 중력 증발로 탈출. 문명은 극도로 효율적이거나 매우 오래 사는 M-왜성 근처에 살아야 할 것."
+    "bodyEn": "Around 10¹³ years from now. The universe is dominated by red dwarfs, brown dwarfs, and stellar corpses. The few stars still shining are billions of years old, fusing hydrogen at a glacial pace. Galaxies have become increasingly diffuse: many stars have escaped through gravitational evaporation, leaving large halos of remnants and a sparse stellar population. Any civilization that wants to last on a stellar energy budget at this point either has to be extraordinarily efficient or has to set up near one of the very long-lived M-dwarfs.",
+    "bodyKo": "지금으로부터 약 10¹³년 뒤. 우주는 적색왜성, 갈색왜성, 그리고 항성 시체들이 지배한다. 아직 빛나고 있는 몇 안 되는 별들은 수십억 년이나 산 노쇠한 별들로, 수소를 빙하 같은 속도로 천천히 융합하고 있다. 은하 자체도 점점 희박해진다. 많은 별이 중력 증발로 빠져나가, 잔해로 채워진 큰 헤일로와 듬성듬성한 항성 인구가 남는다. 만약 이 시기까지도 \"별의 에너지로 살아남는\" 문명이 있다면, 그 문명은 극도로 효율적인 에너지 사용을 하거나, 매우 오래 사는 M형 적색왜성 곁에 정착해야만 한다."
   },
   "stage13-milestone-075-the-last-red-dwarfs": {
     "id": "stage13-milestone-075-the-last-red-dwarfs",
@@ -3116,8 +3116,8 @@
     "progress": 75,
     "titleEn": "The Last Red Dwarfs",
     "titleKo": "마지막 적색왜성",
-    "bodyEn": "~10¹³-10¹⁴ years. M-dwarfs are the last main-sequence stars. Each fuses H so slowly it can live ~10¹³ years (10× current universe age). Civilizations around them could last for trillions of years — but planetary habitable zones near M-dwarfs are problematic (flares, tidal locking). Last star in observable universe will switch off by ~1.2 × 10¹⁴ years from now.",
-    "bodyKo": "~10¹³-10¹⁴년. M-왜성이 마지막 주계열성. 각각이 H를 너무 천천히 융합해 ~10¹³년 살 수 있다(현재 우주 나이의 10×). 그들 주위 문명이 수조 년 지속 가능 — 하지만 M-왜성 근처 행성 거주 가능 영역은 문제 있음(플레어, 조석 잠금). 관측 가능 우주의 마지막 별이 지금부터 ~1.2 × 10¹⁴년 후 꺼질 것."
+    "bodyEn": "About 10¹³ to 10¹⁴ years from now. M-dwarfs are the very last main-sequence stars still burning hydrogen. Each fuses hydrogen so slowly it can last around 10¹³ years — about 10 times the current age of the universe. A civilization clustered around one such star could in principle last for trillions of years, although the planetary habitable zone near an M-dwarf comes with its own difficulties: violent stellar flares, tidal locking that keeps one side always pointed at the star, and limited UV for some kinds of biochemistry. The last star left anywhere in the observable universe will switch off about 1.2 × 10¹⁴ years from now.",
+    "bodyKo": "지금으로부터 약 10¹³~10¹⁴년 사이. 이제 수소를 태우는 주계열성으로 남아 있는 것은 M형 적색왜성뿐이다. 이들은 수소를 워낙 천천히 융합해 한 별의 수명이 약 10¹³년에 이른다 — 현재 우주 나이의 약 10배다. 그런 별 곁에 모여 사는 문명이라면 원리상 수조 년을 살 수도 있다. 다만 M형 별 주위의 거주 가능 지역에는 고유의 어려움이 있다. 극심한 항성 플레어, 한쪽 면이 늘 별을 향해 고정되는 \"조석 잠금(tidal locking)\", 그리고 어떤 종류의 생화학에는 부족할 수 있는 자외선량 같은 문제들이다. 관측 가능한 우주 어디에서든 \"마지막으로 살아 있는 별\"은 지금으로부터 약 1.2 × 10¹⁴년 뒤쯤 꺼진다."
   },
   "stage13-milestone-090-no-new-dawn": {
     "id": "stage13-milestone-090-no-new-dawn",
@@ -3128,8 +3128,8 @@
     "progress": 90,
     "titleEn": "No New Dawn",
     "titleKo": "새 새벽은 없다",
-    "bodyEn": "Last star formation event has occurred. No protoplanetary disks. Whatever planets exist will never be visited by anyone observing from a nearby star's light. The universe transitions from \"alive with stars\" to \"graveyard of stellar remnants.\" This is irrevocable: cosmic expansion has thinned gas below the threshold for new star formation.",
-    "bodyKo": "마지막 별 형성 사건이 발생. 원시 행성계 원반 없음. 존재하는 어떤 행성도 가까운 별의 빛으로부터 관측하는 누구에게도 다시는 방문되지 않을 것. 우주가 \"별이 살아있는\"에서 \"항성 잔해의 묘지\"로 전이. 이는 되돌릴 수 없음: 우주 팽창이 새 별 형성 임계 아래로 가스를 얇게 만들었다."
+    "bodyEn": "The last star-formation event in the universe has happened. No protoplanetary disks form anywhere any more, and whatever planets still exist will never again be visited by light from a freshly born nearby star. The universe makes a one-way transition from \"alive with stars\" to \"graveyard of stellar remnants.\" This is irreversible: cosmic expansion has thinned out the available gas below the threshold for new star formation, and there is no mechanism to push it back over.",
+    "bodyKo": "우주에서 \"마지막 별 형성 사건\"이 이미 끝났다. 어느 곳에서도 새 원시 행성계 원반은 더 이상 만들어지지 않고, 그때까지 살아남아 있는 행성들도 \"갓 태어난 가까운 별의 빛\"을 다시 받을 일은 영영 없다. 우주는 \"별이 살아 숨 쉬던 시대\"에서 \"항성 잔해의 묘지\"로 한 방향으로만 흘러가는 전이를 완료한다. 이것은 되돌릴 수 없다. 우주 팽창은 새 별 형성에 필요한 가스 밀도의 임계 아래로 가스를 이미 흩어 놓았고, 그것을 다시 임계 위로 되돌릴 메커니즘은 존재하지 않는다."
   },
   "stage13-milestone-100-starlight-ends": {
     "id": "stage13-milestone-100-starlight-ends",
@@ -3140,8 +3140,8 @@
     "progress": 100,
     "titleEn": "Starlight Ends",
     "titleKo": "별빛의 종말",
-    "bodyEn": "~1.2 × 10¹⁴ years from now. The last red dwarf flickers out. Universe contains zero living stars. Light sources: only Hawking radiation, occasional rare WD collisions producing brief novae, accretion onto BHs. The visible universe is dark. Civilizations face a choice: migrate to BH accretion energy, hibernate, or die. The Stelliferous Era ends — about 0.0000001% of universe's total lifespan.",
-    "bodyKo": "지금부터 ~1.2 × 10¹⁴년. 마지막 적색왜성이 깜빡이며 꺼진다. 우주에 살아있는 별 0. 광원: 호킹 복사만, 가끔 드문 WD 충돌이 잠시 신성 생성, BH로의 부착. 가시 우주가 어둡다. 문명은 선택에 직면: BH 부착 에너지로 이주, 동면, 또는 죽음. 항성 시대 종료 — 우주 총 수명의 약 0.0000001%."
+    "bodyEn": "About 1.2 × 10¹⁴ years from now. The last red dwarf flickers out, and the universe contains exactly zero living stars. The only sources of light are now Hawking radiation from black holes, occasional rare collisions between white dwarfs producing brief nova-like flashes, and faint accretion onto remaining black holes. The visible universe is dark. Any surviving civilizations face a stark choice: migrate to black-hole accretion as an energy source, enter long-term hibernation, or die. The Stelliferous Era — the long chapter when stars dominated — ends. It occupied only about 0.0000001% of the universe's total lifespan.",
+    "bodyKo": "지금으로부터 약 1.2 × 10¹⁴년 뒤. 우주 안의 마지막 적색왜성이 깜빡이며 꺼진다. 우주 안에 살아 있는 별은 정확히 0개가 된다. 이 시점에 남은 광원이라고는 블랙홀에서 새어 나오는 호킹 복사, 가끔 일어나는 백색왜성 충돌로 잠시 만들어지는 신성 같은 섬광, 그리고 남아 있는 블랙홀로의 미약한 가스 강착 정도가 전부다. 가시 우주는 사실상 어둡다. 그때까지 살아남은 문명이 있다면 가혹한 선택지가 놓여 있다. 에너지원을 블랙홀 강착으로 옮기든지, 장기 동면에 들어가든지, 죽음을 받아들이든지다. 별이 무대를 지배하던 \"항성 시대(Stelliferous Era)\"가 막을 내린다. 우주 전체 수명에서 보면 그 시대는 단지 약 0.0000001%에 불과했다."
   },
   "stage14-entity-decay-positron": {
     "id": "stage14-entity-decay-positron",
@@ -3152,8 +3152,8 @@
     "nameEn": "Decay Positron",
     "nameKo": "붕괴 양전자",
     "meta": "Common · auto x2.0 · `e⁺`",
-    "bodyEn": "If proton decay occurs (predicted by Grand Unified Theories, p → e⁺ + π⁰, lifetime >10³⁴ years), positrons gradually fill universe. After 10⁴⁰ years, all baryons decayed. Each proton → 1 positron + photons. Super-Kamiokande searches for proton decay; null results so far set lifetime > 2.4 × 10³⁴ years. If GUTs wrong, baryons may be eternal — leaving \"iron stars\" as final state.",
-    "bodyKo": "양성자 붕괴 발생 시(대통일이론 예측, p → e⁺ + π⁰, 수명 >10³⁴년), 양전자가 점진적으로 우주를 채움. 10⁴⁰년 후 모든 중입자 붕괴. 각 양성자 → 1 양전자 + 광자. 슈퍼-카미오칸데가 양성자 붕괴 탐색; 지금까지 무 결과로 수명 > 2.4 × 10³⁴년 설정. GUT 틀렸다면 중입자가 영원할 수 있음 — 최종 상태로 \"철 별\" 남김."
+    "bodyEn": "If proton decay really happens — Grand Unified Theories generally predict the channel p → e⁺ + π⁰ with a lifetime above about 10³⁴ years — positrons (the antimatter partner of the electron) gradually fill the universe. After roughly 10⁴⁰ years, every original baryon has decayed, each one having produced one positron plus assorted photons along the way. So far Super-Kamiokande's search for proton decay has come up empty, and its null result sets the proton's lifetime above about 2.4 × 10³⁴ years. If it turns out the GUTs are simply wrong and protons really are eternal, this whole positron-filling-the-universe phase never happens, and the late universe instead has \"iron stars\" as its long-lasting end state.",
+    "bodyKo": "양성자 붕괴가 실제로 일어난다면 — 대통일이론(GUT)은 보통 p → e⁺ + π⁰ 채널을, 수명이 약 10³⁴년 이상이라고 예측한다 — 시간이 지나면서 양전자(전자의 반물질 짝꿍)가 우주를 서서히 채워간다. 약 10⁴⁰년이 지나면 원래 있던 모든 중입자가 다 붕괴해 있고, 각 양성자가 붕괴하면서 양전자 하나와 광자 몇 개가 함께 만들어진 셈이다. 지금까지 슈퍼-카미오칸데가 양성자 붕괴를 찾아왔지만 검출에는 실패했고, 그 \"무 검출\"이 양성자 수명에 약 2.4 × 10³⁴년 이상이라는 하한선을 그어둔 상태다. 만약 GUT가 그냥 틀려서 양성자가 정말로 영원히 안정한 입자라면, 우주가 양전자로 천천히 채워지는 이 단계 자체가 일어나지 않는다. 그 경우 우주 말기에는 양성자 붕괴 대신 앞서 본 \"철 별\"이 오랫동안 살아남는 최종 상태가 된다."
   },
   "stage14-entity-pion-decay": {
     "id": "stage14-entity-pion-decay",
@@ -3164,8 +3164,8 @@
     "nameEn": "Pion Decay",
     "nameKo": "파이온 붕괴",
     "meta": "Common · click x15.0 · `π⁰`",
-    "bodyEn": "If proton decays via p → e⁺ + π⁰, the π⁰ then decays to 2 γ in 8 × 10⁻¹⁷ seconds. So every decaying proton produces 2 high-energy gamma photons (~70 MeV each). Background γ flux from cosmic proton decay would be ~10⁻²⁵ γ/s — vastly weaker than CMB or any current background. Detection would require dedicated experiments observing universe for ~10³⁵ years.",
-    "bodyKo": "양성자가 p → e⁺ + π⁰을 통해 붕괴하면 그 π⁰이 8 × 10⁻¹⁷초에 2 γ로 붕괴. 그래서 붕괴하는 모든 양성자가 2 고에너지 감마 광자(각각 ~70 MeV) 생성. 우주 양성자 붕괴의 배경 γ 플럭스가 ~10⁻²⁵ γ/s — CMB나 어떤 현재 배경보다 훨씬 약함. 검출은 우주를 ~10³⁵년 관측하는 전용 실험 요구."
+    "bodyEn": "If a proton decays through the channel p → e⁺ + π⁰, the neutral pion (π⁰) that comes out is itself very unstable: it decays in about 8 × 10⁻¹⁷ seconds into two photons. So every proton that decays this way ultimately produces, among other things, two high-energy gamma photons, each carrying about 70 megaelectron-volts. If we add up all those gammas as a slowly accumulating cosmic background, the resulting flux from proton decay across the universe would be on the order of 10⁻²⁵ photons per second — far, far weaker than the cosmic microwave background or any other background we currently measure. Realistically, detecting it would require dedicated experiments quietly observing the universe for something like 10³⁵ years.",
+    "bodyKo": "만약 양성자가 p → e⁺ + π⁰ 채널로 붕괴한다면, 그 결과로 나온 중성 파이온(π⁰)은 그 자체가 매우 불안정해서, 약 8 × 10⁻¹⁷초 안에 광자 두 개로 다시 붕괴한다. 그래서 이 채널로 붕괴하는 모든 양성자는 결국, 다른 것들과 함께 약 70 MeV짜리 고에너지 감마 광자 두 개를 우주에 내놓는 셈이다. 우주 전체에서 일어나는 양성자 붕괴를 다 합쳐서 만드는 감마선 \"배경 플럭스\"는 매우 약하다. 대략 1초당 1 cm²당 10⁻²⁵개 정도라, 우주배경복사(CMB)나 우리가 지금 측정하는 어떤 다른 배경보다도 비교가 안 될 만큼 약하다. 현실적으로 이 신호를 검출하려면 전용 실험이 약 10³⁵년 동안 우주를 조용히 지켜봐야 할 것이다."
   },
   "stage14-entity-decay-neutrino": {
     "id": "stage14-entity-decay-neutrino",
@@ -3176,8 +3176,8 @@
     "nameEn": "Decay Neutrino",
     "nameKo": "붕괴 중성미자",
     "meta": "Common · crit(flat) x0.4 · `ν`",
-    "bodyEn": "Proton decay channels include p → ν̄ + e⁺ + π⁺ (SU(5) GUT) — produces neutrinos. Decay neutrinos contribute to neutrino background. Modern cosmic neutrino background (CνB, from BB) ~336/cm³; decay neutrinos would supplement this over ~10³⁴ years. PTOLEMY-style experiments may eventually detect either type — extremely difficult.",
-    "bodyKo": "양성자 붕괴 채널이 p → ν̄ + e⁺ + π⁺(SU(5) GUT) 포함 — 중성미자 생성. 붕괴 중성미자가 중성미자 배경에 기여. 현대 우주 중성미자 배경(CνB, BB에서) ~336/cm³; 붕괴 중성미자가 ~10³⁴년에 걸쳐 이를 보충할 것. PTOLEMY 식 실험이 결국 둘 중 하나 검출 가능 — 극도로 어려움."
+    "bodyEn": "Some proton decay channels — most famously p → ν̄ + e⁺ + π⁺ in the simplest SU(5) GUT — also produce neutrinos. If they occur, these \"decay neutrinos\" gradually add to the existing cosmic neutrino background. Today that relic background has about 336 neutrinos per cubic centimeter, all left over from the Big Bang. Over the roughly 10³⁴-year proton-decay timescale, decay neutrinos would supplement that primordial flux. Detecting either population is enormously difficult because their energies are very low, and experiments designed for it — PTOLEMY-style setups using tritium beta decay capture — may eventually catch them. But even in the most optimistic scenarios, that detection lies far in the future.",
+    "bodyKo": "양성자 붕괴 채널 가운데에는 중성미자를 함께 내놓는 것도 있다. 가장 유명한 예가 가장 단순한 SU(5) GUT에서 예측되는 p → ν̄ + e⁺ + π⁺ 채널이다. 이 반응이 실제로 일어난다면, 그렇게 만들어진 \"붕괴 중성미자\"가 기존의 우주 중성미자 배경에 점점 더 많은 중성미자를 보탠다. 오늘날 그 배경 중성미자는 1 cm³당 약 336개로, 모두 빅뱅에서 남은 \"잔재\"다. 약 10³⁴년 정도의 양성자 붕괴 시간 척도에서, 붕괴 중성미자가 이 원시 플럭스를 보충하는 셈이다. 다만 두 종류 모두 에너지가 매우 낮아서 직접 검출이 아주 어렵다. 삼중수소 베타 붕괴 포획을 이용하는 PTOLEMY 식 실험들이 언젠가는 두 부류 중 하나를 잡아낼 가능성이 있지만, 가장 낙관적인 시나리오에서도 그 검출은 한참 미래의 일이다."
   },
   "stage14-entity-proton-decay": {
     "id": "stage14-entity-proton-decay",
@@ -3188,8 +3188,8 @@
     "nameEn": "Proton Decay",
     "nameKo": "양성자 붕괴",
     "meta": "Common · time x2.0 · `p→`",
-    "bodyEn": "GUT prediction: protons unstable, decay via X-boson exchange in ~10³⁴-10⁴⁰ years. Reduces every nucleus eventually to leptons + photons. White dwarfs gradually lose mass; black dwarfs slowly dissolve. NOT confirmed experimentally yet — Super-Kamiokande, Hyper-K (under construction) test predictions. Some GUTs predict longer lifetimes; SUSY-GUT models predict 10³⁵-10³⁶ years. If proton lifetime is infinite, \"iron stars\" survive much longer.",
-    "bodyKo": "GUT 예측: 양성자 불안정, ~10³⁴-10⁴⁰년에 X-보손 교환을 통해 붕괴. 결국 모든 핵을 경입자 + 광자로 환원. 백색왜성이 점진적으로 질량 잃음; 흑색왜성이 천천히 용해. 아직 실험적으로 확인되지 않음 — 슈퍼-카미오칸데, 하이퍼-K(건설 중)가 예측 시험. 일부 GUT가 더 긴 수명 예측; SUSY-GUT 모형이 10³⁵-10³⁶년 예측. 양성자 수명이 무한이라면 \"철 별\"이 훨씬 더 오래 생존."
+    "bodyEn": "Grand Unified Theories (GUTs) — attempts to unify the strong, weak, and electromagnetic forces into one — generally predict that the proton itself is not stable. In the simplest GUT picture, a proton can decay through a heavy \"X boson\" exchange on a timescale somewhere between 10³⁴ and 10⁴⁰ years. If true, every nucleus in the universe will eventually break down into leptons (such as positrons) and photons. White dwarfs would slowly lose mass; black dwarfs would dissolve very gradually. So far, no proton decay has actually been observed. Experiments like Super-Kamiokande in Japan watch huge tanks of pure water for the characteristic decay signatures, and have so far set the proton lifetime above about 2.4 × 10³⁴ years. The much bigger Hyper-Kamiokande detector, now under construction, will push that limit further. Some variants of GUTs — including supersymmetric GUTs — predict slightly longer lifetimes around 10³⁵–10³⁶ years. If, alternatively, the proton turns out to be exactly stable, \"iron stars\" rather than proton decay would dominate the universe's late history.",
+    "bodyKo": "대통일이론(GUT) — 강한 상호작용, 약한 상호작용, 전자기력을 하나의 이론으로 묶으려는 시도들 — 은 대개 양성자가 사실은 완전히 안정하지 않다고 예측한다. 가장 단순한 GUT 그림에 따르면, 양성자는 무거운 \"X 보손\" 교환을 통해 약 10³⁴~10⁴⁰년 시간 척도에서 붕괴할 수 있다. 만약 이것이 사실이라면, 우주에 있는 모든 원자핵은 결국 경입자(예: 양전자)와 광자로 분해된다. 백색왜성은 천천히 질량을 잃고, 흑색왜성도 매우 점진적으로 \"녹아내리듯\" 사라진다. 다만 아직 실험적으로 양성자 붕괴가 직접 관측된 적은 없다. 일본의 슈퍼-카미오칸데 같은 실험이 거대한 초순수 물탱크에서 양성자 붕괴의 특징적인 신호를 찾아왔지만, 지금까지의 \"무 검출\" 결과는 양성자 수명을 약 2.4 × 10³⁴년 이상이라는 하한선으로 밀어 올렸을 뿐이다. 현재 건설 중인 훨씬 더 큰 \"하이퍼-카미오칸데\"가 이 한계를 더 위로 밀어 올릴 예정이다. 일부 GUT 변형 — 초대칭 GUT 등 — 은 양성자 수명을 약 10³⁵~10³⁶년 정도로 더 길게 예측한다. 반대로, 만약 양성자가 끝까지 완전히 안정하다면 양성자 붕괴 대신 앞서 본 \"철 별\" 시나리오가 우주 말기의 주도권을 잡게 된다."
   },
   "stage14-entity-diamond-star": {
     "id": "stage14-entity-diamond-star",
@@ -3200,8 +3200,8 @@
     "nameEn": "Diamond Star",
     "nameKo": "다이아몬드 별",
     "meta": "Rare · auto x4.0 · `💎★`",
-    "bodyEn": "Highly-degenerate cooled WDs may crystallize entirely into carbon-oxygen lattice — essentially a \"diamond star\". BPM 37093 (50 ly away, 2004) confirmed crystalline core (Hubble + asteroseismology). Cooled black dwarfs at 10¹⁵ years: pure crystal throughout. The deepest universe contains diamond corpses of dead suns, drifting forever in the dark. Romantic and quantitatively correct.",
-    "bodyKo": "고도로 축퇴된 식은 WD가 완전히 탄소-산소 격자로 결정화될 수 있음 — 본질적으로 \"다이아몬드 별\". BPM 37093(50 광년, 2004)이 결정 핵 확인(허블 + 항성 지진학). 10¹⁵년의 식은 흑색왜성: 전체가 순수 결정. 가장 깊은 우주가 죽은 태양의 다이아몬드 시체를 담고 있다, 어둠 속을 영원히 표류. 낭만적이면서 정량적으로 옳다."
+    "bodyEn": "Highly degenerate, deeply-cooled white dwarfs can crystallize entirely — every atom in their carbon-oxygen interior locks into a regular lattice — essentially turning the star into a single enormous crystal. We already have an example. In 2004, Hubble observations combined with \"asteroseismology\" (the analysis of starquake-like oscillations on the surface) confirmed that the white dwarf BPM 37093, about 50 light-years away, has a crystallized core. By around 10¹⁵ years from now, cooled black dwarfs would be pure crystal throughout. The deepest universe will then quietly contain the diamond corpses of dead suns, drifting forever in the dark — a thoroughly romantic image that also happens to be quantitatively correct.",
+    "bodyKo": "심하게 축퇴된 채 깊이 식어버린 백색왜성은 내부의 탄소·산소 원자들이 통째로 규칙적인 격자에 박혀 \"전체가 결정화\"될 수 있다. 사실상 별 하나가 거대한 단일 결정이 되는 셈이다. 이미 실제 사례도 있다. 2004년에 허블 망원경 관측과 \"항성지진학(asteroseismology)\" — 별 표면을 흔드는 별지진 같은 진동을 분석하는 기법 — 을 결합한 연구가, 약 50광년 떨어진 백색왜성 \"BPM 37093\"의 핵이 이미 결정화되어 있음을 확인했다. 지금으로부터 약 10¹⁵년 뒤가 되면, 식어버린 흑색왜성들은 내부 전체가 순수한 결정 격자로 채워져 있을 것이다. 우주의 가장 깊은 시점에는, 죽은 태양들의 다이아몬드 시체가 어둠 속을 영원히 표류하고 있는 셈이다. 굉장히 낭만적인 이미지이고, 동시에 정량적으로도 옳다."
   },
   "stage14-entity-gw-echo": {
     "id": "stage14-entity-gw-echo",
@@ -3224,8 +3224,8 @@
     "nameEn": "Quantum Tunneling",
     "nameKo": "양자 터널링",
     "meta": "Rare · crit(flat) x1.5 · `⇢`",
-    "bodyEn": "Even at zero temperature, quantum mechanics allows barrier crossing. WDs can quantum-tunnel into iron via slow fusion over 10^1500 years (each nucleon barrier-crosses individually). Black holes can quantum-tunnel into other configurations. The universe at extremely long timescales is patient — every quantum possibility eventually realizes. Boltzmann brains may spontaneously assemble from vacuum fluctuations.",
-    "bodyKo": "0 온도에서도 양자역학이 장벽 교차를 허용. WD가 10^1500년에 걸쳐 느린 융합을 통해 철로 양자 터널링 가능(각 핵자가 개별적으로 장벽 교차). 블랙홀이 다른 배열로 양자 터널링 가능. 극도로 긴 시간 척도의 우주는 인내심 있다 — 모든 양자 가능성이 결국 실현. 볼츠만 뇌가 진공 요동에서 자발적으로 조립될 수 있다."
+    "bodyEn": "Even at zero temperature — when classically nothing can happen — quantum mechanics still lets particles \"tunnel\" through energy barriers that they don't, classically, have enough energy to cross. On extremely long timescales this matters cosmologically. Cooled white dwarfs could, in principle, quantum-tunnel into iron stars over something like 10¹⁵⁰⁰ years, with each nucleon individually crossing the Coulomb barrier and slowly nudging the nuclei toward the energy minimum at iron-56. Black holes can quantum-tunnel into other configurations on their own astronomical timescales. The universe on long-enough timescales is essentially patient: every quantum process with non-zero probability will eventually realize itself somewhere. One spookier consequence of this, much-discussed in cosmology, is the \"Boltzmann brain\" scenario, in which a self-aware brain could in principle assemble out of vacuum fluctuations purely by chance over astronomically long times.",
+    "bodyKo": "온도가 0인 상태 — 고전적으로는 아무 일도 일어날 수 없는 상태 — 에서도 양자역학은 입자가 자신의 에너지로는 절대 넘을 수 없는 에너지 장벽을 \"터널링\"으로 통과하게 해준다. 극단적으로 긴 시간 척도에서는 이 효과가 우주적으로도 중요한 의미를 갖는다. 식어버린 백색왜성은 원리상 약 10¹⁵⁰⁰년이라는 어마어마한 시간 동안, 각 핵자가 개별적으로 정전기적 장벽(쿨롱 장벽)을 양자 터널링으로 넘으면서, 핵을 가장 안정한 에너지 자리인 \"철-56\"으로 천천히 밀어 옮겨 \"철 별\"로 바뀔 수 있다. 블랙홀도 자신만의 천문학적 시간 척도에서 다른 형태로 양자 터널링이 가능하다. 충분히 긴 시간을 두고 보면 우주는 사실 인내심 그 자체다. 0이 아닌 확률을 가진 양자 사건은 결국 어딘가에서는 반드시 한 번 일어난다. 그래서 우주론에서 자주 회자되는 으스스한 시나리오 중 하나가 \"볼츠만 뇌(Boltzmann brain)\"다. 천문학적으로 긴 시간 동안 진공의 양자 요동만으로 자기 인식하는 뇌 하나가 우연히 통째로 조립될 수도 있다는 발상이다."
   },
   "stage14-entity-relic-neutrino-background": {
     "id": "stage14-entity-relic-neutrino-background",
@@ -3236,8 +3236,8 @@
     "nameEn": "Relic Neutrino Background",
     "nameKo": "잔존 중성미자 배경",
     "meta": "Rare · time x3.0 · `νBG`",
-    "bodyEn": "Cosmic Neutrino Background (CνB): ~336 neutrinos/cm³, temperature 1.95 K, from neutrino decoupling at t=1 s. NEVER directly detected (energies too low). PTOLEMY experiment aims to detect via tritium beta decay capture. Indirect: N_eff = 2.99 ± 0.17 (Planck 2018) from CMB matches Standard Model 3.044. CνB persists for entire cosmic age — these neutrinos witnessed the universe at 1 second old.",
-    "bodyKo": "우주 중성미자 배경(CνB): ~336 중성미자/cm³, 온도 1.95 K, t=1 s의 중성미자 분리에서. 직접 검출 안 됨(에너지 너무 낮음). PTOLEMY 실험이 삼중수소 베타 붕괴 포획을 통해 검출 목표. 간접: CMB에서 N_eff = 2.99 ± 0.17(Planck 2018)이 표준 모형 3.044와 일치. CνB가 전 우주 시간 동안 지속 — 이 중성미자가 1초 우주를 목격했다."
+    "bodyEn": "The Cosmic Neutrino Background (CνB) is the sea of leftover neutrinos from when neutrinos \"decoupled\" from the rest of matter — stopped interacting frequently enough to stay in thermal equilibrium — at about one second after the Big Bang. The predicted number density is about 336 per cubic centimeter and the temperature is about 1.95 kelvin (a bit cooler than the photon CMB at 2.725 K). The CνB has never been directly detected, because the neutrinos' energies today are so tiny. The PTOLEMY experiment aims to catch them via a clever technique: looking for inverse beta decay on tritium atoms (³H + ν → ³He + e⁻), which has no energy threshold. Indirect confirmation does exist: the cosmic microwave background, when carefully analyzed, constrains the \"effective number of neutrino species,\" and the Planck satellite found N_eff = 2.99 ± 0.17 (2018), in good agreement with the Standard Model prediction of 3.044. Those CνB neutrinos have been streaming freely across the universe ever since the universe was one second old.",
+    "bodyKo": "\"우주 중성미자 배경(CνB)\"은 빅뱅 후 약 1초 무렵, 중성미자가 나머지 물질과 \"분리(decouple)\"되면서 — 즉 더 이상 자주 상호작용하지 않게 되어 열적 평형에서 벗어나면서 — 우주에 남게 된 중성미자들의 바다다. 이론적으로는 1 cm³당 약 336개, 온도는 약 1.95 K로 예측되며, 광자 CMB(2.725 K)보다 살짝 더 차갑다. CνB는 아직 직접 검출된 적이 없다. 오늘날 이 중성미자의 에너지가 너무 낮기 때문이다. PTOLEMY 실험은 영리한 방법을 시도하는데, 에너지 임계가 없는 \"역 베타 붕괴\"(³H + ν → ³He + e⁻)를 삼중수소 원자에서 일으켜 잡아내려 한다. 간접적 확증은 이미 있다. 우주배경복사를 정밀하게 분석하면 \"유효 중성미자 종 수(N_eff)\"가 제약되는데, 2018년 플랑크 위성이 N_eff = 2.99 ± 0.17을 측정해 표준 모형 예측값 3.044와 잘 들어맞는 결과를 내놓았다. 우주가 단 1초 늙었을 무렵 떠난 그 중성미자들이, 그때부터 지금까지 우주를 자유롭게 가로질러오고 있는 셈이다."
   },
   "stage14-entity-gut-monopole-decay": {
     "id": "stage14-entity-gut-monopole-decay",

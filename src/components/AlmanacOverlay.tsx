@@ -82,9 +82,9 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
           })}
         </div>
 
-        <div className="almanac-content" ref={contentRef}>
-          <div className="almanac-info" ref={infoRef} style={{ '--stage-accent': stageMeta?.accent ?? '#8090b0' } as React.CSSProperties}>
-            <div className="almanac-info__bg-num">{String(selectedId).padStart(2, '0')}</div>
+        <div className="almanac-scroll" ref={contentRef} style={{ '--stage-accent': stageMeta?.accent ?? '#8090b0' } as React.CSSProperties}>
+          {/* Description — always visible at top */}
+          <div className="almanac-desc">
             <h2 className="almanac-stage-name">
               {isFuture(selectedId)
                 ? <span className="almanac-locked-name">{localizedStageName}</span>
@@ -100,13 +100,9 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                   <div className="almanac-era-tags">
                     <span className="almanac-era-tag">⏱ {pickLang(almanac.cosmicEra.timeRange, language)}</span>
                     <span className="almanac-era-tag">🌡 {pickLang(almanac.cosmicEra.temperature, language)}</span>
-                    <span className="almanac-era-tag">⚛ {pickLang(almanac.cosmicEra.keyParticles, language)}</span>
                   </div>
                 ) : null}
                 <p className="almanac-body">{pickLang(almanac?.body, language) || (language === 'ko' ? stageMeta?.quoteKo ?? stageMeta?.quote : stageMeta?.quote)}</p>
-                {almanac?.cosmicEra?.realWorldScale ? (
-                  <p className="almanac-scale">{pickLang(almanac.cosmicEra.realWorldScale, language)}</p>
-                ) : null}
                 {almanac?.funFact ? (
                   <p className="almanac-funfact">💡 {pickLang(almanac.funFact, language)}</p>
                 ) : null}
@@ -114,51 +110,33 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
             )}
           </div>
 
-          <div className="almanac-log" ref={logRef}>
-            <div className="q-stage almanac-log-header">
-              {isFuture(selectedId) ? t(language, 'almanacMilestonesLocked') : t(language, 'almanacMilestones')}
-            </div>
-            {isFuture(selectedId) ? (
-              <div className="almanac-log-locked-stage">
-                <div className="almanac-log-locked-count">
-                  {`${allLogs.length} ${t(language, 'almanacMilestonesSealed')}`}
-                </div>
-                <p className="almanac-locked-body">{t(language, 'almanacUnlockHint')}</p>
-              </div>
-            ) : (
-              <div className="almanac-log-list">
-                {allLogs.filter((log) => log.progress > 0).map((log) => {
-                  const unlocked = effectiveProgress >= log.progress;
-                  const loreId = unlocked ? milestoneLoreId(log.stageId, log.progress, log.title.en) : null;
-                  return (
-                    <div key={log.progress} className={`almanac-log-entry ${unlocked ? 'almanac-log-entry--open' : 'almanac-log-entry--locked'}`}>
-                      {!unlocked && (
-                        <div className="almanac-log-progress">{t(language, 'almanacUnknown')}</div>
-                      )}
-                      <div className="almanac-log-body">
-                        <div className="almanac-log-entry-title">
-                          {unlocked ? pickLogText(log.title, language) : t(language, 'almanacLogLocked')}
-                        </div>
-                        {unlocked ? (
-                          <div className="almanac-log-entry-msg">{pickLogText(log.message, language)}</div>
-                        ) : null}
-                      </div>
-                      {unlocked && loreId ? (
-                        <button
-                          type="button"
-                          className="almanac-log-entry__more"
-                          onClick={() => setActiveLoreId(loreId)}
-                          aria-label={language === 'ko' ? '심층 해설 보기' : 'Read more'}
-                        >
-                          {language === 'ko' ? '자세히 →' : 'More →'}
-                        </button>
-                      ) : null}
+          {/* Milestones — flows below, scrollable with the page */}
+          {!isFuture(selectedId) && allLogs.filter((log) => log.progress > 0).length > 0 ? (
+            <div className="almanac-milestones">
+              <div className="almanac-milestones__title">{t(language, 'almanacMilestones')}</div>
+              {allLogs.filter((log) => log.progress > 0).map((log) => {
+                const unlocked = effectiveProgress >= log.progress;
+                const loreId = unlocked ? milestoneLoreId(log.stageId, log.progress, log.title.en) : null;
+                return (
+                  <div key={log.progress} className={`almanac-ms ${unlocked ? 'almanac-ms--open' : 'almanac-ms--locked'}`}>
+                    <div className="almanac-ms__text">
+                      <div className="almanac-ms__title">{unlocked ? pickLogText(log.title, language) : t(language, 'almanacLogLocked')}</div>
+                      {unlocked ? <div className="almanac-ms__msg">{pickLogText(log.message, language)}</div> : null}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    {unlocked && loreId ? (
+                      <button type="button" className="almanac-ms__more" onClick={() => setActiveLoreId(loreId)}>→</button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {isFuture(selectedId) ? (
+            <div className="almanac-milestones">
+              <p className="almanac-locked-body">{t(language, 'almanacUnlockHint')}</p>
+            </div>
+          ) : null}
         </div>
       </div>
       {activeLoreId !== null ? (

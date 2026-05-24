@@ -74,41 +74,18 @@ module.exports = ({ env } = {}) => {
             /^anim-/,
             /^transition-/,
           ],
-          // Greedy: if any selector contains this string, keep the whole rule.
-          // Use sparingly; this is the escape hatch.
+          // Greedy: only for class families with predictable runtime composition
+          // that the extractor genuinely can't see. Everything else relies on
+          // the extractor finding literal class names in .ts/.tsx.
           greedy: [
-            /^float-text/,
-            /^float-collision/,
-            /^float-crit/,
-            /^float-normal/,
+            // Toasts/animations whose classes are appended by JS at runtime
+            /^float-/,
             /^toast-/,
-            /^intro-/,
-            /^quote-/,
-            /^lore-/,
-            /^entity-/,
-            /^almanac-/,
-            /^skills?-/,
-            /^shop-/,
-            /^prestige-/,
-            /^leaderboard/,
-            /^login/,
-            /^ending-/,
-            /^encounter-/,
-            /^settings-/,
-            /^combo-/,
-            /^scale-/,
-            /^big-bang/,
-            /^name-setup/,
-            /^offline-progress/,
-            /^speech-bubble/,
-            /^multiverse-/,
-            /^singularity/,
-            /^timeline/,
-            /^final-/,
-            /^reset-/,
-            /^stage-log/,
-            /^cinematic/,
-            /^credits/,
+            // Stage transitions add classes via setState() that may not appear
+            // verbatim in JSX (composed via dictionaries)
+            /^stage-/,
+            // BEM containers commonly composed dynamically
+            /^entity-glyph/,
           ],
           // Preserve all @keyframes; classes that use animation: name ... may
           // reference these dynamically.
