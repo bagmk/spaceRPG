@@ -241,7 +241,7 @@ export class SoundManager {
     }
   }
 
-  playCondenseExplosion(): void {
+  playCondenseExplosion(stageId = 1): void {
     const ctx = this.ensureContext();
     const master = this.masterGain;
     if (!this.isUsable() || !ctx || !master || !this.unlocked || this.sfxMuted) {
@@ -249,91 +249,109 @@ export class SoundManager {
     }
     try {
       const now = ctx.currentTime;
-      const volume = dbToGain(TUNING.COLLISION_VOLUME_DB - 3);
+      const vol = dbToGain(TUNING.COLLISION_VOLUME_DB - 3);
 
-      // 1. Impact — deep sub-bass thump
+      // Stage-based parameters for variety
+      // Each stage gets different pitch, wave type, chord, and character
+      const stageChar = this._getStageCondenseCharacter(stageId);
+
+      // 1. Impact thump
       const impact = ctx.createOscillator();
-      impact.type = 'sine';
-      const impactGain = ctx.createGain();
-      impact.frequency.setValueAtTime(120, now);
-      impact.frequency.exponentialRampToValueAtTime(30, now + 0.4);
-      impactGain.gain.setValueAtTime(volume * 1.2, now);
-      impactGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-      impact.connect(impactGain);
-      impactGain.connect(master);
-      impact.start(now);
-      impact.stop(now + 0.5);
+      impact.type = stageChar.impactWave;
+      const impactG = ctx.createGain();
+      impact.frequency.setValueAtTime(stageChar.impactFreq, now);
+      impact.frequency.exponentialRampToValueAtTime(stageChar.impactFreq * 0.25, now + 0.45);
+      impactG.gain.setValueAtTime(vol * 1.1, now);
+      impactG.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      impact.connect(impactG); impactG.connect(master);
+      impact.start(now); impact.stop(now + 0.5);
 
-      // 2. Noise burst — filtered crash
-      const noiseDur = 1.2;
-      const noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * noiseDur), ctx.sampleRate);
-      const noiseData = noiseBuf.getChannelData(0);
-      for (let i = 0; i < noiseData.length; i++) {
-        noiseData[i] = (Math.random() * 2 - 1) * (1 - i / noiseData.length);
-      }
-      const noise = ctx.createBufferSource();
-      noise.buffer = noiseBuf;
-      const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.setValueAtTime(800, now);
-      noiseFilter.frequency.exponentialRampToValueAtTime(200, now + noiseDur);
-      noiseFilter.Q.value = 1.5;
-      const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(volume * 0.5, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseDur);
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(master);
-      noise.start(now);
+      // 2. Noise texture
+      const nDur = stageChar.noiseDur;
+      const nBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * nDur), ctx.sampleRate);
+      const nData = nBuf.getChannelData(0);
+      for (let i = 0; i < nData.length; i++) nData[i] = (Math.random() * 2 - 1) * (1 - i / nData.length);
+      const nSrc = ctx.createBufferSource(); nSrc.buffer = nBuf;
+      const nFilt = ctx.createBiquadFilter();
+      nFilt.type = stageChar.noiseFilterType;
+      nFilt.frequency.setValueAtTime(stageChar.noiseFreqStart, now);
+      nFilt.frequency.exponentialRampToValueAtTime(stageChar.noiseFreqEnd, now + nDur);
+      nFilt.Q.value = stageChar.noiseQ;
+      const nG = ctx.createGain();
+      nG.gain.setValueAtTime(vol * 0.4, now);
+      nG.gain.exponentialRampToValueAtTime(0.0001, now + nDur);
+      nSrc.connect(nFilt); nFilt.connect(nG); nG.connect(master); nSrc.start(now);
 
-      // 3. Rising chord — ascending tones (triumph feel)
-      const chordNotes = [220, 330, 440, 554];
-      chordNotes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        const gain = ctx.createGain();
-        const delay = 0.15 + i * 0.12;
-        osc.frequency.setValueAtTime(freq, now + delay);
-        osc.frequency.linearRampToValueAtTime(freq * 1.5, now + delay + 1.0);
-        gain.gain.setValueAtTime(0.0001, now + delay);
-        gain.gain.linearRampToValueAtTime(volume * 0.12, now + delay + 0.15);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 1.2);
-        osc.connect(gain);
-        gain.connect(master);
-        osc.start(now + delay);
-        osc.stop(now + delay + 1.3);
+      // 3. Chord tones
+      stageChar.chord.forEach((freq: number, i: number) => {
+        const o = ctx.createOscillator();
+        o.type = stageChar.chordWave;
+        const g = ctx.createGain();
+        const d = 0.12 + i * 0.1;
+        o.frequency.setValueAtTime(freq, now + d);
+        o.frequency.linearRampToValueAtTime(freq * stageChar.chordSlide, now + d + 1.0);
+        g.gain.setValueAtTime(0.0001, now + d);
+        g.gain.linearRampToValueAtTime(vol * 0.1, now + d + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + d + 1.1);
+        o.connect(g); g.connect(master);
+        o.start(now + d); o.stop(now + d + 1.2);
       });
 
-      // 4. Shimmer — high sparkle tail
-      const shimmer = ctx.createOscillator();
-      shimmer.type = 'triangle';
-      const shimmerGain = ctx.createGain();
-      shimmer.frequency.setValueAtTime(1200, now + 0.3);
-      shimmer.frequency.exponentialRampToValueAtTime(2400, now + 1.0);
-      shimmer.frequency.exponentialRampToValueAtTime(3200, now + 2.0);
-      shimmerGain.gain.setValueAtTime(0.0001, now + 0.3);
-      shimmerGain.gain.linearRampToValueAtTime(volume * 0.06, now + 0.6);
-      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-      shimmer.connect(shimmerGain);
-      shimmerGain.connect(master);
-      shimmer.start(now + 0.3);
-      shimmer.stop(now + 2.3);
+      // 4. Tail shimmer
+      const sh = ctx.createOscillator();
+      sh.type = 'triangle';
+      const shG = ctx.createGain();
+      sh.frequency.setValueAtTime(stageChar.shimmerFreq, now + 0.25);
+      sh.frequency.exponentialRampToValueAtTime(stageChar.shimmerFreq * 2, now + 1.8);
+      shG.gain.setValueAtTime(0.0001, now + 0.25);
+      shG.gain.linearRampToValueAtTime(vol * 0.05, now + 0.5);
+      shG.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+      sh.connect(shG); shG.connect(master);
+      sh.start(now + 0.25); sh.stop(now + 2.1);
 
-      // 5. Sub rumble tail
-      const rumble = ctx.createOscillator();
-      rumble.type = 'sine';
-      const rumbleGain = ctx.createGain();
-      rumble.frequency.setValueAtTime(55, now + 0.1);
-      rumble.frequency.exponentialRampToValueAtTime(25, now + 2.5);
-      rumbleGain.gain.setValueAtTime(volume * 0.4, now + 0.1);
-      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
-      rumble.connect(rumbleGain);
-      rumbleGain.connect(master);
-      rumble.start(now + 0.1);
-      rumble.stop(now + 2.5);
+      // 5. Sub rumble
+      const rb = ctx.createOscillator();
+      rb.type = 'sine';
+      const rbG = ctx.createGain();
+      rb.frequency.setValueAtTime(stageChar.rumbleFreq, now + 0.08);
+      rb.frequency.exponentialRampToValueAtTime(stageChar.rumbleFreq * 0.4, now + 2.2);
+      rbG.gain.setValueAtTime(vol * 0.35, now + 0.08);
+      rbG.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+      rb.connect(rbG); rbG.connect(master);
+      rb.start(now + 0.08); rb.stop(now + 2.3);
     } catch (err) {
       this.logAudioError(err);
     }
+  }
+
+  private _getStageCondenseCharacter(stageId: number) {
+    type W = OscillatorType;
+    type F = BiquadFilterType;
+    // Each stage cluster has a unique sonic fingerprint
+    const characters: Record<number, {
+      impactWave: W; impactFreq: number;
+      noiseFilterType: F; noiseFreqStart: number; noiseFreqEnd: number; noiseQ: number; noiseDur: number;
+      chord: number[]; chordWave: W; chordSlide: number;
+      shimmerFreq: number; rumbleFreq: number;
+    }> = {
+      1:  { impactWave:'sine',     impactFreq:140, noiseFilterType:'bandpass', noiseFreqStart:1000, noiseFreqEnd:300, noiseQ:2, noiseDur:1.0, chord:[262,330,392,523], chordWave:'sine',     chordSlide:1.5,  shimmerFreq:1400, rumbleFreq:60  }, // Inflation — bright expansion
+      2:  { impactWave:'sine',     impactFreq:110, noiseFilterType:'lowpass',  noiseFreqStart:600,  noiseFreqEnd:150, noiseQ:1, noiseDur:1.3, chord:[196,247,294,392], chordWave:'sine',     chordSlide:1.3,  shimmerFreq:1000, rumbleFreq:50  }, // Baryogenesis — warm, deep
+      3:  { impactWave:'square',   impactFreq:100, noiseFilterType:'bandpass', noiseFreqStart:900,  noiseFreqEnd:250, noiseQ:3, noiseDur:1.1, chord:[220,277,330,440], chordWave:'square',   chordSlide:1.2,  shimmerFreq:1100, rumbleFreq:55  }, // QGP — buzzy, electric
+      4:  { impactWave:'sine',     impactFreq:130, noiseFilterType:'highpass', noiseFreqStart:400,  noiseFreqEnd:800, noiseQ:1, noiseDur:0.9, chord:[294,370,440,587], chordWave:'triangle', chordSlide:1.4,  shimmerFreq:1600, rumbleFreq:45  }, // Nucleosynthesis — fusion flash
+      5:  { impactWave:'triangle', impactFreq:90,  noiseFilterType:'lowpass',  noiseFreqStart:500,  noiseFreqEnd:120, noiseQ:1, noiseDur:1.5, chord:[175,220,262,349], chordWave:'sine',     chordSlide:1.1,  shimmerFreq:800,  rumbleFreq:40  }, // Recombination — gentle release
+      6:  { impactWave:'sine',     impactFreq:65,  noiseFilterType:'lowpass',  noiseFreqStart:300,  noiseFreqEnd:80,  noiseQ:1, noiseDur:2.0, chord:[131,165,196,262], chordWave:'sine',     chordSlide:1.05, shimmerFreq:600,  rumbleFreq:30  }, // Dark Age — deep, quiet
+      7:  { impactWave:'sine',     impactFreq:150, noiseFilterType:'bandpass', noiseFreqStart:1200, noiseFreqEnd:400, noiseQ:2, noiseDur:1.0, chord:[330,415,494,659], chordWave:'sine',     chordSlide:1.6,  shimmerFreq:2000, rumbleFreq:55  }, // First Stars — bright ignition
+      8:  { impactWave:'sawtooth', impactFreq:120, noiseFilterType:'bandpass', noiseFreqStart:1400, noiseFreqEnd:500, noiseQ:2, noiseDur:1.1, chord:[349,440,523,698], chordWave:'triangle', chordSlide:1.4,  shimmerFreq:2200, rumbleFreq:50  }, // Reionization — crackling energy
+      9:  { impactWave:'sine',     impactFreq:100, noiseFilterType:'lowpass',  noiseFreqStart:700,  noiseFreqEnd:200, noiseQ:1, noiseDur:1.4, chord:[196,262,330,392], chordWave:'sine',     chordSlide:1.2,  shimmerFreq:1200, rumbleFreq:45  }, // Galaxy — swirling majesty
+      10: { impactWave:'triangle', impactFreq:110, noiseFilterType:'bandpass', noiseFreqStart:800,  noiseFreqEnd:300, noiseQ:1, noiseDur:1.2, chord:[262,330,392,494], chordWave:'sine',     chordSlide:1.3,  shimmerFreq:1500, rumbleFreq:48  }, // Planetary — orbital harmony
+      11: { impactWave:'sine',     impactFreq:85,  noiseFilterType:'lowpass',  noiseFreqStart:500,  noiseFreqEnd:150, noiseQ:1, noiseDur:1.6, chord:[220,277,330,440], chordWave:'triangle', chordSlide:1.15, shimmerFreq:900,  rumbleFreq:38  }, // Life — organic warmth
+      12: { impactWave:'sawtooth', impactFreq:160, noiseFilterType:'highpass', noiseFreqStart:600,  noiseFreqEnd:1200,noiseQ:2, noiseDur:0.8, chord:[370,440,554,740], chordWave:'sawtooth', chordSlide:1.8,  shimmerFreq:2800, rumbleFreq:65  }, // Stellar Death — violent, harsh
+      13: { impactWave:'sine',     impactFreq:70,  noiseFilterType:'lowpass',  noiseFreqStart:400,  noiseFreqEnd:100, noiseQ:1, noiseDur:2.0, chord:[147,175,220,294], chordWave:'sine',     chordSlide:0.9,  shimmerFreq:500,  rumbleFreq:32  }, // Remnant — fading, dim
+      14: { impactWave:'square',   impactFreq:80,  noiseFilterType:'bandpass', noiseFreqStart:600,  noiseFreqEnd:200, noiseQ:3, noiseDur:1.8, chord:[165,196,247,330], chordWave:'square',   chordSlide:0.85, shimmerFreq:700,  rumbleFreq:28  }, // Degenerate — disintegrating
+      15: { impactWave:'sine',     impactFreq:50,  noiseFilterType:'lowpass',  noiseFreqStart:350,  noiseFreqEnd:60,  noiseQ:2, noiseDur:2.5, chord:[110,139,165,220], chordWave:'sine',     chordSlide:0.7,  shimmerFreq:400,  rumbleFreq:22  }, // Black Hole — deep void
+      16: { impactWave:'triangle', impactFreq:40,  noiseFilterType:'lowpass',  noiseFreqStart:200,  noiseFreqEnd:40,  noiseQ:1, noiseDur:3.0, chord:[98,123,147,196],  chordWave:'sine',     chordSlide:0.6,  shimmerFreq:300,  rumbleFreq:18  }, // Heat Death — silence approaching
+    };
+    return characters[stageId] ?? characters[1];
   }
 
   playBigBang(): void {

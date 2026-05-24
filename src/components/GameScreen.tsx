@@ -271,6 +271,7 @@ export function GameScreen({
   const openEntityPanel = () => {
     setViewingStageId(null);
     setEntityPanelOpen(true);
+    soundManager?.playUIOpen();
   };
   const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
   const hasAffordableEntity = currentStageEntities.some((entity) => {
@@ -340,7 +341,7 @@ export function GameScreen({
         anchor: 'shop',
         message: t(language, 'tutShop'),
         ctaLabel: t(language, 'tutShopOpen'),
-        onCta: () => setShopOpen(true),
+        onCta: () => { setShopOpen(true); soundManager?.playUIOpen(); },
       };
     }
     if (hasActiveBoost && !state.tutorialFlags['boost-hud-seen']) {
@@ -530,8 +531,11 @@ export function GameScreen({
       return;
     }
     setTransitionPhase('bursting');
-    setShakeClass('shake-big');
-    soundManager?.playCondenseExplosion();
+    // The new cinematic transition system applies its own shake/scale/filter on
+    // .app-shell.transitioning--<style>. We intentionally leave shakeClass empty
+    // so it doesn't fight the cinematic transform animations.
+    setShakeClass('');
+    soundManager?.playCondenseExplosion(state.stageIdx + 1);
   }, [dispatch, soundManager, state.imploding, state.pendingCondenseStageIdx, state.stageIdx, transitionPhase]);
 
   useEffect(() => {
@@ -560,9 +564,18 @@ export function GameScreen({
     };
   }, [transitionPhase]);
 
+  // While bursting we want classes keyed to the CURRENT stage (the one being left).
+  // While revealing, key to the NEW stage (the one we just entered).
+  const exitStyle = stage.transitionStyle ?? 'condense';
+  const enterStyle = displayStage.transitionStyle ?? 'condense';
+  const transitionClass =
+    transitionPhase === 'bursting' ? `transitioning transitioning--${exitStyle}` :
+    transitionPhase === 'revealing' ? `revealing revealing--${enterStyle}` :
+    '';
+
   return (
     <div
-      className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''}`}
+      className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''} ${transitionClass}`}
       style={{ '--accent': displayStage.accent, '--core': displayStage.coreColor } as CSSProperties}
     >
       {saveErrorVisible ? (
@@ -682,7 +695,7 @@ export function GameScreen({
           }
         />
         {shopOpen && canShowShop ? (
-          <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => setShopOpen(false)} />
+          <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => { setShopOpen(false); soundManager?.playUIClose(); }} />
         ) : null}
         {entityPanelOpen ? (
           <EntityPanel
@@ -690,8 +703,8 @@ export function GameScreen({
             purchasedEntities={state.purchasedEntities}
             quanta={state.quanta}
             language={language}
-            onPurchase={(entityId) => dispatch({ type: 'PURCHASE_ENTITY', entityId })}
-            onClose={() => setEntityPanelOpen(false)}
+            onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
+            onClose={() => { setEntityPanelOpen(false); soundManager?.playUIClose(); }}
             onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
           />
         ) : null}
@@ -715,7 +728,7 @@ export function GameScreen({
                 type="button"
                 ref={infoAnchorRef}
                 className="hud-stage-chip"
-                onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
+                onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
                 title={t(language, 'hudViewInfo')}
                 aria-label={t(language, 'hudViewInfo')}
               >
@@ -723,7 +736,7 @@ export function GameScreen({
               </button>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
-                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
+                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
                     <span className="hud-entropy-readout">
                       <span>{t(language, 'hudEntropy')}</span>
@@ -797,7 +810,7 @@ export function GameScreen({
                 }
               }}
             >
-              <span>{isViewingPastStage ? t(language, 'hudCompleted') : showEndingButton ? (language === 'ko' ? '엔딩 선택' : 'CHOOSE ENDING') : t(language, 'hudCondense')}</span>
+              <span>{isViewingPastStage ? t(language, 'hudCompleted') : showEndingButton ? (language === 'ko' ? '엔딩 선택' : 'CHOOSE ENDING') : ((language === 'ko' ? stage.condenseLabelKo : stage.condenseLabel) ?? t(language, 'hudCondense'))}</span>
               {!isViewingPastStage && !showEndingButton ? (
                 <small className="entropy-inline">
                   <span>{`+${entropyPreviewReadout.value}`}</span>
@@ -833,6 +846,7 @@ export function GameScreen({
               disabled={!canShowShop}
               onClick={() => {
                 setShopOpen(true);
+                soundManager?.playUIOpen();
                 if (!state.hasSeenCashShopTutorial) {
                   dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
                 }
@@ -854,7 +868,7 @@ export function GameScreen({
           <button
             type="button"
             className="mini-button settings-gear-btn bottom-settings-button"
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => { setSettingsOpen(true); soundManager?.playUIOpen(); }}
             title={t(language, 'hudSettings')}
             aria-label={t(language, 'hudSettings')}
           >
@@ -862,8 +876,9 @@ export function GameScreen({
             <span className="hud-action-label">{t(language, 'hudSettings')}</span>
           </button>
         </div>
-        <div className={`stage-transition-wash ${transitionPhase === 'bursting' ? 'active' : ''}`} />
-        <div className={`stage-reveal-fade ${transitionPhase === 'revealing' ? 'active' : ''}`} />
+        <div className={`stage-transition-wash stage-transition-wash--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} />
+        <div className={`stage-transition-rays stage-transition-rays--${exitStyle} ${transitionPhase === 'bursting' ? 'active' : ''}`} aria-hidden="true" />
+        <div className={`stage-reveal-fade stage-reveal-fade--${enterStyle} ${transitionPhase === 'revealing' ? 'active' : ''}`} />
         <ScaleIndicator stageId={displayStage.id} language={language} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
@@ -918,7 +933,7 @@ export function GameScreen({
           currentStageId={stage.id}
           progressPercent={Math.floor(progress01 * 100)}
           language={language}
-          onClose={() => setAlmanacOpen(false)}
+          onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}
 
@@ -927,12 +942,13 @@ export function GameScreen({
           bgmMuted={bgmMuted}
           sfxMuted={sfxMuted}
           language={language}
+          soundManager={soundManager}
           onToggleBgm={onToggleBgm}
           onToggleSfx={onToggleSfx}
           onToggleLanguage={onToggleLanguage}
-          onRequestReset={() => { setSettingsOpen(false); onRequestReset(); }}
+          onRequestReset={() => { setSettingsOpen(false); soundManager?.playUIClose(); onRequestReset(); }}
           onOpenLeaderboard={onOpenLeaderboard}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => { setSettingsOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}
 
@@ -991,6 +1007,7 @@ export function GameScreen({
           ctaLabel={t(language, 'tutStageLogOpen')}
           onCta={() => {
             setAlmanacOpen(true);
+            soundManager?.playUIOpen();
             dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' });
           }}
           onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' })}
