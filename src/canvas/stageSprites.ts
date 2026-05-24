@@ -255,11 +255,35 @@ function drawSpriteBaryon(
   ctx: CanvasRenderingContext2D,
   r: number,
   color: string,
-  _t: number,
+  t: number,
 ): void {
-  ctx.fillStyle = color;
+  const s = Math.max(1.2, r);
+  // Quark triplet — 3 small colored dots orbiting a center
+  // Represents the 3 color charges (r/g/b) of QCD
+  const qColors = ['#ff6666', '#66dd66', '#6688ff'];
+  const orbitR = s * 0.55;
+  ctx.rotate(t * 0.8);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const qx = Math.cos(a) * orbitR;
+    const qy = Math.sin(a) * orbitR;
+    // Gluon connection line to center
+    ctx.strokeStyle = hexToRgba(qColors[i], 0.25);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(qx, qy);
+    ctx.stroke();
+    // Quark dot
+    ctx.fillStyle = qColors[i];
+    ctx.beginPath();
+    ctx.arc(qx, qy, s * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Center glow (confinement)
+  ctx.fillStyle = hexToRgba(color, 0.35);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.2, r), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2);
   ctx.fill();
 }
 

@@ -1421,6 +1421,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 
   const tickFrame = (now: number, dt: number) => {
+    const frameStart = import.meta.env.DEV ? performance.now() : 0;
     const canvas = canvasRef.current;
     const world = worldRef.current;
     if (!canvas || !world) {
@@ -1767,6 +1768,27 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       flare.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = flare;
       ctx.fillRect(0, 0, width, height);
+    }
+    if (import.meta.env.DEV) {
+      const cost = performance.now() - frameStart;
+      // @ts-expect-error dev-only diagnostic attached to window
+      const stats = (window.__frameStats ??= { count: 0, heavy: 0, totalMs: 0, maxMs: 0 });
+      stats.count++;
+      stats.totalMs += cost;
+      if (cost > stats.maxMs) stats.maxMs = cost;
+      if (cost > 12) {
+        stats.heavy++;
+        if (cost > 25) {
+          // eslint-disable-next-line no-console
+          console.warn('[heavy frame]', cost.toFixed(1) + 'ms', {
+            bursts: world.bursts.length,
+            flyers: world.flyers.length,
+            particles: world.particles.length,
+            rogues: world.rogues.length,
+            wakeTrails: world.wakeTrails.length,
+          });
+        }
+      }
     }
   };
 

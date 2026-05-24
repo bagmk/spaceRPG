@@ -274,6 +274,7 @@ canvas {
   background: rgba(255, 255, 255, 0.03);
   color: var(--fg);
   padding: 8px 12px;
+  min-height: 44px; /* Apple HIG tap target */
   font-size: 10px;
   letter-spacing: 0.2em;
   cursor: pointer;
@@ -436,7 +437,7 @@ button.hud-stage-title--clickable:hover {
 }
 
 .hud-condense {
-  min-height: 30px;
+  min-height: 44px; /* Apple HIG tap target — was 30px */
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.04);
   color: var(--fg);
@@ -4001,7 +4002,8 @@ button.stat-header-item {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 38px;
+  min-width: 44px; /* Apple HIG tap target — was 38px */
+  min-height: 44px;
   padding: 6px 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
@@ -7148,7 +7150,7 @@ button.stat-header-item {
 }
 
 .hud-condense {
-  min-height: 34px;
+  min-height: 44px; /* Apple HIG tap target — was 34px */
   margin: 0 9px 9px;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 44%, rgba(255, 255, 255, 0.16));
