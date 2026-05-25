@@ -20,9 +20,10 @@ interface AlmanacOverlayProps {
   progressPercent: number;
   language: Lang;
   onClose: () => void;
+  onUITap?: () => void;
 }
 
-export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose }: AlmanacOverlayProps) {
+export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose, onUITap }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
   const [activeLoreId, setActiveLoreId] = useState<string | null>(null);
   const pillsRef = useRef<HTMLDivElement | null>(null);
@@ -82,7 +83,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                 data-stage-id={s.id}
                 className={`almanac-pill almanac-pill--${state} ${selectedId === s.id ? 'almanac-pill--active' : ''}`}
                 style={{ '--pill-accent': s.accent } as React.CSSProperties}
-                onClick={() => setSelectedId(s.id)}
+                onClick={() => { setSelectedId(s.id); onUITap?.(); }}
               >
                 <span className="almanac-pill-num">{String(s.id).padStart(2, '0')}</span>
                 {isFuture(s.id) ? <span className="almanac-pill-lock">🔒</span> : null}
@@ -133,7 +134,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                       {unlocked ? <div className="almanac-ms__msg">{pickLogText(log.message, language)}</div> : null}
                     </div>
                     {unlocked && loreId ? (
-                      <button type="button" className="almanac-ms__more" onClick={() => setActiveLoreId(loreId)}>→</button>
+                      <button type="button" className="almanac-ms__more" onClick={() => { setActiveLoreId(loreId); onUITap?.(); }}>→</button>
                     ) : null}
                   </div>
                 );

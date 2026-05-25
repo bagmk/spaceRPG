@@ -141,6 +141,7 @@ export function GameScreen({
   const [entityPanelOpen, setEntityPanelOpen] = useState(false);
   const [almanacOpen, setAlmanacOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -359,6 +360,14 @@ export function GameScreen({
         anchor: 'resource',
         message: t(language, 'tutCondense'),
         autoCloseMs: 8000,
+      };
+    }
+    if (stage.id >= 3 && !state.tutorialFlags['focus-mode-intro']) {
+      return {
+        flagId: 'focus-mode-intro',
+        anchor: 'field',
+        message: t(language, 'tutFocusMode'),
+        autoCloseMs: 7000,
       };
     }
     return null;
@@ -706,7 +715,8 @@ export function GameScreen({
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onClose={() => { setEntityPanelOpen(false); soundManager?.playUIClose(); }}
-            onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
+            onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
+            onUITap={() => soundManager?.playUITap()}
           />
         ) : null}
         {viewingStageId !== null && !entityPanelOpen ? (
@@ -722,7 +732,7 @@ export function GameScreen({
             </button>
           </div>
         ) : null}
-        <div className="hud-info" ref={resourceAnchorRef}>
+        <div className={`hud-info ${focusMode ? 'focus-hidden' : ''}`} ref={resourceAnchorRef}>
           <div className="hud-info-click-zone">
             <div className="hud-topline">
               <button
@@ -840,7 +850,7 @@ export function GameScreen({
             );
           })()}
         </div>
-        <div className="bottom-buttons">
+        <div className={`bottom-buttons ${focusMode ? 'focus-hidden' : ''}`}>
           <div ref={shopAnchorRef}>
             <ShopButton
               highlighted={hasShopNotification}
@@ -877,6 +887,14 @@ export function GameScreen({
             <span className="hud-action-label">{t(language, 'hudSettings')}</span>
           </button>
         </div>
+        <button
+          type="button"
+          className={`focus-toggle-btn ${focusMode ? 'focus-toggle-btn--active' : ''}`}
+          onClick={() => { setFocusMode((v) => !v); soundManager?.playToggle(!focusMode); }}
+          aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+        >
+          {focusMode ? '◉' : '○'}
+        </button>
         {/* Render transition overlays via Portal directly into document.body so
             they are completely independent of .app-shell's stacking/containing/
             clipping context. This guarantees the fixed-positioned wash/rays/fade
@@ -889,7 +907,7 @@ export function GameScreen({
           </>,
           document.body,
         )}
-        <ScaleIndicator stageId={displayStage.id} language={language} />
+        <ScaleIndicator stageId={displayStage.id} language={language} className={focusMode ? 'focus-hidden' : ''} />
         {state.totalClicks > 0 || import.meta.env.DEV ? (
           <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
         ) : null}
@@ -944,6 +962,7 @@ export function GameScreen({
           progressPercent={Math.floor(progress01 * 100)}
           language={language}
           onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
+          onUITap={() => soundManager?.playUITap()}
         />
       ) : null}
 

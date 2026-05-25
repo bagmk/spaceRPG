@@ -138,9 +138,10 @@ interface Props {
   onPurchase: (entityId: string) => void;
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
+  onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, purchasedEntities, quanta, language, onPurchase, onClose, onStageSelect }: Props) {
+export function EntityPanel({ currentStageId, purchasedEntities, quanta, language, onPurchase, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -291,7 +292,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
                 language={language}
                 rarityColor={RARITY_COLORS[entity.rarity]}
                 onPurchase={onPurchase}
-                onInspect={() => setInspectedEntityId(entity.id)}
+                onInspect={() => { setInspectedEntityId(entity.id); onUITap?.(); }}
                 animDelay={idx * 45}
                 canPurchase={selectedStageId <= currentStageId && !anchorLocked}
                 anchorLockedBy={anchorLocked ? anchorName : undefined}

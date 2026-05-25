@@ -504,6 +504,16 @@ export class SoundManager {
     } catch (err) { this.logAudioError(err); }
   }
 
+  /** Light tap for UI navigation (almanac, stage select, detail view). */
+  playUITap(): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 7);
+      this.playTonedBurst(960, 0.06, vol);
+    } catch (err) { this.logAudioError(err); }
+  }
+
   /** Bright "ding" for entity level-up / purchase. */
   playEntityLevelUp(): void {
     const ctx = this.ensureContext();
