@@ -1712,7 +1712,8 @@ function drawLifeOrbitEntities(
     const orbitBand = index % 4;
     const orbitR = earthRadius + 45 + orbitBand * 32 + (isLegend ? 28 : 0);
     const speed = isFreeFlight ? 0.0002 + unit(seed, 82) * 0.00016 : 0.00034 + unit(seed, 82) * 0.00022;
-    const angle = now * speed * (unit(seed, 83) > 0.5 ? 1 : -1) + unit(seed, 84) * Math.PI * 2;
+    const dir = isFreeFlight ? 1 : (unit(seed, 83) > 0.5 ? 1 : -1);
+    const angle = now * speed * dir + unit(seed, 84) * Math.PI * 2;
     const tilt = 0.44 + unit(seed, 85) * 0.2;
     const x = cx + Math.cos(angle) * orbitR;
     const y = cy + Math.sin(angle) * orbitR * tilt + Math.sin(now * 0.00055 + seed) * (isFreeFlight ? 9 : 3);
@@ -1836,18 +1837,15 @@ function drawLifeOrbitEntities(
       ctx.rotate(heading);
       const s = size * 1.2;
 
-      // Engine glow trail (drawn first, behind ship)
-      const trailLen = s * (4 + Math.sin(t * 2.5) * 0.8);
-      const trailGrad = ctx.createLinearGradient(-s * 1.2, 0, -s * 1.2 - trailLen, 0);
-      trailGrad.addColorStop(0, hexToRgba('#66bbff', 0.45));
-      trailGrad.addColorStop(0.3, hexToRgba('#4488ff', 0.2));
+      // Short soft engine glow (no long beam)
+      const glowLen = s * 1.2;
+      const trailGrad = ctx.createRadialGradient(-s * 1.3, 0, 0, -s * 1.3, 0, glowLen);
+      trailGrad.addColorStop(0, hexToRgba('#66bbff', 0.3));
+      trailGrad.addColorStop(0.5, hexToRgba('#4488ff', 0.1));
       trailGrad.addColorStop(1, hexToRgba('#2255aa', 0));
       ctx.fillStyle = trailGrad;
       ctx.beginPath();
-      ctx.moveTo(-s * 1.2, -s * 0.2);
-      ctx.quadraticCurveTo(-s * 1.2 - trailLen * 0.5, -s * 0.05, -s * 1.2 - trailLen, 0);
-      ctx.quadraticCurveTo(-s * 1.2 - trailLen * 0.5, s * 0.05, -s * 1.2, s * 0.2);
-      ctx.closePath();
+      ctx.arc(-s * 1.3, 0, glowLen, 0, Math.PI * 2);
       ctx.fill();
 
       // Main hull — sleek diamond shape
@@ -3765,8 +3763,16 @@ export function drawEntities(
     list.push(i);
   }
 
+  // Sleeping-body threshold: when both bodies in a pair are barely moving, skip
+  // the inter-pair force calculation entirely. They'll still receive center-pull
+  // and pointer push below, but skipping pairwise forces is a huge win in
+  // late-game Stage 5/6 where particles tend to settle.
+  const SLEEP_VEL_SQ = 0.04 * 0.04;
+
   for (let i = 0; i < bodies.length; i++) {
     const a = bodies[i];
+    const aSpeedSq = a.body.vx * a.body.vx + a.body.vy * a.body.vy;
+    const aSleeping = aSpeedSq < SLEEP_VEL_SQ;
     const agx = Math.floor(a.body.x / CELL_SIZE);
     const agy = Math.floor(a.body.y / CELL_SIZE);
 
@@ -3778,6 +3784,12 @@ export function drawEntities(
         for (let k = 0; k < list.length; k++) {
           const j = list[k];
           if (j <= i) continue;  // unordered pair: only do i<j once
+          // Skip pair entirely when both are essentially at rest.
+          if (aSleeping) {
+            const bj = bodies[j];
+            const bSpeedSq = bj.body.vx * bj.body.vx + bj.body.vy * bj.body.vy;
+            if (bSpeedSq < SLEEP_VEL_SQ) continue;
+          }
           const b = bodies[j];
           const dx = b.body.x - a.body.x;
           const dy = b.body.y - a.body.y;
@@ -3876,7 +3888,7 @@ export function drawEntities(
     const current = positions[index];
     const previous = positions[index - 1];
     const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
-    if (distance > 170) continue;
+    if (distance > 110) continue;  // was 170 — fewer gradient strokes when particles bunch up
     const alpha = Math.max(0.04, 0.15 - distance / 1400);
     const grad = ctx.createLinearGradient(previous.x, previous.y, current.x, current.y);
     grad.addColorStop(0, hexToRgba(previous.item.glowColor, alpha));
