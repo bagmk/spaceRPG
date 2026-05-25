@@ -1640,24 +1640,42 @@ function drawDiskRibbon(
   stage: Stage,
   back: boolean,
 ): void {
-  const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
-  gradient.addColorStop(0, hexToRgba('#fff0c8', back ? 0.34 : 0.62));
-  gradient.addColorStop(0.45, hexToRgba(stage.coreColor, back ? 0.26 : 0.52));
-  gradient.addColorStop(1, hexToRgba(stage.accent, 0));
+  // Draw multiple thin sub-rings with fade at edges for soft look
+  const segments = 24;
+  const startAngle = back ? Math.PI : 0;
+  const endAngle = back ? Math.PI * 2 : Math.PI;
+  const fadeZone = 0.12; // fraction of arc that fades at each edge
 
   ctx.save();
   ctx.scale(1, Math.cos(tilt));
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  if (back) {
-    ctx.arc(0, 0, outer, Math.PI, Math.PI * 2);
-    ctx.arc(0, 0, inner, Math.PI * 2, Math.PI, true);
-  } else {
-    ctx.arc(0, 0, outer, 0, Math.PI);
-    ctx.arc(0, 0, inner, Math.PI, 0, true);
+
+  for (let i = 0; i < segments; i++) {
+    const t = i / segments;
+    const t2 = (i + 1) / segments;
+    const a1 = startAngle + t * (endAngle - startAngle);
+    const a2 = startAngle + t2 * (endAngle - startAngle);
+
+    // Edge fade: alpha drops near 0% and 100% of the arc
+    let edgeAlpha = 1;
+    if (t < fadeZone) edgeAlpha = t / fadeZone;
+    if (t > 1 - fadeZone) edgeAlpha = (1 - t) / fadeZone;
+
+    const baseAlpha = back ? 0.34 : 0.62;
+    const midAlpha = back ? 0.26 : 0.52;
+
+    const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
+    gradient.addColorStop(0, hexToRgba('#fff0c8', baseAlpha * edgeAlpha));
+    gradient.addColorStop(0.45, hexToRgba(stage.coreColor, midAlpha * edgeAlpha));
+    gradient.addColorStop(1, hexToRgba(stage.accent, 0));
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, outer, a1, a2);
+    ctx.arc(0, 0, inner, a2, a1, true);
+    ctx.closePath();
+    ctx.fill();
   }
-  ctx.closePath();
-  ctx.fill();
+
   ctx.restore();
 }
 
