@@ -1458,32 +1458,18 @@ function drawLifeCanvasAmbient(
     }
   }
 
-  // Large neural web spanning full canvas
-  const nodeCount = 16 + Math.floor(lifePower * 20);
+  // Subtle neural web — faint dots only, no connecting lines
+  const nodeCount = 8 + Math.floor(lifePower * 10);
   const pts = Array.from({ length: nodeCount }, (_, i) => {
     const a = (i / nodeCount) * Math.PI * 2 + Math.sin(now * 0.000048 + i * 0.82) * 0.18;
-    const dist = radius * (0.28 + unit(i + 200, 60) * 0.92);
+    const dist = radius * (0.4 + unit(i + 200, 60) * 0.7);
     return { x: cx + Math.cos(a) * dist, y: cy + Math.sin(a * 1.1) * dist * 0.8 };
   });
 
-  ctx.lineCap = 'round';
   for (let i = 0; i < nodeCount; i++) {
-    for (let j = i + 1; j < nodeCount; j++) {
-      const dist = Math.hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y);
-      if (dist > radius * 1.1) continue;
-      const flicker = 0.45 + Math.sin(now * 0.0005 + (i * nodeCount + j) * 0.14) * 0.55;
-      const alpha = (0.022 + lifePower * 0.058) * (1 - dist / (radius * 1.15)) * flicker;
-      ctx.strokeStyle = hexToRgba(j % 3 === 0 ? '#3affb4' : '#74cfff', alpha);
-      ctx.lineWidth = 0.5 + lifePower * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(pts[i].x, pts[i].y);
-      const mx = (pts[i].x + pts[j].x) / 2 + Math.sin(now * 0.00022 + i + j) * radius * 0.05;
-      const my = (pts[i].y + pts[j].y) / 2 + Math.cos(now * 0.00018 + i + j) * radius * 0.04;
-      ctx.quadraticCurveTo(mx, my, pts[j].x, pts[j].y);
-      ctx.stroke();
-    }
-    ctx.fillStyle = hexToRgba('#7dffaa', 0.1 + lifePower * 0.2);
-    fillCircle(ctx, pts[i].x, pts[i].y, 1.1 + lifePower * 2.2);
+    const flicker = 0.3 + Math.sin(now * 0.0004 + i * 1.3) * 0.3;
+    ctx.fillStyle = hexToRgba('#7dffaa', flicker * lifePower * 0.12);
+    fillCircle(ctx, pts[i].x, pts[i].y, 0.8 + lifePower * 1.2);
   }
 
   // Signal pulse rings radiating from Earth center

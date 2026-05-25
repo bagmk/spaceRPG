@@ -390,7 +390,7 @@ function drawRecombinationField(args: DrawClusterArgs): void {
     const orbitPhase = (mote.hue + t * (0.9 + (idx % 3) * 0.2));
     drawStageSprite(ctx, stage.id, mote.x + Math.cos(orbitPhase) * mote.r, mote.y + Math.sin(orbitPhase) * mote.r, mote.r * 0.9, mote.color, 0.78, orbitPhase);
     // photon streaks on occasional capture
-    if (mote.age % 900 < 60) {
+    if (mote.age % 1600 < 40) {  // ← was 900<60 (~6.7%); now ~2.5% — fewer expensive stroke calls
       ctx.strokeStyle = hexToRgba('#ffffff', 0.18 + Math.abs(Math.sin(t * 8 + idx)) * 0.36);
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -408,12 +408,12 @@ function drawDarkAge(args: DrawClusterArgs): void {
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.92, stage.accent, 0.02);
   cluster.motes.forEach((mote, idx) => {
     const baseAlpha = 0.12 + Math.min(0.6, mote.mass * 0.04);
-    // draw a long faded trail by layering translucent arcs offset by velocity
-    for (let s = 0; s < 4; s += 1) {
-      const decay = 1 - s / 4;
-      ctx.fillStyle = hexToRgba(mote.color, baseAlpha * decay * 0.45);
+    // draw a long faded trail (2 layers — was 4, halved for Stage 6 perf)
+    for (let s = 0; s < 2; s += 1) {
+      const decay = 1 - s / 2;
+      ctx.fillStyle = hexToRgba(mote.color, baseAlpha * decay * 0.5);
       ctx.beginPath();
-      ctx.ellipse(mote.x - mote.vx * s * 0.6, mote.y - mote.vy * s * 0.6, Math.max(0.6, mote.r * 0.6 * decay), Math.max(0.6, mote.r * 0.6 * decay), 0, 0, Math.PI * 2);
+      ctx.ellipse(mote.x - mote.vx * s * 0.9, mote.y - mote.vy * s * 0.9, Math.max(0.6, mote.r * 0.6 * decay), Math.max(0.6, mote.r * 0.6 * decay), 0, 0, Math.PI * 2);
       ctx.fill();
     }
     drawStageSprite(ctx, stage.id, mote.x, mote.y, Math.max(0.6, mote.r * 0.65), mote.color, 0.42, mote.hue + Math.sin(t * 0.4 + idx));
