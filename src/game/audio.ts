@@ -12,6 +12,12 @@ function getAudioContextCtor(): AudioContextConstructor | undefined {
   return window.AudioContext ?? win.webkitAudioContext;
 }
 
+interface FadingOutEntry {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  stopTimer: number | null;
+}
+
 export class SoundManager {
   private context: AudioContext | null = null;
 
@@ -62,13 +68,15 @@ export class SoundManager {
   // changed by the time they resolve, so they can't accidentally start an
   // outdated track on top of the current one.
   private musicEpoch = 0;
-  // At most 1 outgoing track is allowed during cross-fade. If the user
-  // switches stages rapidly we force-cut older outgoing tracks (300ms snap
-  // fade) so we never stack 3+ simultaneous tracks. The "outgoing" slot is
-  // the track that WAS this.musicSource at the moment a new switch occurred.
-  private outgoingSource: AudioBufferSourceNode | null = null;
-  private outgoingGain: GainNode | null = null;
-  private outgoingStopTimer: number | null = null;
+  // All currently-fading-out tracks. We keep an array (not a single slot)
+  // because a single slot leaks under rapid switches: the old outgoing ref
+  // gets nulled but its AudioBufferSourceNode keeps playing via closure,
+  // creating ghost tracks that stack. With an array we snap-stop ALL of
+  // them on each new switch, guaranteeing: at most 1 musicSource + 0..1
+  // sources audible past the brief CLEANUP_FADE_MS window.
+  private fadingOut: FadingOutEntry[] = [];
+  // 80ms click-free fade for forced cleanup of orphaned sources.
+  private static readonly CLEANUP_FADE_MS = 80;
 
   constructor(sfxMuted: boolean, musicMuted = false) {
     this.sfxMuted = sfxMuted;
@@ -415,7 +423,10 @@ export class SoundManager {
         ? this.chapterPools.get(this.currentPoolId)
         : null;
       const playingBuf = this.musicSource?.buffer ?? null;
-      const outgoingBuf = this.outgoingSource?.buffer ?? null;
+      const fadingBufs = new Set<AudioBuffer>();
+      for (const entry of this.fadingOut) {
+        if (entry.source.buffer) fadingBufs.add(entry.source.buffer);
+      }
       let evictedIdx = -1;
       for (let i = 0; i < this.bufferAccessOrder.length; i += 1) {
         const id = this.bufferAccessOrder[i];
@@ -426,7 +437,7 @@ export class SoundManager {
           break;
         }
         if (buf === playingBuf) continue;
-        if (buf === outgoingBuf) continue;
+        if (fadingBufs.has(buf)) continue;
         if (activePool && activePool.includes(buf)) continue;
         evictedIdx = i;
         break;
@@ -461,17 +472,17 @@ export class SoundManager {
       nextGain.connect(master);
       next.start();
 
-      // Cross-fade out the previous track.
+      // Snap-cut any orphaned fading sources before starting a new track —
+      // otherwise rapid switches can stack 3+ tracks. After this call, only
+      // the soon-to-be-demoted prev track remains audible.
+      this.snapStopAllFadingOut();
+
       const prev = this.musicSource;
       const prevGain = this.musicGain;
       if (prev && prevGain) {
         prevGain.gain.cancelScheduledValues(ctx.currentTime);
         prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
-        window.setTimeout(() => {
-          try { prev.stop(); } catch { /* already stopped */ }
-          prev.disconnect();
-          prevGain.disconnect();
-        }, fadeMs + 100);
+        this.pushFadingOut(prev, prevGain, fadeMs + 100);
       }
 
       this.musicSource = next;
@@ -549,43 +560,19 @@ export class SoundManager {
       nextGain.connect(master);
       next.start();
 
-      // Cross-fade management — see outgoingSource comment in state.
-      // Step 1: if there is already an outgoing track from a recent switch
-      //         that is STILL audible, snap it to 0 in 300ms (no waiting for
-      //         its full 4s fade — that would stack with our new outgoing).
-      if (this.outgoingSource && this.outgoingGain) {
-        const oldSrc = this.outgoingSource;
-        const oldGain = this.outgoingGain;
-        oldGain.gain.cancelScheduledValues(ctx.currentTime);
-        oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
-        if (this.outgoingStopTimer !== null) window.clearTimeout(this.outgoingStopTimer);
-        window.setTimeout(() => {
-          try { oldSrc.stop(); } catch { /* already stopped */ }
-          oldSrc.disconnect();
-          oldGain.disconnect();
-        }, 400);
-        this.outgoingSource = null;
-        this.outgoingGain = null;
-        this.outgoingStopTimer = null;
-      }
-      // Step 2: demote current musicSource to the outgoing slot and fade it out.
+      // Step 1: snap-cut EVERY orphaned fading source (not just the most
+      // recent one — that was the old bug). After this returns, at most the
+      // current musicSource is audible, guaranteeing no track stacking under
+      // rapid stage switches.
+      this.snapStopAllFadingOut();
+
+      // Step 2: demote current musicSource into the fading-out set.
       const prev = this.musicSource;
       const prevGain = this.musicGain;
       if (prev && prevGain) {
         prevGain.gain.cancelScheduledValues(ctx.currentTime);
         prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
-        this.outgoingSource = prev;
-        this.outgoingGain = prevGain;
-        this.outgoingStopTimer = window.setTimeout(() => {
-          try { prev.stop(); } catch { /* already stopped */ }
-          prev.disconnect();
-          prevGain.disconnect();
-          if (this.outgoingSource === prev) {
-            this.outgoingSource = null;
-            this.outgoingGain = null;
-            this.outgoingStopTimer = null;
-          }
-        }, fadeMs + 100);
+        this.pushFadingOut(prev, prevGain, fadeMs + 100);
       }
 
       this.musicSource = next;
@@ -612,33 +599,15 @@ export class SoundManager {
   fadeOutMusic(fadeMs: number = TUNING.MUSIC_FADE_OUT_MS): void {
     this.musicEpoch += 1; // invalidate any pending chain timers
     this.currentPoolId = null; // stop any pool rotation chaining
+    // Snap any orphaned fading-out sources — no point fading them twice.
+    this.snapStopAllFadingOut();
     const ctx = this.context;
-    // Snap any existing outgoing track immediately — no point fading it twice.
-    if (this.outgoingSource && this.outgoingGain && ctx) {
-      const oldSrc = this.outgoingSource;
-      const oldGain = this.outgoingGain;
-      oldGain.gain.cancelScheduledValues(ctx.currentTime);
-      oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-      if (this.outgoingStopTimer !== null) window.clearTimeout(this.outgoingStopTimer);
-      window.setTimeout(() => {
-        try { oldSrc.stop(); } catch { /* already stopped */ }
-        oldSrc.disconnect();
-        oldGain.disconnect();
-      }, 300);
-      this.outgoingSource = null;
-      this.outgoingGain = null;
-      this.outgoingStopTimer = null;
-    }
     const prev = this.musicSource;
     const prevGain = this.musicGain;
     if (!ctx || !prev || !prevGain) return;
     prevGain.gain.cancelScheduledValues(ctx.currentTime);
     prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
-    window.setTimeout(() => {
-      try { prev.stop(); } catch { /* already stopped */ }
-      prev.disconnect();
-      prevGain.disconnect();
-    }, fadeMs + 100);
+    this.pushFadingOut(prev, prevGain, fadeMs + 100);
     this.musicSource = null;
     this.musicGain = null;
     this.currentChapter = null;
@@ -749,6 +718,50 @@ export class SoundManager {
     }
   }
 
+  /**
+   * Track a fading-out source. After stopDelayMs, the source is stopped
+   * and disconnected. Used by both crossfade demotion and forced cleanup.
+   */
+  private pushFadingOut(source: AudioBufferSourceNode, gain: GainNode, stopDelayMs: number): void {
+    const entry: FadingOutEntry = { source, gain, stopTimer: null };
+    entry.stopTimer = window.setTimeout(() => {
+      try { source.stop(); } catch { /* already stopped */ }
+      source.disconnect();
+      gain.disconnect();
+      this.fadingOut = this.fadingOut.filter((e) => e !== entry);
+    }, stopDelayMs);
+    this.fadingOut.push(entry);
+  }
+
+  /**
+   * Snap-stop every currently-fading source with a short click-free fade.
+   * Call this BEFORE starting any new track so we never stack 3+ tracks.
+   * Idempotent and cheap when fadingOut is empty (the common case).
+   */
+  private snapStopAllFadingOut(): void {
+    const ctx = this.context;
+    if (!ctx || this.fadingOut.length === 0) return;
+    const fadeSec = SoundManager.CLEANUP_FADE_MS / 1000;
+    const stopAtMs = SoundManager.CLEANUP_FADE_MS + 30;
+    for (const entry of this.fadingOut) {
+      if (entry.stopTimer !== null) window.clearTimeout(entry.stopTimer);
+      entry.gain.gain.cancelScheduledValues(ctx.currentTime);
+      entry.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeSec);
+      const { source, gain } = entry;
+      window.setTimeout(() => {
+        try { source.stop(); } catch { /* already stopped */ }
+        source.disconnect();
+        gain.disconnect();
+      }, stopAtMs);
+    }
+    this.fadingOut = [];
+  }
+
+  /** TEST-ONLY: returns the number of audible sources right now. */
+  _debugActiveSourceCount(): number {
+    return (this.musicSource ? 1 : 0) + this.fadingOut.length;
+  }
+
   dispose(): void {
     if (this.musicSource && this.musicGain) {
       try { this.musicSource.stop(); } catch { /* already stopped */ }
@@ -758,17 +771,14 @@ export class SoundManager {
       this.musicGain = null;
     }
     this.musicEpoch += 1;
-    if (this.outgoingSource) {
-      try { this.outgoingSource.stop(); } catch { /* already stopped */ }
-      this.outgoingSource.disconnect();
-      this.outgoingGain?.disconnect();
-      this.outgoingSource = null;
-      this.outgoingGain = null;
+    // Stop every fading-out source and clear their cleanup timers.
+    for (const entry of this.fadingOut) {
+      if (entry.stopTimer !== null) window.clearTimeout(entry.stopTimer);
+      try { entry.source.stop(); } catch { /* already stopped */ }
+      entry.source.disconnect();
+      entry.gain.disconnect();
     }
-    if (this.outgoingStopTimer !== null) {
-      window.clearTimeout(this.outgoingStopTimer);
-      this.outgoingStopTimer = null;
-    }
+    this.fadingOut = [];
     this.musicBuffers.clear();
     this.bufferAccessOrder = [];
     this.inflightLoads.clear();

@@ -21,7 +21,7 @@ import {
   safeAdd,
   MAX_SAFE_QUANTA,
 } from '../formulas';
-import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
+import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, BIG_RIP_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
 import { SKILL_TIME_RATE_BASE, TIME_MAXED_STAGE_SECONDS } from '../balance';
@@ -345,11 +345,7 @@ describe('scaling formulas', () => {
     }, 0);
     expect(completedBigCrunchOnly.find((ending) => ending.id === 'big_crunch')?.unlocked).toBe(false);
 
-    const allEntities = STAGE_ENTITIES.map((entity) => ({
-      entityId: entity.id,
-      count: entity.maxCount,
-    }));
-    const bigRipReady = getEndingOptions({ ...baseState, purchasedEntities: allEntities }, 0);
+    const bigRipReady = getEndingOptions({ ...baseState, entropy: BIG_RIP_ENTROPY_THRESHOLD_KB }, 0);
     expect(bigRipReady.find((ending) => ending.id === 'big_rip')?.unlocked).toBe(true);
 
     const finalNoCrit = getEndingOptions({

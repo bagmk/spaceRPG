@@ -884,7 +884,7 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Magnetic Field':         { name: '자기장',           description: '해로운 항성풍을 막아주는 행성 방패.' },
   'Goldilocks Zone':        { name: '골디락스 영역',    description: '표면의 물이 액체로 머무는 궤도 구역.' },
   'Sun':                    { name: '태양',             description: '붕괴하는 성운에서 가장 먼저 태어나는 중심 별.' },
-  'Dyson Swarm':            { name: '다이슨 군집',      description: '별빛을 거두는 문명 규모의 반짝이는 구조물.' },
+  'Protoplanetary Disk':    { name: '원시행성 원반',    description: '먼지와 가스가 빙글빙글 돌며 세상을 빚어내는 거대한 요람.' },
   'Habitable World':        { name: '생명 가능 행성',   description: '생명을 위한 모든 조건이 맞아떨어진 세계.' },
 
   // Stage 11 — Earth formation → Life → Civilization
@@ -1151,7 +1151,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Liquid Water',     'H₂O·', 'Stable surface solvent enabling complex chemistry.',       'epic',   'click', 35.0),
     item('Magnetic Field',   '⇌',    'Planetary shield deflecting harmful stellar wind.',        'epic',   'crit',  2.0, true),
     item('Goldilocks Zone',  '🌡',   'Orbital band where surface water stays liquid.',           'epic',   'time',  5.0),
-    item('Dyson Swarm',      '☀⛭',   'A glittering civilization-scale lattice drinking starlight.','legendary','multiplier',50.0),
+    item('Protoplanetary Disk','◎',   'The spinning cradle of dust and gas that sculpts every world to come.','legendary','multiplier',50.0),
     item('Habitable World',  '⊕',    'A world where all the conditions for life align.',         'legendary','multiplier',50.0),
   ]),
 

@@ -69,6 +69,7 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 interface EntityDrawItem {
   id: string;
+  stageId: number;
   name: string;
   formula: string;
   color: string;
@@ -696,10 +697,11 @@ function drawNebulaCloud(
   now: number,
   strength: number,
   seed = 0,
+  cheap = false,
 ): void {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  const blobCount = 8 + Math.floor(strength * 8);
+  const blobCount = cheap ? 4 + Math.floor(strength * 4) : 8 + Math.floor(strength * 8);
   for (let i = 0; i < blobCount; i += 1) {
     const angle = unit(seed + i, 31) * Math.PI * 2 + Math.sin(now * 0.0002 + i) * 0.3;
     // scatter blobs more broadly across canvas
@@ -707,11 +709,15 @@ function drawNebulaCloud(
     const x = cx + Math.cos(angle) * dist;
     const y = cy + Math.sin(angle) * dist * 0.82;
     const r = radius * (0.14 + unit(seed + i, 33) * 0.28 + strength * 0.08) * (1 + Math.sin(now * 0.0009 + i) * 0.1);
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, hexToRgba(color, 0.03 + strength * 0.09));
-    grad.addColorStop(0.6, hexToRgba(color, 0.01 + strength * 0.03));
-    grad.addColorStop(1, hexToRgba(color, 0));
-    ctx.fillStyle = grad;
+    if (cheap) {
+      ctx.fillStyle = hexToRgba(color, 0.025 + strength * 0.055);
+    } else {
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, hexToRgba(color, 0.03 + strength * 0.09));
+      grad.addColorStop(0.6, hexToRgba(color, 0.01 + strength * 0.03));
+      grad.addColorStop(1, hexToRgba(color, 0));
+      ctx.fillStyle = grad;
+    }
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -1194,7 +1200,7 @@ function drawGlobalEntityFields(
     }
     // ── Stage 6: Dark Age / gas clouds — large nebula blobs
     if (textHas(text, 'cloud', 'gas', 'nebula', 'envelope', 'dust', 'wind', 'hydrogen', 'molecular', 'protogalactic')) {
-      drawNebulaCloud(ctx, cx, cy, radius * 1.05, col, now, strength, idLen);
+      drawNebulaCloud(ctx, cx, cy, radius * 1.05, col, now, strength, idLen, sid === 5 || sid === 6);
     }
     // ── Stage 7: First stars — stellar wind + HII glow
     if (textHas(text, 'star', 'protostar', 'stellar', 'hii', 'pop iii', 'supernova precursor')) {
@@ -1310,7 +1316,7 @@ function drawLocalEntityEffect(ctx: CanvasRenderingContext2D, position: EntityPo
   } else if (textHas(text, 'planet', 'moon', 'asteroid', 'disk', 'core', 'zone', 'habitable')) {
     drawDiskSwarm(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'cloud', 'gas', 'nebula', 'envelope', 'dust', 'wind', 'hydrogen')) {
-    drawNebulaCloud(ctx, 0, 0, glowRadius * 1.45, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
+    drawNebulaCloud(ctx, 0, 0, glowRadius * 1.45, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, item.stageId === 5 || item.stageId === 6);
   } else if (textHas(text, 'dna', 'rna')) {
     ctx.strokeStyle = hexToRgba(item.color, 0.24 + strength * 0.12);
     ctx.lineWidth = 1;
@@ -3782,6 +3788,7 @@ export function drawEntities(
     for (let copyIndex = 0; copyIndex < visibleCount; copyIndex++) {
       items.push({
         id: entity.id,
+        stageId,
         name: entity.name,
         formula: entity.formula,
         color: entity.visual.color,
@@ -4029,11 +4036,15 @@ export function drawEntities(
     const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
     if (distance > 110) continue;  // was 170 — fewer gradient strokes when particles bunch up
     const alpha = Math.max(0.04, 0.15 - distance / 1400);
-    const grad = ctx.createLinearGradient(previous.x, previous.y, current.x, current.y);
-    grad.addColorStop(0, hexToRgba(previous.item.glowColor, alpha));
-    grad.addColorStop(0.5, hexToRgba(current.item.glowColor, alpha * 0.3));
-    grad.addColorStop(1, hexToRgba(current.item.glowColor, alpha));
-    ctx.strokeStyle = grad;
+    if (stageId === 5 || stageId === 6) {
+      ctx.strokeStyle = hexToRgba(current.item.glowColor, alpha * 0.9);
+    } else {
+      const grad = ctx.createLinearGradient(previous.x, previous.y, current.x, current.y);
+      grad.addColorStop(0, hexToRgba(previous.item.glowColor, alpha));
+      grad.addColorStop(0.5, hexToRgba(current.item.glowColor, alpha * 0.3));
+      grad.addColorStop(1, hexToRgba(current.item.glowColor, alpha));
+      ctx.strokeStyle = grad;
+    }
     ctx.beginPath();
     ctx.moveTo(previous.x, previous.y);
     const midX = (previous.x + current.x) / 2 + Math.sin(now * 0.0004 + current.item.seed) * 8;

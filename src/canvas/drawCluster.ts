@@ -358,12 +358,31 @@ function drawNucleosynthesis(args: DrawClusterArgs): void {
     }, { x: 0, y: 0 });
     centroid.x /= g.length; centroid.y /= g.length;
     drawSoftNode(ctx, centroid.x, centroid.y, glowR, stage.coreColor, 0.22 + g.length * 0.06);
-    // small binding threads
+    // Nuclear binding energy — pulsing curved bonds between nucleons
+    const bondPulse = 0.5 + Math.sin(t * 3 + gi * 1.7) * 0.3;
     for (let k = 0; k < g.length; k += 1) {
       const a = cluster.motes[g[k]];
       for (let m = k + 1; m < g.length; m += 1) {
         const b = cluster.motes[g[m]];
-        drawThread(ctx, a.x, a.y, b.x, b.y, stage.accent, 0.08 + g.length * 0.06, 0.8 + g.length * 0.3);
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const perpX = -(b.y - a.y) * 0.25 * Math.sin(t * 2.5 + k + m);
+        const perpY = (b.x - a.x) * 0.25 * Math.sin(t * 2.5 + k + m);
+        // Curved bond
+        ctx.strokeStyle = hexToRgba(stage.accent, (0.12 + g.length * 0.08) * bondPulse);
+        ctx.lineWidth = 0.6 + g.length * 0.2;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(mx + perpX, my + perpY, b.x, b.y);
+        ctx.stroke();
+        // Energy spark traveling along bond
+        const sparkT = (t * 1.5 + k * 0.3 + m * 0.7) % 1;
+        const sx = a.x + (b.x - a.x) * sparkT + perpX * 4 * sparkT * (1 - sparkT);
+        const sy = a.y + (b.y - a.y) * sparkT + perpY * 4 * sparkT * (1 - sparkT);
+        ctx.fillStyle = hexToRgba('#ffffff', 0.4 * bondPulse);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     // draw particles inside cluster
@@ -404,18 +423,14 @@ function drawRecombinationField(args: DrawClusterArgs): void {
 function drawDarkAge(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, now } = args;
   const t = now / 1000;
-  // almost empty field, long trails and faint glows
+  // almost empty field, short trails and faint glows
   drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.92, stage.accent, 0.02);
   cluster.motes.forEach((mote, idx) => {
     const baseAlpha = 0.12 + Math.min(0.6, mote.mass * 0.04);
-    // draw a long faded trail (2 layers — was 4, halved for Stage 6 perf)
-    for (let s = 0; s < 2; s += 1) {
-      const decay = 1 - s / 2;
-      ctx.fillStyle = hexToRgba(mote.color, baseAlpha * decay * 0.5);
-      ctx.beginPath();
-      ctx.ellipse(mote.x - mote.vx * s * 0.9, mote.y - mote.vy * s * 0.9, Math.max(0.6, mote.r * 0.6 * decay), Math.max(0.6, mote.r * 0.6 * decay), 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.fillStyle = hexToRgba(mote.color, baseAlpha * 0.45);
+    ctx.beginPath();
+    ctx.arc(mote.x - mote.vx * 0.8, mote.y - mote.vy * 0.8, Math.max(0.6, mote.r * 0.55), 0, Math.PI * 2);
+    ctx.fill();
     drawStageSprite(ctx, stage.id, mote.x, mote.y, Math.max(0.6, mote.r * 0.65), mote.color, 0.42, mote.hue + Math.sin(t * 0.4 + idx));
   });
 }
@@ -649,47 +664,20 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
 
   // Layer 5b: accretion dust — glowing sparks orbiting outside the sun
   const sunVisualR = sunT > 0 ? (8 + sunT * 28) * 2.5 : 0; // sun corona radius
-  const dustAlpha = Math.max(0.25, 0.9 * (1 - rangeT(progress, 0.45, 0.88)));
+  const dustAlpha = Math.max(0.15, 0.6 * (1 - rangeT(progress, 0.45, 0.88)));
   if (dustAlpha > 0.005 && cluster.motes.length > 0) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     cluster.motes.forEach((mote) => {
       const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
       const dist = Math.hypot(cx - pushed.x, cy - pushed.y);
-      // Skip dust inside the sun corona — it wouldn't be visible anyway
       if (dist < sunVisualR) return;
-      const nx = dist > 0.1 ? (cx - pushed.x) / dist : 0;
-      const ny = dist > 0.1 ? (cy - pushed.y) / dist : 0;
 
-      // Outer glow halo
-      const sparkle = 0.6 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.4;
-      ctx.fillStyle = hexToRgba('#ffd880', dustAlpha * 0.2 * sparkle);
+      // Single warm dust speck — no glow, no streak, just a tiny dot
+      const sparkle = 0.5 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.2;
+      ctx.fillStyle = hexToRgba(mote.color, dustAlpha * 0.5 * sparkle);
       ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, mote.r * 4 + 2, 0, Math.PI * 2);
+      ctx.arc(pushed.x, pushed.y, mote.r * 0.6, 0, Math.PI * 2);
       ctx.fill();
-
-      // Bright particle core
-      ctx.fillStyle = hexToRgba('#ffe8b0', dustAlpha * 0.85 * sparkle);
-      ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, mote.r * 1.5 + 1, 0, Math.PI * 2);
-      ctx.fill();
-
-      // White hot center
-      ctx.fillStyle = hexToRgba('#ffffff', dustAlpha * 0.55 * sparkle);
-      ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, mote.r * 0.7, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Motion streak toward sun
-      const streakLen = Math.min(14, dist * 0.12);
-      ctx.strokeStyle = hexToRgba('#ffc860', dustAlpha * 0.4);
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(pushed.x, pushed.y);
-      ctx.lineTo(pushed.x + nx * streakLen, pushed.y + ny * streakLen);
-      ctx.stroke();
     });
-    ctx.restore();
   }
 
   // Layer 6: individual planet formation and stable orbits

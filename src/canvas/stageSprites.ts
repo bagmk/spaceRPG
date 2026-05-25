@@ -326,14 +326,29 @@ function drawSpriteBaryon(
 }
 
 function drawSpriteQuark(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.rotate(t);
-  ctx.fillStyle = color;
+  // QGP: turbulent plasma blob — vibrating, unstable, hot
+  const s = Math.max(1.5, r * 1.6);
+  const wobble = Math.sin(t * 4) * 0.3;
+  // Hot plasma glow
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * (1.2 + wobble * 0.3));
+  grad.addColorStop(0, hexToRgba('#ffffff', 0.5));
+  grad.addColorStop(0.3, hexToRgba(color, 0.4));
+  grad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(0, -r * 1.2);
-  ctx.lineTo(r, r);
-  ctx.lineTo(-r, r);
-  ctx.closePath();
+  ctx.arc(0, 0, s * (1.2 + wobble * 0.3), 0, Math.PI * 2);
   ctx.fill();
+  // Turbulent quarks buzzing around
+  for (let i = 0; i < 5; i++) {
+    const a = t * (1.2 + i * 0.3) + (i / 5) * Math.PI * 2;
+    const dist = s * (0.3 + Math.sin(t * 2.5 + i * 1.7) * 0.25);
+    const px = Math.cos(a) * dist;
+    const py = Math.sin(a) * dist;
+    ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#ff6644' : i % 3 === 1 ? '#44dd66' : '#4488ff', 0.6);
+    ctx.beginPath();
+    ctx.arc(px, py, s * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawSpriteNucleus(ctx: CanvasRenderingContext2D, r: number, color: string): void {
@@ -347,37 +362,87 @@ function drawSpriteNucleus(ctx: CanvasRenderingContext2D, r: number, color: stri
 }
 
 function drawSpriteAtom(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.fillStyle = color;
+  // Recombination: electron settling into orbit — atom forming
+  const s = Math.max(1.5, r * 1.4);
+  // Cheap halo: avoid per-particle gradients in dense Stage 5 fields.
+  ctx.fillStyle = hexToRgba(color, 0.16);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.2, r * 0.7), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.rotate(t * 0.8);
-  ctx.strokeStyle = hexToRgba(color, 0.8);
-  ctx.lineWidth = 1;
+  ctx.fillStyle = hexToRgba('#ffffff', 0.55);
   ctx.beginPath();
-  ctx.ellipse(0, 0, r * 1.8, r * 0.9, 0, 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  // Electron orbit. Use ellipse rotation directly to avoid per-mote save/rotate.
+  ctx.strokeStyle = hexToRgba(color, 0.2);
+  ctx.lineWidth = 0.5;
+  const orbitRotation = t * 0.4;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s * 1.25, s * 0.45, orbitRotation, 0, Math.PI * 2);
   ctx.stroke();
+  // Electron dot
+  const eAngle = t * 1.8;
+  const ox = Math.cos(eAngle) * s * 1.25;
+  const oy = Math.sin(eAngle) * s * 0.45;
+  const cosR = Math.cos(orbitRotation);
+  const sinR = Math.sin(orbitRotation);
+  const ex = ox * cosR - oy * sinR;
+  const ey = ox * sinR + oy * cosR;
+  ctx.fillStyle = hexToRgba('#88ccff', 0.8);
+  ctx.beginPath();
+  ctx.arc(ex, ey, s * 0.1, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawSpriteHydrogen(ctx: CanvasRenderingContext2D, r: number, color: string): void {
-  ctx.fillStyle = color;
+  // Dark Age: cold hydrogen gas cloud — dim, drifting, waiting
+  const s = Math.max(1.5, r * 1.6);
+  // Diffuse cloud, drawn with a few translucent blobs instead of gradients.
+  ctx.fillStyle = hexToRgba(color, 0.08);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1, r * 0.7), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(r, -1, 2, 2);
+  // Denser core knot
+  ctx.fillStyle = hexToRgba(color, 0.3);
+  ctx.beginPath();
+  ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  // Faint wispy edge
+  ctx.fillStyle = hexToRgba(color, 0.12);
+  ctx.beginPath();
+  ctx.arc(-s * 0.3, s * 0.2, s * 0.25, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawSpriteStar(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.rotate(t * 0.5);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, r * 0.4);
+  // First Stars: blazing hot young star — intense core + corona rays
+  const s = Math.max(2, r * 1.6);
+  const pulse = 0.85 + Math.sin(t * 2.5) * 0.15;
+  // Corona glow
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.4 * pulse);
+  grad.addColorStop(0, hexToRgba('#ffffff', 0.7 * pulse));
+  grad.addColorStop(0.25, hexToRgba(color, 0.4 * pulse));
+  grad.addColorStop(0.7, hexToRgba(color, 0.08));
+  grad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(0, -r * 1.8);
-  ctx.lineTo(0, r * 1.8);
-  ctx.moveTo(-r * 1.8, 0);
-  ctx.lineTo(r * 1.8, 0);
-  ctx.stroke();
+  ctx.arc(0, 0, s * 1.4 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+  // 4-point light rays
+  ctx.strokeStyle = hexToRgba(color, 0.2 * pulse);
+  ctx.lineWidth = 0.6;
+  for (let i = 0; i < 4; i++) {
+    const a = t * 0.3 + (i / 4) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * s * 1.8, Math.sin(a) * s * 1.8);
+    ctx.stroke();
+  }
+  // Bright core
+  ctx.fillStyle = hexToRgba('#ffffff', 0.8);
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawSpriteIonBubble(
@@ -416,12 +481,11 @@ function drawSpriteGalaxy(ctx: CanvasRenderingContext2D, r: number, color: strin
 }
 
 function drawSpritePlanet(ctx: CanvasRenderingContext2D, r: number, color: string): void {
-  const grad = ctx.createLinearGradient(-r, -r, r, r);
-  grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(1, color);
-  ctx.fillStyle = grad;
+  // Tiny dark dust speck — subtle, blends into the disk
+  const s = Math.max(0.8, r * 0.55);
+  ctx.fillStyle = hexToRgba(color, 0.45);
   ctx.beginPath();
-  ctx.arc(0, 0, Math.max(1.5, r * 1.1), 0, Math.PI * 2);
+  ctx.arc(0, 0, s, 0, Math.PI * 2);
   ctx.fill();
 }
 
