@@ -14,10 +14,12 @@ import { Leaderboard } from './components/Leaderboard';
 import {
   clearAllStoredState,
   clearSave,
-  loadBgmMuted,
-  saveBgmMuted,
   loadSfxMuted,
   saveSfxMuted,
+  loadMusicMuted,
+  saveMusicMuted,
+  loadMusicVolume,
+  saveMusicVolume,
   loadLanguage,
   saveLanguage,
 } from './game/storage';
@@ -67,8 +69,9 @@ function AppInner() {
   useCloudSync({ state, dispatch });
   const [route, setRoute] = useState<Route>('login');
   const [resumeAvailable, setResumeAvailable] = useState(hadSavedGame);
-  const [bgmMuted, setBgmMuted] = useState(loadBgmMuted);
   const [sfxMuted, setSfxMuted] = useState(loadSfxMuted);
+  const [musicMuted, setMusicMuted] = useState(loadMusicMuted);
+  const [musicVolume, setMusicVolumeState] = useState(loadMusicVolume);
   const [language, setLanguage] = useState(loadLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [bigBangRestarting, setBigBangRestarting] = useState(false);
@@ -77,7 +80,8 @@ function AppInner() {
   const soundManagerRef = useRef<SoundManager | null>(null);
 
   useEffect(() => {
-    const manager = new SoundManager(bgmMuted, sfxMuted);
+    const manager = new SoundManager(sfxMuted, musicMuted);
+    manager.setMusicVolume(musicVolume);
     soundManagerRef.current = manager;
     return () => manager.dispose();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,14 +128,19 @@ function AppInner() {
   }, []);
 
   useEffect(() => {
-    soundManagerRef.current?.setBgmMuted(bgmMuted);
-    saveBgmMuted(bgmMuted);
-  }, [bgmMuted]);
-
-  useEffect(() => {
     soundManagerRef.current?.setSfxMuted(sfxMuted);
     saveSfxMuted(sfxMuted);
   }, [sfxMuted]);
+
+  useEffect(() => {
+    soundManagerRef.current?.setMusicMuted(musicMuted);
+    saveMusicMuted(musicMuted);
+  }, [musicMuted]);
+
+  useEffect(() => {
+    soundManagerRef.current?.setMusicVolume(musicVolume);
+    saveMusicVolume(musicVolume);
+  }, [musicVolume]);
 
   useEffect(() => {
     saveLanguage(language);
@@ -189,7 +198,7 @@ function AppInner() {
             soundManagerRef.current?.unlock();
           }}
           onPlayBigBang={() => {
-            soundManagerRef.current?.playBigBang();
+            // (Big Bang sting removed — too cheesy. Music handles the transition.)
           }}
           onOpenAtlas={() => setRoute('atlas')}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
@@ -202,11 +211,13 @@ function AppInner() {
             state={state}
             dispatch={dispatch}
             soundManager={soundManagerRef.current}
-            bgmMuted={bgmMuted}
             sfxMuted={sfxMuted}
+            musicMuted={musicMuted}
+            musicVolume={musicVolume}
             language={language}
-            onToggleBgm={() => setBgmMuted((v) => !v)}
             onToggleSfx={() => setSfxMuted((v) => !v)}
+            onToggleMusic={() => setMusicMuted((v) => !v)}
+            onSetMusicVolume={setMusicVolumeState}
             onToggleLanguage={() => setLanguage((v) => (v === 'en' ? 'ko' : 'en'))}
             onRequestReset={() => setShowResetConfirm(true)}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
@@ -218,12 +229,13 @@ function AppInner() {
         <FinalScreen
           state={state}
           language={language}
+          soundManager={soundManagerRef.current}
           onBuyPrestigeUpgrade={(upgradeId) => dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId })}
           onOpenAtlas={() => setRoute('atlas')}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
           onPrestige={() => {
             soundManagerRef.current?.unlock();
-            soundManagerRef.current?.playBigBang();
+            // (Big Bang sting removed — too cheesy. Music handles the transition.)
             setBigBangRestarting(true);
           }}
         />

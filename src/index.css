@@ -7555,6 +7555,52 @@ button.stat-header-item {
   background: rgba(80, 200, 140, 0.1);
 }
 
+/* ── Focus mode ── */
+.focus-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-12px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.scale-indicator.focus-hidden,
+.bottom-buttons.focus-hidden {
+  transform: translateY(12px);
+}
+.hud-info,
+.bottom-buttons,
+.scale-indicator {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.focus-toggle-btn {
+  all: unset;
+  cursor: pointer;
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 90;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: all 0.25s ease;
+}
+.focus-toggle-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.6);
+}
+.focus-toggle-btn--active {
+  border-color: rgba(100, 200, 255, 0.5);
+  color: rgba(100, 200, 255, 0.8);
+  box-shadow: 0 0 8px rgba(100, 200, 255, 0.2);
+}
+
 /* ── Audio toggle buttons (BGM / SFX) ── */
 .settings-audio-btn {
   all: unset;

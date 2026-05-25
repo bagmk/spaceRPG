@@ -53,6 +53,7 @@ import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
 import { getPrestigeMultiplier, PRESTIGE_UPGRADES, type PrestigeUpgradeId } from '../game/prestige';
 import { useBoostNotifications } from '../hooks/useBoostNotifications';
+import { getChapterForStage, getChapterTrackUrls } from '../game/musicChapters';
 import { useAudioUnlockOnPointer } from '../hooks/useAudioUnlockOnPointer';
 import { useSaveErrorToast } from '../hooks/useSaveErrorToast';
 
@@ -100,11 +101,13 @@ interface GameScreenProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   soundManager: SoundManager | null;
-  bgmMuted: boolean;
   sfxMuted: boolean;
+  musicMuted: boolean;
+  musicVolume: number;
   language: 'en' | 'ko';
-  onToggleBgm: () => void;
   onToggleSfx: () => void;
+  onToggleMusic: () => void;
+  onSetMusicVolume: (v: number) => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
   onOpenLeaderboard?: () => void;
@@ -114,13 +117,15 @@ function EndingCinematic({
   endingId,
   language,
   onComplete,
+  soundManager,
 }: {
   endingId: EndingId | null;
   language: 'en' | 'ko';
   onComplete: () => void;
+  soundManager: SoundManager | null;
 }) {
   return endingId === null ? null : (
-    <EndingCredits endingId={endingId} language={language} onComplete={onComplete} />
+    <EndingCredits endingId={endingId} language={language} onComplete={onComplete} soundManager={soundManager} />
   );
 }
 
@@ -128,11 +133,13 @@ export function GameScreen({
   state,
   dispatch,
   soundManager,
-  bgmMuted,
   sfxMuted,
+  musicMuted,
+  musicVolume,
   language,
-  onToggleBgm,
   onToggleSfx,
+  onToggleMusic,
+  onSetMusicVolume,
   onToggleLanguage,
   onRequestReset,
   onOpenLeaderboard,
@@ -406,9 +413,45 @@ export function GameScreen({
     particleFieldRef.current?.tick(now, dt);
   });
 
+  // Per-stage music: lazy-load the stage's track pool, cross-fade rotation.
+  // Safe-fails when the file is absent — stage just stays silent.
   useEffect(() => {
-    soundManager?.setStage(displayStage.id - 1, displayStage.silenceBeforeMs ?? 0);
-  }, [soundManager, displayStage.id, displayStage.silenceBeforeMs]);
+    if (!soundManager) return;
+    const chapter = getChapterForStage(displayStage.id);
+    void soundManager.loadAndPlayChapterPool(chapter, getChapterTrackUrls(chapter));
+  }, [soundManager, displayStage.id]);
+
+  // Prefetch the *next* stage's music during idle time so the transition
+  // doesn't stall on fetch+decode. We use requestIdleCallback when available
+  // (most browsers) and fall back to setTimeout. Cancelled on unmount/change
+  // so we never prefetch a stage the user already left.
+  useEffect(() => {
+    if (!soundManager) return;
+    const nextStageId = displayStage.id + 1;
+    if (nextStageId > STAGES.length) return; // already on the last stage
+
+    const ric = (window as typeof window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    });
+    let handle: number | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const run = () => {
+      const chapter = getChapterForStage(nextStageId);
+      void soundManager.prefetchChapter(chapter, getChapterTrackUrls(chapter));
+    };
+    if (typeof ric.requestIdleCallback === 'function') {
+      handle = ric.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      timeoutHandle = setTimeout(run, 2000);
+    }
+    return () => {
+      if (handle !== null && typeof ric.cancelIdleCallback === 'function') {
+        ric.cancelIdleCallback(handle);
+      }
+      if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+    };
+  }, [soundManager, displayStage.id]);
 
   useEffect(() => {
     if (stage.mechanic === 'life_evolution' && progress01 >= 0.99 && !civPlayed.current) {
@@ -541,11 +584,13 @@ export function GameScreen({
       return;
     }
     setTransitionPhase('bursting');
+    // Play the grand stage-advance impact at the moment of birth (right when
+    // the implosion ends and the new stage starts to bloom).
+    soundManager?.playStageAdvanceImpact(state.stageIdx + 1);
     // The new cinematic transition system applies its own shake/scale/filter on
     // .app-shell.transitioning--<style>. We intentionally leave shakeClass empty
     // so it doesn't fight the cinematic transform animations.
     setShakeClass('');
-    soundManager?.playCondenseExplosion(state.stageIdx + 1);
   }, [dispatch, soundManager, state.imploding, state.pendingCondenseStageIdx, state.stageIdx, transitionPhase]);
 
   useEffect(() => {
@@ -968,11 +1013,13 @@ export function GameScreen({
 
       {settingsOpen ? (
         <SettingsPanel
-          bgmMuted={bgmMuted}
           sfxMuted={sfxMuted}
+          musicMuted={musicMuted}
+          musicVolume={musicVolume}
           language={language}
           soundManager={soundManager}
-          onToggleBgm={onToggleBgm}
+          onToggleMusic={onToggleMusic}
+          onSetMusicVolume={onSetMusicVolume}
           onToggleSfx={onToggleSfx}
           onToggleLanguage={onToggleLanguage}
           onRequestReset={() => { setSettingsOpen(false); soundManager?.playUIClose(); onRequestReset(); }}
@@ -1059,6 +1106,7 @@ export function GameScreen({
         <EndingCinematic
           endingId={state.selectedEndingId}
           language={language}
+          soundManager={soundManager}
           onComplete={() => dispatch({ type: 'COMPLETE_ENDING', now: Date.now() })}
         />
       ) : null}

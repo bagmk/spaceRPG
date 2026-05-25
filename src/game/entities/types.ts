@@ -11,6 +11,7 @@ export type EntityGlyph =
   | 'particle'
   | 'antiparticle'
   | 'quark'
+  | 'meson'        // NEW: pion/kaon — quark-antiquark pair
   | 'lepton'
   | 'boson'
   | 'nucleus'
@@ -19,10 +20,14 @@ export type EntityGlyph =
   | 'plasma'
   | 'radiation'
   | 'cloud'
+  | 'accretion'    // NEW: directional gas inflow
+  | 'envelope'     // NEW: bloated stellar envelope (red giant)
+  | 'nebula'       // NEW: planetary nebula — color-rich bipolar lobes
   | 'halo'
   | 'star'
   | 'supernova'
   | 'remnant'
+  | 'crystal'      // NEW: diamond/iron star — frozen lattice
   | 'black_hole'
   | 'galaxy'
   | 'planet'

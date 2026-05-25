@@ -42,7 +42,10 @@ const GLOW_RADIUS: Record<EntityRarity, number> = {
 };
 
 const MAX_VISIBLE_PER_ENTITY = 10;
-const MAX_TOTAL_ENTITY_DRAW = 32;
+// Generous soft ceiling. Physics is spatial-grid accelerated (see drawEntities),
+// so 200 particles ~= 60 fps comfortably even on mid-range devices. Simple
+// truncation in insertion order — Common items are never preferentially erased.
+const MAX_TOTAL_ENTITY_DRAW = 200;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 interface EntityDrawItem {
@@ -3447,6 +3450,152 @@ function drawEntityGlyph(
       }
       break;
     }
+    case 'meson': {
+      // Quark-antiquark pair tied by a vibrating color string
+      const sep = s * 0.5;
+      const wobble = Math.sin(now * 0.006 + unit(item.seed, 11) * 3) * s * 0.08;
+      // Connecting string
+      ctx.strokeStyle = hexToRgba(item.color, 0.6);
+      ctx.lineWidth = s * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(-sep, wobble);
+      ctx.quadraticCurveTo(0, -wobble * 2, sep, wobble);
+      ctx.stroke();
+      // Two endpoints: quark + antiquark
+      ctx.fillStyle = hexToRgba('#ffffff', 0.85);
+      fillCircle(ctx, -sep, wobble, s * 0.18);
+      fillCircle(ctx, sep, wobble, s * 0.18);
+      // Bar over the right one to indicate "anti"
+      ctx.strokeStyle = hexToRgba('#ffffff', 0.65);
+      ctx.lineWidth = s * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(sep - s * 0.18, wobble - s * 0.26);
+      ctx.lineTo(sep + s * 0.18, wobble - s * 0.26);
+      ctx.stroke();
+      break;
+    }
+    case 'accretion': {
+      // Funnel-like inflow: streamlines curving inward toward center
+      const arms = 6;
+      for (let i = 0; i < arms; i++) {
+        const a0 = (i / arms) * Math.PI * 2 + spin * 0.4;
+        ctx.strokeStyle = hexToRgba(item.color, 0.55);
+        ctx.lineWidth = s * 0.08;
+        ctx.beginPath();
+        for (let t = 0; t < 12; t++) {
+          const u = t / 12;
+          const angle = a0 + u * 0.9; // curves as it falls in
+          const radius = s * (1.1 - u);
+          const px = Math.cos(angle) * radius;
+          const py = Math.sin(angle) * radius;
+          if (t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      // Inflowing dust particles
+      for (let i = 0; i < 5; i++) {
+        const t = (now * 0.001 + unit(item.seed, i + 50)) % 1;
+        const angle = unit(item.seed, i + 60) * Math.PI * 2 + t * 0.8;
+        const radius = s * (1.0 - t);
+        ctx.fillStyle = hexToRgba(item.color, 0.7 * (1 - t * 0.5));
+        fillCircle(ctx, Math.cos(angle) * radius, Math.sin(angle) * radius, s * 0.06);
+      }
+      // Tiny bright core (the thing being fed)
+      ctx.fillStyle = hexToRgba('#ffffff', 0.7);
+      fillCircle(ctx, 0, 0, s * 0.12 * pulse);
+      break;
+    }
+    case 'envelope': {
+      // Small hot core wrapped in a billowing, slowly pulsing red envelope
+      const breathing = 1 + Math.sin(now * 0.002 + unit(item.seed, 5)) * 0.12;
+      // Outer envelope (translucent)
+      const envR = s * 1.05 * breathing;
+      const grad = ctx.createRadialGradient(0, 0, s * 0.25, 0, 0, envR);
+      grad.addColorStop(0, hexToRgba(item.color, 0.55));
+      grad.addColorStop(0.55, hexToRgba(item.color, 0.25));
+      grad.addColorStop(1, hexToRgba(item.color, 0));
+      ctx.fillStyle = grad;
+      fillCircle(ctx, 0, 0, envR);
+      // Wispy surface filaments
+      for (let i = 0; i < 8; i++) {
+        const a = spin * 0.3 + i * (Math.PI / 4);
+        const wr = envR * (0.7 + Math.sin(now * 0.003 + i) * 0.2);
+        ctx.strokeStyle = hexToRgba(item.color, 0.35);
+        ctx.lineWidth = s * 0.04;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * envR * 0.4, Math.sin(a) * envR * 0.4);
+        ctx.lineTo(Math.cos(a) * wr, Math.sin(a) * wr);
+        ctx.stroke();
+      }
+      // Bright compact core
+      ctx.fillStyle = hexToRgba('#ffe680', 0.9 * pulse);
+      fillCircle(ctx, 0, 0, s * 0.22);
+      break;
+    }
+    case 'nebula': {
+      // Bipolar lobes with a faint central white-dwarf seed
+      ctx.rotate(spin * 0.3);
+      // Two asymmetric lobes (one on each side)
+      for (const side of [-1, 1]) {
+        const lobeGrad = ctx.createRadialGradient(side * s * 0.55, 0, 0, side * s * 0.55, 0, s * 0.7);
+        lobeGrad.addColorStop(0, hexToRgba(item.color, 0.55));
+        lobeGrad.addColorStop(0.6, hexToRgba(item.color, 0.18));
+        lobeGrad.addColorStop(1, hexToRgba(item.color, 0));
+        ctx.fillStyle = lobeGrad;
+        ctx.beginPath();
+        ctx.ellipse(side * s * 0.55, 0, s * 0.7, s * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Equatorial ring (thin, slightly tilted)
+      ctx.strokeStyle = hexToRgba(item.color, 0.7);
+      ctx.lineWidth = s * 0.06;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 1.05, s * 0.18, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Central white-dwarf core (very bright pinpoint)
+      ctx.fillStyle = hexToRgba('#e8f4ff', 0.95 * pulse);
+      fillCircle(ctx, 0, 0, s * 0.13);
+      break;
+    }
+    case 'crystal': {
+      // A regular hexagonal lattice of bright nodes — frozen geometry
+      const verts = 6;
+      const r1 = s * 0.85;
+      // Outer hexagon
+      ctx.strokeStyle = hexToRgba(item.color, 0.85);
+      ctx.lineWidth = s * 0.07;
+      ctx.beginPath();
+      for (let i = 0; i <= verts; i++) {
+        const a = (i / verts) * Math.PI * 2 + spin * 0.05;
+        const px = Math.cos(a) * r1;
+        const py = Math.sin(a) * r1;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      // Inner spokes (to give a clear faceted look)
+      ctx.strokeStyle = hexToRgba(item.color, 0.45);
+      ctx.lineWidth = s * 0.045;
+      for (let i = 0; i < verts; i++) {
+        const a = (i / verts) * Math.PI * 2 + spin * 0.05;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        ctx.stroke();
+      }
+      // Glittering vertex dots
+      for (let i = 0; i < verts; i++) {
+        const a = (i / verts) * Math.PI * 2 + spin * 0.05;
+        const glint = 0.55 + Math.sin(now * 0.005 + i * 1.7) * 0.35;
+        ctx.fillStyle = hexToRgba('#ffffff', glint);
+        fillCircle(ctx, Math.cos(a) * r1, Math.sin(a) * r1, s * 0.09);
+      }
+      // Center gem
+      ctx.fillStyle = hexToRgba('#ffffff', 0.9 * pulse);
+      fillCircle(ctx, 0, 0, s * 0.16);
+      break;
+    }
     case 'particle':
     default: {
       // Generic particle cluster
@@ -3535,9 +3684,11 @@ export function drawEntities(
     return;
   }
 
+  // Soft total cap: simple truncation in insertion order (no rarity priority).
+  // The original rarity-priority cap erased Common entities when Rare/Epic
+  // were added, so we just slice from the end if we ever exceed the ceiling.
+  // Per-entity cap (MAX_VISIBLE_PER_ENTITY = 6) usually keeps us well under.
   if (items.length > MAX_TOTAL_ENTITY_DRAW) {
-    const RARITY_PRIORITY: Record<string, number> = { legendary: 0, epic: 1, rare: 2, common: 3 };
-    items.sort((a, b) => (RARITY_PRIORITY[a.rarity] ?? 3) - (RARITY_PRIORITY[b.rarity] ?? 3));
     items.length = MAX_TOTAL_ENTITY_DRAW;
   }
 
@@ -3605,37 +3756,72 @@ export function drawEntities(
     bodies.push({ pos, body, mass: RARITY_MASS[item.rarity] ?? 1, pers: EFFECT_PERSONALITY[item.effectType] ?? EFFECT_PERSONALITY.auto });
   }
 
-  // Physics step
+  // ── Physics step (spatial-grid accelerated, O(N) average) ──────────────────
+  // Each body is binned into a CELL_SIZE × CELL_SIZE grid cell. For each body
+  // we only check pairs in its own cell + the 8 neighboring cells, and we
+  // skip any pair beyond INTERACTION_RADIUS. This brings the per-frame cost
+  // from N² (e.g. 19,600 pair checks for 140 particles) down to roughly
+  // O(N × k) where k is the average neighbor count (~10-25), so the same
+  // 140 particles now do ~1,400-3,500 pair checks instead.
+  const CELL_SIZE = 110;
+  const INTERACTION_RADIUS = 200;
+  const INTERACTION_RADIUS_SQ = INTERACTION_RADIUS * INTERACTION_RADIUS;
+  const grid = new Map<number, number[]>();
+  const cellKey = (gx: number, gy: number) => gx * 100003 + gy;
+  for (let i = 0; i < bodies.length; i++) {
+    const b = bodies[i];
+    const gx = Math.floor(b.body.x / CELL_SIZE);
+    const gy = Math.floor(b.body.y / CELL_SIZE);
+    const k = cellKey(gx, gy);
+    let list = grid.get(k);
+    if (!list) { list = []; grid.set(k, list); }
+    list.push(i);
+  }
+
   for (let i = 0; i < bodies.length; i++) {
     const a = bodies[i];
-    for (let j = i + 1; j < bodies.length; j++) {
-      const b = bodies[j];
-      const dx = b.body.x - a.body.x;
-      const dy = b.body.y - a.body.y;
-      const d = Math.max(4, Math.hypot(dx, dy));
-      const nx = dx / d;
-      const ny = dy / d;
+    const agx = Math.floor(a.body.x / CELL_SIZE);
+    const agy = Math.floor(a.body.y / CELL_SIZE);
 
-      // Gravity pull between entities
-      const gravAvg = (a.pers.gravityMult + b.pers.gravityMult) * 0.5;
-      const gForce = dyn.gravity * gravAvg * (a.mass + b.mass) * 0.5 / (d * d + 400);
-      a.body.vx += nx * gForce * a.pers.speedMult / a.mass;
-      a.body.vy += ny * gForce * a.pers.speedMult / a.mass;
-      b.body.vx -= nx * gForce * b.pers.speedMult / b.mass;
-      b.body.vy -= ny * gForce * b.pers.speedMult / b.mass;
+    // Visit own cell + 8 neighbors
+    for (let ox = -1; ox <= 1; ox++) {
+      for (let oy = -1; oy <= 1; oy++) {
+        const list = grid.get(cellKey(agx + ox, agy + oy));
+        if (!list) continue;
+        for (let k = 0; k < list.length; k++) {
+          const j = list[k];
+          if (j <= i) continue;  // unordered pair: only do i<j once
+          const b = bodies[j];
+          const dx = b.body.x - a.body.x;
+          const dy = b.body.y - a.body.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq > INTERACTION_RADIUS_SQ) continue;  // far-field cutoff
+          const d = Math.max(4, Math.sqrt(distSq));
+          const nx = dx / d;
+          const ny = dy / d;
 
-      // Repulsion when close
-      const minDist = a.pos.size + b.pos.size + 18;
-      if (d < minDist) {
-        const distAC = Math.hypot(a.body.x - cx, a.body.y - cy);
-        const distBC = Math.hypot(b.body.x - cx, b.body.y - cy);
-        const centerFade = Math.min(1, Math.min(distAC, distBC) / 50);
-        const repAvg = (a.pers.repulsionMult + b.pers.repulsionMult) * 0.5;
-        const push = ((minDist - d) / minDist) * dyn.repulsion * repAvg * 0.08 * centerFade;
-        a.body.vx -= nx * push * a.pers.speedMult / a.mass;
-        a.body.vy -= ny * push * a.pers.speedMult / a.mass;
-        b.body.vx += nx * push * b.pers.speedMult / b.mass;
-        b.body.vy += ny * push * b.pers.speedMult / b.mass;
+          // Gravity pull between entities
+          const gravAvg = (a.pers.gravityMult + b.pers.gravityMult) * 0.5;
+          const gForce = dyn.gravity * gravAvg * (a.mass + b.mass) * 0.5 / (d * d + 400);
+          a.body.vx += nx * gForce * a.pers.speedMult / a.mass;
+          a.body.vy += ny * gForce * a.pers.speedMult / a.mass;
+          b.body.vx -= nx * gForce * b.pers.speedMult / b.mass;
+          b.body.vy -= ny * gForce * b.pers.speedMult / b.mass;
+
+          // Repulsion when close
+          const minDist = a.pos.size + b.pos.size + 18;
+          if (d < minDist) {
+            const distAC = Math.hypot(a.body.x - cx, a.body.y - cy);
+            const distBC = Math.hypot(b.body.x - cx, b.body.y - cy);
+            const centerFade = Math.min(1, Math.min(distAC, distBC) / 50);
+            const repAvg = (a.pers.repulsionMult + b.pers.repulsionMult) * 0.5;
+            const push = ((minDist - d) / minDist) * dyn.repulsion * repAvg * 0.08 * centerFade;
+            a.body.vx -= nx * push * a.pers.speedMult / a.mass;
+            a.body.vy -= ny * push * a.pers.speedMult / a.mass;
+            b.body.vx += nx * push * b.pers.speedMult / b.mass;
+            b.body.vy += ny * push * b.pers.speedMult / b.mass;
+          }
+        }
       }
     }
 

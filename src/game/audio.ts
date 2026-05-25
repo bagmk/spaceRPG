@@ -2,12 +2,6 @@ import { TUNING } from './constants';
 import { dbToGain } from './formulas';
 import type { EndingId, RogueTypeKey } from './types';
 
-interface ActiveDrone {
-  oscillators: OscillatorNode[];
-  gain: GainNode;
-  filter: BiquadFilterNode;
-}
-
 type AudioContextConstructor = typeof AudioContext;
 
 function getAudioContextCtor(): AudioContextConstructor | undefined {
@@ -29,19 +23,56 @@ export class SoundManager {
 
   private unlocked = false;
 
-  private bgmMuted: boolean;
-
   private sfxMuted: boolean;
 
   private clickTimestamps: number[] = [];
 
   private lastClickAt = 0;
 
-  private ambient: ActiveDrone | null = null;
+  // ── Music layer (chapter-based, separate from procedural drone) ──────────
+  // Real audio-file BGM that plays per "chapter" (per-stage pool).
+  private musicSource: AudioBufferSourceNode | null = null;
+  private musicGain: GainNode | null = null;
+  private currentChapter: string | null = null;
+  private musicBuffers = new Map<string, AudioBuffer>();
+  private inflightLoads = new Map<string, Promise<AudioBuffer | null>>();
+  private musicMuted = false;
+  private musicVolume = 1; // user multiplier 0..1, applied on top of MUSIC_VOLUME_DB
 
-  constructor(bgmMuted: boolean, sfxMuted: boolean) {
-    this.bgmMuted = bgmMuted;
+  // LRU cache for decoded AudioBuffers. Web Audio decodes MP3s to 32-bit float
+  // PCM in memory (~11x file size). With 25 stage/ending tracks at 256kbps,
+  // unbounded caching reaches ~1.5GB after a full playthrough — enough to
+  // trigger thermal throttling and GC stalls on mid-tier machines.
+  // 4 entries ≈ current + last + next + pool partner; plenty for smooth UX.
+  private static readonly MAX_CACHED_BUFFERS = 4;
+  private bufferAccessOrder: string[] = []; // oldest -> newest
+
+  // decodeAudioData supposedly runs off the main thread, but in practice large
+  // MP3s can stall for >200ms on low-end hardware. Surface those so we know
+  // which assets need re-encoding.
+  private static readonly SLOW_DECODE_WARN_MS = 250;
+
+  // Chapter-pool rotation: each chapter id maps to N candidate tracks (URLs).
+  // When one finishes, we cross-fade into a random other one from the pool.
+  private chapterPools = new Map<string, AudioBuffer[]>();
+  private currentPoolId: string | null = null;
+  private currentPoolIdx = -1;
+  // Monotonic epoch — bumps on every chapter switch / fade-out. Async tasks
+  // (load promises, chain timers) capture the epoch at start and bail if it
+  // changed by the time they resolve, so they can't accidentally start an
+  // outdated track on top of the current one.
+  private musicEpoch = 0;
+  // At most 1 outgoing track is allowed during cross-fade. If the user
+  // switches stages rapidly we force-cut older outgoing tracks (300ms snap
+  // fade) so we never stack 3+ simultaneous tracks. The "outgoing" slot is
+  // the track that WAS this.musicSource at the moment a new switch occurred.
+  private outgoingSource: AudioBufferSourceNode | null = null;
+  private outgoingGain: GainNode | null = null;
+  private outgoingStopTimer: number | null = null;
+
+  constructor(sfxMuted: boolean, musicMuted = false) {
     this.sfxMuted = sfxMuted;
+    this.musicMuted = musicMuted;
   }
 
   unlock(): void {
@@ -54,10 +85,6 @@ export class SoundManager {
     }
     this.unlocked = true;
     void ctx.resume();
-    if (this.ambient) {
-      const targetGain = this.bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
-      this.ambient.gain.gain.setValueAtTime(targetGain, ctx.currentTime);
-    }
   }
 
   // Call this when visibility returns. Safe to call multiple times.
@@ -71,86 +98,8 @@ export class SoundManager {
     }
   }
 
-  setBgmMuted(bgmMuted: boolean): void {
-    this.bgmMuted = bgmMuted;
-    const ctx = this.context;
-    if (!ctx || !this.ambient) {
-      return;
-    }
-    const targetGain = bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
-    this.ambient.gain.gain.cancelScheduledValues(ctx.currentTime);
-    this.ambient.gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.05);
-  }
-
   setSfxMuted(sfxMuted: boolean): void {
     this.sfxMuted = sfxMuted;
-  }
-
-  setStage(stageIdx: number, silenceBeforeMs = 0): void {
-    const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked) {
-      return;
-    }
-    if (stageIdx >= 15) {
-      this.fadeOutAmbient(2000);
-      return;
-    }
-    try {
-      const root = 55 * Math.pow(2, stageIdx * 0.18);
-      const gain = ctx.createGain();
-      gain.gain.value = 0;
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 600;
-      filter.Q.value = 0.9;
-      gain.connect(filter);
-      filter.connect(this.masterGain!);
-
-      const oscA = ctx.createOscillator();
-      oscA.type = 'sawtooth';
-      oscA.frequency.value = root;
-      const oscB = ctx.createOscillator();
-      oscB.type = 'sawtooth';
-      oscB.frequency.value = root * 1.005;
-
-      oscA.connect(gain);
-      oscB.connect(gain);
-      oscA.start();
-      oscB.start();
-
-      const targetGain = this.bgmMuted ? 0 : dbToGain(TUNING.DRONE_VOLUME_DB);
-      if (silenceBeforeMs > 0) {
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + silenceBeforeMs / 1000);
-        gain.gain.linearRampToValueAtTime(
-          targetGain,
-          ctx.currentTime + silenceBeforeMs / 1000 + TUNING.AMBIENT_CROSSFADE_MS / 1000,
-        );
-      } else {
-        gain.gain.linearRampToValueAtTime(
-          targetGain,
-          ctx.currentTime + TUNING.AMBIENT_CROSSFADE_MS / 1000,
-        );
-      }
-
-      const previous = this.ambient;
-      this.ambient = { oscillators: [oscA, oscB], gain, filter };
-
-      if (previous) {
-        previous.gain.gain.cancelScheduledValues(ctx.currentTime);
-        previous.gain.gain.linearRampToValueAtTime(
-          0,
-          ctx.currentTime + TUNING.AMBIENT_CROSSFADE_MS / 1000,
-        );
-        window.setTimeout(() => {
-          previous.oscillators.forEach((oscillator) => oscillator.stop());
-          previous.gain.disconnect();
-          previous.filter.disconnect();
-        }, TUNING.AMBIENT_CROSSFADE_MS + TUNING.CLICK_MIN_GAP_MS);
-      }
-    } catch (err) {
-      this.logAudioError(err);
-    }
   }
 
   playClick(stageIdx: number, isCrit: boolean): void {
@@ -181,24 +130,6 @@ export class SoundManager {
         dbToGain(TUNING.CLICK_VOLUME_DB - 2) * limiter,
       );
     }
-  }
-
-  fadeOutAmbient(durationMs: number): void {
-    const ctx = this.context;
-    const ambient = this.ambient;
-    if (!ctx || !ambient) {
-      return;
-    }
-    ambient.gain.gain.cancelScheduledValues(ctx.currentTime);
-    ambient.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
-    window.setTimeout(() => {
-      ambient.oscillators.forEach((oscillator) => oscillator.stop());
-      ambient.gain.disconnect();
-      ambient.filter.disconnect();
-      if (this.ambient === ambient) {
-        this.ambient = null;
-      }
-    }, durationMs + TUNING.CLICK_MIN_GAP_MS);
   }
 
   playAutoTick(stageIdx: number, rate: number): void {
@@ -241,89 +172,6 @@ export class SoundManager {
     }
   }
 
-  playCondenseExplosion(stageId = 1): void {
-    const ctx = this.ensureContext();
-    const master = this.masterGain;
-    if (!this.isUsable() || !ctx || !master || !this.unlocked || this.sfxMuted) {
-      return;
-    }
-    try {
-      const now = ctx.currentTime;
-      const vol = dbToGain(TUNING.COLLISION_VOLUME_DB - 3);
-
-      // Stage-based parameters for variety
-      // Each stage gets different pitch, wave type, chord, and character
-      const stageChar = this._getStageCondenseCharacter(stageId);
-
-      // 1. Impact thump
-      const impact = ctx.createOscillator();
-      impact.type = stageChar.impactWave;
-      const impactG = ctx.createGain();
-      impact.frequency.setValueAtTime(stageChar.impactFreq, now);
-      impact.frequency.exponentialRampToValueAtTime(stageChar.impactFreq * 0.25, now + 0.45);
-      impactG.gain.setValueAtTime(vol * 1.1, now);
-      impactG.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-      impact.connect(impactG); impactG.connect(master);
-      impact.start(now); impact.stop(now + 0.5);
-
-      // 2. Noise texture
-      const nDur = stageChar.noiseDur;
-      const nBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * nDur), ctx.sampleRate);
-      const nData = nBuf.getChannelData(0);
-      for (let i = 0; i < nData.length; i++) nData[i] = (Math.random() * 2 - 1) * (1 - i / nData.length);
-      const nSrc = ctx.createBufferSource(); nSrc.buffer = nBuf;
-      const nFilt = ctx.createBiquadFilter();
-      nFilt.type = stageChar.noiseFilterType;
-      nFilt.frequency.setValueAtTime(stageChar.noiseFreqStart, now);
-      nFilt.frequency.exponentialRampToValueAtTime(stageChar.noiseFreqEnd, now + nDur);
-      nFilt.Q.value = stageChar.noiseQ;
-      const nG = ctx.createGain();
-      nG.gain.setValueAtTime(vol * 0.4, now);
-      nG.gain.exponentialRampToValueAtTime(0.0001, now + nDur);
-      nSrc.connect(nFilt); nFilt.connect(nG); nG.connect(master); nSrc.start(now);
-
-      // 3. Chord tones
-      stageChar.chord.forEach((freq: number, i: number) => {
-        const o = ctx.createOscillator();
-        o.type = stageChar.chordWave;
-        const g = ctx.createGain();
-        const d = 0.12 + i * 0.1;
-        o.frequency.setValueAtTime(freq, now + d);
-        o.frequency.linearRampToValueAtTime(freq * stageChar.chordSlide, now + d + 1.0);
-        g.gain.setValueAtTime(0.0001, now + d);
-        g.gain.linearRampToValueAtTime(vol * 0.1, now + d + 0.12);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + d + 1.1);
-        o.connect(g); g.connect(master);
-        o.start(now + d); o.stop(now + d + 1.2);
-      });
-
-      // 4. Tail shimmer
-      const sh = ctx.createOscillator();
-      sh.type = 'triangle';
-      const shG = ctx.createGain();
-      sh.frequency.setValueAtTime(stageChar.shimmerFreq, now + 0.25);
-      sh.frequency.exponentialRampToValueAtTime(stageChar.shimmerFreq * 2, now + 1.8);
-      shG.gain.setValueAtTime(0.0001, now + 0.25);
-      shG.gain.linearRampToValueAtTime(vol * 0.05, now + 0.5);
-      shG.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
-      sh.connect(shG); shG.connect(master);
-      sh.start(now + 0.25); sh.stop(now + 2.1);
-
-      // 5. Sub rumble
-      const rb = ctx.createOscillator();
-      rb.type = 'sine';
-      const rbG = ctx.createGain();
-      rb.frequency.setValueAtTime(stageChar.rumbleFreq, now + 0.08);
-      rb.frequency.exponentialRampToValueAtTime(stageChar.rumbleFreq * 0.4, now + 2.2);
-      rbG.gain.setValueAtTime(vol * 0.35, now + 0.08);
-      rbG.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-      rb.connect(rbG); rbG.connect(master);
-      rb.start(now + 0.08); rb.stop(now + 2.3);
-    } catch (err) {
-      this.logAudioError(err);
-    }
-  }
-
   private _getStageCondenseCharacter(stageId: number) {
     type W = OscillatorType;
     type F = BiquadFilterType;
@@ -352,43 +200,6 @@ export class SoundManager {
       16: { impactWave:'triangle', impactFreq:40,  noiseFilterType:'lowpass',  noiseFreqStart:200,  noiseFreqEnd:40,  noiseQ:1, noiseDur:3.0, chord:[98,123,147,196],  chordWave:'sine',     chordSlide:0.6,  shimmerFreq:300,  rumbleFreq:18  }, // Heat Death — silence approaching
     };
     return characters[stageId] ?? characters[1];
-  }
-
-  playBigBang(): void {
-    const ctx = this.ensureContext();
-    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) {
-      return;
-    }
-    try {
-      const volume = dbToGain(TUNING.BIG_BANG_VOLUME_DB);
-      this.playNoiseBurst(0.2, volume, 2000);
-
-      const chirp = ctx.createOscillator();
-      chirp.type = 'sawtooth';
-      const chirpGain = ctx.createGain();
-      chirpGain.gain.value = volume * 0.5;
-      chirp.connect(chirpGain);
-      chirpGain.connect(this.masterGain!);
-      chirp.frequency.setValueAtTime(8000, ctx.currentTime);
-      chirp.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 1.5);
-      chirpGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
-      chirp.start();
-      chirp.stop(ctx.currentTime + 1.5);
-
-      const boomDelay = 0.25;
-      const boom = ctx.createOscillator();
-      boom.type = 'sine';
-      const boomGain = ctx.createGain();
-      boomGain.gain.setValueAtTime(volume * 0.8, ctx.currentTime + boomDelay);
-      boomGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + boomDelay + 0.6);
-      boom.frequency.setValueAtTime(80, ctx.currentTime + boomDelay);
-      boom.connect(boomGain);
-      boomGain.connect(this.masterGain!);
-      boom.start(ctx.currentTime + boomDelay);
-      boom.stop(ctx.currentTime + boomDelay + 0.6);
-    } catch (err) {
-      this.logAudioError(err);
-    }
   }
 
   playTimeAccelerationWhoosh(intensity: number): void {
@@ -527,13 +338,444 @@ export class SoundManager {
     } catch (err) { this.logAudioError(err); }
   }
 
-  dispose(): void {
-    if (this.ambient) {
-      this.ambient.oscillators.forEach((oscillator) => oscillator.stop());
-      this.ambient.gain.disconnect();
-      this.ambient.filter.disconnect();
-      this.ambient = null;
+  // ── Chapter music API ──────────────────────────────────────────────────
+  // Lazy-load + cross-fade audio files (mp3/ogg/m4a) by chapter id.
+  // playChapter('stellar') is idempotent — calling it again with the same id
+  // is a no-op so the song doesn't restart when the player navigates within
+  // the same era.
+
+  async loadChapter(chapterId: string, url: string): Promise<AudioBuffer | null> {
+    if (this.musicBuffers.has(chapterId)) {
+      this.touchBuffer(chapterId);
+      return this.musicBuffers.get(chapterId)!;
     }
+    if (this.inflightLoads.has(chapterId)) return this.inflightLoads.get(chapterId)!;
+    const ctx = this.ensureContext();
+    if (!ctx) return null;
+    const promise = (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
+        const arrayBuffer = await res.arrayBuffer();
+        const decodeStart = performance.now();
+        const buffer = await ctx.decodeAudioData(arrayBuffer);
+        const decodeMs = performance.now() - decodeStart;
+        if (decodeMs > SoundManager.SLOW_DECODE_WARN_MS) {
+          console.warn(
+            `[audio] slow decode: ${chapterId} (${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB) ` +
+              `took ${decodeMs.toFixed(0)}ms — consider re-encoding at lower bitrate`,
+          );
+        }
+        this.musicBuffers.set(chapterId, buffer);
+        this.touchBuffer(chapterId);
+        this.evictIfNeeded();
+        return buffer;
+      } catch (err) {
+        this.logAudioError(err);
+        return null;
+      } finally {
+        this.inflightLoads.delete(chapterId);
+      }
+    })();
+    this.inflightLoads.set(chapterId, promise);
+    return promise;
+  }
+
+  /**
+   * Prefetch a chapter's buffers without starting playback. Use this to warm
+   * the cache for the next stage during idle time, so the actual transition
+   * doesn't stall on fetch+decode. Idempotent and respects LRU cache size.
+   */
+  async prefetchChapter(chapterId: string, urls: string[]): Promise<void> {
+    if (!urls.length) return;
+    await Promise.all(
+      urls.map((url, i) => this.loadChapter(`${chapterId}#${i}`, url)),
+    );
+  }
+
+  /** Move a buffer key to the most-recently-used position. */
+  private touchBuffer(id: string): void {
+    const idx = this.bufferAccessOrder.indexOf(id);
+    if (idx >= 0) this.bufferAccessOrder.splice(idx, 1);
+    this.bufferAccessOrder.push(id);
+  }
+
+  /**
+   * Evict oldest buffers until we are at or below MAX_CACHED_BUFFERS.
+   * NEVER evicts:
+   *   - The buffer currently driving musicSource (audible)
+   *   - Any buffer in the currently-active chapterPool (next in chain)
+   *   - The outgoing source's buffer (mid-crossfade)
+   * If all remaining entries are protected, eviction stops early — better to
+   * exceed the limit briefly than to glitch the audio.
+   */
+  private evictIfNeeded(): void {
+    while (this.bufferAccessOrder.length > SoundManager.MAX_CACHED_BUFFERS) {
+      const activePool = this.currentPoolId
+        ? this.chapterPools.get(this.currentPoolId)
+        : null;
+      const playingBuf = this.musicSource?.buffer ?? null;
+      const outgoingBuf = this.outgoingSource?.buffer ?? null;
+      let evictedIdx = -1;
+      for (let i = 0; i < this.bufferAccessOrder.length; i += 1) {
+        const id = this.bufferAccessOrder[i];
+        const buf = this.musicBuffers.get(id);
+        if (!buf) {
+          // Stale entry — just drop it from the order list.
+          evictedIdx = i;
+          break;
+        }
+        if (buf === playingBuf) continue;
+        if (buf === outgoingBuf) continue;
+        if (activePool && activePool.includes(buf)) continue;
+        evictedIdx = i;
+        break;
+      }
+      if (evictedIdx < 0) return; // all remaining are protected
+      const evictId = this.bufferAccessOrder.splice(evictedIdx, 1)[0];
+      this.musicBuffers.delete(evictId);
+    }
+  }
+
+  private getMusicTargetGain(): number {
+    if (this.musicMuted) return 0;
+    const base = dbToGain(TUNING.MUSIC_VOLUME_DB);
+    return base * Math.max(0, Math.min(1, this.musicVolume));
+  }
+
+  playChapter(chapterId: string, fadeMs: number = TUNING.MUSIC_CROSSFADE_MS): void {
+    if (this.currentChapter === chapterId) return;
+    const ctx = this.ensureContext();
+    const buffer = this.musicBuffers.get(chapterId);
+    const master = this.masterGain;
+    if (!this.isUsable() || !ctx || !this.unlocked || !buffer || !master) return;
+    try {
+      const next = ctx.createBufferSource();
+      next.buffer = buffer;
+      next.loop = true;
+      const nextGain = ctx.createGain();
+      nextGain.gain.setValueAtTime(0, ctx.currentTime);
+      const targetGain = this.getMusicTargetGain();
+      nextGain.gain.linearRampToValueAtTime(targetGain, ctx.currentTime + fadeMs / 1000);
+      next.connect(nextGain);
+      nextGain.connect(master);
+      next.start();
+
+      // Cross-fade out the previous track.
+      const prev = this.musicSource;
+      const prevGain = this.musicGain;
+      if (prev && prevGain) {
+        prevGain.gain.cancelScheduledValues(ctx.currentTime);
+        prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+        window.setTimeout(() => {
+          try { prev.stop(); } catch { /* already stopped */ }
+          prev.disconnect();
+          prevGain.disconnect();
+        }, fadeMs + 100);
+      }
+
+      this.musicSource = next;
+      this.musicGain = nextGain;
+      this.currentChapter = chapterId;
+    } catch (err) {
+      this.logAudioError(err);
+    }
+  }
+
+  /** Load and play in one shot; resolves once playback has actually started. */
+  async loadAndPlayChapter(chapterId: string, url: string, fadeMs?: number): Promise<void> {
+    const buffer = await this.loadChapter(chapterId, url);
+    if (buffer) this.playChapter(chapterId, fadeMs);
+  }
+
+
+  /** Load all tracks for a chapter and start rotation. Idempotent per pool id. */
+  async loadAndPlayChapterPool(chapterId: string, urls: string[], fadeMs?: number): Promise<void> {
+    if (this.currentPoolId === chapterId) return; // no-op within same pool
+    if (!urls.length) return;
+    // Bump epoch IMMEDIATELY so any pending chain timers from the previous
+    // pool no-op on fire. Capture our own epoch so we can detect if a newer
+    // chapter request supersedes us while we await load.
+    this.musicEpoch += 1;
+    const myEpoch = this.musicEpoch;
+    // Load each url under a synthetic per-track id so the existing cache works.
+    const loaded = await Promise.all(
+      urls.map((url, i) => this.loadChapter(`${chapterId}#${i}`, url)),
+    );
+    // If another chapter request came in while we were loading, abandon.
+    if (myEpoch !== this.musicEpoch) return;
+    const buffers = loaded.filter((b): b is AudioBuffer => b !== null);
+    if (!buffers.length) return; // nothing usable — fall back to silence
+    this.chapterPools.set(chapterId, buffers);
+    this.currentPoolId = chapterId;
+    this.currentPoolIdx = -1;
+    this.playRandomFromPool(chapterId, fadeMs);
+  }
+
+  private playRandomFromPool(chapterId: string, fadeMs?: number): void {
+    const pool = this.chapterPools.get(chapterId);
+    if (!pool || !pool.length) return;
+    // Pick a random index, avoiding the current one if possible.
+    let idx = Math.floor(Math.random() * pool.length);
+    if (pool.length > 1 && idx === this.currentPoolIdx) {
+      idx = (idx + 1) % pool.length;
+    }
+    this.currentPoolIdx = idx;
+    this.playBufferWithChain(pool[idx], chapterId, fadeMs ?? TUNING.MUSIC_CROSSFADE_MS);
+  }
+
+  /**
+   * Play a one-shot buffer (NOT looping); on natural end, queue the next
+   * random pool track. Cross-fades against the existing musicSource.
+   * Use this instead of playChapter() when you want pool rotation.
+   */
+  private playBufferWithChain(buffer: AudioBuffer, chapterId: string, fadeMs: number): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!this.isUsable() || !ctx || !this.unlocked || !master) return;
+    try {
+      const next = ctx.createBufferSource();
+      next.buffer = buffer;
+      next.loop = false; // chained pool, not looping
+      const nextGain = ctx.createGain();
+      nextGain.gain.setValueAtTime(0, ctx.currentTime);
+      nextGain.gain.linearRampToValueAtTime(this.getMusicTargetGain(), ctx.currentTime + fadeMs / 1000);
+      // Fade out the trailing edge so the chain cross-fades cleanly.
+      const trackDur = buffer.duration;
+      const trailFadeStart = Math.max(0, trackDur - fadeMs / 1000);
+      nextGain.gain.setValueAtTime(this.getMusicTargetGain(), ctx.currentTime + trailFadeStart);
+      nextGain.gain.linearRampToValueAtTime(0, ctx.currentTime + trackDur);
+      next.connect(nextGain);
+      nextGain.connect(master);
+      next.start();
+
+      // Cross-fade management — see outgoingSource comment in state.
+      // Step 1: if there is already an outgoing track from a recent switch
+      //         that is STILL audible, snap it to 0 in 300ms (no waiting for
+      //         its full 4s fade — that would stack with our new outgoing).
+      if (this.outgoingSource && this.outgoingGain) {
+        const oldSrc = this.outgoingSource;
+        const oldGain = this.outgoingGain;
+        oldGain.gain.cancelScheduledValues(ctx.currentTime);
+        oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+        if (this.outgoingStopTimer !== null) window.clearTimeout(this.outgoingStopTimer);
+        window.setTimeout(() => {
+          try { oldSrc.stop(); } catch { /* already stopped */ }
+          oldSrc.disconnect();
+          oldGain.disconnect();
+        }, 400);
+        this.outgoingSource = null;
+        this.outgoingGain = null;
+        this.outgoingStopTimer = null;
+      }
+      // Step 2: demote current musicSource to the outgoing slot and fade it out.
+      const prev = this.musicSource;
+      const prevGain = this.musicGain;
+      if (prev && prevGain) {
+        prevGain.gain.cancelScheduledValues(ctx.currentTime);
+        prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+        this.outgoingSource = prev;
+        this.outgoingGain = prevGain;
+        this.outgoingStopTimer = window.setTimeout(() => {
+          try { prev.stop(); } catch { /* already stopped */ }
+          prev.disconnect();
+          prevGain.disconnect();
+          if (this.outgoingSource === prev) {
+            this.outgoingSource = null;
+            this.outgoingGain = null;
+            this.outgoingStopTimer = null;
+          }
+        }, fadeMs + 100);
+      }
+
+      this.musicSource = next;
+      this.musicGain = nextGain;
+      this.currentChapter = chapterId;
+
+      // When the track ends naturally, queue the next random one.
+      // Schedule the chain a bit before the actual end so cross-fade overlaps.
+      // Capture epoch at schedule time — if anything (chapter switch, fade-out,
+      // another playback call) bumps the epoch before this fires, no-op.
+      const myEpoch = this.musicEpoch;
+      const queueAheadMs = Math.max(0, fadeMs - 200);
+      const chainDelayMs = Math.max(0, trackDur * 1000 - queueAheadMs);
+      window.setTimeout(() => {
+        if (this.musicEpoch !== myEpoch) return;
+        if (this.currentPoolId !== chapterId) return;
+        this.playRandomFromPool(chapterId, fadeMs);
+      }, chainDelayMs);
+    } catch (err) {
+      this.logAudioError(err);
+    }
+  }
+
+  fadeOutMusic(fadeMs: number = TUNING.MUSIC_FADE_OUT_MS): void {
+    this.musicEpoch += 1; // invalidate any pending chain timers
+    this.currentPoolId = null; // stop any pool rotation chaining
+    const ctx = this.context;
+    // Snap any existing outgoing track immediately — no point fading it twice.
+    if (this.outgoingSource && this.outgoingGain && ctx) {
+      const oldSrc = this.outgoingSource;
+      const oldGain = this.outgoingGain;
+      oldGain.gain.cancelScheduledValues(ctx.currentTime);
+      oldGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+      if (this.outgoingStopTimer !== null) window.clearTimeout(this.outgoingStopTimer);
+      window.setTimeout(() => {
+        try { oldSrc.stop(); } catch { /* already stopped */ }
+        oldSrc.disconnect();
+        oldGain.disconnect();
+      }, 300);
+      this.outgoingSource = null;
+      this.outgoingGain = null;
+      this.outgoingStopTimer = null;
+    }
+    const prev = this.musicSource;
+    const prevGain = this.musicGain;
+    if (!ctx || !prev || !prevGain) return;
+    prevGain.gain.cancelScheduledValues(ctx.currentTime);
+    prevGain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+    window.setTimeout(() => {
+      try { prev.stop(); } catch { /* already stopped */ }
+      prev.disconnect();
+      prevGain.disconnect();
+    }, fadeMs + 100);
+    this.musicSource = null;
+    this.musicGain = null;
+    this.currentChapter = null;
+  }
+
+  setMusicMuted(muted: boolean): void {
+    this.musicMuted = muted;
+    const ctx = this.context;
+    const g = this.musicGain;
+    if (!ctx || !g) return;
+    g.gain.cancelScheduledValues(ctx.currentTime);
+    g.gain.setTargetAtTime(this.getMusicTargetGain(), ctx.currentTime, 0.1);
+  }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    const ctx = this.context;
+    const g = this.musicGain;
+    if (!ctx || !g) return;
+    g.gain.cancelScheduledValues(ctx.currentTime);
+    g.gain.setTargetAtTime(this.getMusicTargetGain(), ctx.currentTime, 0.1);
+  }
+
+  isChapterLoaded(chapterId: string): boolean {
+    return this.musicBuffers.has(chapterId);
+  }
+
+  getCurrentChapter(): string | null {
+    return this.currentChapter;
+  }
+
+  /**
+   * Grand stage-advance impact — 3-layer synthesis evoking a "cosmic birth"
+   * moment. Replaces the old playCondenseExplosion noise burst.
+   *
+   *  Layer 1: 42 Hz sub-bass swell (slow ramp-in, the "weight")
+   *  Layer 2: pure sine impact + 3rd harmonic (the "moment", gong-like)
+   *  Layer 3: 3 ascending high sine pings (the "shimmer")
+   *
+   * Pitch base shifts up subtly per stage so progression is audible:
+   *   Stage 1 ~110 Hz, Stage 8 ~165 Hz, Stage 16 ~265 Hz.
+   */
+  playStageAdvanceImpact(nextStageIdx: number): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted || !master) return;
+    try {
+      const now = ctx.currentTime;
+      const stageIdx = Math.max(0, nextStageIdx);
+      const baseFreq = 110 * Math.pow(1.06, stageIdx);
+      const volume = dbToGain(TUNING.STAGE_ADVANCE_VOLUME_DB);
+
+      // Layer 1 — sub-bass swell
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.value = 42;
+      const subGain = ctx.createGain();
+      subGain.gain.setValueAtTime(0.0001, now);
+      subGain.gain.linearRampToValueAtTime(volume * 0.55, now + 0.6);
+      subGain.gain.setValueAtTime(volume * 0.55, now + 1.4);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.9);
+      subOsc.connect(subGain);
+      subGain.connect(master);
+      subOsc.start(now);
+      subOsc.stop(now + 3.0);
+
+      // Layer 2 — main chime (fundamental + 3rd harmonic for body)
+      const impactAt = now + 0.4;
+      const fundamental = ctx.createOscillator();
+      fundamental.type = 'sine';
+      fundamental.frequency.value = baseFreq;
+      const fundGain = ctx.createGain();
+      fundGain.gain.setValueAtTime(volume * 0.7, impactAt);
+      fundGain.gain.exponentialRampToValueAtTime(0.0001, impactAt + 2.5);
+      fundamental.connect(fundGain);
+      fundGain.connect(master);
+      fundamental.start(impactAt);
+      fundamental.stop(impactAt + 2.6);
+
+      const harm = ctx.createOscillator();
+      harm.type = 'sine';
+      harm.frequency.value = baseFreq * 3;
+      const harmGain = ctx.createGain();
+      harmGain.gain.setValueAtTime(volume * 0.18, impactAt);
+      harmGain.gain.exponentialRampToValueAtTime(0.0001, impactAt + 1.8);
+      harm.connect(harmGain);
+      harmGain.connect(master);
+      harm.start(impactAt);
+      harm.stop(impactAt + 2.0);
+
+      // Layer 3 — ascending high sparkle (3 quick sine pings)
+      const sparkleAt = impactAt + 0.2;
+      [8, 10, 12].forEach((mult, i) => {
+        const s = ctx.createOscillator();
+        s.type = 'sine';
+        s.frequency.value = baseFreq * mult;
+        const sg = ctx.createGain();
+        const t0 = sparkleAt + i * 0.06;
+        sg.gain.setValueAtTime(volume * 0.08, t0);
+        sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+        s.connect(sg);
+        sg.connect(master);
+        s.start(t0);
+        s.stop(t0 + 0.45);
+      });
+    } catch (err) {
+      this.logAudioError(err);
+    }
+  }
+
+  dispose(): void {
+    if (this.musicSource && this.musicGain) {
+      try { this.musicSource.stop(); } catch { /* already stopped */ }
+      this.musicSource.disconnect();
+      this.musicGain.disconnect();
+      this.musicSource = null;
+      this.musicGain = null;
+    }
+    this.musicEpoch += 1;
+    if (this.outgoingSource) {
+      try { this.outgoingSource.stop(); } catch { /* already stopped */ }
+      this.outgoingSource.disconnect();
+      this.outgoingGain?.disconnect();
+      this.outgoingSource = null;
+      this.outgoingGain = null;
+    }
+    if (this.outgoingStopTimer !== null) {
+      window.clearTimeout(this.outgoingStopTimer);
+      this.outgoingStopTimer = null;
+    }
+    this.musicBuffers.clear();
+    this.bufferAccessOrder = [];
+    this.inflightLoads.clear();
+    this.chapterPools.clear();
+    this.currentChapter = null;
+    this.currentPoolId = null;
+    this.currentPoolIdx = -1;
     if (this.context) {
       void this.context.close();
       this.context = null;

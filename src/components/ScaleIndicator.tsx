@@ -1,10 +1,10 @@
 import { getScreenScaleLabel, getUnitTooltip } from '../game/scaleIndicator';
 import { t, type Lang } from '../i18n';
 
-export function ScaleIndicator({ stageId, language }: { stageId: number; language: Lang }) {
+export function ScaleIndicator({ stageId, language, className }: { stageId: number; language: Lang; className?: string }) {
   const scale = getScreenScaleLabel(stageId);
   return (
-    <div className="scale-indicator" aria-hidden="true">
+    <div className={`scale-indicator ${className ?? ''}`} aria-hidden="true">
       <div className="scale-title">{t(language, 'scaleTitle')}</div>
       <div className="scale-bar" style={{ width: `${scale.length}px` }}>
         {Array.from({ length: 9 }, (_, index) => (

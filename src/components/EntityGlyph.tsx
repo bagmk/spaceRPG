@@ -331,6 +331,56 @@ function glyphShape(glyph: EntityGlyphKind): ReactNode {
           <span className="entity-glyph__spark entity-glyph__spark--a" />
         </>
       );
+    case 'meson':
+      // Quark-antiquark pair: two cores connected by a vibrating string-ish ring.
+      return (
+        <>
+          <span className="entity-glyph__ring entity-glyph__ring--a" />
+          <span className="entity-glyph__dot entity-glyph__dot--1" />
+          <span className="entity-glyph__dot entity-glyph__dot--2" />
+        </>
+      );
+    case 'accretion':
+      // Gas inflow: outer ring + ray streams + tight bright core.
+      return (
+        <>
+          <span className="entity-glyph__ring entity-glyph__ring--b" />
+          <span className="entity-glyph__ray entity-glyph__ray--a" />
+          <span className="entity-glyph__ray entity-glyph__ray--b" />
+          <span className="entity-glyph__ray entity-glyph__ray--c" />
+          <span className="entity-glyph__core" />
+        </>
+      );
+    case 'envelope':
+      // Bloated red-giant envelope: large cloud layers + tiny hot core.
+      return (
+        <>
+          <span className="entity-glyph__cloud entity-glyph__cloud--a" />
+          <span className="entity-glyph__cloud entity-glyph__cloud--b" />
+          <span className="entity-glyph__cloud entity-glyph__cloud--c" />
+          <span className="entity-glyph__core" />
+        </>
+      );
+    case 'nebula':
+      // Planetary nebula: bipolar cloud lobes + equatorial ring + bright core.
+      return (
+        <>
+          <span className="entity-glyph__cloud entity-glyph__cloud--a" />
+          <span className="entity-glyph__cloud entity-glyph__cloud--b" />
+          <span className="entity-glyph__ring entity-glyph__ring--a" />
+          <span className="entity-glyph__core" />
+        </>
+      );
+    case 'crystal':
+      // Crystalline lattice: faceted ring + scattered glints + center gem.
+      return (
+        <>
+          <span className="entity-glyph__ring entity-glyph__ring--a" />
+          <span className="entity-glyph__ring entity-glyph__ring--b" />
+          {dots(5)}
+          <span className="entity-glyph__core" />
+        </>
+      );
     case 'particle':
     default:
       return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   formatDuration,
   formatEntropyParts,
@@ -6,6 +6,8 @@ import {
 } from '../game/formulas';
 import type { GameState } from '../game/types';
 import type { PrestigeUpgradeId } from '../game/prestige';
+import type { SoundManager } from '../game/audio';
+import { PRESTIGE_CHAPTER_ID, getPrestigeTrackUrls } from '../game/musicChapters';
 import { PrestigeShop } from './PrestigeShop';
 import { t, type Lang } from '../i18n';
 
@@ -75,14 +77,24 @@ const FINAL_QUOTES: { en: string; ko: string; attr: string; attrKo: string }[] =
 interface FinalScreenProps {
   state: GameState;
   language: Lang;
+  soundManager?: SoundManager | null;
   onPrestige: () => void;
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
 }
 
-export function FinalScreen({ state, language, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
+export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
+
+  // Prestige/final screen music — "Amazing Grace" instrumental, calm closer.
+  // Fades out on unmount so the next screen starts clean.
+  useEffect(() => {
+    if (!soundManager) return undefined;
+    soundManager.fadeOutMusic(1500);
+    void soundManager.loadAndPlayChapterPool(PRESTIGE_CHAPTER_ID, getPrestigeTrackUrls(), 2500);
+    return () => { soundManager.fadeOutMusic(1500); };
+  }, [soundManager]);
   const quoteIdx = (state.universeCount - 1) % FINAL_QUOTES.length;
   const quote = FINAL_QUOTES[quoteIdx];
   const finalQuote = language === 'ko' ? quote.ko : quote.en;

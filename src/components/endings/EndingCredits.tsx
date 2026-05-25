@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EndingId } from '../../game/types';
+import type { SoundManager } from '../../game/audio';
+import { getEndingChapterId, getEndingTrackUrls } from '../../game/musicChapters';
 import { t, type Lang } from '../../i18n';
 
 interface EndingCreditsProps {
   endingId: EndingId;
   language: Lang;
   onComplete: () => void;
+  soundManager?: SoundManager | null;
 }
 
 interface EndingCreditCopy {
@@ -101,7 +104,7 @@ const CREDIT_COPY: Record<EndingId, EndingCreditCopy> = {
   },
 };
 
-export function EndingCredits({ endingId, language, onComplete }: EndingCreditsProps) {
+export function EndingCredits({ endingId, language, onComplete, soundManager }: EndingCreditsProps) {
   const [videoFailed, setVideoFailed] = useState(false);
   const copy = useMemo(() => CREDIT_COPY[endingId], [endingId]);
 
@@ -110,6 +113,19 @@ export function EndingCredits({ endingId, language, onComplete }: EndingCreditsP
     const timeoutId = window.setTimeout(onComplete, 4500);
     return () => window.clearTimeout(timeoutId);
   }, [onComplete, videoFailed]);
+
+  // Ending-specific music: fade out chapter BGM, lazy-load the ending track,
+  // and play it under the (muted) cinematic video. On unmount, fade out so
+  // the next screen (FinalScreen / multiverse) starts on a clean slate.
+  useEffect(() => {
+    if (!soundManager) return undefined;
+    soundManager.fadeOutMusic(1500);
+    const chapterId = getEndingChapterId(endingId);
+    void soundManager.loadAndPlayChapterPool(chapterId, getEndingTrackUrls(endingId), 2000);
+    return () => {
+      soundManager.fadeOutMusic(1500);
+    };
+  }, [soundManager, endingId]);
 
   return (
     <div className="ending-cinematic ending-credits">

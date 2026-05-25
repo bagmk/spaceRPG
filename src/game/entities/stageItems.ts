@@ -64,6 +64,51 @@ function blendHex(base: string, tint: string, t: number): string {
   );
 }
 
+/**
+ * Rotate a hex color's hue by N degrees while keeping saturation and lightness.
+ * Used so multiple entities sharing the same glyph in the same stage feel
+ * related (same family) yet visually distinct (slight tonal variation).
+ */
+function rotateHexHue(hex: string, degrees: number): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  h = (h + degrees + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r2 = 0, g2 = 0, b2 = 0;
+  if (h < 60) { r2 = c; g2 = x; }
+  else if (h < 120) { r2 = x; g2 = c; }
+  else if (h < 180) { g2 = c; b2 = x; }
+  else if (h < 240) { g2 = x; b2 = c; }
+  else if (h < 300) { r2 = x; b2 = c; }
+  else { r2 = c; b2 = x; }
+  const toHex = (v: number) =>
+    Math.max(0, Math.min(255, Math.round((v + m) * 255))).toString(16).padStart(2, '0');
+  return '#' + toHex(r2) + toHex(g2) + toHex(b2);
+}
+
+/**
+ * Predefined hue offsets used to differentiate same-glyph entities within a stage.
+ * Slot 0 = no shift (lead entity); subsequent slots gently shift left/right
+ * around the stage's anchor color so duplicates feel like a family.
+ */
+const GLYPH_DUPE_HUE_OFFSETS: readonly number[] = [0, 14, -14, 24, -24, 34, -8, 8, 20, -20];
+
 function item(
   name: string,
   formula: string,
@@ -110,7 +155,7 @@ function motionFor(rarity: EntityRarity, index: number): EntityVisual['motion'] 
   return 'float';
 }
 
-function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
+function glyphForLegacy(stageId: StageId, spec: EntitySpec): EntityGlyph {
   const name = spec.name.toLowerCase();
   const formula = spec.formula.toLowerCase();
 
@@ -243,6 +288,385 @@ function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
   return 'particle';
 }
 
+/**
+ * Exact-name glyph overrides for entities where keyword matching would yield
+ * a shape that conflicts with the entity's intent or description.
+ * Edits here take priority over the keyword cascade in glyphForRefined.
+ */
+const ENTITY_GLYPH_OVERRIDES: Record<string, EntityGlyph> = {
+  // --- 🔴 Direct shape↔description mismatches ---
+  'Cold Hydrogen':         'atom',      // 단원자 중성 수소 (분자가 아님)
+  'Stellar Wind':          'wave',      // 입자류 흐름 (정적 가스 구름이 아님)
+  'Ionized Hydrogen':      'plasma',    // 전자를 잃은 핵 (원자가 아님)
+  'Bubble Merger':         'plasma',    // 이온화 영역들의 합병 (원자가 아님)
+  'Cold Gas Remnant':      'cloud',     // 식어버린 가스 (별 시체가 아님)
+  'Pion Decay':            'radiation', // 파이온이 두 광자로 변환되는 과정
+
+  // --- 🟡 Tighter shape↔description matches ---
+  'Cosmic Transparency':   'void',      // 빛이 자유로워진 결과의 "투명함"
+  'First Cosmic Dawn Seed':'cloud',     // 아직 점화 전 단계 — 가스 구름
+  'Oxygen':                'atom',      // 원소 자체는 원자
+  'Carbon First':          'atom',      // 같은 이유 (탄소 원자)
+  'Stellar Feedback':      'wave',      // 별이 주변에 미치는 흐름·방출
+  'Star Formation Cloud':  'cloud',     // 아직 별이 되기 전 구름
+  'Proton Decay':          'entropy',   // 사라지는 과정 강조
+  'Baryon Washout':        'entropy',   // "0으로 시들어 간다"
+  'Firewall':              'plasma',    // 고에너지 장벽
+  'Dark Energy Spike':     'wave',      // 시공간을 갈가리 찢는 동적 사건
+
+  // --- 🆕 Use new dedicated glyphs to break up cloud / remnant overlap ---
+  'Pion':                  'meson',     // 쿼크-반쿼크 쌍 (전용 glyph)
+  'Kaon':                  'meson',     // 같은 이유
+  'Hydrogen Cloud':        'molecule',  // H₂ 분자 구름 (분자가 본질)
+  'Protogalactic Cloud':   'halo',      // 미래 은하의 헤일로 모체
+  'Gas Accretion':         'accretion', // 방향성 가스 유입 (전용 glyph)
+  'Intergalactic Medium':  'halo',      // 우주 거미줄을 따라 분포하는 희박 매질
+  'Red Giant Envelope':    'envelope',  // 부푼 항성 외피 (전용 glyph)
+  'Stellar Wind AGB':      'wave',      // 외피 방출 흐름
+  'Planetary Nebula':      'nebula',    // 색채 있는 양극 로브 (전용 glyph)
+  'Diamond Star':          'crystal',   // 결정화 격자 (전용 glyph)
+  'Iron Star':             'crystal',   // 양자 터널링으로 철 격자로 수렴
+};
+
+/**
+ * Refined glyph picker for stages 2-9 and 12-16.
+ * Uses word-boundary matching to avoid substring traps like "ark" inside
+ * "quark"/"dark" or "agn" inside "magnetic", and adds many keywords that the
+ * legacy picker was missing (dwarf, event horizon, penrose, firewall,
+ * ergosphere, dark energy, virtual particle, etc.).
+ */
+function glyphForRefined(stageId: StageId, spec: EntitySpec): EntityGlyph {
+  // Explicit overrides win over keyword matching.
+  const override = ENTITY_GLYPH_OVERRIDES[spec.name];
+  if (override) return override;
+
+  const name = spec.name.toLowerCase();
+  const formula = spec.formula.toLowerCase();
+  const hasWord = (w: string) => new RegExp(`\\b${w}\\b`, 'i').test(spec.name);
+  const has = (s: string) => name.includes(s);
+
+  // --- Ending-specific overrides (Stage 16) ---
+  if (spec.endingId === 'bounce') return 'bounce';
+  if (spec.endingId === 'big_crunch') return 'singularity';
+  if (spec.endingId === 'big_rip') return 'wave';
+  if (spec.endingId === 'heat_death') return 'entropy';
+  if (spec.endingId === 'vacuum_decay') return 'quantum';
+
+  // --- Singularity / Bounce ---
+  if (has('singularity')) return 'singularity';
+  if (has('quantum bounce') || has('bounce')) return 'bounce';
+
+  // --- Black holes & their immediate phenomena ---
+  if (
+    has('black hole') ||
+    hasWord('bh') ||
+    formula.includes('⚫') ||
+    has('event horizon') ||
+    has('penrose') ||
+    has('firewall') ||
+    has('ergosphere') ||
+    has('information paradox') ||
+    has('bh entropy') ||
+    has('bh domination') ||
+    has('bh merger') ||
+    has('bh evaporation') ||
+    has('supermassive evaporation')
+  ) {
+    return 'black_hole';
+  }
+
+  // --- Supernovae / Novae (before remnant so Helium Flash, Type Ia SN, Nova all hit here) ---
+  if (
+    has('supernova') ||
+    hasWord('sn') ||
+    has('nova') ||
+    has('helium flash') ||
+    has('eruption') ||
+    has('evaporation flash') ||
+    has('precursor')
+  ) {
+    return 'supernova';
+  }
+
+  // --- Galaxies (before remnant so "Dwarf Galaxy" beats "dwarf") ---
+  // Use word-boundary for 'galactic' to avoid "metagalactic" → galaxy.
+  // Use word-boundary for 'agn' to avoid "magnetic"/"magnetar" → galaxy.
+  if (
+    has('galaxy') ||
+    hasWord('galactic') ||
+    has('quasar') ||
+    has('spiral arm') ||
+    hasWord('agn') ||
+    has('cluster') ||
+    has('cosmic web') ||
+    has('large scale')
+  ) {
+    return 'galaxy';
+  }
+
+  // --- Stellar remnants (dwarf, neutron star, magnetar, pulsar, planck remnant, iron/diamond star) ---
+  if (
+    has('white dwarf') ||
+    has('brown dwarf') ||
+    has('black dwarf') ||
+    has('red dwarf') ||
+    hasWord('dwarf') ||
+    has('neutron star') ||
+    has('magnetar') ||
+    has('pulsar') ||
+    has('remnant') ||
+    has('graveyard') ||
+    has('iron star') ||
+    has('diamond star') ||
+    has('planck remnant')
+  ) {
+    return 'remnant';
+  }
+
+  // --- Halos & filaments (before any 'dark' fall-through so dark matter is correctly halo) ---
+  if (has('dark matter') || has('halo') || has('filament')) {
+    return 'halo';
+  }
+
+  // --- Void / vacuum / dark energy / heat death (special: thermal death routes to entropy) ---
+  if (
+    has('thermal death') ||
+    has('thermal equilibrium')
+  ) {
+    return 'entropy';
+  }
+  if (
+    has('void') ||
+    has('darkness') ||
+    has('vacuum') ||
+    has('de sitter') ||
+    has('dark energy')
+  ) {
+    return 'void';
+  }
+
+  // --- Stars (after galaxy/remnant so dwarf-galaxy and white-dwarf go to their right places) ---
+  if (
+    has('protostar') ||
+    has('main sequence star') ||
+    has('star formation') ||
+    has('cosmic dawn') ||
+    has('fusion') ||
+    has('carbon') ||
+    has('oxygen') ||
+    has('stellar feedback') ||
+    name === 'sun' ||
+    (has('star') && !has('starlight'))
+  ) {
+    return 'star';
+  }
+
+  // --- Quarks (now safe: 'ark' inside 'quark' no longer triggers planet/ark) ---
+  if (has('antiquark')) return 'antiparticle';
+  if (has('quark') || has('color charge') || has('flux tube')) return 'quark';
+
+  // --- Antimatter ---
+  if (has('antimatter')) return 'antiparticle';
+
+  // --- Spacecraft → planet (interstellar ark uses word-boundary 'ark') ---
+  if (
+    has('satellite') ||
+    has('probe') ||
+    has('lander') ||
+    hasWord('ark')
+  ) {
+    return 'planet';
+  }
+  if (has('telescope') || has('observatory')) return 'radiation';
+
+  // --- Planets and Solar System bodies (NO 'core'/'zone'/'disk' which previously mismatched) ---
+  if (
+    has('planetary nebula')
+  ) {
+    return 'cloud';
+  }
+  if (
+    has('planet') ||
+    has('moon') ||
+    has('asteroid') ||
+    has('comet') ||
+    has('planetesimal') ||
+    has('rocky') ||
+    has('gas giant') ||
+    has('goldilocks') ||
+    has('habitable')
+  ) {
+    return 'planet';
+  }
+
+  // --- Water / ocean ---
+  if (has('water') || has('ocean') || formula.includes('h₂o')) return 'water';
+
+  // --- Biology ---
+  if (hasWord('dna') || hasWord('rna')) return 'dna';
+  if (has('neuron') || has('brain')) return 'neuron';
+  if (has('cell') || has('eukaryote') || has('prokaryote') || has('membrane') || has('photosynthesis')) {
+    return 'cell';
+  }
+  if (has('life') || has('amino') || has('fish') || has('plant') || has('sapiens') || has('cambrian')) {
+    return 'life';
+  }
+
+  // --- Plasma (before cloud so "Plasma to Gas" stays plasma, not cloud) ---
+  if (has('plasma') || has('qgp') || has('fireball') || hasWord('hii')) return 'plasma';
+
+  // --- Clouds & gas (placed before atom/molecule so envelope/nebula stay cloud) ---
+  if (
+    has('cloud') ||
+    has(' gas') ||
+    has('nebula') ||
+    has('envelope') ||
+    has('atmosphere') ||
+    has('intergalactic medium') ||
+    has('stellar wind') ||
+    has('gas accretion') ||
+    has('cold gas')
+  ) {
+    return 'cloud';
+  }
+
+  // --- Atoms (positronium, ionized hydrogen, HII bubble, bubble merger) ---
+  if (
+    has('positronium') ||
+    has('ionized hydrogen') ||
+    has('bubble') ||
+    has('hydrogen atom') ||
+    has('helium atom') ||
+    has('atom')
+  ) {
+    return 'atom';
+  }
+
+  // --- Molecules ---
+  if (has('molecule') || has('molecular') || has('hydrogen cloud') || has('cold hydrogen')) {
+    return 'molecule';
+  }
+
+  // --- Waves / oscillations (before nucleus so Baryon Acoustic Oscillation is wave) ---
+  if (
+    has('wave') ||
+    has('oscillation') ||
+    has('signal') ||
+    has('echo') ||
+    has('slingshot') ||
+    has('front') ||
+    has('damping') ||
+    has('mass transfer') ||
+    has('perturbation') ||
+    has('streaming') ||
+    has('break') ||
+    has('trough')
+  ) {
+    return 'wave';
+  }
+
+  // --- Nuclei ---
+  if (
+    has('proton') ||
+    has('neutron') ||
+    has('deuterium') ||
+    has('tritium') ||
+    has('helium') ||
+    has('lithium') ||
+    has('beryllium') ||
+    has('baryon') ||
+    has('pion') ||
+    has('kaon') ||
+    has('first heavy elements') ||
+    has('first nuclei') ||
+    has('iron') ||
+    has('nuclei') ||
+    has('nucleus') ||
+    hasWord('bbn')
+  ) {
+    return 'nucleus';
+  }
+
+  // --- Radiation / photons ---
+  if (
+    has('photon') ||
+    has('gamma') ||
+    has('radiation') ||
+    has('cmb') ||
+    hasWord('uv') ||
+    has('x-ray') ||
+    has('lyman') ||
+    has('ionizing') ||
+    has('metagalactic') ||
+    has('cosmic background') ||
+    has('transparency')
+  ) {
+    return 'radiation';
+  }
+
+  // --- Entropy / decay / annihilation / equilibrium ---
+  if (
+    has('entropy') ||
+    has('annihilation') ||
+    has('washout') ||
+    has('equilibrium')
+  ) {
+    return 'entropy';
+  }
+
+  // --- Leptons ---
+  if (has('electron') || has('positron') || has('neutrino') || has('muon')) return 'lepton';
+
+  // --- Bosons ---
+  if (has('gluon') || has('boson') || has('higgs') || has('graviton') || has('monopole')) return 'boson';
+
+  // --- Fields ---
+  if (
+    has('field') ||
+    has('symmetry') ||
+    has('wormhole') ||
+    has('limit') ||
+    has('surface') ||
+    has('cp violation') ||
+    has('phase boundary') ||
+    has('confinement') ||
+    has('inflaton') ||
+    has('potential') ||
+    has('last scattering') ||
+    has(' seed') ||
+    has('collapse') ||
+    has('reionization complete') ||
+    has('epoch of reionization') ||
+    has('gravitational lens')
+  ) {
+    return 'field';
+  }
+
+  // --- Quantum / fluctuations / tunneling / virtual particles ---
+  if (
+    has('quantum') ||
+    has('fluctuation') ||
+    has('tunneling') ||
+    has('virtual particle')
+  ) {
+    return 'quantum';
+  }
+
+  // --- Decay catch-all (after all specific cases above) ---
+  if (has('decay')) return 'entropy';
+
+  if (stageId <= 3) return 'quantum';
+  return 'particle';
+}
+
+/** Dispatch glyph picking by stage. Stages 1, 10, 11 use the original behavior. */
+function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
+  if (stageId === 1 || stageId === 10 || stageId === 11) {
+    return glyphForLegacy(stageId, spec);
+  }
+  return glyphForRefined(stageId, spec);
+}
+
 function stageEffectScale(stageId: StageId, spec: EntitySpec): number {
   if (stageId < 2 || !REBALANCED_EFFECT_RARITIES.has(spec.rarity)) return 1;
   if (spec.effect.type === 'auto') return 0.1;
@@ -260,9 +684,26 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
   const threshold = ENTITY_COST_ANCHORS[stageId];
   const color = ENTITY_STAGE_ACCENT[stageId];
 
+  // Pre-compute each spec's glyph so we can detect within-stage duplicates and
+  // give same-glyph entities a slight hue shift (still in the stage palette).
+  const glyphs = specs.map((spec) => glyphFor(stageId, spec));
+  const glyphSeenCount: Record<string, number> = {};
+  const glyphSlot: number[] = specs.map((_, i) => {
+    const g = glyphs[i];
+    const slot = glyphSeenCount[g] ?? 0;
+    glyphSeenCount[g] = slot + 1;
+    return slot;
+  });
+
   return specs.map((spec, index) => {
     const tint = ENTITY_RARITY_TINT[spec.rarity];
-    const entityColor = blendHex(color, tint.hex, tint.amount);
+    let entityColor = blendHex(color, tint.hex, tint.amount);
+    // Apply hue shift if this is not the first entity using its glyph in the stage.
+    const slot = glyphSlot[index];
+    if (slot > 0) {
+      const offset = GLYPH_DUPE_HUE_OFFSETS[slot % GLYPH_DUPE_HUE_OFFSETS.length];
+      if (offset !== 0) entityColor = rotateHexHue(entityColor, offset);
+    }
     // Multiplier effects are NOT scaled up by rarity — they compound multiplicatively across stages.
     // Auto, click, crit, and time effects get rarity scaling to make higher rarities feel impactful.
     const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : ENTITY_RARITY_EFFECT_SCALE[spec.rarity];
@@ -287,7 +728,7 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
       effect: { ...spec.effect, value: scaledEffectValue },
       visual: {
         symbol: spec.formula,
-        glyph: glyphFor(stageId, spec),
+        glyph: glyphs[index],
         color: entityColor,
         glowColor: entityColor,
         size: ENTITY_RARITY_SIZE[spec.rarity],

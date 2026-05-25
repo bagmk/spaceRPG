@@ -108,6 +108,8 @@ export const STRINGS = {
                           ko: '활성 버프가 여기 표시되며 실시간으로 줄어듭니다. 중첩 구매로 시간을 연장할 수 있습니다.' },
   tutCondense:          { en: 'Both gauges are full. Press Condense to advance.',
                           ko: '두 게이지가 모두 가득 찼습니다. 응축을 눌러 진행하세요.' },
+  tutFocusMode:         { en: 'Try Focus Mode! The ○ button at the bottom left hides the UI so you can enjoy the view.',
+                          ko: '포커스 모드를 사용해보세요! 왼쪽 아래 ○ 버튼을 누르면 UI가 사라지고 우주만 감상할 수 있어요.' },
   tutStageLog:          { en: 'Stage events are recorded here. Click to explore milestones.',
                           ko: '단계별 사건이 여기 기록됩니다. 눌러서 마일스톤을 살펴보세요.' },
   tutStageLogOpen:      { en: 'Open', ko: '열기' },
@@ -117,7 +119,6 @@ export const STRINGS = {
 
   // ── Settings panel ────────────────────────────────────────────
   settingsTitle:     { en: 'Settings',       ko: '설정' },
-  settingsBgm:       { en: 'BGM',            ko: '배경음악' },
   settingsSfx:       { en: 'Sound Effects',  ko: '효과음' },
   settingsLanguage:  { en: 'Language',       ko: '언어' },
   settingsReset:     { en: 'Reset Game',     ko: '게임 초기화' },

@@ -264,18 +264,6 @@ export function saveMutedPreference(muted: boolean): void {
   }
 }
 
-export function loadBgmMuted(): boolean {
-  if (!isBrowser()) return TUNING.AUDIO_DEFAULT_MUTED;
-  const raw = localStorage.getItem('cc_bgm_muted');
-  if (raw === null) return TUNING.AUDIO_DEFAULT_MUTED;
-  return raw === 'true';
-}
-
-export function saveBgmMuted(v: boolean): void {
-  if (!isBrowser()) return;
-  try { localStorage.setItem('cc_bgm_muted', String(v)); } catch { /* noop */ }
-}
-
 export function loadSfxMuted(): boolean {
   if (!isBrowser()) return false;
   const raw = localStorage.getItem('cc_sfx_muted');
@@ -286,6 +274,32 @@ export function loadSfxMuted(): boolean {
 export function saveSfxMuted(v: boolean): void {
   if (!isBrowser()) return;
   try { localStorage.setItem('cc_sfx_muted', String(v)); } catch { /* noop */ }
+}
+
+export function loadMusicMuted(): boolean {
+  if (!isBrowser()) return false; // music defaults to ON; drone defaults to muted
+  const raw = localStorage.getItem('cc_music_muted');
+  if (raw === null) return false;
+  return raw === 'true';
+}
+
+export function saveMusicMuted(v: boolean): void {
+  if (!isBrowser()) return;
+  try { localStorage.setItem('cc_music_muted', String(v)); } catch { /* noop */ }
+}
+
+export function loadMusicVolume(): number {
+  if (!isBrowser()) return 0.8;
+  const raw = localStorage.getItem('cc_music_volume');
+  if (raw === null) return 0.8;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return 0.8;
+  return Math.max(0, Math.min(1, n));
+}
+
+export function saveMusicVolume(v: number): void {
+  if (!isBrowser()) return;
+  try { localStorage.setItem('cc_music_volume', String(v)); } catch { /* noop */ }
 }
 
 export function loadLanguage(): 'en' | 'ko' {

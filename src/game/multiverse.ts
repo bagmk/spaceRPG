@@ -1,11 +1,12 @@
 import type { EndingId, EndingOption, EndingProgressFlags, GameState, Stage, UniverseSeed, AnomalyType } from './types';
 import type { Lang } from '../i18n';
 import { STAGES } from './stages';
-import { STAGE_ENTITIES, getPurchasedEntityCount } from './entities/stageItems';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
 export const BIG_CRUNCH_ENTROPY_THRESHOLD_KB = 1024 * 1024;
+/** 1 RB = 1024 YB = 1024^8 KB */
+export const BIG_RIP_ENTROPY_THRESHOLD_KB = Math.pow(1024, 8);
 
 interface BilingualHint { en: string; ko: string; }
 interface EndingDefinition {
@@ -44,8 +45,8 @@ export const ENDING_DEFINITIONS: Record<EndingId, EndingDefinition> = {
       ko: '가속이 모든 결합을 찢어냅니다.',
     },
     condition: {
-      en: 'Complete all Entity Lab upgrades.',
-      ko: '모든 Entity Lab 업그레이드를 완료하세요.',
+      en: 'Reach 1 Ronna Byte (1024 YB) of Entropy.',
+      ko: '엔트로피 1 론나바이트(1024 YB)를 달성하세요.',
     },
   },
   vacuum_decay: {
@@ -264,13 +265,9 @@ export function isBigCrunchEligible(
 }
 
 export function isBigRipEligible(
-  state: Pick<GameState, 'purchasedEntities'>,
+  state: Pick<GameState, 'entropy'>,
 ): boolean {
-  const requiredEntities = STAGE_ENTITIES.filter((entity) => entity.maxCount > 0);
-  return (
-    requiredEntities.length > 0 &&
-    requiredEntities.every((entity) => getPurchasedEntityCount(state.purchasedEntities, entity) >= entity.maxCount)
-  );
+  return (state.entropy ?? 0) >= BIG_RIP_ENTROPY_THRESHOLD_KB;
 }
 
 export function isVacuumDecayEligible(
@@ -292,7 +289,7 @@ export function isBounceEligible(
 }
 
 export function getCurrentUniverseEndingProgressFlags(
-  state: Pick<GameState, 'stageIdx' | 'entropy' | 'critLevel' | 'skills' | 'endingProgressFlags' | 'purchasedEntities'>,
+  state: Pick<GameState, 'stageIdx' | 'entropy' | 'critLevel' | 'skills' | 'endingProgressFlags'>,
 ): EndingProgressFlags {
   const criticalUpgradedThisUniverse = hasCriticalUpgradeInCurrentUniverse(state);
   const bigCrunchEligible = isBigCrunchEligible(state);

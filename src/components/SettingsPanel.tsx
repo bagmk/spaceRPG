@@ -4,12 +4,14 @@ import { useAuth } from '../auth/AuthProvider';
 import type { SoundManager } from '../game/audio';
 
 interface SettingsPanelProps {
-  bgmMuted: boolean;
   sfxMuted: boolean;
+  musicMuted: boolean;
+  musicVolume: number;          // 0..1
   language: Lang;
   soundManager?: SoundManager | null;
-  onToggleBgm: () => void;
   onToggleSfx: () => void;
+  onToggleMusic: () => void;
+  onSetMusicVolume: (v: number) => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
   onOpenLeaderboard?: () => void;
@@ -17,12 +19,14 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({
-  bgmMuted,
   sfxMuted,
+  musicMuted,
+  musicVolume,
   language,
   soundManager,
-  onToggleBgm,
   onToggleSfx,
+  onToggleMusic,
+  onSetMusicVolume,
   onToggleLanguage,
   onRequestReset,
   onOpenLeaderboard,
@@ -52,15 +56,30 @@ export function SettingsPanel({
         </div>
 
         <div className="settings-row">
-          <span className="settings-label">{t(language, 'settingsBgm')}</span>
+          <span className="settings-label">{language === 'ko' ? '음악' : 'Music'}</span>
           <button
             type="button"
-            className={`settings-audio-btn ${!bgmMuted ? 'settings-audio-btn--on' : ''}`}
-            onClick={() => { onToggleBgm(); if (bgmMuted) soundManager?.playToggle(true); }}
-            aria-label={bgmMuted ? 'BGM off' : 'BGM on'}
+            className={`settings-audio-btn ${!musicMuted ? 'settings-audio-btn--on' : ''}`}
+            onClick={() => { onToggleMusic(); if (musicMuted) soundManager?.playToggle(true); }}
+            aria-label={musicMuted ? 'Music off' : 'Music on'}
           >
-            <span className="audio-icon">{bgmMuted ? '🔈' : '🔈'}</span>
+            <span className="audio-icon">{musicMuted ? '🎵' : '🎵'}</span>
           </button>
+        </div>
+
+        <div className="settings-row">
+          <span className="settings-label">{language === 'ko' ? '음악 볼륨' : 'Music Vol'}</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={musicVolume}
+            disabled={musicMuted}
+            onChange={(e) => onSetMusicVolume(parseFloat(e.target.value))}
+            style={{ flex: 1, marginLeft: 12, opacity: musicMuted ? 0.4 : 1 }}
+            aria-label="Music volume"
+          />
         </div>
 
         <div className="settings-row">
