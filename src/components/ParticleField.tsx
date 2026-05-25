@@ -117,6 +117,13 @@ function stepClusterPhysics(
   const cluster = world.cluster;
   const motes = cluster.motes;
   const effectiveMaxMass = getEffectiveMaxMass(progress);
+  // Always update rotations even with no motes (black hole keeps spinning)
+  cluster.diskRotation = (cluster.diskRotation ?? 0) + dt * 0.0011;
+  cluster.earthRotation = (cluster.earthRotation ?? 0) + dt * TUNING.LIFE_EARTH_ROT_RATE;
+  if ((cluster.moonNudgeImpulse ?? 0) > 0) {
+    cluster.moonNudgeImpulse = Math.max(0, (cluster.moonNudgeImpulse ?? 0) - dt * 0.0016);
+  }
+
   if (motes.length === 0) {
     return;
   }
@@ -126,14 +133,6 @@ function stepClusterPhysics(
   if (shouldRefreshNeighbors) {
     refreshNeighborCache(motes, world.moteNeighborCache);
     world.moteLastNeighborRefresh = now;
-  }
-
-  cluster.diskRotation = (cluster.diskRotation ?? 0) + dt * 0.0011;
-  cluster.earthRotation = (cluster.earthRotation ?? 0) + dt * TUNING.LIFE_EARTH_ROT_RATE;
-  // Moon nudge impulse decays back to zero over ~700ms so the user sees a
-  // bright flash on click that fades smoothly.
-  if ((cluster.moonNudgeImpulse ?? 0) > 0) {
-    cluster.moonNudgeImpulse = Math.max(0, (cluster.moonNudgeImpulse ?? 0) - dt * 0.0016);
   }
 
   const dtScale = Math.min(2.2, Math.max(0.2, dt / 16.67));
