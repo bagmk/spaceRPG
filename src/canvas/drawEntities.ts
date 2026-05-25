@@ -1626,29 +1626,26 @@ function drawSpacecraftBody(
     ctx.lineTo(size * 0.28, size * 0.62);
     ctx.stroke();
   } else if (textHas(text, 'probe', 'lander', 'ark')) {
-    ctx.lineWidth = Math.max(0.8, size * 0.1);
+    // Compact spacecraft — small body + dish antenna + faint thruster glow
+    ctx.lineWidth = Math.max(0.6, size * 0.08);
+    // Body
+    ctx.fillRect(-size * 0.2, -size * 0.15, size * 0.4, size * 0.3);
+    ctx.strokeRect(-size * 0.2, -size * 0.15, size * 0.4, size * 0.3);
+    // Solar panels
+    ctx.fillStyle = hexToRgba('#74cfff', 0.35);
+    ctx.fillRect(-size * 0.7, -size * 0.1, size * 0.4, size * 0.2);
+    ctx.fillRect(size * 0.3, -size * 0.1, size * 0.4, size * 0.2);
+    // Dish antenna
+    ctx.strokeStyle = hexToRgba('#ffffff', 0.5);
+    ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.moveTo(size * 0.68, 0);
-    ctx.lineTo(-size * 0.45, -size * 0.34);
-    ctx.lineTo(-size * 0.24, 0);
-    ctx.lineTo(-size * 0.45, size * 0.34);
-    ctx.closePath();
-    ctx.fill();
+    ctx.arc(size * 0.2, -size * 0.3, size * 0.18, Math.PI * 0.7, Math.PI * 1.3);
     ctx.stroke();
-    ctx.strokeStyle = hexToRgba('#ffffff', 0.45);
+    // Faint thruster dot
+    const glow = 0.3 + Math.sin(now * 0.005 + item.seed) * 0.15;
+    ctx.fillStyle = hexToRgba('#88ccff', glow);
     ctx.beginPath();
-    ctx.moveTo(-size * 0.52, -size * 0.36);
-    ctx.lineTo(-size * 0.78, -size * 0.66);
-    ctx.moveTo(-size * 0.52, size * 0.36);
-    ctx.lineTo(-size * 0.78, size * 0.66);
-    ctx.stroke();
-    const flame = 0.45 + Math.sin(now * 0.006 + item.seed) * 0.18;
-    ctx.fillStyle = hexToRgba('#ffd36b', flame);
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.45, 0);
-    ctx.lineTo(-size * (0.82 + flame * 0.34), -size * 0.18);
-    ctx.lineTo(-size * (0.82 + flame * 0.34), size * 0.18);
-    ctx.closePath();
+    ctx.arc(-size * 0.28, 0, size * 0.06, 0, Math.PI * 2);
     ctx.fill();
   } else {
     ctx.lineWidth = Math.max(0.8, size * 0.1);
@@ -3763,8 +3760,8 @@ export function drawEntities(
   // from N² (e.g. 19,600 pair checks for 140 particles) down to roughly
   // O(N × k) where k is the average neighbor count (~10-25), so the same
   // 140 particles now do ~1,400-3,500 pair checks instead.
-  const CELL_SIZE = 110;
-  const INTERACTION_RADIUS = 200;
+  const CELL_SIZE = 90;            // shrunk to match smaller interaction radius
+  const INTERACTION_RADIUS = 150;  // was 200 — fewer pair checks per body
   const INTERACTION_RADIUS_SQ = INTERACTION_RADIUS * INTERACTION_RADIUS;
   const grid = new Map<number, number[]>();
   const cellKey = (gx: number, gy: number) => gx * 100003 + gy;
