@@ -1877,22 +1877,66 @@ function drawLifeOrbitEntities(
     }
     // ── Interstellar Ark — small glowing dot with faint trail ──
     else if (nameL.includes('ark')) {
+      const t = now * 0.001;
       ctx.save();
       ctx.translate(x, y);
-      // Soft glow
-      const arkGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 2);
-      arkGrad.addColorStop(0, hexToRgba('#aaddff', 0.4));
-      arkGrad.addColorStop(0.4, hexToRgba('#6699cc', 0.15));
-      arkGrad.addColorStop(1, hexToRgba('#4477aa', 0));
-      ctx.fillStyle = arkGrad;
-      fillCircle(ctx, 0, 0, size * 2);
-      // Core dot
-      ctx.fillStyle = hexToRgba('#ffffff', 0.7);
-      fillCircle(ctx, 0, 0, 2);
-      // Blinking nav light
-      const blink = Math.sin(now * 0.004) > 0.3 ? 0.6 : 0.15;
-      ctx.fillStyle = hexToRgba('#88ccff', blink);
-      fillCircle(ctx, 0, 0, 3);
+      const heading = angle + Math.PI / 2 + Math.sin(t * 0.35) * 0.25;
+      ctx.rotate(heading);
+      const s = size * 1.2;
+
+      // Short engine glow (radial, no beam)
+      const engineGrad = ctx.createRadialGradient(-s * 1.3, 0, 0, -s * 1.3, 0, s * 0.8);
+      engineGrad.addColorStop(0, hexToRgba('#66bbff', 0.25));
+      engineGrad.addColorStop(1, hexToRgba('#2255aa', 0));
+      ctx.fillStyle = engineGrad;
+      fillCircle(ctx, -s * 1.3, 0, s * 0.8);
+
+      // Main hull — sleek diamond shape
+      ctx.fillStyle = hexToRgba('#d0dce8', 0.82);
+      ctx.beginPath();
+      ctx.moveTo(s * 1.8, 0);
+      ctx.lineTo(s * 0.3, -s * 0.55);
+      ctx.lineTo(-s * 1.2, -s * 0.25);
+      ctx.lineTo(-s * 1.2, s * 0.25);
+      ctx.lineTo(s * 0.3, s * 0.55);
+      ctx.closePath();
+      ctx.fill();
+
+      // Hull center stripe
+      ctx.fillStyle = hexToRgba('#a8c4e0', 0.6);
+      ctx.beginPath();
+      ctx.moveTo(s * 1.5, 0);
+      ctx.lineTo(s * 0.2, -s * 0.18);
+      ctx.lineTo(-s * 1.0, -s * 0.1);
+      ctx.lineTo(-s * 1.0, s * 0.1);
+      ctx.lineTo(s * 0.2, s * 0.18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cockpit window
+      ctx.fillStyle = hexToRgba('#aaeeff', 0.7);
+      ctx.beginPath();
+      ctx.ellipse(s * 1.2, 0, s * 0.2, s * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Habitat ring
+      ctx.strokeStyle = hexToRgba('#88bbff', 0.35);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.65, s * 0.65, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const la = t * 0.6 + i * (Math.PI * 2 / 6);
+        ctx.fillStyle = hexToRgba('#cceeff', 0.35 + Math.sin(t * 1.5 + i) * 0.15);
+        fillCircle(ctx, Math.cos(la) * s * 0.6, Math.sin(la) * s * 0.6, 1.0);
+      }
+
+      // Nav lights
+      const navBlink = Math.sin(t * 4) > 0.3 ? 0.8 : 0.2;
+      ctx.fillStyle = hexToRgba('#ff4444', navBlink);
+      fillCircle(ctx, s * 0.3, -s * 0.52, 1.0);
+      ctx.fillStyle = hexToRgba('#44ff44', navBlink);
+      fillCircle(ctx, s * 0.3, s * 0.52, 1.0);
       ctx.restore();
     }
     // ── Generic orbital entity ──
