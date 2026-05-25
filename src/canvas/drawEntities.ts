@@ -1,5 +1,5 @@
 import { hexToRgba } from '../game/formulas';
-import { TUNING } from '../game/constants';
+import { TUNING, CANVAS_SCALE } from '../game/constants';
 import type { EntityEffectType, EntityGlyph, EntityRarity, PurchasedEntityEntry, StageEntity } from '../game/entities/types';
 import type { MoteCluster } from '../game/types/canvas';
 import { findEntityById } from '../game/entities/stageItems';
@@ -28,24 +28,43 @@ const _entityBodyCache = new Map<string, { x: number; y: number; vx: number; vy:
 function _getEntityBodyCache() { return _entityBodyCache; }
 
 const ICON_SIZE: Record<EntityRarity, number> = {
-  common: 7,
-  rare: 10,
-  epic: 14,
-  legendary: 19,
+  common: 7 * CANVAS_SCALE,
+  rare: 10 * CANVAS_SCALE,
+  epic: 14 * CANVAS_SCALE,
+  legendary: 19 * CANVAS_SCALE,
 };
 
 const GLOW_RADIUS: Record<EntityRarity, number> = {
-  common: 9,
-  rare: 13,
-  epic: 18,
-  legendary: 28,
+  common: 9 * CANVAS_SCALE,
+  rare: 13 * CANVAS_SCALE,
+  epic: 18 * CANVAS_SCALE,
+  legendary: 28 * CANVAS_SCALE,
 };
 
-const MAX_VISIBLE_PER_ENTITY = 10;
-// Generous soft ceiling. Physics is spatial-grid accelerated (see drawEntities),
-// so 200 particles ~= 60 fps comfortably even on mid-range devices. Simple
-// truncation in insertion order — Common items are never preferentially erased.
-const MAX_TOTAL_ENTITY_DRAW = 200;
+/**
+ * Visible-particle thresholds for the dynamic cap.
+ *
+ *   - Below VISIBLE_PARTICLE_THRESHOLD: everything you buy is drawn. e.g.
+ *     buying 20 commons all show up on screen.
+ *   - Above the threshold: rarity caps are walked down using the
+ *     REDUCTION_CYCLE pattern (3:2:1 ratio between common, rare, epic).
+ *     Common shrinks fastest; legendary never shrinks. This keeps the
+ *     early-game lush and only trims when the field is genuinely overcrowded.
+ */
+const VISIBLE_PARTICLE_THRESHOLD = 80;
+const HARD_CEILING = 160;
+const RARITY_MAX_VISIBLE: Record<EntityRarity, number> = {
+  common: 20,
+  rare: 10,
+  epic: 5,
+  legendary: 1,
+};
+// Walk-down pattern: take one slot off this rarity each iteration. Length 6,
+// containing 3 commons + 2 rares + 1 epic, so the cumulative reduction over
+// any window is exactly 3:2:1.
+const REDUCTION_CYCLE: ReadonlyArray<EntityRarity> = [
+  'common', 'common', 'common', 'rare', 'rare', 'epic',
+];
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 interface EntityDrawItem {
@@ -558,30 +577,68 @@ function drawColorCharge(
   strength: number,
 ): void {
   const colorCharges = ['#ff5c55', '#57d77a', '#5aa7ff'];
+  const t = now * 0.001;
   const spin = now * 0.0008;
-  const points = colorCharges.map((chargeColor, i) => {
-    const angle = spin + (i / 3) * Math.PI * 2;
-    return {
-      color: chargeColor,
-      x: cx + Math.cos(angle) * radius * 0.28,
-      y: cy + Math.sin(angle) * radius * 0.22,
-    };
-  });
+  const pulse = 0.6 + Math.sin(t * 3) * 0.2;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.lineWidth = 0.9 + strength * 0.9;
+
+  // Central confinement glow
+  const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.35);
+  coreGrad.addColorStop(0, hexToRgba('#ffffff', 0.15 * pulse * strength));
+  coreGrad.addColorStop(0.5, hexToRgba(color, 0.08 * pulse));
+  coreGrad.addColorStop(1, hexToRgba(color, 0));
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3 color charges with independent wobble
+  const points = colorCharges.map((chargeColor, i) => {
+    const baseAngle = spin + (i / 3) * Math.PI * 2;
+    const wobble = Math.sin(t * (2.5 + i * 0.7) + i * 2.1) * radius * 0.08;
+    const orbitR = radius * (0.22 + Math.sin(t * 1.8 + i * 1.3) * 0.06) + wobble;
+    return {
+      color: chargeColor,
+      x: cx + Math.cos(baseAngle) * orbitR,
+      y: cy + Math.sin(baseAngle) * orbitR * 0.82,
+    };
+  });
+
+  // Wavy gluon flux tubes (not straight lines)
+  ctx.lineWidth = 0.7 + strength * 0.8;
   for (let i = 0; i < points.length; i += 1) {
-    const next = points[(i + 1) % points.length];
-    ctx.strokeStyle = hexToRgba(color, 0.08 + strength * 0.11);
-    ctx.beginPath();
-    ctx.moveTo(points[i].x, points[i].y);
-    ctx.quadraticCurveTo(cx, cy, next.x, next.y);
-    ctx.stroke();
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const dist = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
+    const wave = Math.sin(t * 4 + i * 2.1) * radius * 0.12;
+    const perpX = -(b.y - a.y) / dist * wave;
+    const perpY = (b.x - a.x) / dist * wave;
+    // Double flux tube
+    for (let s = -1; s <= 1; s += 2) {
+      ctx.strokeStyle = hexToRgba(a.color, (0.06 + strength * 0.08) * pulse);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(mx + perpX * s, my + perpY * s, b.x, b.y);
+      ctx.stroke();
+    }
+    // Energy spark traveling along tube
+    const sparkT = (t * 2 + i * 0.33) % 1;
+    const sx = a.x + (b.x - a.x) * sparkT;
+    const sy = a.y + (b.y - a.y) * sparkT;
+    ctx.fillStyle = hexToRgba('#ffffff', 0.3 * pulse * strength);
+    fillCircle(ctx, sx, sy, 0.6 + strength * 0.5);
   }
+
+  // Color charge particles with glow halos
   for (const point of points) {
-    ctx.fillStyle = hexToRgba(point.color, 0.35 + strength * 0.3);
-    fillCircle(ctx, point.x, point.y, 1.4 + strength * 2.3);
+    ctx.fillStyle = hexToRgba(point.color, 0.12 + strength * 0.1);
+    fillCircle(ctx, point.x, point.y, 2.5 + strength * 3.5);
+    ctx.fillStyle = hexToRgba(point.color, 0.45 + strength * 0.35);
+    fillCircle(ctx, point.x, point.y, 1.2 + strength * 1.8);
   }
   ctx.restore();
 }
@@ -1062,7 +1119,7 @@ function drawGlobalEntityFields(
     }
     // ── Stage 2/3: Quark-gluon plasma — color charges + turbulent sea
     if (textHas(text, 'quark', 'gluon', 'qcd', 'color', 'baryon', 'pion', 'kaon', 'plasma')) {
-      drawColorCharge(ctx, cx, cy, radius * 0.78, col, now, strength);
+      drawColorCharge(ctx, cx, cy, radius * 0.78, col, now, strength, sid);
       drawPlasmaSea(ctx, cx, cy, radius * 1.0, col, now, strength, idLen);
     }
     // ── Stage 4: Nucleosynthesis — fusion bursts + nuclear clusters
@@ -1170,7 +1227,7 @@ function drawLocalEntityEffect(ctx: CanvasRenderingContext2D, position: EntityPo
   } else if (textHas(text, 'quantum', 'fluctuation', 'foam', 'tunneling', 'virtual particle')) {
     drawQuantumFoam(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'quark', 'gluon', 'qcd', 'color', 'baryon', 'pion', 'kaon')) {
-    drawColorCharge(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55);
+    drawColorCharge(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.stageId ?? 2);
   } else if (textHas(text, 'proton', 'neutron', 'deuterium', 'tritium', 'helium', 'lithium', 'beryllium', 'fusion', 'nucleosynthesis')) {
     drawNuclearCluster(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'white dwarf', 'brown dwarf', 'black dwarf', 'neutron star', 'pulsar', 'remnant', 'graveyard')) {
@@ -1813,74 +1870,24 @@ function drawLifeOrbitEntities(
       fillCircle(ctx, 0, 0, 3);
       ctx.restore();
     }
-    // ── Interstellar Ark — massive generation ship ──
+    // ── Interstellar Ark — small glowing dot with faint trail ──
     else if (nameL.includes('ark')) {
-      const t = now * 0.001;
       ctx.save();
       ctx.translate(x, y);
-      // Face along orbit tangent with gentle weaving
-      const heading = angle + Math.PI / 2 + Math.sin(t * 0.35) * 0.25;
-      ctx.rotate(heading);
-      const s = size * 1.2;
-
-      // Short soft engine glow (no long beam)
-      const glowLen = s * 1.2;
-      const trailGrad = ctx.createRadialGradient(-s * 1.3, 0, 0, -s * 1.3, 0, glowLen);
-      trailGrad.addColorStop(0, hexToRgba('#66bbff', 0.3));
-      trailGrad.addColorStop(0.5, hexToRgba('#4488ff', 0.1));
-      trailGrad.addColorStop(1, hexToRgba('#2255aa', 0));
-      ctx.fillStyle = trailGrad;
-      ctx.beginPath();
-      ctx.arc(-s * 1.3, 0, glowLen, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Main hull — sleek diamond shape
-      ctx.fillStyle = hexToRgba('#d0dce8', 0.82);
-      ctx.beginPath();
-      ctx.moveTo(s * 1.8, 0);           // nose
-      ctx.lineTo(s * 0.3, -s * 0.55);   // top wing
-      ctx.lineTo(-s * 1.2, -s * 0.25);  // rear top
-      ctx.lineTo(-s * 1.2, s * 0.25);   // rear bottom
-      ctx.lineTo(s * 0.3, s * 0.55);    // bottom wing
-      ctx.closePath();
-      ctx.fill();
-
-      // Hull center stripe (bridge)
-      ctx.fillStyle = hexToRgba('#a8c4e0', 0.6);
-      ctx.beginPath();
-      ctx.moveTo(s * 1.5, 0);
-      ctx.lineTo(s * 0.2, -s * 0.18);
-      ctx.lineTo(-s * 1.0, -s * 0.1);
-      ctx.lineTo(-s * 1.0, s * 0.1);
-      ctx.lineTo(s * 0.2, s * 0.18);
-      ctx.closePath();
-      ctx.fill();
-
-      // Cockpit window
-      ctx.fillStyle = hexToRgba('#aaeeff', 0.7);
-      ctx.beginPath();
-      ctx.ellipse(s * 1.2, 0, s * 0.2, s * 0.1, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Habitat dome (rotating ring of lights)
-      ctx.strokeStyle = hexToRgba('#88bbff', 0.35);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, s * 0.65, s * 0.65, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      for (let i = 0; i < 6; i++) {
-        const la = t * 0.6 + i * (Math.PI * 2 / 6);
-        ctx.fillStyle = hexToRgba('#cceeff', 0.35 + Math.sin(t * 1.5 + i) * 0.15);
-        fillCircle(ctx, Math.cos(la) * s * 0.6, Math.sin(la) * s * 0.6, 1.0);
-      }
-
-      // Wing-tip nav lights
-      const navBlink = Math.sin(t * 4) > 0.3 ? 0.8 : 0.2;
-      ctx.fillStyle = hexToRgba('#ff4444', navBlink);
-      fillCircle(ctx, s * 0.3, -s * 0.52, 1.0);
-      ctx.fillStyle = hexToRgba('#44ff44', navBlink);
-      fillCircle(ctx, s * 0.3, s * 0.52, 1.0);
-      ctx.fill();
+      // Soft glow
+      const arkGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 2);
+      arkGrad.addColorStop(0, hexToRgba('#aaddff', 0.4));
+      arkGrad.addColorStop(0.4, hexToRgba('#6699cc', 0.15));
+      arkGrad.addColorStop(1, hexToRgba('#4477aa', 0));
+      ctx.fillStyle = arkGrad;
+      fillCircle(ctx, 0, 0, size * 2);
+      // Core dot
+      ctx.fillStyle = hexToRgba('#ffffff', 0.7);
+      fillCircle(ctx, 0, 0, 2);
+      // Blinking nav light
+      const blink = Math.sin(now * 0.004) > 0.3 ? 0.6 : 0.15;
+      ctx.fillStyle = hexToRgba('#88ccff', blink);
+      fillCircle(ctx, 0, 0, 3);
       ctx.restore();
     }
     // ── Generic orbital entity ──
@@ -3624,8 +3631,40 @@ export function drawEntities(
     }
   }
 
+  // Dynamic per-rarity cap — start at each rarity's natural max (so a player who
+  // owns 20 commons sees 20 commons), and only walk caps down when the total
+  // particle count exceeds VISIBLE_PARTICLE_THRESHOLD.
+  const caps: Record<EntityRarity, number> = { ...RARITY_MAX_VISIBLE };
+  const computeTotalVisible = () => {
+    let sum = 0;
+    for (const ae of activeEntities) {
+      sum += Math.min(ae.count, caps[ae.entity.rarity]);
+    }
+    return sum;
+  };
+  let totalVisible = computeTotalVisible();
+  let cycleStep = 0;
+  // Safety bound: cycle is at most ~6 * (20+10+5) = 210 iterations even if every
+  // rarity gets walked to zero. In practice it stops much earlier.
+  for (let safety = 0; safety < 300 && totalVisible > VISIBLE_PARTICLE_THRESHOLD; safety++) {
+    const r = REDUCTION_CYCLE[cycleStep % REDUCTION_CYCLE.length];
+    cycleStep++;
+    if (caps[r] > 0) {
+      caps[r] -= 1;
+      totalVisible = computeTotalVisible();
+    } else {
+      // This rarity already exhausted — try the next slot in the cycle.
+      // Avoid an infinite loop when all reducible rarities are at zero.
+      let allZero = true;
+      for (const checkR of ['common', 'rare', 'epic'] as EntityRarity[]) {
+        if (caps[checkR] > 0) { allZero = false; break; }
+      }
+      if (allZero) break;
+    }
+  }
+
   for (const { entity, count, sourceIndex } of activeEntities) {
-    const visibleCount = Math.min(count, MAX_VISIBLE_PER_ENTITY);
+    const visibleCount = Math.min(count, caps[entity.rarity]);
     for (let copyIndex = 0; copyIndex < visibleCount; copyIndex++) {
       items.push({
         id: entity.id,
@@ -3659,8 +3698,8 @@ export function drawEntities(
   // The original rarity-priority cap erased Common entities when Rare/Epic
   // were added, so we just slice from the end if we ever exceed the ceiling.
   // Per-entity cap (MAX_VISIBLE_PER_ENTITY = 6) usually keeps us well under.
-  if (items.length > MAX_TOTAL_ENTITY_DRAW) {
-    items.length = MAX_TOTAL_ENTITY_DRAW;
+  if (items.length > HARD_CEILING) {
+    items.length = HARD_CEILING;
   }
 
   // ── N-body physics simulation for entity particles ──────────────────────
@@ -3674,8 +3713,8 @@ export function drawEntities(
     2:  { gravity: 1.4, repulsion: 4.5, centerPull: 0.0025, dampening: 0.996, maxSpeed: 5.0 },
     3:  { gravity: 1.2, repulsion: 4.0, centerPull: 0.002, dampening: 0.997, maxSpeed: 4.5 },
     4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
-    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.0014, dampening: 0.997, maxSpeed: 4.0 },
-    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0012, dampening: 0.996, maxSpeed: 4.2 },
+    5:  { gravity: 0.95, repulsion: 3.5, centerPull: 0.0012, dampening: 0.997, maxSpeed: 4.0 },
+    6:  { gravity: 0.9, repulsion: 3.3, centerPull: 0.0012, dampening: 0.997, maxSpeed: 4.0 },
     7:  { gravity: 0.9, repulsion: 3.2, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
     8:  { gravity: 1.0, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 4.0 },
     9:  { gravity: 1.1, repulsion: 3.0, centerPull: 0.0012, dampening: 0.998, maxSpeed: 4.5 },
