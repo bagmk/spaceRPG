@@ -396,18 +396,18 @@ function drawNucleosynthesis(args: DrawClusterArgs): void {
 function drawRecombinationField(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, now } = args;
   const t = now / 1000;
-  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.98, stage.coreColor, 0.08);
+  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.78, stage.coreColor, 0.045);
 
   // orbital rings and electrons
   for (let orbit = 0; orbit < 4; orbit += 1) {
-    const rr = cluster.physicalRadius * (0.18 + orbit * 0.14);
-    strokeLocalEllipse(ctx, rr * 1.02, rr * 0.34, orbit * 0.22 + t * 0.06, stage.accent, 0.07 + orbit * 0.02, 1 + orbit * 0.2);
+    const rr = cluster.physicalRadius * (0.15 + orbit * 0.115);
+    strokeLocalEllipse(ctx, rr * 0.98, rr * 0.31, orbit * 0.22 + t * 0.06, stage.accent, 0.055 + orbit * 0.014, 0.8 + orbit * 0.16);
   }
 
   cluster.motes.forEach((mote, idx) => {
     // electrons appear as small fast dots orbiting small nucleus points
     const orbitPhase = (mote.hue + t * (0.9 + (idx % 3) * 0.2));
-    drawStageSprite(ctx, stage.id, mote.x + Math.cos(orbitPhase) * mote.r, mote.y + Math.sin(orbitPhase) * mote.r, mote.r * 0.9, mote.color, 0.78, orbitPhase);
+    drawStageSprite(ctx, stage.id, mote.x + Math.cos(orbitPhase) * mote.r, mote.y + Math.sin(orbitPhase) * mote.r, mote.r * 0.9, mote.color, 0.88, orbitPhase);
     // photon streaks on occasional capture
     if (mote.age % 1600 < 40) {  // ← was 900<60 (~6.7%); now ~2.5% — fewer expensive stroke calls
       ctx.strokeStyle = hexToRgba('#ffffff', 0.18 + Math.abs(Math.sin(t * 8 + idx)) * 0.36);
@@ -424,14 +424,14 @@ function drawDarkAge(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, now } = args;
   const t = now / 1000;
   // almost empty field, short trails and faint glows
-  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.92, stage.accent, 0.02);
+  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * 0.58, stage.accent, 0.014);
   cluster.motes.forEach((mote, idx) => {
     const baseAlpha = 0.12 + Math.min(0.6, mote.mass * 0.04);
-    ctx.fillStyle = hexToRgba(mote.color, baseAlpha * 0.45);
+    ctx.fillStyle = hexToRgba(mote.color, baseAlpha * 0.34);
     ctx.beginPath();
     ctx.arc(mote.x - mote.vx * 0.8, mote.y - mote.vy * 0.8, Math.max(0.6, mote.r * 0.55), 0, Math.PI * 2);
     ctx.fill();
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, Math.max(0.6, mote.r * 0.65), mote.color, 0.42, mote.hue + Math.sin(t * 0.4 + idx));
+    drawStageSprite(ctx, stage.id, mote.x, mote.y, Math.max(0.7, mote.r * 0.62), mote.color, 0.68, mote.hue + Math.sin(t * 0.4 + idx));
   });
 }
 
@@ -666,18 +666,36 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
   const sunVisualR = sunT > 0 ? (8 + sunT * 28) * 2.5 : 0; // sun corona radius
   const dustAlpha = Math.max(0.15, 0.6 * (1 - rangeT(progress, 0.45, 0.88)));
   if (dustAlpha > 0.005 && cluster.motes.length > 0) {
-    cluster.motes.forEach((mote) => {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    cluster.motes.forEach((mote, idx) => {
       const pushed = applyPointerVisualDisplacement(mote.x, mote.y, pointerPressure, 13);
       const dist = Math.hypot(cx - pushed.x, cy - pushed.y);
-      if (dist < sunVisualR) return;
+      if (dist < sunVisualR * 0.82) return;
 
-      // Single warm dust speck — no glow, no streak, just a tiny dot
-      const sparkle = 0.5 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.2;
-      ctx.fillStyle = hexToRgba(mote.color, dustAlpha * 0.5 * sparkle);
+      const sparkle = 0.72 + Math.sin(now * 0.003 + mote.id * 2.3) * 0.22;
+      const speed = Math.max(0.001, Math.hypot(mote.vx, mote.vy));
+      const tailX = mote.vx / speed;
+      const tailY = mote.vy / speed;
+      const tailLength = 7 + (idx % 4) * 2.2 + mote.r * 2.6;
+      ctx.strokeStyle = hexToRgba(mote.color, dustAlpha * 0.22 * sparkle);
+      ctx.lineWidth = Math.max(0.75, mote.r * 0.32);
       ctx.beginPath();
-      ctx.arc(pushed.x, pushed.y, mote.r * 0.6, 0, Math.PI * 2);
+      ctx.moveTo(pushed.x - tailX * tailLength, pushed.y - tailY * tailLength);
+      ctx.lineTo(pushed.x + tailX * 1.8, pushed.y + tailY * 1.8);
+      ctx.stroke();
+
+      ctx.fillStyle = hexToRgba(mote.color, dustAlpha * 0.16 * sparkle);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, mote.r * 1.8 + 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = hexToRgba('#fff4c8', dustAlpha * 0.78 * sparkle);
+      ctx.beginPath();
+      ctx.arc(pushed.x, pushed.y, Math.max(1.6, mote.r * 0.86), 0, Math.PI * 2);
       ctx.fill();
     });
+    ctx.restore();
   }
 
   // Layer 6: individual planet formation and stable orbits
@@ -693,8 +711,8 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
       drawFormingPlanet(ctx, cx, cy, idx, localT, now);
     } else {
       // Stable: draw orbit ring + final planet
-      ctx.strokeStyle = hexToRgba(body.color, 0.08);
-      ctx.lineWidth = idx === 2 ? 1.2 : 0.8;
+      ctx.strokeStyle = hexToRgba(body.color, idx === 2 ? 0.16 : 0.12);
+      ctx.lineWidth = idx === 2 ? 1.35 : 0.95;
       ctx.beginPath();
       ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
       ctx.stroke();

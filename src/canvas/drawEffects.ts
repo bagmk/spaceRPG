@@ -78,9 +78,9 @@ export function drawEffects({
     ctx.rotate(angle);
 
     // Arrow chevron
-    const size = 8 * pulse;
+    const size = 5.5 * pulse;
     ctx.strokeStyle = rogue.color;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 1.7;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.globalAlpha = alpha;
@@ -94,7 +94,7 @@ export function drawEffects({
     ctx.globalAlpha = alpha * 0.3;
     ctx.fillStyle = rogue.color;
     ctx.beginPath();
-    ctx.arc(0, 0, 4 * pulse, 0, Math.PI * 2);
+    ctx.arc(0, 0, 2.4 * pulse, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.globalAlpha = 1;

@@ -285,16 +285,17 @@ export function spawnMotesAtClick(
         : Math.random() * Math.PI * 2;
     const clusterRadius = Math.max(TUNING.MOTE_CLUSTER_MIN_RADIUS, cluster.physicalRadius);
     const spawnSpread = Math.max(8, Math.max(width, height) * TUNING.MOTE_SPAWN_RADIUS_FRAC * 0.05);
-    const radius = clusterRadius * (0.16 + Math.random() * 0.94);
+    const radius = clusterRadius * (0.28 + Math.random() * 1.06);
     const x = cx + Math.cos(angle) * radius + (Math.random() - 0.5) * spawnSpread;
     const y = cy + Math.sin(angle) * radius + (Math.random() - 0.5) * spawnSpread;
+    const spreadAngle = Math.atan2(y - cy, x - cx);
     const mote = createBaseMote(
       cluster,
       stage,
       x,
       y,
-      Math.cos(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
-      Math.sin(clickAngle) * 0.28 + (Math.random() - 0.5) * 0.9,
+      Math.cos(spreadAngle) * 0.45 + Math.cos(clickAngle) * 0.12 + (Math.random() - 0.5) * 0.72,
+      Math.sin(spreadAngle) * 0.45 + Math.sin(clickAngle) * 0.12 + (Math.random() - 0.5) * 0.72,
       now,
     );
     if (stage.clusterMode === 'planetary') {

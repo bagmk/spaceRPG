@@ -67,20 +67,6 @@ export function SettingsPanel({
           </button>
         </div>
 
-        <div className="settings-row">
-          <span className="settings-label">{language === 'ko' ? '음악 볼륨' : 'Music Vol'}</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={musicVolume}
-            disabled={musicMuted}
-            onChange={(e) => onSetMusicVolume(parseFloat(e.target.value))}
-            style={{ flex: 1, marginLeft: 12, opacity: musicMuted ? 0.4 : 1 }}
-            aria-label="Music volume"
-          />
-        </div>
 
         <div className="settings-row">
           <span className="settings-label">{t(language, 'settingsSfx')}</span>

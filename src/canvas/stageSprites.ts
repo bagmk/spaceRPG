@@ -101,6 +101,11 @@ export function getRogueNameLabel(name: string, lang: Lang): string {
 }
 
 export function getStageRogueColor(stage: Stage, typeKey: RogueTypeKey): string {
+  if (stage.id === 4) {
+    if (typeKey === 'minor') return '#ffd45a';
+    if (typeKey === 'major') return '#fff0a8';
+    return '#ffb13d';
+  }
   if (typeKey === 'minor') {
     return stage.particleColors[1] ?? stage.accent;
   }
@@ -365,17 +370,17 @@ function drawSpriteAtom(ctx: CanvasRenderingContext2D, r: number, color: string,
   // Recombination: electron settling into orbit — atom forming
   const s = Math.max(1.5, r * 1.4);
   // Cheap halo: avoid per-particle gradients in dense Stage 5 fields.
-  ctx.fillStyle = hexToRgba(color, 0.16);
+  ctx.fillStyle = hexToRgba(color, 0.22);
   ctx.beginPath();
   ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = hexToRgba('#ffffff', 0.55);
+  ctx.fillStyle = hexToRgba('#ffffff', 0.72);
   ctx.beginPath();
   ctx.arc(0, 0, s * 0.18, 0, Math.PI * 2);
   ctx.fill();
   // Electron orbit. Use ellipse rotation directly to avoid per-mote save/rotate.
-  ctx.strokeStyle = hexToRgba(color, 0.2);
-  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = hexToRgba(color, 0.34);
+  ctx.lineWidth = 0.72;
   const orbitRotation = t * 0.4;
   ctx.beginPath();
   ctx.ellipse(0, 0, s * 1.25, s * 0.45, orbitRotation, 0, Math.PI * 2);
@@ -388,9 +393,13 @@ function drawSpriteAtom(ctx: CanvasRenderingContext2D, r: number, color: string,
   const sinR = Math.sin(orbitRotation);
   const ex = ox * cosR - oy * sinR;
   const ey = ox * sinR + oy * cosR;
-  ctx.fillStyle = hexToRgba('#88ccff', 0.8);
+  ctx.fillStyle = hexToRgba('#88ccff', 0.9);
   ctx.beginPath();
-  ctx.arc(ex, ey, s * 0.1, 0, Math.PI * 2);
+  ctx.arc(ex, ey, s * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = hexToRgba('#ffffff', 0.45);
+  ctx.beginPath();
+  ctx.arc(ex, ey, s * 0.045, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -398,19 +407,28 @@ function drawSpriteHydrogen(ctx: CanvasRenderingContext2D, r: number, color: str
   // Dark Age: cold hydrogen gas cloud — dim, drifting, waiting
   const s = Math.max(1.5, r * 1.6);
   // Diffuse cloud, drawn with a few translucent blobs instead of gradients.
-  ctx.fillStyle = hexToRgba(color, 0.08);
+  ctx.fillStyle = hexToRgba(color, 0.09);
   ctx.beginPath();
-  ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 0.85, 0, Math.PI * 2);
   ctx.fill();
   // Denser core knot
-  ctx.fillStyle = hexToRgba(color, 0.3);
+  ctx.fillStyle = hexToRgba(color, 0.42);
   ctx.beginPath();
-  ctx.arc(s * 0.15, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+  ctx.arc(s * 0.12, -s * 0.08, s * 0.3, 0, Math.PI * 2);
   ctx.fill();
   // Faint wispy edge
-  ctx.fillStyle = hexToRgba(color, 0.12);
+  ctx.fillStyle = hexToRgba(color, 0.14);
   ctx.beginPath();
-  ctx.arc(-s * 0.3, s * 0.2, s * 0.25, 0, Math.PI * 2);
+  ctx.arc(-s * 0.25, s * 0.16, s * 0.19, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba('#dff4ff', 0.22);
+  ctx.lineWidth = 0.55;
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.38, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = hexToRgba('#ffffff', 0.34);
+  ctx.beginPath();
+  ctx.arc(s * 0.12, -s * 0.08, s * 0.075, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -463,30 +481,77 @@ function drawSpriteIonBubble(
 }
 
 function drawSpriteGalaxy(ctx: CanvasRenderingContext2D, r: number, color: string, t: number): void {
-  ctx.rotate(t * 0.35);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  const s = Math.max(2.6, r * 1.25);
+  ctx.rotate(t * 0.42);
+
+  ctx.strokeStyle = hexToRgba(color, 0.72);
+  ctx.lineWidth = Math.max(0.75, s * 0.12);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   for (let arm = 0; arm < 2; arm += 1) {
     ctx.beginPath();
-    for (let i = 0; i < 12; i += 1) {
-      const u = i / 11;
-      const angle = arm * Math.PI + u * Math.PI * 1.8;
-      const dist = r * (0.2 + u * 1.8);
+    for (let i = 0; i < 16; i += 1) {
+      const u = i / 15;
+      const angle = arm * Math.PI + u * Math.PI * 2.35 + Math.sin(u * Math.PI) * 0.22;
+      const dist = s * (0.16 + u * 1.95);
       const px = Math.cos(angle) * dist;
-      const py = Math.sin(angle) * dist * 0.7;
+      const py = Math.sin(angle) * dist * (0.56 + u * 0.12);
       if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.stroke();
   }
+
+  ctx.strokeStyle = hexToRgba('#ffffff', 0.34);
+  ctx.lineWidth = Math.max(0.35, s * 0.045);
+  for (let arm = 0; arm < 2; arm += 1) {
+    ctx.beginPath();
+    for (let i = 3; i < 14; i += 1) {
+      const u = i / 15;
+      const angle = arm * Math.PI + u * Math.PI * 2.35 + Math.sin(u * Math.PI) * 0.22;
+      const dist = s * (0.16 + u * 1.95);
+      const px = Math.cos(angle) * dist;
+      const py = Math.sin(angle) * dist * (0.56 + u * 0.12);
+      if (i === 3) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = hexToRgba('#fff7dc', 0.88);
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.26, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let i = 0; i < 5; i += 1) {
+    const angle = t * 0.18 + i * 1.7;
+    const dist = s * (0.52 + (i % 3) * 0.34);
+    const px = Math.cos(angle) * dist;
+    const py = Math.sin(angle) * dist * 0.62;
+    ctx.fillStyle = hexToRgba(i % 2 === 0 ? '#fff0a8' : '#dbe5ff', 0.5);
+    ctx.beginPath();
+    ctx.arc(px, py, Math.max(0.45, s * 0.075), 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawSpritePlanet(ctx: CanvasRenderingContext2D, r: number, color: string): void {
-  // Tiny dark dust speck — subtle, blends into the disk
-  const s = Math.max(0.8, r * 0.55);
-  ctx.fillStyle = hexToRgba(color, 0.45);
+  const s = Math.max(1.35, r * 0.85);
+  ctx.fillStyle = hexToRgba(color, 0.18);
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 1.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = hexToRgba(color, 0.72);
   ctx.beginPath();
   ctx.arc(0, 0, s, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = hexToRgba('#fff1c4', 0.48);
+  ctx.beginPath();
+  ctx.arc(-s * 0.28, -s * 0.28, s * 0.34, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba('#fff8df', 0.35);
+  ctx.lineWidth = Math.max(0.35, s * 0.12);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s * 1.55, s * 0.48, -0.22, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function drawSpriteCell(ctx: CanvasRenderingContext2D, r: number, color: string): void {

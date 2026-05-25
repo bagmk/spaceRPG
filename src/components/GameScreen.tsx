@@ -30,9 +30,9 @@ import {
 } from '../game/shop/boosts';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
+import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
-import { EncounterAlert } from './EncounterAlert';
 import { FloatingNumber } from './FloatingNumber';
 import { ParticleField, type ParticleFieldHandle } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
@@ -67,12 +67,6 @@ interface FloatingEntry {
   entropyGained?: number;
   variant: 'normal' | 'crit' | 'collision';
   delayMs?: number;
-}
-
-interface EncounterEntry {
-  id: number;
-  name: string;
-  color: string;
 }
 
 interface TutorialBubble {
@@ -231,7 +225,6 @@ export function GameScreen({
     canChooseEnding;
   useBoostNotifications(state.shopBoosts, language);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
-  const [encounterEntries, setEncounterEntries] = useState<EncounterEntry[]>([]);
   const [shakeClass, setShakeClass] = useState('');
   const saveErrorVisible = useSaveErrorToast();
   useAudioUnlockOnPointer(soundManager);
@@ -336,14 +329,6 @@ export function GameScreen({
         autoCloseMs: 6000,
       };
     }
-    if (encounterEntries.length > 0 && !state.tutorialFlags['rogue-encounter-intro']) {
-      return {
-        flagId: 'rogue-encounter-intro',
-        anchor: 'field',
-        message: t(language, 'tutRogueEncounter'),
-        autoCloseMs: 7000,
-      };
-    }
     if (canShowShop && !state.hasSeenCashShopTutorial) {
       return {
         flagId: 'hasSeenCashShopTutorial',
@@ -384,7 +369,6 @@ export function GameScreen({
     entityPanelOpen,
     hasActiveBoost,
     hasAffordableEntity,
-    encounterEntries.length,
     language,
     ownedCurrentStageEntityCount,
     stage.id,
@@ -486,8 +470,10 @@ export function GameScreen({
     const event = state.lastClickEvent;
     const emissionCount = Math.max(1, clickEmissionCount);
     const gainedLabel = formatFloatingGain(event.gained);
+    const particleName = getParticleNameLabel(event.particleName, language);
+    const particleDefinition = getParticleDefinitionLabel(event.particleName, language);
     const text = event.isCrit
-      ? `CRIT ${gainedLabel}`
+      ? `${language === 'ko' ? '치명타' : 'CRIT'} ${gainedLabel}`
       : gainedLabel;
 
     setFloatingEntries((current) => [
@@ -501,8 +487,8 @@ export function GameScreen({
           x: event.x + Math.cos(angle) * radius,
           y: event.y + Math.sin(angle) * radius - index * 6,
           text,
-          particleName: event.particleName,
-          particleDefinition: event.particleDefinition,
+          particleName,
+          particleDefinition,
           entropyGained: undefined,
           variant,
           delayMs: index * 60,
@@ -515,7 +501,7 @@ export function GameScreen({
       setFloatingEntries((current) => current.filter((entry) => Math.floor(entry.id / 100) !== event.id));
     }, event.isCrit ? TUNING.FLOAT_CRIT_MS : TUNING.FLOAT_NORMAL_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [clickEmissionCount, dispatch, soundManager, state.lastClickEvent, state.stageIdx]);
+  }, [clickEmissionCount, dispatch, language, soundManager, state.lastClickEvent, state.stageIdx]);
 
   useEffect(() => {
     if (!state.lastCollisionEvent) {
@@ -523,13 +509,14 @@ export function GameScreen({
     }
     const event = state.lastCollisionEvent;
     const rogueName = getRogueNameLabel(event.name, language);
+    const rogueText = language === 'ko' ? rogueName : rogueName.toUpperCase();
     setFloatingEntries((current) => [
       ...current,
       {
         id: event.id,
         x: event.x,
         y: event.y,
-        text: `+${formatWhole(event.bonus)} · ${rogueName.toUpperCase()}`,
+        text: `+${formatWhole(event.bonus)} · ${rogueText}`,
         entropyGained: event.entropyGained,
         variant: 'collision',
       },
@@ -550,17 +537,10 @@ export function GameScreen({
   }, [dispatch, language, soundManager, state.lastCollisionEvent]);
 
   useEffect(() => {
-    if (!state.lastEncounterEvent) {
-      return undefined;
+    if (state.lastEncounterEvent) {
+      dispatch({ type: 'CLEAR_ENCOUNTER_EVENT', id: state.lastEncounterEvent.id });
     }
-    const event = state.lastEncounterEvent;
-    setEncounterEntries((current) => [...current, { ...event, name: getRogueNameLabel(event.name, language) }]);
-    dispatch({ type: 'CLEAR_ENCOUNTER_EVENT', id: event.id });
-    const timeoutId = window.setTimeout(() => {
-      setEncounterEntries((current) => current.filter((entry) => entry.id !== event.id));
-    }, TUNING.ENCOUNTER_ALERT_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [dispatch, language, state.lastEncounterEvent]);
+  }, [dispatch, state.lastEncounterEvent]);
 
   useEffect(() => {
     if (state.pendingCondenseStageIdx === null) {
@@ -734,9 +714,6 @@ export function GameScreen({
               trigger: mechanicResult?.trigger,
             });
           }}
-          onEncounter={(payload) =>
-            dispatch({ type: 'REPORT_ENCOUNTER', name: payload.name, color: payload.color })
-          }
           onCollision={(payload) =>
             dispatch({
               type: 'REPORT_COLLISION',
@@ -970,9 +947,6 @@ export function GameScreen({
             variant={entry.variant}
             delayMs={entry.delayMs}
           />
-        ))}
-        {encounterEntries.map((entry) => (
-          <EncounterAlert key={entry.id} color={entry.color} name={entry.name} language={language} />
         ))}
       </main>
 

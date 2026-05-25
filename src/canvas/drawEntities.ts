@@ -480,16 +480,17 @@ function drawQuantumFoam(
   now: number,
   strength: number,
   seed = 0,
+  cheap = false,
 ): void {
-  const count = 20 + Math.floor(strength * 28);
+  const count = cheap ? 8 + Math.floor(strength * 10) : 20 + Math.floor(strength * 28);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   // Interference wave rings — whole canvas undulation
-  const waveCount = 2 + Math.floor(strength * 4);
+  const waveCount = cheap ? 1 + Math.floor(strength * 2) : 2 + Math.floor(strength * 4);
   for (let w = 0; w < waveCount; w++) {
     const waveSpeed = 0.00025 + w * 0.00015;
     const wavePhase = w * 1.8 + seed * 0.01;
-    const ringCount = 5 + Math.floor(strength * 4);
+    const ringCount = cheap ? 2 + Math.floor(strength * 2) : 5 + Math.floor(strength * 4);
     for (let r = 0; r < ringCount; r++) {
       const rr = radius * (0.1 + r * 0.1) + Math.sin(now * waveSpeed + wavePhase + r * 0.7) * radius * 0.04;
       ctx.strokeStyle = hexToRgba(color, (0.012 + strength * 0.022) * (1 - r / (ringCount + 2)));
@@ -509,7 +510,7 @@ function drawQuantumFoam(
     const y = cy + Math.sin(angle * 1.3) * dist * 0.78;
     ctx.fillStyle = hexToRgba(i % 4 === 0 ? '#ffffff' : color, 0.03 + flicker * (0.07 + strength * 0.14));
     fillCircle(ctx, x, y, 0.5 + unit(localSeed, 13) * (1.2 + strength * 2.2));
-    if (i % 3 === 0) {
+    if (!cheap && i % 3 === 0) {
       ctx.strokeStyle = hexToRgba(color, 0.015 + flicker * strength * 0.08);
       ctx.lineWidth = 0.5;
       strokeCircle(ctx, x, y, 3.5 + unit(localSeed, 14) * radius * 0.1);
@@ -527,11 +528,12 @@ function drawVacuumBubble(
   now: number,
   strength: number,
   seed = 0,
+  cheap = false,
 ): void {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   // Scattered expanding bubbles — count scales with strength
-  const bubbleCount = 4 + Math.floor(strength * 16);
+  const bubbleCount = cheap ? 2 + Math.floor(strength * 5) : 4 + Math.floor(strength * 16);
   for (let i = 0; i < bubbleCount; i += 1) {
     const bx = i < 4 ? cx : cx + (unit(seed + i, 201) - 0.5) * radius * 1.8;
     const by = i < 4 ? cy : cy + (unit(seed + i, 202) - 0.5) * radius * 1.4;
@@ -556,8 +558,9 @@ function drawVacuumBubble(
   ctx.strokeStyle = hexToRgba('#ffffff', 0.04 + strength * 0.07);
   ctx.lineWidth = 0.7;
   ctx.beginPath();
-  for (let i = 0; i <= 12; i += 1) {
-    const t = i / 12;
+  const outlineSegments = cheap ? 6 : 12;
+  for (let i = 0; i <= outlineSegments; i += 1) {
+    const t = i / outlineSegments;
     const a = t * Math.PI * 2 + now * 0.00018 + seed;
     const r = radius * (0.42 + Math.sin(i * 1.7 + now * 0.001) * 0.06 + strength * 0.08);
     const x = cx + Math.cos(a) * r;
@@ -701,16 +704,20 @@ function drawNebulaCloud(
 ): void {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  const blobCount = cheap ? 4 + Math.floor(strength * 4) : 8 + Math.floor(strength * 8);
+  const visualRadius = cheap ? radius * 0.72 : radius;
+  const blobCount = cheap ? 3 + Math.floor(strength * 3) : 8 + Math.floor(strength * 8);
   for (let i = 0; i < blobCount; i += 1) {
     const angle = unit(seed + i, 31) * Math.PI * 2 + Math.sin(now * 0.0002 + i) * 0.3;
     // scatter blobs more broadly across canvas
-    const dist = radius * (0.04 + unit(seed + i, 32) * 0.78);
+    const dist = visualRadius * (0.04 + unit(seed + i, 32) * (cheap ? 0.5 : 0.78));
     const x = cx + Math.cos(angle) * dist;
     const y = cy + Math.sin(angle) * dist * 0.82;
-    const r = radius * (0.14 + unit(seed + i, 33) * 0.28 + strength * 0.08) * (1 + Math.sin(now * 0.0009 + i) * 0.1);
+    const rBase = cheap
+      ? 0.08 + unit(seed + i, 33) * 0.16 + strength * 0.035
+      : 0.14 + unit(seed + i, 33) * 0.28 + strength * 0.08;
+    const r = visualRadius * rBase * (1 + Math.sin(now * 0.0009 + i) * 0.1);
     if (cheap) {
-      ctx.fillStyle = hexToRgba(color, 0.025 + strength * 0.055);
+      ctx.fillStyle = hexToRgba(color, 0.03 + strength * 0.045);
     } else {
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
       grad.addColorStop(0, hexToRgba(color, 0.03 + strength * 0.09));
@@ -720,6 +727,17 @@ function drawNebulaCloud(
     }
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (cheap) {
+    ctx.strokeStyle = hexToRgba(color, 0.06 + strength * 0.035);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.arc(cx, cy, visualRadius * (0.2 + strength * 0.04), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = hexToRgba('#ffffff', 0.05 + strength * 0.055);
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(0.7, visualRadius * 0.026), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
@@ -734,6 +752,7 @@ function drawDiskSwarm(
   now: number,
   strength: number,
   seed = 0,
+  cheap = false,
 ): void {
   const t = now * 0.001;
   ctx.save();
@@ -741,20 +760,22 @@ function drawDiskSwarm(
   ctx.globalCompositeOperation = 'lighter';
 
   // Warm dust glow — diffuse disk background
-  const diskGrad = ctx.createRadialGradient(0, 0, radius * 0.08, 0, 0, radius * 0.7);
-  diskGrad.addColorStop(0, hexToRgba('#fff4d6', 0.06 * strength));
-  diskGrad.addColorStop(0.5, hexToRgba(color, 0.03 * strength));
-  diskGrad.addColorStop(1, hexToRgba(color, 0));
+  const diskFill = cheap ? hexToRgba(color, 0.03 * strength) : ctx.createRadialGradient(0, 0, radius * 0.08, 0, 0, radius * 0.7);
+  if (!cheap && typeof diskFill !== 'string') {
+    diskFill.addColorStop(0, hexToRgba('#fff4d6', 0.06 * strength));
+    diskFill.addColorStop(0.5, hexToRgba(color, 0.03 * strength));
+    diskFill.addColorStop(1, hexToRgba(color, 0));
+  }
   ctx.save();
   ctx.scale(1, 0.35);
-  ctx.fillStyle = diskGrad;
+  ctx.fillStyle = diskFill;
   ctx.beginPath();
   ctx.arc(0, 0, radius * 0.7, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   // Dust rings with gaps (Kirkwood-style)
-  const ringCount = 5;
+  const ringCount = cheap ? 2 : 5;
   for (let i = 0; i < ringCount; i += 1) {
     const ringR = radius * (0.2 + i * 0.1);
     const tilt = 0.34;
@@ -767,7 +788,7 @@ function drawDiskSwarm(
   }
 
   // Orbiting planetesimals — different speeds per ring
-  const rocks = 8 + Math.floor(strength * 8);
+  const rocks = cheap ? 4 + Math.floor(strength * 4) : 8 + Math.floor(strength * 8);
   for (let i = 0; i < rocks; i += 1) {
     const ringBand = 0.18 + unit(seed + i, 41) * 0.48;
     const speed = 0.00035 * (1 - ringBand * 0.5); // inner = faster (Kepler)
@@ -787,11 +808,13 @@ function drawDiskSwarm(
 
   // Accretion streaks — gas spiraling inward
   ctx.lineWidth = 0.4;
-  for (let arm = 0; arm < 3; arm += 1) {
+  const armCount = cheap ? 1 : 3;
+  const armSegments = cheap ? 8 : 16;
+  for (let arm = 0; arm < armCount; arm += 1) {
     ctx.strokeStyle = hexToRgba('#ffc860', (0.03 + strength * 0.04));
     ctx.beginPath();
-    for (let s = 0; s < 16; s += 1) {
-      const u = s / 15;
+    for (let s = 0; s < armSegments; s += 1) {
+      const u = s / (armSegments - 1);
       const spiralAngle = arm * 2.09 + u * Math.PI * 1.6 + t * 0.08;
       const spiralR = radius * (0.12 + u * 0.48);
       const x = Math.cos(spiralAngle) * spiralR;
@@ -813,9 +836,10 @@ function drawEntropyFragments(
   now: number,
   strength: number,
   seed = 0,
+  cheap = false,
 ): void {
   // More fragments slowly dispersing into darkness
-  const count = 12 + Math.floor(strength * 18);
+  const count = cheap ? 6 + Math.floor(strength * 8) : 12 + Math.floor(strength * 18);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < count; i += 1) {
@@ -828,18 +852,20 @@ function drawEntropyFragments(
     ctx.fillStyle = hexToRgba(i % 5 === 0 ? '#ffffff' : color, alpha);
     fillCircle(ctx, x, y, 0.6 + unit(seed + i, 53) * (1.5 + strength * 1.6));
   }
-  // Dashed boundary ring
-  ctx.strokeStyle = hexToRgba(color, 0.022 + strength * 0.038);
-  ctx.lineWidth = 0.65;
-  ctx.setLineDash([2, 8]);
-  strokeCircle(ctx, cx, cy, radius * (0.48 + strength * 0.1));
-  ctx.setLineDash([]);
-  // Very faint outer shell
-  ctx.strokeStyle = hexToRgba(color, 0.012 + strength * 0.02);
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([1, 12]);
-  strokeCircle(ctx, cx, cy, radius * (0.76 + strength * 0.14));
-  ctx.setLineDash([]);
+  if (!cheap) {
+    // Dashed boundary ring
+    ctx.strokeStyle = hexToRgba(color, 0.022 + strength * 0.038);
+    ctx.lineWidth = 0.65;
+    ctx.setLineDash([2, 8]);
+    strokeCircle(ctx, cx, cy, radius * (0.48 + strength * 0.1));
+    ctx.setLineDash([]);
+    // Very faint outer shell
+    ctx.strokeStyle = hexToRgba(color, 0.012 + strength * 0.02);
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([1, 12]);
+    strokeCircle(ctx, cx, cy, radius * (0.76 + strength * 0.14));
+    ctx.setLineDash([]);
+  }
   ctx.restore();
 }
 
@@ -1288,11 +1314,11 @@ function drawLocalEntityEffect(ctx: CanvasRenderingContext2D, position: EntityPo
   } else if (textHas(text, 'dark energy', 'big rip', 'spike')) {
     drawRiftLines(ctx, 0, 0, glowRadius * 1.6, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'entropy', 'decay', 'annihilation', 'washout', 'equilibrium', 'darkness', 'void', 'thermal', 'last baryon')) {
-    drawEntropyFragments(ctx, 0, 0, glowRadius * 1.35, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
+    drawEntropyFragments(ctx, 0, 0, glowRadius * 1.35, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, true);
   } else if (textHas(text, 'vacuum', 'inflaton', 'inflation', 'symmetry', 'wormhole', 'de sitter', 'bubble')) {
-    drawVacuumBubble(ctx, 0, 0, glowRadius * 1.45, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
+    drawVacuumBubble(ctx, 0, 0, glowRadius * 1.45, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, true);
   } else if (textHas(text, 'quantum', 'fluctuation', 'foam', 'tunneling', 'virtual particle')) {
-    drawQuantumFoam(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
+    drawQuantumFoam(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, true);
   } else if (textHas(text, 'quark', 'gluon', 'qcd', 'color', 'baryon', 'pion', 'kaon')) {
     drawColorCharge(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55);
   } else if (textHas(text, 'proton', 'neutron', 'deuterium', 'tritium', 'helium', 'lithium', 'beryllium', 'fusion', 'nucleosynthesis')) {
@@ -1314,9 +1340,9 @@ function drawLocalEntityEffect(ctx: CanvasRenderingContext2D, position: EntityPo
     ctx.quadraticCurveTo(-glowRadius * 0.7, -glowRadius * 0.35, 0, 0);
     ctx.stroke();
   } else if (textHas(text, 'planet', 'moon', 'asteroid', 'disk', 'core', 'zone', 'habitable')) {
-    drawDiskSwarm(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
+    drawDiskSwarm(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, true);
   } else if (textHas(text, 'cloud', 'gas', 'nebula', 'envelope', 'dust', 'wind', 'hydrogen')) {
-    drawNebulaCloud(ctx, 0, 0, glowRadius * 1.45, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, item.stageId === 5 || item.stageId === 6);
+    drawNebulaCloud(ctx, 0, 0, glowRadius * 0.96, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed, true);
   } else if (textHas(text, 'dna', 'rna')) {
     ctx.strokeStyle = hexToRgba(item.color, 0.24 + strength * 0.12);
     ctx.lineWidth = 1;
@@ -4056,14 +4082,19 @@ export function drawEntities(
   for (const position of positions) {
     const { item, x, y, size, glowRadius } = position;
     const isLegend = item.rarity === 'legendary';
+    const compactGlow = stageId === 5 || stageId === 6;
+    const outerGlowRadius = compactGlow ? glowRadius * 0.56 : glowRadius;
+    const innerGlowRadius = compactGlow ? glowRadius * 0.28 : glowRadius * 0.5;
+    const outerGlowAlpha = compactGlow ? (isLegend ? 0.09 : 0.045) : (isLegend ? 0.18 : 0.10);
+    const innerGlowAlpha = compactGlow ? (isLegend ? 0.18 : 0.11) : (isLegend ? 0.28 : 0.16);
     drawLocalEntityEffect(ctx, position, now);
-    ctx.fillStyle = hexToRgba(item.glowColor, isLegend ? 0.18 : 0.10);
+    ctx.fillStyle = hexToRgba(item.glowColor, outerGlowAlpha);
     ctx.beginPath();
-    ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+    ctx.arc(x, y, outerGlowRadius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = hexToRgba(item.glowColor, isLegend ? 0.28 : 0.16);
+    ctx.fillStyle = hexToRgba(item.glowColor, innerGlowAlpha);
     ctx.beginPath();
-    ctx.arc(x, y, glowRadius * 0.5, 0, Math.PI * 2);
+    ctx.arc(x, y, innerGlowRadius, 0, Math.PI * 2);
     ctx.fill();
 
     if (isLegend) {

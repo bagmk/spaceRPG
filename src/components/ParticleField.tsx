@@ -72,11 +72,6 @@ interface CollisionPayload {
   name: string;
 }
 
-interface EncounterPayload {
-  name: string;
-  color: string;
-}
-
 interface ParticleFieldProps {
   stage: Stage;
   actualStageId: number;
@@ -96,7 +91,6 @@ interface ParticleFieldProps {
   anomaly: AnomalyType | null;
   purchasedEntities: PurchasedEntityEntry[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
-  onEncounter: (payload: EncounterPayload) => void;
   onCollision: (payload: CollisionPayload) => void;
 }
 
@@ -228,11 +222,11 @@ function applyAnchorForce(
       // Stage 1: stronger pull toward center + orbital spin + bouncy repulsion
       const targetR = clusterRadius * Math.pow(mote.hue, 1.75) * 0.7;
       const radial = (dist - targetR) / Math.max(targetR, 16);
-      const gravity = TUNING.MOTE_ANCHOR_GRAVITY * 1.6;
+      const gravity = TUNING.MOTE_ANCHOR_GRAVITY * 1.2;
       mote.vx += nx * radial * gravity * dtScale;
       mote.vy += ny * radial * gravity * dtScale;
       // Orbital tangential force — swirl around center
-      const spin = 0.55 * (35 / (dist + 8));
+      const spin = 0.32 * (35 / (dist + 8));
       mote.vx += -ny * spin * dtScale;
       mote.vy += nx * spin * dtScale;
       break;
@@ -270,8 +264,8 @@ function applyAnchorForce(
       const radial = (dist - targetR) / targetR;
       mote.vx += nx * radial * TUNING.PLANETARY_ORBIT_LOCK * dtScale;
       mote.vy += ny * radial * TUNING.PLANETARY_ORBIT_LOCK * dtScale;
-      mote.vx += -ny * 0.42 * dtScale;
-      mote.vy += nx * 0.42 * dtScale;
+      mote.vx += -ny * 0.32 * dtScale;
+      mote.vy += nx * 0.32 * dtScale;
       break;
     }
     case 'lifeSurface': {
@@ -282,8 +276,8 @@ function applyAnchorForce(
       mote.vx += nx * radial * 0.6 * dtScale;
       mote.vy += ny * radial * 0.6 * dtScale;
       // Tangential orbit
-      mote.vx += -ny * 0.35 * dtScale;
-      mote.vy += nx * 0.35 * dtScale;
+      mote.vx += -ny * 0.24 * dtScale;
+      mote.vy += nx * 0.24 * dtScale;
       break;
     }
     case 'redGiant': {
@@ -432,7 +426,15 @@ function createRogue(world: CanvasWorld, stage: Stage, width: number, height: nu
     speed > 0.3 && Math.random() < TUNING.TRAVEL_DIRECTION_BIAS
       ? Math.atan2(world.coreVY, world.coreVX) + (Math.random() - 0.5) * 1.2
       : Math.random() * Math.PI * 2;
-  const radius = Math.max(width, height) * TUNING.ROGUE_SPAWN_RADIUS_FRAC;
+  const typeKey = pickRogueType();
+  const type = ROGUE_TYPES[typeKey];
+  const cosAngle = Math.cos(angle);
+  const sinAngle = Math.sin(angle);
+  const edgeDistance = Math.min(
+    width / 2 / Math.max(Math.abs(cosAngle), 0.0001),
+    height / 2 / Math.max(Math.abs(sinAngle), 0.0001),
+  );
+  const radius = edgeDistance + TUNING.ROGUE_SPAWN_EDGE_MARGIN + type.r * 0.65;
   const x = cx + Math.cos(angle) * radius;
   const y = cy + Math.sin(angle) * radius;
   const targetX = cx + (Math.random() - 0.5) * width * TUNING.ROGUE_TARGET_RECT_FRAC;
@@ -440,8 +442,6 @@ function createRogue(world: CanvasWorld, stage: Stage, width: number, height: nu
   const dx = targetX - x;
   const dy = targetY - y;
   const distance = Math.max(1, Math.hypot(dx, dy));
-  const typeKey = pickRogueType();
-  const type = ROGUE_TYPES[typeKey];
   const moveSpeed = randomBetween(TUNING.ROGUE_SPEED_MIN, TUNING.ROGUE_SPEED_MAX);
   const id = world.nextId + 1;
   world.nextId = id;
@@ -545,7 +545,7 @@ function applyPointerPressureToMote(
   if (distance > radius) return;
   const falloff = 1 - distance / radius;
   const push = field.strength * (falloff * falloff) * TUNING.MOTE_POINTER_PUSH_STRENGTH * dtScale;
-  const curl = field.strength * falloff * 0.35 * dtScale;
+  const curl = field.strength * falloff * 0.22 * dtScale;
   mote.vx += nx * push - ny * curl;
   mote.vy += ny * push + nx * curl;
   mote.spinVel += (nx > 0 ? 1 : -1) * push * 0.06;
@@ -665,7 +665,6 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   anomaly,
   purchasedEntities,
   onGatherClick,
-  onEncounter,
   onCollision,
 }: ParticleFieldProps, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -764,12 +763,15 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) return;
       // Cap DPR to 2: high-DPR phones (DPR 3) gain no visible quality for 2.25x
       // GPU/memory cost in a 2D canvas particle game.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = bounds.width * dpr;
-      canvas.height = bounds.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const pixelWidth = Math.max(1, Math.round(bounds.width * dpr));
+      const pixelHeight = Math.max(1, Math.round(bounds.height * dpr));
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+      ctx.setTransform(pixelWidth / bounds.width, 0, 0, pixelHeight / bounds.height, 0, 0);
       sizeRef.current = { width: bounds.width, height: bounds.height };
       if (!worldRef.current) {
         worldRef.current = createWorld(bounds.width, bounds.height, stage);
@@ -1199,7 +1201,6 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
         if (onScreen && !rogue.spotted) {
           rogue.spotted = true;
-          onEncounter({ name: rogue.name, color: rogue.color });
         }
         // Once pointer attracts a rogue, keep it alive much longer
         const attractDist = pointerPressure
