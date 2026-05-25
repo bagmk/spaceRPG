@@ -729,24 +729,72 @@ function drawDiskSwarm(
   strength: number,
   seed = 0,
 ): void {
+  const t = now * 0.001;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(now * 0.00018 + seed);
   ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 3; i += 1) {
-    ctx.strokeStyle = hexToRgba(color, (0.04 + strength * 0.06) / (i + 1));
-    ctx.lineWidth = 0.8 + strength * 0.5;
+
+  // Warm dust glow — diffuse disk background
+  const diskGrad = ctx.createRadialGradient(0, 0, radius * 0.08, 0, 0, radius * 0.7);
+  diskGrad.addColorStop(0, hexToRgba('#fff4d6', 0.06 * strength));
+  diskGrad.addColorStop(0.5, hexToRgba(color, 0.03 * strength));
+  diskGrad.addColorStop(1, hexToRgba(color, 0));
+  ctx.save();
+  ctx.scale(1, 0.35);
+  ctx.fillStyle = diskGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Dust rings with gaps (Kirkwood-style)
+  const ringCount = 5;
+  for (let i = 0; i < ringCount; i += 1) {
+    const ringR = radius * (0.2 + i * 0.1);
+    const tilt = 0.34;
+    const alpha = (0.03 + strength * 0.05) * (1 - i * 0.12);
+    ctx.strokeStyle = hexToRgba(i % 2 === 0 ? color : '#ffe8c0', alpha);
+    ctx.lineWidth = 1.2 + strength * 0.6 - i * 0.15;
     ctx.beginPath();
-    ctx.ellipse(0, 0, radius * (0.32 + i * 0.17), radius * (0.12 + i * 0.06), i * 0.22, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, ringR, ringR * tilt, now * 0.00006 + seed, 0, Math.PI * 2);
     ctx.stroke();
   }
-  const rocks = 5 + Math.floor(strength * 6);
+
+  // Orbiting planetesimals — different speeds per ring
+  const rocks = 8 + Math.floor(strength * 8);
   for (let i = 0; i < rocks; i += 1) {
-    const ring = 0.28 + unit(seed + i, 41) * 0.42;
-    const angle = now * (0.00028 + unit(seed + i, 42) * 0.00025) + unit(seed + i, 43) * Math.PI * 2;
-    ctx.fillStyle = hexToRgba(i % 3 === 0 ? '#ffffff' : color, 0.16 + strength * 0.16);
-    fillCircle(ctx, Math.cos(angle) * radius * ring, Math.sin(angle) * radius * ring * 0.32, 0.9 + strength * 1.3);
+    const ringBand = 0.18 + unit(seed + i, 41) * 0.48;
+    const speed = 0.00035 * (1 - ringBand * 0.5); // inner = faster (Kepler)
+    const angle = now * speed + unit(seed + i, 43) * Math.PI * 2;
+    const rx = radius * ringBand;
+    const ry = rx * 0.34;
+    const px = Math.cos(angle) * rx;
+    const py = Math.sin(angle) * ry;
+    const rockSize = 0.6 + unit(seed + i, 44) * (1.2 + strength * 1.5);
+    // Warm glow
+    ctx.fillStyle = hexToRgba(i % 4 === 0 ? '#ffffff' : i % 3 === 0 ? '#ffe0a0' : color, 0.12 + strength * 0.15);
+    fillCircle(ctx, px, py, rockSize * 2);
+    // Bright core
+    ctx.fillStyle = hexToRgba(i % 4 === 0 ? '#ffffff' : '#ffd888', 0.3 + strength * 0.2);
+    fillCircle(ctx, px, py, rockSize);
   }
+
+  // Accretion streaks — gas spiraling inward
+  ctx.lineWidth = 0.4;
+  for (let arm = 0; arm < 3; arm += 1) {
+    ctx.strokeStyle = hexToRgba('#ffc860', (0.03 + strength * 0.04));
+    ctx.beginPath();
+    for (let s = 0; s < 16; s += 1) {
+      const u = s / 15;
+      const spiralAngle = arm * 2.09 + u * Math.PI * 1.6 + t * 0.08;
+      const spiralR = radius * (0.12 + u * 0.48);
+      const x = Math.cos(spiralAngle) * spiralR;
+      const y = Math.sin(spiralAngle) * spiralR * 0.34;
+      if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
   ctx.restore();
 }
 
@@ -1758,11 +1806,14 @@ function drawLifeOrbitEntities(
     const isLegend = item.rarity === 'legendary';
     const isFreeFlight = textHas(text, 'probe', 'lander', 'ark');
     const orbitBand = index % 4;
-    const orbitR = earthRadius + 45 + orbitBand * 32 + (isLegend ? 28 : 0);
-    const speed = isFreeFlight ? 0.0002 + unit(seed, 82) * 0.00016 : 0.00034 + unit(seed, 82) * 0.00022;
+    const baseOrbitR = earthRadius + 45 + orbitBand * 32 + (isLegend ? 28 : 0);
+    const speed = isFreeFlight ? 0.00015 + unit(seed, 82) * 0.0001 : 0.00034 + unit(seed, 82) * 0.00022;
     const dir = isFreeFlight ? 1 : (unit(seed, 83) > 0.5 ? 1 : -1);
     const angle = now * speed * dir + unit(seed, 84) * Math.PI * 2;
     const tilt = 0.44 + unit(seed, 85) * 0.2;
+    // Free-flight entities get elongated elliptical orbits that go off-screen
+    const eccentricity = isFreeFlight ? 1.8 + unit(seed, 86) * 1.2 : 1.0;
+    const orbitR = baseOrbitR * (1 + (eccentricity - 1) * Math.abs(Math.sin(angle * 0.5)));
     const x = cx + Math.cos(angle) * orbitR;
     const y = cy + Math.sin(angle) * orbitR * tilt + Math.sin(now * 0.00055 + seed) * (isFreeFlight ? 9 : 3);
     return { item, x, y, angle, orbitR, isFreeFlight };
@@ -1880,50 +1931,64 @@ function drawLifeOrbitEntities(
       const t = now * 0.001;
       ctx.save();
       ctx.translate(x, y);
-      const heading = angle + Math.PI / 2 + Math.sin(t * 0.35) * 0.25;
+      const heading = angle + Math.PI / 2 + Math.sin(t * 0.35) * 0.15;
       ctx.rotate(heading);
-      const s = size * 1.2;
+      const s = size * 0.75;
 
-      // Short engine glow (radial, no beam)
-      const engineGrad = ctx.createRadialGradient(-s * 1.3, 0, 0, -s * 1.3, 0, s * 0.8);
-      engineGrad.addColorStop(0, hexToRgba('#66bbff', 0.25));
-      engineGrad.addColorStop(1, hexToRgba('#2255aa', 0));
-      ctx.fillStyle = engineGrad;
-      fillCircle(ctx, -s * 1.3, 0, s * 0.8);
-
-      // Main hull — sleek diamond shape
-      ctx.fillStyle = hexToRgba('#d0dce8', 0.82);
+      // Engine exhaust beam — tapered, wiggly, fading
+      const beamLen = s * (2.5 + Math.sin(t * 2.5) * 0.4);
+      const beamGrad = ctx.createLinearGradient(-s * 0.9, 0, -s * 0.9 - beamLen, 0);
+      beamGrad.addColorStop(0, hexToRgba('#88ddff', 0.35));
+      beamGrad.addColorStop(0.25, hexToRgba('#4499dd', 0.15));
+      beamGrad.addColorStop(0.6, hexToRgba('#2266aa', 0.05));
+      beamGrad.addColorStop(1, hexToRgba('#114477', 0));
+      ctx.fillStyle = beamGrad;
       ctx.beginPath();
-      ctx.moveTo(s * 1.8, 0);
-      ctx.lineTo(s * 0.3, -s * 0.55);
-      ctx.lineTo(-s * 1.2, -s * 0.25);
-      ctx.lineTo(-s * 1.2, s * 0.25);
-      ctx.lineTo(s * 0.3, s * 0.55);
+      ctx.moveTo(-s * 0.9, -s * 0.12);
+      const wiggle1 = Math.sin(t * 3) * s * 0.04;
+      const wiggle2 = Math.sin(t * 3.7) * s * 0.03;
+      ctx.quadraticCurveTo(-s * 0.9 - beamLen * 0.5, wiggle1 - s * 0.03, -s * 0.9 - beamLen, wiggle2);
+      ctx.quadraticCurveTo(-s * 0.9 - beamLen * 0.5, wiggle1 + s * 0.03, -s * 0.9, s * 0.12);
       ctx.closePath();
       ctx.fill();
 
-      // Hull center stripe
-      ctx.fillStyle = hexToRgba('#a8c4e0', 0.6);
+      // Engine glow dot
+      ctx.fillStyle = hexToRgba('#aaeeff', 0.5 + Math.sin(t * 4) * 0.15);
+      fillCircle(ctx, -s * 0.9, 0, s * 0.15);
+
+      // Main hull
+      ctx.fillStyle = hexToRgba('#d0dce8', 0.85);
       ctx.beginPath();
-      ctx.moveTo(s * 1.5, 0);
-      ctx.lineTo(s * 0.2, -s * 0.18);
-      ctx.lineTo(-s * 1.0, -s * 0.1);
-      ctx.lineTo(-s * 1.0, s * 0.1);
-      ctx.lineTo(s * 0.2, s * 0.18);
+      ctx.moveTo(s * 1.6, 0);
+      ctx.lineTo(s * 0.25, -s * 0.45);
+      ctx.lineTo(-s * 0.9, -s * 0.2);
+      ctx.lineTo(-s * 0.9, s * 0.2);
+      ctx.lineTo(s * 0.25, s * 0.45);
       ctx.closePath();
       ctx.fill();
 
-      // Cockpit window
+      // Hull stripe
+      ctx.fillStyle = hexToRgba('#a8c4e0', 0.55);
+      ctx.beginPath();
+      ctx.moveTo(s * 1.3, 0);
+      ctx.lineTo(s * 0.15, -s * 0.14);
+      ctx.lineTo(-s * 0.75, -s * 0.08);
+      ctx.lineTo(-s * 0.75, s * 0.08);
+      ctx.lineTo(s * 0.15, s * 0.14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cockpit
       ctx.fillStyle = hexToRgba('#aaeeff', 0.7);
       ctx.beginPath();
-      ctx.ellipse(s * 1.2, 0, s * 0.2, s * 0.1, 0, 0, Math.PI * 2);
+      ctx.ellipse(s * 1.0, 0, s * 0.15, s * 0.08, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Habitat ring
-      ctx.strokeStyle = hexToRgba('#88bbff', 0.35);
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = hexToRgba('#88bbff', 0.3);
+      ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.ellipse(0, 0, s * 0.65, s * 0.65, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, s * 0.5, s * 0.5, 0, 0, Math.PI * 2);
       ctx.stroke();
       for (let i = 0; i < 6; i++) {
         const la = t * 0.6 + i * (Math.PI * 2 / 6);
