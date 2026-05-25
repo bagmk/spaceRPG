@@ -575,11 +575,24 @@ function drawColorCharge(
   color: string,
   now: number,
   strength: number,
+  stageId = 2,
 ): void {
-  const colorCharges = ['#ff5c55', '#57d77a', '#5aa7ff'];
   const t = now * 0.001;
-  const spin = now * 0.0008;
   const pulse = 0.6 + Math.sin(t * 3) * 0.2;
+
+  // Stage-specific flavor: count, colors, speed, wobble
+  const chargeCount = stageId <= 2 ? 2 : stageId <= 3 ? 3 : stageId <= 4 ? 4 : 5;
+  const spinSpeed = stageId <= 2 ? 0.0012 : stageId <= 3 ? 0.0008 : stageId <= 4 ? 0.0006 : 0.0004;
+  const wobbleAmp = stageId <= 2 ? 0.12 : stageId <= 3 ? 0.08 : stageId <= 4 ? 0.05 : 0.03;
+  const tubeWave = stageId <= 2 ? 0.18 : stageId <= 3 ? 0.12 : stageId <= 4 ? 0.08 : 0.05;
+  const palette = stageId <= 2
+    ? ['#ff8844', '#44aaff']                                     // matter vs antimatter pair
+    : stageId <= 3
+      ? ['#ff5c55', '#57d77a', '#5aa7ff']                        // RGB quark colors
+      : stageId <= 4
+        ? ['#ffaa44', '#ff6644', '#ffdd66', '#ffcc88']           // warm fusion
+        : ['#aa88ff', '#6644cc', '#8866dd', '#bb99ff', '#5533aa']; // cool degenerate
+  const spin = now * spinSpeed;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -594,19 +607,20 @@ function drawColorCharge(
   ctx.arc(cx, cy, radius * 0.35, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3 color charges with independent wobble
-  const points = colorCharges.map((chargeColor, i) => {
-    const baseAngle = spin + (i / 3) * Math.PI * 2;
-    const wobble = Math.sin(t * (2.5 + i * 0.7) + i * 2.1) * radius * 0.08;
+  // Charges with independent wobble
+  const points = Array.from({ length: chargeCount }, (_, i) => {
+    const cc = palette[i % palette.length];
+    const baseAngle = spin + (i / chargeCount) * Math.PI * 2;
+    const wobble = Math.sin(t * (2.5 + i * 0.7) + i * 2.1) * radius * wobbleAmp;
     const orbitR = radius * (0.22 + Math.sin(t * 1.8 + i * 1.3) * 0.06) + wobble;
     return {
-      color: chargeColor,
+      color: cc,
       x: cx + Math.cos(baseAngle) * orbitR,
       y: cy + Math.sin(baseAngle) * orbitR * 0.82,
     };
   });
 
-  // Wavy gluon flux tubes (not straight lines)
+  // Wavy flux tubes
   ctx.lineWidth = 0.7 + strength * 0.8;
   for (let i = 0; i < points.length; i += 1) {
     const a = points[i];
@@ -614,10 +628,9 @@ function drawColorCharge(
     const mx = (a.x + b.x) / 2;
     const my = (a.y + b.y) / 2;
     const dist = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
-    const wave = Math.sin(t * 4 + i * 2.1) * radius * 0.12;
+    const wave = Math.sin(t * 4 + i * 2.1) * radius * tubeWave;
     const perpX = -(b.y - a.y) / dist * wave;
     const perpY = (b.x - a.x) / dist * wave;
-    // Double flux tube
     for (let s = -1; s <= 1; s += 2) {
       ctx.strokeStyle = hexToRgba(a.color, (0.06 + strength * 0.08) * pulse);
       ctx.beginPath();
@@ -625,7 +638,7 @@ function drawColorCharge(
       ctx.quadraticCurveTo(mx + perpX * s, my + perpY * s, b.x, b.y);
       ctx.stroke();
     }
-    // Energy spark traveling along tube
+    // Energy spark
     const sparkT = (t * 2 + i * 0.33) % 1;
     const sx = a.x + (b.x - a.x) * sparkT;
     const sy = a.y + (b.y - a.y) * sparkT;
@@ -633,7 +646,7 @@ function drawColorCharge(
     fillCircle(ctx, sx, sy, 0.6 + strength * 0.5);
   }
 
-  // Color charge particles with glow halos
+  // Charge particles with glow
   for (const point of points) {
     ctx.fillStyle = hexToRgba(point.color, 0.12 + strength * 0.1);
     fillCircle(ctx, point.x, point.y, 2.5 + strength * 3.5);
@@ -1227,7 +1240,7 @@ function drawLocalEntityEffect(ctx: CanvasRenderingContext2D, position: EntityPo
   } else if (textHas(text, 'quantum', 'fluctuation', 'foam', 'tunneling', 'virtual particle')) {
     drawQuantumFoam(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'quark', 'gluon', 'qcd', 'color', 'baryon', 'pion', 'kaon')) {
-    drawColorCharge(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.stageId ?? 2);
+    drawColorCharge(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55);
   } else if (textHas(text, 'proton', 'neutron', 'deuterium', 'tritium', 'helium', 'lithium', 'beryllium', 'fusion', 'nucleosynthesis')) {
     drawNuclearCluster(ctx, 0, 0, glowRadius * 1.55, item.color, now + item.seed, 0.45 + strength * 0.55, item.seed);
   } else if (textHas(text, 'white dwarf', 'brown dwarf', 'black dwarf', 'neutron star', 'pulsar', 'remnant', 'graveyard')) {
@@ -1655,19 +1668,12 @@ function drawSpacecraftBody(
   ctx.strokeStyle = hexToRgba(color, 0.75);
   ctx.fillStyle = hexToRgba(color, 0.62);
   if (textHas(text, 'telescope', 'observatory')) {
-    ctx.lineWidth = Math.max(0.9, size * 0.12);
-    ctx.fillRect(-size * 0.55, -size * 0.16, size * 1.1, size * 0.32);
-    ctx.strokeRect(-size * 0.55, -size * 0.16, size * 1.1, size * 0.32);
-    ctx.strokeStyle = hexToRgba('#ffffff', 0.58);
-    ctx.beginPath();
-    ctx.arc(size * 0.58, 0, size * 0.18, -Math.PI * 0.45, Math.PI * 0.45);
-    ctx.stroke();
-    ctx.strokeStyle = hexToRgba(color, 0.46);
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.22, size * 0.2);
-    ctx.lineTo(-size * 0.44, size * 0.62);
-    ctx.lineTo(size * 0.28, size * 0.62);
-    ctx.stroke();
+    // Simple body + solar panels (no triangle/beam)
+    ctx.lineWidth = Math.max(0.6, size * 0.08);
+    ctx.fillRect(-size * 0.3, -size * 0.15, size * 0.6, size * 0.3);
+    ctx.fillStyle = hexToRgba('#74cfff', 0.35);
+    ctx.fillRect(-size * 0.8, -size * 0.1, size * 0.4, size * 0.2);
+    ctx.fillRect(size * 0.4, -size * 0.1, size * 0.4, size * 0.2);
   } else if (textHas(text, 'probe', 'lander', 'ark')) {
     // Compact spacecraft — small body + dish antenna + faint thruster glow
     ctx.lineWidth = Math.max(0.6, size * 0.08);
@@ -1722,7 +1728,6 @@ function drawLifeOrbitEntities(
 
   const techLevel = Math.min(1, items.length / 6);
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
 
   // Orbit rings — prominently visible with glow + dashes
   const orbitCount = Math.min(4, Math.max(2, Math.ceil(items.length / 3)));
@@ -1799,9 +1804,9 @@ function drawLifeOrbitEntities(
       ctx.stroke();
     }
 
-    // Big soft glow
-    const glowR = size * 6;
-    const glowAlpha = item.rarity === 'legendary' ? 0.42 : 0.28;
+    // Soft glow (reduced to avoid bright beams)
+    const glowR = size * 3;
+    const glowAlpha = item.rarity === 'legendary' ? 0.25 : 0.15;
     const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
     glow.addColorStop(0, hexToRgba(item.glowColor, glowAlpha));
     glow.addColorStop(0.3, hexToRgba(item.glowColor, glowAlpha * 0.5));
