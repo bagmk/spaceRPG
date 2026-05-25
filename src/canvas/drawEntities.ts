@@ -1732,22 +1732,12 @@ function drawLifeOrbitEntities(
           ? 12
           : 8.5;
 
+    // Subtle orbit glow dot for telescope/observatory (no beam)
     if (textHas(text, 'telescope', 'observatory')) {
-      const surfaceX = cx + Math.cos(angle + Math.PI) * earthRadius * 0.62;
-      const surfaceY = cy + Math.sin(angle + Math.PI) * earthRadius * 0.36;
-      ctx.strokeStyle = hexToRgba(item.color, 0.14);
-      ctx.lineWidth = 0.9;
+      ctx.fillStyle = hexToRgba(item.color, 0.12);
       ctx.beginPath();
-      ctx.moveTo(surfaceX, surfaceY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      for (let ring = 0; ring < 2; ring += 1) {
-        ctx.strokeStyle = hexToRgba('#ffffff', 0.18 / (ring + 1));
-        ctx.lineWidth = 1.2 - ring * 0.3;
-        ctx.beginPath();
-        ctx.arc(x, y, size * (1.8 + ring * 1.1 + Math.sin(now * 0.002 + ring) * 0.12), -0.7, 0.7);
-        ctx.stroke();
-      }
+      ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     if (isFreeFlight) {
@@ -3700,8 +3690,8 @@ export function drawEntities(
     2:  { gravity: 1.4, repulsion: 4.5, centerPull: 0.0025, dampening: 0.996, maxSpeed: 5.0 },
     3:  { gravity: 1.2, repulsion: 4.0, centerPull: 0.002, dampening: 0.997, maxSpeed: 4.5 },
     4:  { gravity: 0.9, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
-    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.5 },
-    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0008, dampening: 0.999, maxSpeed: 3.0 },
+    5:  { gravity: 0.8, repulsion: 3.0, centerPull: 0.0014, dampening: 0.997, maxSpeed: 4.0 },
+    6:  { gravity: 0.6, repulsion: 2.5, centerPull: 0.0012, dampening: 0.996, maxSpeed: 4.2 },
     7:  { gravity: 0.9, repulsion: 3.2, centerPull: 0.001, dampening: 0.998, maxSpeed: 3.8 },
     8:  { gravity: 1.0, repulsion: 3.5, centerPull: 0.001, dampening: 0.998, maxSpeed: 4.0 },
     9:  { gravity: 1.1, repulsion: 3.0, centerPull: 0.0012, dampening: 0.998, maxSpeed: 4.5 },
