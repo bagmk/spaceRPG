@@ -1637,43 +1637,63 @@ function drawDiskRibbon(
   inner: number,
   outer: number,
   tilt: number,
-  stage: Stage,
+  _stage: Stage,
   back: boolean,
 ): void {
-  // Draw multiple thin sub-rings with fade at edges for soft look
-  const segments = 24;
+  // Multi-layered concentric rings with blackbody color gradient
+  // Inner = hot white/yellow, outer = orange/red/dark
+  const ringColors = [
+    { pos: 0.00, color: '#ffffff', alpha: 0.7 },
+    { pos: 0.08, color: '#fffae0', alpha: 0.65 },
+    { pos: 0.18, color: '#ffd878', alpha: 0.6 },
+    { pos: 0.30, color: '#ffb040', alpha: 0.55 },
+    { pos: 0.45, color: '#ff8828', alpha: 0.45 },
+    { pos: 0.60, color: '#e85a18', alpha: 0.35 },
+    { pos: 0.75, color: '#b03010', alpha: 0.22 },
+    { pos: 0.88, color: '#601808', alpha: 0.12 },
+    { pos: 1.00, color: '#200800', alpha: 0 },
+  ];
+
   const startAngle = back ? Math.PI : 0;
   const endAngle = back ? Math.PI * 2 : Math.PI;
-  const fadeZone = 0.12; // fraction of arc that fades at each edge
+  const backMult = back ? 0.55 : 1;
 
   ctx.save();
   ctx.scale(1, Math.cos(tilt));
 
-  for (let i = 0; i < segments; i++) {
-    const t = i / segments;
-    const t2 = (i + 1) / segments;
-    const a1 = startAngle + t * (endAngle - startAngle);
-    const a2 = startAngle + t2 * (endAngle - startAngle);
+  // Draw each ring band
+  const bands = ringColors.length - 1;
+  for (let b = 0; b < bands; b++) {
+    const c0 = ringColors[b];
+    const c1 = ringColors[b + 1];
+    const r0 = inner + (outer - inner) * c0.pos;
+    const r1 = inner + (outer - inner) * c1.pos;
 
-    // Edge fade: alpha drops near 0% and 100% of the arc
-    let edgeAlpha = 1;
-    if (t < fadeZone) edgeAlpha = t / fadeZone;
-    if (t > 1 - fadeZone) edgeAlpha = (1 - t) / fadeZone;
+    // Create gradient for this band
+    const grad = ctx.createRadialGradient(0, 0, r0, 0, 0, r1);
+    grad.addColorStop(0, hexToRgba(c0.color, c0.alpha * backMult));
+    grad.addColorStop(1, hexToRgba(c1.color, c1.alpha * backMult));
 
-    const baseAlpha = back ? 0.34 : 0.62;
-    const midAlpha = back ? 0.26 : 0.52;
-
-    const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
-    gradient.addColorStop(0, hexToRgba('#fff0c8', baseAlpha * edgeAlpha));
-    gradient.addColorStop(0.45, hexToRgba(stage.coreColor, midAlpha * edgeAlpha));
-    gradient.addColorStop(1, hexToRgba(stage.accent, 0));
-
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(0, 0, outer, a1, a2);
-    ctx.arc(0, 0, inner, a2, a1, true);
+    ctx.arc(0, 0, r1, startAngle, endAngle);
+    ctx.arc(0, 0, r0, endAngle, startAngle, true);
     ctx.closePath();
     ctx.fill();
+  }
+
+  // Fine texture lines (subtle ring striations)
+  const lineCount = 12;
+  for (let i = 0; i < lineCount; i++) {
+    const t = (i + 0.5) / lineCount;
+    const r = inner + (outer - inner) * t;
+    const tempAlpha = (1 - t) * 0.15 * backMult;
+    if (tempAlpha < 0.01) continue;
+    ctx.strokeStyle = hexToRgba('#ffeedd', tempAlpha);
+    ctx.lineWidth = 0.4 + (1 - t) * 0.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, startAngle, endAngle);
+    ctx.stroke();
   }
 
   ctx.restore();
