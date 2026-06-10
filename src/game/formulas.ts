@@ -3,6 +3,8 @@ import { STAGES } from './stages';
 import {
   AUTO_OUTPUT_MULTIPLIER,
   CLICK_OUTPUT_MULTIPLIER,
+  ENTROPY_W_AUTO,
+  ENTROPY_W_CLICK,
   SKILL_TIME_RATE_BASE,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -431,13 +433,29 @@ export function getCompositeBoostMultiplier(
   return getActiveShopBoostMultiplier(boosts, category, now);
 }
 
+// Entity redesign D1: stage advancement is gated by cumulative entropy alone.
+// Quanta is the economy (spend on upgrades/fusion); cosmic time is a narrative readout.
 export function canCondense(state: GameState): boolean {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding) {
     return false;
   }
   const stage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
-  const threshold = getEffectiveThreshold(stage, state.cumulativeBoost);
-  return state.quanta >= threshold && state.cosmicClockSec >= stage.cosmicTimeSec;
+  return state.entropy >= stage.entropyThreshold;
+}
+
+/** Cumulative entropy the player entered this stage with (= previous stage's gate). */
+export function getEntropyGateFloor(stageIdx: number): number {
+  if (stageIdx <= 0) return 0;
+  return STAGES[Math.min(stageIdx - 1, STAGES.length - 1)].entropyThreshold;
+}
+
+/** 0..1 progress through the current stage's entropy gate window. */
+export function getEntropyGateProgress(entropy: number, stageIdx: number): number {
+  const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
+  const floor = getEntropyGateFloor(stageIdx);
+  const span = stage.entropyThreshold - floor;
+  if (span <= 0) return entropy >= stage.entropyThreshold ? 1 : 0;
+  return clamp((entropy - floor) / span, 0, 1);
 }
 
 /**
@@ -449,7 +467,6 @@ export function canCondense(state: GameState): boolean {
  * Stage  8 threshold 300B → ~150B KB              (150 TB)
  * Stage 16 threshold  4Z → ~2Z KB                 (2 ZB)
  */
-const ENTROPY_MATTER_RATE = 0.5;
 const ENTROPY_CONDENSE_RATE = 0.1;
 
 export function getEntropyOnCondense(quanta: number, _threshold: number): number {
@@ -457,11 +474,22 @@ export function getEntropyOnCondense(quanta: number, _threshold: number): number
   return Math.floor(quanta * ENTROPY_CONDENSE_RATE);
 }
 
-export function getEntropyFromMatterGain(beforeQuanta: number, afterQuanta: number, _threshold: number): number {
+/**
+ * Entropy from matter income, weighted by how it was earned (entity redesign).
+ * Clicking converts at ENTROPY_W_CLICK, auto income at ENTROPY_W_AUTO — active
+ * play drives the progression gate roughly twice as fast per quanta.
+ */
+export function getEntropyFromMatterGain(
+  beforeQuanta: number,
+  afterQuanta: number,
+  _threshold: number,
+  source: 'click' | 'auto' = 'auto',
+): number {
   if (!Number.isFinite(beforeQuanta) || !Number.isFinite(afterQuanta) || afterQuanta <= beforeQuanta) {
     return 0;
   }
-  return (afterQuanta - beforeQuanta) * ENTROPY_MATTER_RATE;
+  const weight = source === 'click' ? ENTROPY_W_CLICK : ENTROPY_W_AUTO;
+  return (afterQuanta - beforeQuanta) * weight;
 }
 
 export function applyAntiRunaway(raw: number): number {

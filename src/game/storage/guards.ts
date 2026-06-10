@@ -7,6 +7,7 @@ import type {
   UniverseAtlasEntry,
   UniverseSeed,
   DailyCheckInState,
+  EntityInstance,
   PurchasedEntityEntry,
   ShopBoost,
   LegacyShopBoosts,
@@ -127,6 +128,17 @@ export function isPurchasedEntityEntry(value: unknown): value is PurchasedEntity
   if (!value || typeof value !== 'object') return false;
   const r = value as Record<string, unknown>;
   return typeof r.entityId === 'string' && isFiniteNumber(r.count);
+}
+
+export function isEntityInstance(value: unknown): value is EntityInstance {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as Record<string, unknown>;
+  return typeof r.entityId === 'string' && isFiniteNumber(r.count) && isFiniteNumber(r.level);
+}
+
+export function isAlmanacCollected(value: unknown): value is Record<number, string[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every(isStringArray);
 }
 
 export function isSkillState(value: unknown): boolean {

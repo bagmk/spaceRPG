@@ -1,8 +1,9 @@
 import type { Stage, StageBackground } from './types';
+import { ENTROPY_THRESHOLDS } from './balance';
 
 const COSMIC_YEAR_SECONDS = 31_557_600;
 
-const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'background' | 'zoomDirection'>[] = [
+const STAGE_DEFINITIONS: Omit<Stage, 'timelinePos' | 'cosmicTimeSpanSec' | 'background' | 'zoomDirection' | 'entropyThreshold'>[] = [
   {
     id: 1,
     name: 'Inflation',
@@ -594,6 +595,7 @@ export const STAGES: Stage[] = STAGE_DEFINITIONS.map((stage, index, stages) => {
     cosmicTimeSpanSec: stage.cosmicTimeSec - previousCosmicTime,
     timelinePos: getTimelinePos(stage.cosmicTimeSec, minLog, maxLog),
     zoomDirection: ZOOM_DIRECTION_BY_STAGE[stage.id],
+    entropyThreshold: ENTROPY_THRESHOLDS[stage.id],
   };
 });
 

@@ -1,7 +1,7 @@
 import { TUNING } from '../game/constants';
 import { hexToRgba } from '../game/formulas';
 import type { Mote, MoteCluster, Stage } from '../game/types';
-import type { PurchasedEntityEntry } from '../game/entities/types';
+import type { EntityInstance } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import { drawSoftNode, drawStageSprite, drawThread, strokeLocalEllipse } from './stageSprites';
 
@@ -97,7 +97,7 @@ interface DrawClusterArgs {
   ctx: CanvasRenderingContext2D;
   cluster: MoteCluster;
   stage: Stage;
-  purchasedEntities: PurchasedEntityEntry[];
+  inventory: EntityInstance[];
   cx: number;
   cy: number;
   width: number;
@@ -139,13 +139,13 @@ function applyPointerVisualDisplacement(
 function linkedEntityCount(args: DrawClusterArgs, entityName: string): number {
   const entity = getEntitiesForStage(args.stage.id).find((candidate) => candidate.name === entityName);
   if (!entity) return 0;
-  return getPurchasedEntityCount(args.purchasedEntities, entity);
+  return getPurchasedEntityCount(args.inventory, entity);
 }
 
 function linkedEntityRatio(args: DrawClusterArgs, entityName: string): number {
   const entity = getEntitiesForStage(args.stage.id).find((candidate) => candidate.name === entityName);
   if (!entity || entity.maxCount <= 0) return 0;
-  return Math.min(1, getPurchasedEntityCount(args.purchasedEntities, entity) / entity.maxCount);
+  return Math.min(1, getPurchasedEntityCount(args.inventory, entity) / entity.maxCount);
 }
 
 export function drawCluster(args: DrawClusterArgs): void {

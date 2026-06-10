@@ -12,8 +12,8 @@ import {
   canCondense as canCondenseNow,
   getAutoRate,
   getEffectiveThreshold,
+  getEntropyGateProgress,
   getEntropyOnCondense,
-  getTimeFillRate,
   getTimeGaugeForCosmicClock,
   getProgress,
   getTimeMultiplier,
@@ -184,7 +184,7 @@ export function GameScreen({
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities, state.prestigeUpgrades);
+  }, state.inventory, state.prestigeUpgrades);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
     stage.mechanic === 'reionization'
@@ -196,12 +196,7 @@ export function GameScreen({
   const shopMatterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', wallNow);
   const displayedAutoRate = (autoRate + stageAutoBonus) * shopTimeBoost * shopMatterBoost;
   const timeMult = getTimeMultiplier(state.skills.time.level, modifiers) * shopTimeBoost;
-  const timeGauge = getTimeGaugeForCosmicClock(state.stageIdx, state.cosmicClockSec);
-  const timeProgress01 = Math.min(1, timeGauge / 100);
-  const displayTimeGauge = isViewingPastStage
-    ? getTimeGaugeForCosmicClock(displayStage.id - 1, state.cosmicClockSec)
-    : timeGauge;
-  const displayTimeProgress01 = Math.min(1, displayTimeGauge / 100);
+  const entropyGateProgress01 = getEntropyGateProgress(state.entropy, state.stageIdx);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
@@ -213,12 +208,7 @@ export function GameScreen({
     state.lastEndingId === null &&
     !endingChooserDismissed;
   const canCondense = canCondenseNow(state);
-  const condenseHint =
-    progress01 >= 1 && timeProgress01 < 1
-      ? 'Wait for cosmic time.'
-      : timeProgress01 >= 1 && progress01 < 1
-        ? 'Gather more quanta.'
-        : 'Fill both quanta and cosmic time.';
+  const condenseHint = t(language, 'hudEntropyGateHint');
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
@@ -233,30 +223,10 @@ export function GameScreen({
   const saveErrorVisible = useSaveErrorToast();
   useAudioUnlockOnPointer(soundManager);
   const logicAccumulator = useRef(0);
-  const lastWhooshAt = useRef(0);
   const particleFieldRef = useRef<ParticleFieldHandle>(null);
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
-  const timeFlowRate = getTimeFillRate(stage, state.skills.time.level, modifiers, shopTimeBoost);
-  const timeRemainingSeconds =
-    timeProgress01 >= 1 || timeFlowRate <= 0
-      ? 0
-      : (100 - Math.min(100, timeGauge)) / timeFlowRate;
-  const timeEstimateLabel = (() => {
-    if (timeRemainingSeconds <= 0) return '';
-    const s = timeRemainingSeconds;
-    if (s < 60) return `${Math.ceil(s)}s`;
-    if (s < 3600) return `${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`;
-    if (s < 86400) {
-      const h = Math.floor(s / 3600);
-      const m = Math.floor((s % 3600) / 60);
-      return m > 0 ? `${h}h ${m}m` : `${h}h`;
-    }
-    const d = Math.floor(s / 86400);
-    const h = Math.floor((s % 86400) / 3600);
-    return h > 0 ? `${d}d ${h}h` : `${d}d`;
-  })();
   const cosmicClockFromGauge = state.cosmicClockSec;
   const displayedCosmicClock =
     state.currentUniverseSeed.anomaly === 'inverted_time'
@@ -281,12 +251,12 @@ export function GameScreen({
   };
   const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
   const hasAffordableEntity = currentStageEntities.some((entity) => {
-    const count = getPurchasedEntityCount(state.purchasedEntities, entity);
+    const count = getPurchasedEntityCount(state.inventory, entity);
     const maxed = entity.maxCount > 0 && count >= entity.maxCount;
     return !maxed && state.quanta >= getEntityCost(entity, count);
   });
   const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
-    return sum + getPurchasedEntityCount(state.purchasedEntities, entity);
+    return sum + getPurchasedEntityCount(state.inventory, entity);
   }, 0);
   const showEndingButton = state.completedRun && state.lastEndingId === null && endingChooserDismissed;
   const showCondenseGate = isViewingPastStage || canCondense || showEndingButton;
@@ -399,13 +369,6 @@ export function GameScreen({
     while (logicAccumulator.current >= TUNING.LOGIC_TICK_MS) {
       dispatch({ type: 'TICK', now: Date.now(), dt: TUNING.LOGIC_TICK_MS });
       logicAccumulator.current -= TUNING.LOGIC_TICK_MS;
-    }
-    if (
-      timeFlowRate > 1e10 &&
-      now - lastWhooshAt.current >= TUNING.TIME_ACCELERATION_WHOOSH_INTERVAL_MS
-    ) {
-      lastWhooshAt.current = now;
-      soundManager?.playTimeAccelerationWhoosh(Math.min(1, Math.log10(timeFlowRate) / 20));
     }
     // Drive ParticleField's render in the same frame — single rAF for the app.
     particleFieldRef.current?.tick(now, dt);
@@ -695,7 +658,7 @@ export function GameScreen({
           clickVfxScale={modifiers.clickVfxScale}
           gravityMod={state.currentUniverseSeed.gravityMod}
           anomaly={state.currentUniverseSeed.anomaly}
-          purchasedEntities={state.purchasedEntities}
+          inventory={state.inventory}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -717,6 +680,8 @@ export function GameScreen({
               type: 'CLICK',
               now: Date.now(),
               randomValue: Math.random(),
+              dropRoll: Math.random(),
+              dropPickRoll: Math.random(),
               x: ox,
               y: oy,
               forceCrit: forceCrit || mechanicResult?.forceCrit,
@@ -738,6 +703,8 @@ export function GameScreen({
               entropyBonus: payload.entropyBonus,
               tier: payload.tier,
               name: payload.name,
+              dropRoll: Math.random(),
+              dropPickRoll: Math.random(),
             })
           }
         />
@@ -747,7 +714,7 @@ export function GameScreen({
         {entityPanelOpen ? (
           <EntityPanel
             currentStageId={stage.id}
-            purchasedEntities={state.purchasedEntities}
+            inventory={state.inventory}
             quanta={state.quanta}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
@@ -814,22 +781,21 @@ export function GameScreen({
                     <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
                   </div>
                 </div>
-                <div className="hud-meter hud-meter--time">
+                <div className="hud-meter hud-meter--entropy">
                   <div className="hud-meter-row">
                     <span className="hud-meter-label">
-                      <span className="hud-meter-label-text">{t(language, 'hudTime')}</span>
-                      {timeEstimateLabel && !isViewingPastStage ? (
-                        <span className="hud-time-estimate-inline">{timeEstimateLabel}</span>
-                      ) : null}
+                      <span className="hud-meter-label-text">{t(language, 'hudEntropy')}</span>
                     </span>
-                    <span className="hud-readout hud-cosmic-time">
-                      <span className="hud-readout-value">{timeReadout.value}</span>
-                      <span className="hud-readout-exponent">{timeReadout.exponent ?? ''}</span>
-                      <span className="hud-readout-unit">{timeReadout.unit}</span>
+                    <span className="hud-readout hud-entropy-gate">
+                      <span className="hud-readout-value">{`${formatEntropyAmount(state.entropy)} / ${formatEntropyAmount(stage.entropyThreshold)}`}</span>
                     </span>
                   </div>
-                  <div className="hud-gauge hud-time-gauge" aria-label="Cosmic time gauge">
-                    <div className="hud-gauge-fill hud-time-fill" style={{ width: `${Math.min(100, displayTimeProgress01 * 100)}%` }} />
+                  <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
+                    <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
+                  </div>
+                  <div className="hud-time-readout-faint">
+                    <span>{t(language, 'hudTime')}</span>
+                    <span>{`${timeReadout.value}${timeReadout.exponent ?? ''}${timeReadout.unit}`}</span>
                   </div>
                 </div>
               </div>

@@ -74,12 +74,15 @@ describe('gameReducer', () => {
     expect(next.entropy).toBe(90);
   });
 
-  it('requires both quanta and time gauge before condensing', () => {
+  it('gates condensing on the cumulative entropy threshold (D1)', () => {
     const stage = STAGES[0];
+    // Quanta and time alone no longer open the gate.
     const state = {
       ...createInitialGameState(0),
       quanta: stage.threshold,
-      timeGauge: 0,
+      timeGauge: 100,
+      cosmicClockSec: stage.cosmicTimeSec,
+      entropy: stage.entropyThreshold * 0.9,
     };
 
     expect(canCondense(state)).toBe(false);
@@ -88,8 +91,7 @@ describe('gameReducer', () => {
 
     const ready = {
       ...state,
-      timeGauge: 100,
-      cosmicClockSec: stage.cosmicTimeSec,
+      entropy: stage.entropyThreshold,
     };
     expect(canCondense(ready)).toBe(true);
     const next = gameReducer(ready, { type: 'START_CONDENSE', now: 1000 });
@@ -201,7 +203,7 @@ describe('gameReducer', () => {
       y: 100,
     });
 
-    expect(purchased.purchasedEntities).toEqual([{ entityId: entity.id, count: 1 }]);
+    expect(purchased.inventory).toEqual([{ entityId: entity.id, count: 1, level: 1 }]);
     expect(boosted.lastClickEvent?.gained).toBeGreaterThan(baseline.lastClickEvent?.gained ?? 0);
   });
 

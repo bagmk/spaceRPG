@@ -10,11 +10,12 @@ import { useAuth } from '../auth/AuthProvider';
 import { pullRemoteSave, debouncedPush, flushPendingPush } from '../cloud/sync';
 import { pushLeaderboardEntry } from '../cloud/leaderboard';
 import { toPersistentState } from '../game/reducer';
+import { SAVE_SCHEMA_VERSION } from '../game/storage';
 import type { GameState } from '../game/types';
 import type { GameAction } from '../game/reducer';
 import type { Dispatch } from 'react';
 
-const SAVE_VERSION = 12;
+const SAVE_VERSION = SAVE_SCHEMA_VERSION;
 const CLOUD_SAVE_INTERVAL_MS = 30_000;
 
 interface UseCloudSyncOptions {
@@ -88,7 +89,8 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     state.skillPoints,
     state.singularityUnlocks,
     state.endingsCompleted,
-    state.purchasedEntities,
+    state.inventory,
+    state.almanacCollected,
     state.prestigeUpgrades,
     state.peakEntropy,
   ]);

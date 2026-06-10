@@ -61,7 +61,7 @@ import type {
   Star,
   WakeTrail,
 } from '../game/types';
-import type { PurchasedEntityEntry } from '../game/entities/types';
+import type { EntityInstance } from '../game/entities/types';
 
 interface CollisionPayload {
   x: number;
@@ -89,7 +89,7 @@ interface ParticleFieldProps {
   clickVfxScale: number;
   gravityMod: number;
   anomaly: AnomalyType | null;
-  purchasedEntities: PurchasedEntityEntry[];
+  inventory: EntityInstance[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   onCollision: (payload: CollisionPayload) => void;
 }
@@ -663,7 +663,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   clickVfxScale,
   gravityMod,
   anomaly,
-  purchasedEntities,
+  inventory,
   onGatherClick,
   onCollision,
 }: ParticleFieldProps, ref) {
@@ -1258,7 +1258,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       ctx,
       cluster: world.cluster,
       stage,
-      purchasedEntities,
+      inventory,
       cx,
       cy,
       width,
@@ -1270,7 +1270,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     if (stage.clusterMode !== 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
-    drawEntities(ctx, cx, cy, actualStageId, purchasedEntities, now, pointerPressure, world.cluster);
+    drawEntities(ctx, cx, cy, actualStageId, inventory, now, pointerPressure, world.cluster);
     if (stage.clusterMode === 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
@@ -1356,7 +1356,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           const cx = rect.width / 2;
           const cy = rect.height / 2;
           const moon = getStage11MoonScreen(
-            cx, cy, performance.now(), worldRef.current.cluster, purchasedEntities,
+            cx, cy, performance.now(), worldRef.current.cluster, inventory,
           );
           if (moon.visible) {
             const dist = Math.hypot(x - moon.moonX, y - moon.moonY);
@@ -1387,7 +1387,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           if (worldRef.current && stage.id === 11) {
             const mcx = sizeRef.current.width / 2;
             const mcy = sizeRef.current.height / 2;
-            const moon = getStage11MoonScreen(mcx, mcy, performance.now(), worldRef.current.cluster, purchasedEntities);
+            const moon = getStage11MoonScreen(mcx, mcy, performance.now(), worldRef.current.cluster, inventory);
             if (moon.visible) {
               const dist = Math.hypot(x - moon.moonX, y - moon.moonY);
               if (dist <= moon.moonR * 2.5) {

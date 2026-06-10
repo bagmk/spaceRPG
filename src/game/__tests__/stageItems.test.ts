@@ -176,9 +176,9 @@ describe('stage entity definitions', () => {
 
     const mods = defaultModifiers();
     applyEntityModifiers(mods, [
-      { entityId: autoEntity?.id ?? '', count: 1 },
-      { entityId: clickEntity?.id ?? '', count: 1 },
-      { entityId: timeEntity?.id ?? '', count: 1 },
+      { entityId: autoEntity?.id ?? '', count: 1, level: 1 },
+      { entityId: clickEntity?.id ?? '', count: 1, level: 1 },
+      { entityId: timeEntity?.id ?? '', count: 1, level: 1 },
     ]);
 
     expect(mods.autoRateFlatAdd).toBeGreaterThan(0);
@@ -192,10 +192,10 @@ describe('stage entity definitions', () => {
     if (!timeEntity) return;
 
     const currentStageMods = defaultModifiers();
-    applyEntityModifiers(currentStageMods, [{ entityId: timeEntity.id, count: 1 }], timeEntity.stageId);
+    applyEntityModifiers(currentStageMods, [{ entityId: timeEntity.id, count: 1, level: 1 }], timeEntity.stageId);
 
     const laterStageMods = defaultModifiers();
-    applyEntityModifiers(laterStageMods, [{ entityId: timeEntity.id, count: 1 }], timeEntity.stageId + 1);
+    applyEntityModifiers(laterStageMods, [{ entityId: timeEntity.id, count: 1, level: 1 }], timeEntity.stageId + 1);
 
     expect(currentStageMods.timeMultMult).toBeCloseTo(1 + timeEntity.effect.value / 100);
     expect(laterStageMods.timeMultMult).toBeCloseTo(
@@ -211,7 +211,7 @@ describe('stage entity definitions', () => {
 
     const baseline = { ...defaultModifiers(), autoRateAdd: 1e9, autoRateMult: 48 };
     const withSun = { ...baseline };
-    applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1 }]);
+    applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }]);
 
     expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(525e6, 0);
   });

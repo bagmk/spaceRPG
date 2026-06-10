@@ -147,6 +147,60 @@ export const TIME_STAGE_GROWTH_AFTER_STAGE_6 = 6;
  */
 export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 
+// ── Entropy gate (entity redesign D1) ────────────────────────────────────────
+// Stage advancement gate: cumulative entropy >= ENTROPY_THRESHOLDS[stageId].
+// Calibrated by scripts/entropy-gate-sim.mjs so the reference profile
+// (cps 3, activeFraction 0.5, fusion every 90s) lands on each stage's
+// realPlayTargetSec. Re-run the sim after touching entropy weights below.
+
+export const ENTROPY_THRESHOLDS: Record<number, number> = {
+  1: 1.058e2,
+  2: 1.142e6,
+  3: 4.662e7,
+  4: 1.408e9,
+  5: 1.411e10,
+  6: 3.922e11,
+  7: 3.704e12,
+  8: 1.443e14,
+  9: 8.936e14,
+  10: 8.543e15,
+  11: 1.243e17,
+  12: 4.774e17,
+  13: 8.702e17,
+  14: 2.283e18,
+  15: 5.58e18,
+  16: 4.5e19,
+};
+
+/** Entropy gained per quanta earned by clicking (active play drives progress). */
+export const ENTROPY_W_CLICK = 0.5;
+/** Entropy gained per quanta earned by auto income (half the click weight). */
+export const ENTROPY_W_AUTO = 0.25;
+/** One fusion burst is worth this many seconds of current entropy income (Phase 3). */
+export const ENTROPY_FUSION_VALUE_SEC = 30;
+/** Each fusion consumes this fraction of the quanta bank (Phase 3 sink). */
+export const ENTROPY_FUSION_COST_FRAC = 0.1;
+
+// ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
+
+/** Chance an entity drops on a regular click. */
+export const DROP_CHANCE_BASE = 0.04;
+/** Drop chance multiplier when the click crits. */
+export const DROP_CHANCE_CRIT_MULT = 3;
+/** Chance an entity drops on a rogue collision reward. */
+export const DROP_CHANCE_COLLISION = 0.35;
+/** Base rarity weights for a drop roll (relative, need not sum to 1). */
+export const DROP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
+  common: 80,
+  rare: 16,
+  epic: 3.5,
+  legendary: 0.5,
+};
+/** Crit multiplies rare/epic/legendary weights by this factor. */
+export const DROP_CRIT_RARITY_BIAS = 2;
+/** Combo at/above this threshold also applies the rarity bias. */
+export const DROP_COMBO_BIAS_THRESHOLD = 100;
+
 export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
   click_lv5: 1.4,
   click_lv10: 1.8,
@@ -219,5 +273,18 @@ export const BALANCE = {
   },
   entropy: {
     stageGrowthBase: ENTROPY_STAGE_GROWTH_BASE,
+    thresholds: ENTROPY_THRESHOLDS,
+    wClick: ENTROPY_W_CLICK,
+    wAuto: ENTROPY_W_AUTO,
+    fusionValueSec: ENTROPY_FUSION_VALUE_SEC,
+    fusionCostFrac: ENTROPY_FUSION_COST_FRAC,
+  },
+  drop: {
+    chanceBase: DROP_CHANCE_BASE,
+    chanceCritMult: DROP_CHANCE_CRIT_MULT,
+    chanceCollision: DROP_CHANCE_COLLISION,
+    rarityWeights: DROP_RARITY_WEIGHTS,
+    critRarityBias: DROP_CRIT_RARITY_BIAS,
+    comboBiasThreshold: DROP_COMBO_BIAS_THRESHOLD,
   },
 } as const;

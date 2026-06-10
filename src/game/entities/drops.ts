@@ -1,0 +1,114 @@
+/**
+ * Entity drop system (entity redesign Phase 1 — the Collect loop).
+ *
+ * Clicks, crits and rogue collisions roll for an entity drop from the current
+ * stage's pool. Drops land in the inventory and fill the almanac collection
+ * grid. All randomness is injected via roll values so reducers stay pure.
+ * Tunables live in balance.ts (DROP_*).
+ */
+
+import {
+  DROP_CHANCE_BASE,
+  DROP_CHANCE_COLLISION,
+  DROP_CHANCE_CRIT_MULT,
+  DROP_COMBO_BIAS_THRESHOLD,
+  DROP_CRIT_RARITY_BIAS,
+  DROP_RARITY_WEIGHTS,
+} from '../balance';
+import { getEntitiesForStage } from './stageItems';
+import type { EntityInstance, EntityRarity, StageEntity } from './types';
+
+const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
+
+export interface DropRoll {
+  /** 0..1 — decides whether anything drops. */
+  roll: number;
+  /** 0..1 — decides rarity and which entity within the rarity pool. */
+  pickRoll: number;
+}
+
+interface DropContext {
+  isCrit?: boolean;
+  combo?: number;
+}
+
+/** Drop chance for a click with the given context. */
+export function getClickDropChance(isCrit: boolean): number {
+  return DROP_CHANCE_BASE * (isCrit ? DROP_CHANCE_CRIT_MULT : 1);
+}
+
+function getRarityWeights(context: DropContext): Record<EntityRarity, number> {
+  const biased =
+    context.isCrit === true || (context.combo ?? 0) >= DROP_COMBO_BIAS_THRESHOLD;
+  if (!biased) return DROP_RARITY_WEIGHTS;
+  return {
+    common: DROP_RARITY_WEIGHTS.common,
+    rare: DROP_RARITY_WEIGHTS.rare * DROP_CRIT_RARITY_BIAS,
+    epic: DROP_RARITY_WEIGHTS.epic * DROP_CRIT_RARITY_BIAS,
+    legendary: DROP_RARITY_WEIGHTS.legendary * DROP_CRIT_RARITY_BIAS,
+  };
+}
+
+function pickRarity(pick01: number, weights: Record<EntityRarity, number>): EntityRarity {
+  const total = RARITY_ORDER.reduce((sum, r) => sum + weights[r], 0);
+  let cursor = pick01 * total;
+  for (const rarity of RARITY_ORDER) {
+    cursor -= weights[rarity];
+    if (cursor < 0) return rarity;
+  }
+  return 'common';
+}
+
+/**
+ * Roll an entity drop from the stage pool. Returns null when nothing drops.
+ * `chance` is the pre-computed drop probability (click vs collision differ).
+ */
+export function rollEntityDrop(
+  stageId: number,
+  chance: number,
+  rolls: DropRoll,
+  context: DropContext = {},
+): StageEntity | null {
+  if (rolls.roll >= chance) return null;
+  const pool = getEntitiesForStage(stageId);
+  if (pool.length === 0) return null;
+
+  const rarity = pickRarity(rolls.pickRoll, getRarityWeights(context));
+  // Fall back down the rarity ladder when the stage pool lacks that rarity.
+  const rarityIdx = RARITY_ORDER.indexOf(rarity);
+  let candidates: StageEntity[] = [];
+  for (let i = rarityIdx; i >= 0; i--) {
+    candidates = pool.filter((e) => e.rarity === RARITY_ORDER[i]);
+    if (candidates.length > 0) break;
+  }
+  if (candidates.length === 0) candidates = pool;
+
+  // Reuse pickRoll's fractional spread for the index so one roll covers both decisions.
+  const index = Math.floor(((rolls.pickRoll * 9973) % 1) * candidates.length);
+  return candidates[Math.min(index, candidates.length - 1)];
+}
+
+/** Collision drops use a flat, higher chance. */
+export function getCollisionDropChance(): number {
+  return DROP_CHANCE_COLLISION;
+}
+
+/** Add one copy of an entity to the inventory (immutable). */
+export function addToInventory(inventory: EntityInstance[], entityId: string): EntityInstance[] {
+  const existing = inventory.find((e) => e.entityId === entityId);
+  if (existing) {
+    return inventory.map((e) => (e.entityId === entityId ? { ...e, count: e.count + 1 } : e));
+  }
+  return [...inventory, { entityId, count: 1, level: 1 }];
+}
+
+/** Record an entity in the almanac collection grid (immutable, idempotent). */
+export function addToAlmanac(
+  almanacCollected: Record<number, string[]>,
+  stageId: number,
+  entityId: string,
+): Record<number, string[]> {
+  const collected = almanacCollected[stageId] ?? [];
+  if (collected.includes(entityId)) return almanacCollected;
+  return { ...almanacCollected, [stageId]: [...collected, entityId] };
+}

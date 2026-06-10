@@ -1,6 +1,7 @@
 /** Handlers: TICK, CLICK, BUY_CLICK, BUY_AUTO, BUY_CRIT, REPORT_COLLISION, REPORT_ENCOUNTER */
 
 import { TUNING } from '../constants';
+import { ENTROPY_W_CLICK } from '../balance';
 import {
   safeAdd,
   getAutoRate,
@@ -23,6 +24,13 @@ import { getActiveModifiers } from '../skills/effects';
 import { getPrestigeMultiplier } from '../prestige';
 import { getMechanic } from '../mechanics';
 import { pickParticleName, getParticleEntropyBonus } from '../particles';
+import {
+  addToAlmanac,
+  addToInventory,
+  getClickDropChance,
+  getCollisionDropChance,
+  rollEntityDrop,
+} from '../entities/drops';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
@@ -62,7 +70,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities, state.prestigeUpgrades);
+  }, state.inventory, state.prestigeUpgrades);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
@@ -108,7 +116,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   const entropyFromMatter = canAccrue
-    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold) * entropyEchoMult
+    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
   return withCurrentUniverseEndingProgress({
@@ -142,7 +150,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities, state.prestigeUpgrades);
+  }, state.inventory, state.prestigeUpgrades);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
@@ -166,8 +174,18 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
   const particleName = pickParticleName(stage.id, nextProgress);
   const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
-  const clickEntropy = (gained + boostedMechanicQuanta) * 0.5;
+  const clickEntropy = (gained + boostedMechanicQuanta) * ENTROPY_W_CLICK;
   const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult;
+  // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
+  const droppedEntity =
+    action.dropRoll !== undefined && action.dropPickRoll !== undefined
+      ? rollEntityDrop(
+          stage.id,
+          getClickDropChance(isCrit),
+          { roll: action.dropRoll, pickRoll: action.dropPickRoll },
+          { isCrit, combo },
+        )
+      : null;
   return withCurrentUniverseEndingProgress({
     ...state,
     quanta: nextQuanta,
@@ -176,8 +194,13 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     combo,
     lastClick: action.now,
     eventCounter: eventId,
+    inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
+    almanacCollected: droppedEntity
+      ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
+      : state.almanacCollected,
     lastClickEvent: createClickEvent(
       eventId, action.x, action.y, gained, isCrit, combo, comboMult, particleName, entropyGained,
+      droppedEntity?.id,
     ),
     mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
     mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
@@ -235,16 +258,30 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
   const tierEntropyFloor = action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
   const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', Date.now());
   const boostedBonus = cappedBonus * matterBoost;
-  const entropyGained = boostedBonus * 0.5 + Math.max(action.entropyBonus, tierEntropyFloor) * mult;
+  const entropyGained = boostedBonus * ENTROPY_W_CLICK + Math.max(action.entropyBonus, tierEntropyFloor) * mult;
   const eventId = nextEventId(state);
+  const droppedEntity =
+    action.dropRoll !== undefined && action.dropPickRoll !== undefined
+      ? rollEntityDrop(
+          stage.id,
+          getCollisionDropChance(),
+          { roll: action.dropRoll, pickRoll: action.dropPickRoll },
+          { isCrit: true },
+        )
+      : null;
   return withCurrentUniverseEndingProgress({
     ...state,
     quanta: safeAdd(state.quanta, boostedBonus),
     entropy: safeAdd(state.entropy, entropyGained),
     collisions: state.collisions + 1,
     eventCounter: eventId,
+    inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
+    almanacCollected: droppedEntity
+      ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
+      : state.almanacCollected,
     lastCollisionEvent: createCollisionEvent(
       eventId, action.x, action.y, boostedBonus, entropyGained, action.name, action.tier,
+      droppedEntity?.id,
     ),
   });
 }

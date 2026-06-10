@@ -116,7 +116,14 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 0 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 1 진입**
+- Current Phase: **Phase 1 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 2 진입**
+- Phase 1 결과 (SaveState v13→14 + 엔트로피 게이트 라이브 + 드랍/수집):
+  - 데이터 모델: `inventory: EntityInstance[]`(entityId/count/level), `equippedSlots`, `unlockedSlotCount`, `almanacCollected` 추가. `purchasedEntities` 제거(마이그레이션 변환). 튜너블은 전부 `balance.ts`(ENTROPY_THRESHOLDS 16개, ENTROPY_W_CLICK/W_AUTO, DROP_* 6종).
+  - 게이트 전환(D1): `canCondense = entropy >= stage.entropyThreshold` 단일 조건. 16스테이지 엔딩 게이트도 동일. 엔트로피 가중: 클릭 0.5 / auto 0.25 (sim과 모델 일치). HUD: 시간 게이지 → 엔트로피 게이트 바(보라 #bb8cff), 우주시간은 흐릿한 readout으로 강등.
+  - 마이그레이션 지뢰 처리: 구 세이브 entropy를 [이전 게이트 floor, 게이트 50% 지점]으로 클램프 — 스테이지 스킵/역행 둘 다 방지. peakEntropy는 새 스케일로 리베이스. 클라우드: pullRemoteSave가 validateV5 통과 + **미래 스키마(remote.schemaVersion > 14) 감지 시 hydrate/push 차단** (구 클라이언트가 신 세이브 clobber 방지). SAVE_SCHEMA_VERSION=14 단일화 (useCloudSync의 stale 12 수정).
+  - 드랍/수집: 클릭 4%(크리 ×3), 충돌 35% 확률로 현재 스테이지 엔티티 드랍 → inventory + almanacCollected. 크리/콤보100+는 레어 이상 가중 ×2. 등급 부재 시 하위 등급 폴백. 랜덤은 액션 주입(dropRoll/dropPickRoll)으로 리듀서 순수성 유지. 구매도 도감 기록. 프레스티지 시 도감 보존(D2).
+  - 검증: `npx tsc --noEmit` 클린, vitest 665/665 통과(신규: drops 9건, v13→14 마이그레이션 3건), `npm run build` 통과.
+  - Phase 2 이월: 드랍 아이템도 현재는 구매품과 동일하게 즉시 효과 적용(임시) — Phase 2에서 장착 슬롯으로 효과 이전. 드랍 토스트/도감 격자 UI 미구현(이벤트에 droppedEntityId만 전달). getEntropyOnCondense(quanta 10%) 게이트 피드백은 Phase 4 캘리브레이션 대상.
 - Phase 0 결과 (scripts/entropy-gate-sim.mjs — `node scripts/entropy-gate-sim.mjs`):
   - 엔트로피 게이트에서 CPS 0.5→20 = 총 플레이타임 97.5% 단축 (현행 라이브 게임: BALANCE_ANALYSIS 기준 1.5%). **"행동→진행" 회로 작동 확인.**
   - 융합 버스트가 active 플레이어 엔트로피의 29~43% 기여 — 융합이 진행에 직결됨.

@@ -82,6 +82,9 @@ export type GameAction =
       mechanicChargeDelta?: number;
       mechanicStep?: number;
       trigger?: boolean;
+      /** 0..1 rolls for the entity drop system — omit to disable drops (tests). */
+      dropRoll?: number;
+      dropPickRoll?: number;
     }
   | { type: 'BUY_CLICK' }
   | { type: 'BUY_AUTO' }
@@ -105,6 +108,9 @@ export type GameAction =
       entropyBonus: number;
       tier: RogueTypeKey;
       name: string;
+      /** 0..1 rolls for the entity drop system — omit to disable drops (tests). */
+      dropRoll?: number;
+      dropPickRoll?: number;
     }
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
@@ -176,7 +182,10 @@ export function toPersistentState(state: GameState): PersistentGameState {
     shopBoosts: state.shopBoosts,
     hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
-    purchasedEntities: state.purchasedEntities,
+    inventory: state.inventory,
+    equippedSlots: state.equippedSlots,
+    unlockedSlotCount: state.unlockedSlotCount,
+    almanacCollected: state.almanacCollected,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
   };

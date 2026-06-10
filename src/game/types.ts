@@ -13,7 +13,7 @@ export type * from './types/events';
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from './types/events';
 import type { SkillState, SkillTreeId } from './skills/types';
-import type { PurchasedEntityEntry } from './entities/types';
+import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +30,8 @@ export interface Stage {
   realPlayTargetSec: number;
   timelinePos: number;
   threshold: number;
+  /** Stage-advance gate: cumulative entropy required to condense out of this stage (D1). */
+  entropyThreshold: number;
   clusterMode: ClusterMode;
   mechanic: StageMechanicId;
   accent: string;
@@ -222,10 +224,10 @@ export interface CanvasWorld {
 // Save / persistent state
 // ---------------------------------------------------------------------------
 
-export type { PurchasedEntityEntry } from './entities/types';
+export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 13;
+  version: 14;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -271,7 +273,14 @@ export interface SaveState {
   shopBoosts: ShopBoost[];
   hasOfflineStorageUpgrade: boolean;
   totalShopSpentUSD: number;
-  purchasedEntities: PurchasedEntityEntry[];
+  /** Owned entity stacks — purchases + drops (replaces purchasedEntities in v14). */
+  inventory: EntityInstance[];
+  /** Entity ids equipped into slots (Phase 2 — effects move here). */
+  equippedSlots: string[];
+  /** How many equip slots are unlocked (1..3). */
+  unlockedSlotCount: number;
+  /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
+  almanacCollected: Record<number, string[]>;
   prestigeUpgrades: PrestigeUpgradeLevels;
   peakEntropy: number;
 }

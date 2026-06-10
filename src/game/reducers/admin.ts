@@ -2,6 +2,7 @@
 
 import { SINGULARITY_UNLOCK_LOOKUP } from '../constants';
 import { STAGES } from '../stages';
+import { getEntropyGateFloor } from '../formulas';
 import { getStageStartCosmicTime } from '../timeFlow';
 import { createInitialGameState, createDefaultEndingProgressFlags } from '../defaults';
 import { PRESTIGE_MAX_LEVEL, getPrestigeCost } from '../prestige';
@@ -37,6 +38,9 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     ...state,
     stageIdx: nextStageIdx,
     quanta: 0,
+    // Park cumulative entropy at the new stage's gate floor so the gate window starts at 0%.
+    entropy: getEntropyGateFloor(nextStageIdx),
+    peakEntropy: Math.max(state.peakEntropy, getEntropyGateFloor(nextStageIdx)),
     timeGauge: 0,
     clickLevel: 0,
     autoLevel: 0,
@@ -66,6 +70,7 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
     ...state,
     stageIdx: prevStageIdx,
     quanta: 0,
+    entropy: getEntropyGateFloor(prevStageIdx),
     timeGauge: 0,
     combo: 0,
     lastClick: 0,
@@ -87,13 +92,22 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
 export function handleAdminSetProgress(state: GameState, action: AdminSetProgressAction): GameState {
   const stage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
   const targetQuanta = Math.floor(stage.threshold * action.fraction);
+  const gateFloor = getEntropyGateFloor(state.stageIdx);
+  const targetEntropy = gateFloor + (stage.entropyThreshold - gateFloor) * action.fraction;
   const targetCosmicSec =
     getStageStartCosmicTime(state.stageIdx) +
     (stage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
   const reset = action.fraction === 0
-    ? { purchasedEntities: [], clickLevel: 0, autoLevel: 0, critLevel: 0, entropy: 0 }
+    ? { inventory: [], clickLevel: 0, autoLevel: 0, critLevel: 0 }
     : {};
-  return { ...state, quanta: targetQuanta, cosmicClockSec: targetCosmicSec, ...reset };
+  return {
+    ...state,
+    quanta: targetQuanta,
+    entropy: action.fraction === 0 ? gateFloor : targetEntropy,
+    peakEntropy: Math.max(state.peakEntropy, targetEntropy),
+    cosmicClockSec: targetCosmicSec,
+    ...reset,
+  };
 }
 
 export function handleAdminRestartRun(state: GameState, action: AdminRestartRunAction): GameState {
@@ -175,7 +189,7 @@ export function handleAdminMaxEntities(state: GameState): GameState {
   if (!currentStage) return state;
 
   const entities = getEntitiesForStage(currentStage.id);
-  const updatedEntities = [...state.purchasedEntities];
+  const updatedEntities = state.inventory.map((e) => ({ ...e }));
 
   for (const entity of entities) {
     const targetCount = entity.maxCount > 0 ? entity.maxCount : ADMIN_UNLIMITED_MAX;
@@ -183,9 +197,9 @@ export function handleAdminMaxEntities(state: GameState): GameState {
     if (existing) {
       existing.count = Math.max(existing.count, targetCount);
     } else {
-      updatedEntities.push({ entityId: entity.id, count: targetCount });
+      updatedEntities.push({ entityId: entity.id, count: targetCount, level: 1 });
     }
   }
 
-  return withCurrentUniverseEndingProgress({ ...state, purchasedEntities: updatedEntities });
+  return withCurrentUniverseEndingProgress({ ...state, inventory: updatedEntities });
 }

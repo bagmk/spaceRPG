@@ -1,5 +1,5 @@
 import type { SkillState } from './types';
-import type { PurchasedEntityEntry } from '../entities/types';
+import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier } from '../prestige';
 import { applyEntityModifiers } from '../entities/effects';
@@ -88,7 +88,7 @@ export function defaultModifiers(): Modifiers {
 export function getActiveModifiers(
   skills: SkillState | undefined,
   ctx: ModifierContext,
-  purchasedEntities?: PurchasedEntityEntry[],
+  inventory?: EntityInstance[],
   prestigeUpgrades?: PrestigeUpgradeLevels,
 ): Modifiers {
   const mods = defaultModifiers();
@@ -139,8 +139,8 @@ export function getActiveModifiers(
     mods.eternalReturnUnlocked = true;
   }
 
-  if (purchasedEntities && purchasedEntities.length > 0) {
-    applyEntityModifiers(mods, purchasedEntities, ctx.stageId);
+  if (inventory && inventory.length > 0) {
+    applyEntityModifiers(mods, inventory, ctx.stageId);
   }
 
   // Apply permanent prestige multipliers

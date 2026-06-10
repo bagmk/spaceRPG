@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
-import type { PurchasedEntityEntry } from '../game/types';
+import type { EntityInstance } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
@@ -132,7 +132,7 @@ function formatEntityEffectTotal(
 
 interface Props {
   currentStageId: number;
-  purchasedEntities: PurchasedEntityEntry[];
+  inventory: EntityInstance[];
   quanta: number;
   language: Lang;
   onPurchase: (entityId: string) => void;
@@ -141,7 +141,7 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, purchasedEntities, quanta, language, onPurchase, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ currentStageId, inventory, quanta, language, onPurchase, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -165,7 +165,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
   );
   const entities = stageEntities;
 
-  const countOf = (entity: StageEntity) => getPurchasedEntityCount(purchasedEntities, entity);
+  const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
   const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
 
   useEffect(() => {
@@ -280,7 +280,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
             <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
           )}
           {entities.map((entity, idx) => {
-            const prereq = getEntityLockPrerequisite(entity, purchasedEntities);
+            const prereq = getEntityLockPrerequisite(entity, inventory);
             const anchorLocked = prereq !== undefined;
             const anchorName = prereq ? entityName(prereq, language) : undefined;
             return (
@@ -312,7 +312,7 @@ export function EntityPanel({ currentStageId, purchasedEntities, quanta, languag
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
           canPurchase={
             selectedStageId <= currentStageId &&
-            !isEntityLockedByAnchor(inspectedEntity, purchasedEntities)
+            !isEntityLockedByAnchor(inspectedEntity, inventory)
           }
           displayStageId={selectedStageId}
           onPurchase={onPurchase}

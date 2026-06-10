@@ -13,7 +13,9 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { getDeviceId } from './deviceId';
-import type { PersistentGameState } from '../game/types';
+import { SAVE_SCHEMA_VERSION } from '../game/storage';
+import { validateV5 } from '../game/storage/migrate';
+import type { PersistentGameState, SaveState } from '../game/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +33,17 @@ interface RemoteSaveDoc {
 // Pull
 // ---------------------------------------------------------------------------
 
+/**
+ * True when the remote save was written by a NEWER client schema than this
+ * build understands. While set, pushes are blocked so this (older) client
+ * never clobbers a save it cannot represent.
+ */
+let remoteAheadOfClient = false;
+
+export function isRemoteAheadOfClient(): boolean {
+  return remoteAheadOfClient;
+}
+
 export async function pullRemoteSave(uid: string): Promise<PersistentGameState | null> {
   if (!db) return null;
   try {
@@ -38,7 +51,19 @@ export async function pullRemoteSave(uid: string): Promise<PersistentGameState |
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
     const remote = snap.data() as RemoteSaveDoc;
-    return remote.data ?? null;
+    if ((remote.schemaVersion ?? 0) > SAVE_SCHEMA_VERSION) {
+      remoteAheadOfClient = true;
+      console.warn(
+        `[sync] Remote save schema v${remote.schemaVersion} is newer than this client (v${SAVE_SCHEMA_VERSION}). ` +
+        'Skipping hydrate and blocking pushes — update the app to sync.',
+      );
+      return null;
+    }
+    remoteAheadOfClient = false;
+    if (!remote.data) return null;
+    // Normalize older cloud saves through the same validation/migration as
+    // local storage (e.g. purchasedEntities → inventory in v14).
+    return validateV5(remote.data as Partial<SaveState>);
   } catch (e) {
     console.error('[sync] pullRemoteSave failed:', e);
     return null;
@@ -57,6 +82,7 @@ export async function pushRemoteSave(
   schemaVersion: number,
 ): Promise<void> {
   if (!db) return;
+  if (remoteAheadOfClient) return; // never clobber a newer-schema save
   try {
     writeSeq += 1;
     const ref = doc(db, 'users', uid, 'saves', 'main');

@@ -10,8 +10,8 @@ import type {
   CondenseProgressEntry,
   DailyCheckInState,
   EndingProgressFlags,
+  EntityInstance,
   GameState,
-  PurchasedEntityEntry,
   UniverseAtlasEntry,
   UniverseSeed,
 } from './types';
@@ -53,8 +53,12 @@ export function createDefaultSkills(): SkillState {
   };
 }
 
-export function createDefaultPurchasedEntities(): PurchasedEntityEntry[] {
+export function createDefaultInventory(): EntityInstance[] {
   return [];
+}
+
+export function createDefaultAlmanacCollected(): Record<number, string[]> {
+  return {};
 }
 
 export function createInitialGameState(now: number): GameState {
@@ -117,7 +121,10 @@ export function createInitialGameState(now: number): GameState {
     shopBoosts: [],
     hasOfflineStorageUpgrade: false,
     totalShopSpentUSD: 0,
-    purchasedEntities: [],
+    inventory: createDefaultInventory(),
+    equippedSlots: [],
+    unlockedSlotCount: 1,
+    almanacCollected: createDefaultAlmanacCollected(),
     prestigeUpgrades: createDefaultPrestigeUpgrades(),
     peakEntropy: 0,
   };

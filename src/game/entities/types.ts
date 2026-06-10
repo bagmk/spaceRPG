@@ -83,10 +83,21 @@ export interface StageEntity {
   aliases?: string[];   // legacy IDs preserved when entity fantasy changes
 }
 
-/** What gets serialised in SaveState. */
+/**
+ * Legacy serialised shape (save version <= 13).
+ * Kept for migration only — runtime state uses EntityInstance.
+ */
 export interface PurchasedEntityEntry {
   entityId: string;
   count: number;
+}
+
+/** What gets serialised in SaveState (v14+): owned entity stacks. */
+export interface EntityInstance {
+  entityId: string;
+  count: number;
+  /** Upgrade level — duplicates feed level-ups (Phase 3 fusion sink). Starts at 1. */
+  level: number;
 }
 
 /** Cost of the next purchase given current count. */

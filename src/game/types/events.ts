@@ -13,6 +13,8 @@ export interface FloatingClickEvent {
   particleName: string;
   particleDefinition?: string;
   entropyGained: number;
+  /** Entity that dropped on this click (look up details via findEntityById). */
+  droppedEntityId?: string;
 }
 
 export interface FloatingCollisionEvent {
@@ -23,6 +25,8 @@ export interface FloatingCollisionEvent {
   entropyGained: number;
   name: string;
   tier: RogueTypeKey;
+  /** Entity that dropped on this collision (look up details via findEntityById). */
+  droppedEntityId?: string;
 }
 
 export interface EncounterEvent {

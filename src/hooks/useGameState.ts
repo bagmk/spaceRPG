@@ -94,7 +94,7 @@ export function useGameState(): UseGameStateResult {
           stageId: stage.id,
           clickLevel: payload.skills.click.level,
         },
-        payload.purchasedEntities ?? [],
+        payload.inventory ?? [],
         payload.prestigeUpgrades,
       );
       const autoRate = getAutoRate(modifiers);
@@ -117,7 +117,7 @@ export function useGameState(): UseGameStateResult {
       const nextQuanta = safeAdd(baseState.quanta, gained);
       const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
       const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
-      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold) * entropyEchoMult;
+      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult;
       const stageStartCosmic = getStageStartCosmicTime(payload.stageIdx);
       const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
       const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);
@@ -220,7 +220,7 @@ export function useGameState(): UseGameStateResult {
     state.hasOfflineStorageUpgrade,
     state.hasSeenCashShopTutorial,
     state.totalShopSpentUSD,
-    state.purchasedEntities,
+    state.inventory,
     state.endingsCompleted,
     state.lastEndingId,
     state.selectedEndingId,

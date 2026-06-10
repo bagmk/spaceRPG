@@ -46,6 +46,9 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
   return result;
 }
 
+/** Single source of truth for the save schema version (local + cloud). */
+export const SAVE_SCHEMA_VERSION = 14;
+
 const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
 const SAVE_KEY_V2 = 'cosmic_coalescence_save_v2';
 const SAVE_KEY_V3 = 'cosmic_coalescence_save_v3';
@@ -59,7 +62,7 @@ function isBrowser(): boolean {
 
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 13,
+    version: 14,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
@@ -105,7 +108,10 @@ export function createSaveSnapshot(state: GameState): SaveState {
     shopBoosts: state.shopBoosts,
     hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
-    purchasedEntities: state.purchasedEntities,
+    inventory: state.inventory,
+    equippedSlots: state.equippedSlots,
+    unlockedSlotCount: state.unlockedSlotCount,
+    almanacCollected: state.almanacCollected,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
   };
@@ -191,17 +197,17 @@ export function loadGame(): PersistentGameState | null {
         : null;
     }
     if ((parsed as { version?: number }).version === 7) {
-      // v7 → v8: add purchasedEntities
+      // v7 → v8: add purchasedEntities (now inventory)
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
-      return { ...migrated, purchasedEntities: [] };
+      return { ...migrated, inventory: [], almanacCollected: {} };
     }
     if ((parsed as { version?: number }).version === 8) {
       // v8 → v9: entity IDs changed format (0-indexed → 1-indexed zero-padded, names changed)
-      // reset purchasedEntities so stale IDs don't ghost as 0-count cards
+      // reset entity stacks so stale IDs don't ghost as 0-count cards
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
-      return { ...migrated, purchasedEntities: [] };
+      return { ...migrated, inventory: [], almanacCollected: {} };
     }
     if ((parsed as { version?: number }).version === 9) {
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
@@ -223,12 +229,21 @@ export function loadGame(): PersistentGameState | null {
       return { ...withPrestige, peakEntropy: (withPrestige as any).peakEntropy ?? withPrestige.entropy ?? 0 };
     }
     if ((parsed as { version?: number }).version === 13) {
+      // v13 → v14: validateV5 converts purchasedEntities → inventory, seeds the
+      // almanac, and clamps entropy into the new gate window (entity redesign).
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return {
         ...migrated,
         prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
-        peakEntropy: (migrated as any).peakEntropy ?? migrated.entropy ?? 0,
+      };
+    }
+    if ((parsed as { version?: number }).version === 14) {
+      const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
+      if (!migrated) return null;
+      return {
+        ...migrated,
+        prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
       };
     }
     return null;

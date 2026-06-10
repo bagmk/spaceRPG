@@ -478,6 +478,21 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 8px #6d8fff;
 }
 
+/* Entropy gate bar — violet = progression (entity redesign color code). */
+.hud-entropy-gate-fill {
+  background: #bb8cff;
+  box-shadow: 0 0 8px #bb8cff;
+}
+
+.hud-time-readout-faint {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: 9px;
+  color: #46d8c4;
+  opacity: 0.45;
+}
+
 .hud-time-estimate {
   margin-top: 3px;
   font-size: 10px;

@@ -2,6 +2,7 @@ import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
+import { addToAlmanac } from '../entities/drops';
 import { getEntityCost } from '../entities/types';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -16,7 +17,7 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   const currentStage = STAGES[state.stageIdx];
   if (!currentStage || entity.stageId > currentStage.id) return state;
 
-  const existing = state.purchasedEntities.find((entry) => entityMatchesId(entity, entry.entityId));
+  const existing = state.inventory.find((entry) => entityMatchesId(entity, entry.entityId));
   const currentCount = existing?.count ?? 0;
 
   // Max count check
@@ -25,20 +26,22 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   // Anchor lock — non-anchor entities on the same stage are blocked until
   // the anchor entity for that stage (e.g. Sun on stage 10, Earth Formation
   // on stage 11) is fully maxed.
-  if (isEntityLockedByAnchor(entity, state.purchasedEntities)) return state;
+  if (isEntityLockedByAnchor(entity, state.inventory)) return state;
 
   const cost = getEntityCost(entity, currentCount);
   if (state.quanta < cost) return state;
 
-  const updatedEntities = existing
-    ? state.purchasedEntities.map((e) =>
+  const updatedInventory = existing
+    ? state.inventory.map((e) =>
         e.entityId === existing.entityId ? { ...e, count: e.count + 1 } : e,
       )
-    : [...state.purchasedEntities, { entityId: action.entityId, count: 1 }];
+    : [...state.inventory, { entityId: action.entityId, count: 1, level: 1 }];
 
   return withCurrentUniverseEndingProgress({
     ...state,
     quanta: state.quanta - cost,
-    purchasedEntities: updatedEntities,
+    inventory: updatedInventory,
+    // Purchases count as collected for the almanac grid.
+    almanacCollected: addToAlmanac(state.almanacCollected, entity.stageId, entity.id),
   });
 }

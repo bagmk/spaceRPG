@@ -55,7 +55,7 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.purchasedEntities, state.prestigeUpgrades);
+  }, state.inventory, state.prestigeUpgrades);
 }
 
 export function getAdjustedClickPower(state: GameState): number {
@@ -123,6 +123,7 @@ export function createClickEvent(
   comboMult: number,
   particleName: string,
   entropyGained: number,
+  droppedEntityId?: string,
 ): FloatingClickEvent {
   return {
     id,
@@ -135,6 +136,7 @@ export function createClickEvent(
     particleName,
     particleDefinition: PARTICLE_DEFINITIONS[particleName],
     entropyGained,
+    droppedEntityId,
   };
 }
 
@@ -146,8 +148,9 @@ export function createCollisionEvent(
   entropyGained: number,
   name: string,
   tier: RogueTypeKey,
+  droppedEntityId?: string,
 ): FloatingCollisionEvent {
-  return { id, x, y, bonus, entropyGained, name, tier };
+  return { id, x, y, bonus, entropyGained, name, tier, droppedEntityId };
 }
 
 export function createEncounterEvent(id: number, name: string, color: string): EncounterEvent {

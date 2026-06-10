@@ -1,7 +1,7 @@
 /** Applies purchased entity bonuses on top of existing Modifiers. */
 
 import type { Modifiers } from '../skills/effects';
-import type { PurchasedEntityEntry } from './types';
+import type { EntityInstance } from './types';
 import { LEGACY_TIME_ENTITY_EFFECT_FACTOR } from '../balance';
 import { findEntityById } from './stageItems';
 
@@ -11,10 +11,10 @@ function scaledFlatGain(baseCost: number, totalEffect: number): number {
 
 export function applyEntityModifiers(
   mods: Modifiers,
-  purchasedEntities: PurchasedEntityEntry[],
+  inventory: EntityInstance[],
   currentStageId?: number,
 ): void {
-  for (const entry of purchasedEntities) {
+  for (const entry of inventory) {
     if (entry.count <= 0) continue;
     const entity = findEntityById(entry.entityId);
     if (!entity) continue;

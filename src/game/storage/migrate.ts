@@ -3,14 +3,15 @@
 import { getStageStartCosmicTime } from '../timeFlow';
 import { createInitialUniverseSeed, getCurrentUniverseEndingProgressFlags } from '../multiverse';
 import { createDefaultPrestigeUpgrades } from '../prestige';
+import { STAGES } from '../stages';
+import { findEntityById } from '../entities/stageItems';
 import {
   createDefaultDailyCheckIns,
   createDefaultEndingProgressFlags,
   createDefaultUniverseAtlas,
   createDefaultCondenseProgressHistory,
-  createDefaultPurchasedEntities,
 } from '../defaults';
-import type { PersistentGameState, SaveState, SingularityUnlockId, EndingId } from '../types';
+import type { EntityInstance, PersistentGameState, SaveState, SingularityUnlockId, EndingId } from '../types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4 } from './legacyTypes';
 import {
   isFiniteNumber,
@@ -26,6 +27,8 @@ import {
   isLegacyShopBoosts,
   isSkillState,
   isPurchasedEntityEntry,
+  isEntityInstance,
+  isAlmanacCollected,
 } from './guards';
 import {
   normalizeEndingProgressFlags,
@@ -33,6 +36,75 @@ import {
   normalizeShopBoosts,
   getUnlockedTracksForProgress,
 } from './normalize';
+
+// ---------------------------------------------------------------------------
+// v13 → v14 (entity redesign): inventory model + entropy-gate clamp
+// ---------------------------------------------------------------------------
+
+function seedAlmanacFromInventory(inventory: EntityInstance[]): Record<number, string[]> {
+  const result: Record<number, string[]> = {};
+  for (const entry of inventory) {
+    if (entry.count <= 0) continue;
+    const entity = findEntityById(entry.entityId);
+    if (!entity) continue;
+    const list = result[entity.stageId] ?? (result[entity.stageId] = []);
+    if (!list.includes(entity.id)) list.push(entity.id);
+  }
+  return result;
+}
+
+/**
+ * Clamp pre-v14 cumulative entropy into the current stage's gate window.
+ * Old saves accrued entropy at a flat 0.5/quanta — often orders of magnitude
+ * above the calibrated entropyThresholds. Without this clamp a migrated save
+ * would skip many stages instantly; below the floor it would owe entropy it
+ * "already earned". Lands mid-window at most so the next condense still takes play.
+ */
+function clampEntropyForGate(entropy: number, stageIdx: number): number {
+  const idx = Math.max(0, Math.min(stageIdx, STAGES.length - 1));
+  const floor = idx === 0 ? 0 : STAGES[idx - 1].entropyThreshold;
+  const gate = STAGES[idx].entropyThreshold;
+  const midpoint = floor + (gate - floor) * 0.5;
+  if (!Number.isFinite(entropy) || entropy < floor) return floor;
+  return Math.min(entropy, midpoint);
+}
+
+type EntityModelFields = Pick<
+  PersistentGameState,
+  'inventory' | 'equippedSlots' | 'unlockedSlotCount' | 'almanacCollected' | 'entropy' | 'peakEntropy'
+>;
+
+/**
+ * Derive the v14 entity-model fields from any parsed save. v14 saves pass
+ * through untouched; older saves get purchasedEntities → inventory conversion,
+ * almanac seeding, and the entropy clamp (peakEntropy is rebased to the new
+ * scale — the old flat-rate value would distort prestige forever).
+ */
+function convertEntityModelV14(record: Partial<SaveState>): EntityModelFields {
+  const rawInventory = (record as { inventory?: unknown }).inventory;
+  const hasV14Inventory = Array.isArray(rawInventory) && rawInventory.every(isEntityInstance);
+  const legacyEntries = Array.isArray((record as { purchasedEntities?: unknown }).purchasedEntities)
+    ? ((record as { purchasedEntities?: unknown[] }).purchasedEntities as unknown[]).filter(isPurchasedEntityEntry)
+    : [];
+  const inventory: EntityInstance[] = hasV14Inventory
+    ? (rawInventory as EntityInstance[])
+    : legacyEntries.map((e) => ({ entityId: e.entityId, count: e.count, level: 1 }));
+  const almanacCollected = isAlmanacCollected(record.almanacCollected)
+    ? record.almanacCollected
+    : seedAlmanacFromInventory(inventory);
+  const stageIdx = isFiniteNumber(record.stageIdx) ? record.stageIdx : 0;
+  const rawEntropy = isFiniteNumber(record.entropy) ? record.entropy : 0;
+  const entropy = hasV14Inventory ? rawEntropy : clampEntropyForGate(rawEntropy, stageIdx);
+  const rawPeak = isFiniteNumber(record.peakEntropy) ? record.peakEntropy : entropy;
+  const peakEntropy = hasV14Inventory ? Math.max(rawPeak, entropy) : entropy;
+  const unlockedSlotCount = isFiniteNumber(record.unlockedSlotCount)
+    ? Math.max(1, Math.min(3, Math.floor(record.unlockedSlotCount)))
+    : 1;
+  const equippedSlots = isStringArray(record.equippedSlots)
+    ? record.equippedSlots.slice(0, unlockedSlotCount)
+    : [];
+  return { inventory, equippedSlots, unlockedSlotCount, almanacCollected, entropy, peakEntropy };
+}
 
 function createDefaultSkillState() {
   return {
@@ -113,7 +185,7 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
     clickLevel: v4.clickLevel ?? 0,
     autoLevel: v4.autoLevel ?? 0,
     critLevel: v4.critLevel ?? 0,
-    entropy: v4.entropy ?? 0,
+    // entropy/peakEntropy come from convertEntityModelV14 below.
     totalClicks: v4.totalClicks ?? 0,
     collisions: v4.collisions ?? 0,
     universeCount: v4.universeCount ?? 1,
@@ -166,11 +238,8 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
     shopBoosts: normalizeShopBoosts(record.shopBoosts),
     hasOfflineStorageUpgrade: Boolean(record.hasOfflineStorageUpgrade),
     totalShopSpentUSD: 0,
-    purchasedEntities: Array.isArray(record.purchasedEntities)
-      ? record.purchasedEntities.filter(isPurchasedEntityEntry)
-      : createDefaultPurchasedEntities(),
     prestigeUpgrades: (record as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
-    peakEntropy: (record as any).peakEntropy ?? v4.entropy ?? 0,
+    ...convertEntityModelV14(record),
   };
 }
 
@@ -235,8 +304,7 @@ export function validateV5(
     (parsed.hasSeenCashShopTutorial !== undefined && typeof parsed.hasSeenCashShopTutorial !== 'boolean') ||
     !(Array.isArray(parsed.shopBoosts) || isLegacyShopBoosts(parsed.shopBoosts)) ||
     (parsed.hasOfflineStorageUpgrade !== undefined && typeof parsed.hasOfflineStorageUpgrade !== 'boolean') ||
-    !isFiniteNumber(parsed.totalShopSpentUSD) ||
-    !(Array.isArray(parsed.purchasedEntities) && parsed.purchasedEntities.every(isPurchasedEntityEntry))
+    !isFiniteNumber(parsed.totalShopSpentUSD)
   ) {
     return null;
   }
@@ -248,7 +316,7 @@ export function validateV5(
     clickLevel: parsed.clickLevel,
     autoLevel: parsed.autoLevel,
     critLevel: parsed.critLevel,
-    entropy: parsed.entropy,
+    // entropy/peakEntropy come from convertEntityModelV14 below.
     totalClicks: parsed.totalClicks,
     collisions: parsed.collisions,
     universeCount: parsed.universeCount,
@@ -290,9 +358,8 @@ export function validateV5(
     shopBoosts: normalizeShopBoosts(parsed.shopBoosts),
     hasOfflineStorageUpgrade: parsed.hasOfflineStorageUpgrade ?? false,
     totalShopSpentUSD: parsed.totalShopSpentUSD,
-    purchasedEntities: parsed.purchasedEntities,
     prestigeUpgrades: (parsed as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
-    peakEntropy: (parsed as any).peakEntropy ?? parsed.entropy ?? 0,
+    ...convertEntityModelV14(parsed),
   };
 }
 
