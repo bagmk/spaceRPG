@@ -116,5 +116,16 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **(미시작)**
-- Decided: _(DECISION POINT 답을 여기 누적)_
+- Current Phase: **Phase 0 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 1 진입**
+- Phase 0 결과 (scripts/entropy-gate-sim.mjs — `node scripts/entropy-gate-sim.mjs`):
+  - 엔트로피 게이트에서 CPS 0.5→20 = 총 플레이타임 97.5% 단축 (현행 라이브 게임: BALANCE_ANALYSIS 기준 1.5%). **"행동→진행" 회로 작동 확인.**
+  - 융합 버스트가 active 플레이어 엔트로피의 29~43% 기여 — 융합이 진행에 직결됨.
+  - entropyThreshold 16개 캘리브레이션 완료 (reference 프로필 cps3/af0.5/fusion90s 이 realPlayTargetSec에 정확히 안착, 누적 1.06e2 → 4.50e19).
+  - 미해결(Phase 4로 이월): casual/hardcore 스프레드 122×로 과도 — 압축 레버 = wClick:wAuto 비율, fusionValueSec, 후반 업그레이드 코스트 월. idle 프로필 stage 13 진행 불가(현행도 stage 14 stuck — 회귀 아님) — 오프라인 엔트로피 floor 필요.
+  - balance-simulator.html 게이트 모드 통합 완료 (2026-06-10): gateMode 셀렉터 + 엔트로피 파라미터 5종 + stage별 entropyThreshold 컬럼 + simulateStageEntropy. current 모드는 HEAD 대비 무회귀 검증(동일 출력 11000.5h). 엔트로피 모드 모델 패리티 .mjs와 일치(reference 100.0h, hardcore 3.6h).
+- Decided:
+  - D1 진행 게이트: (a) 순수 엔트로피 — stage 진입 = `entropy >= stage.entropyThreshold` 단일 조건. quanta threshold는 게이트에서 제거, cosmicTime은 연출 readout으로 강등.
+  - D2 아이템 carry: 도감(almanacCollected) 영구 보존 + 프레스티지 시 최고 티어 아이템 중 **1개를 플레이어가 직접 선택**해 carry. 나머지 인벤토리/장착 리셋.
+  - D3 스킬 트리: 4트랙 전부 흡수. click/auto/crit → 장착/세트 보너스로 이전, time → 오프라인 수익으로 전환. 스킬 트리 UI 제거.
+  - D4 가챠: 천장(pity) 포함 — 연속 실패 N회 후 상위 등급 보장. 중복은 레벨업 sink.
+  - D5 UI 범위: 기존 EntityPanel/AlmanacOverlay 점진 개조. 신규 화면 전면 빌드 없음.

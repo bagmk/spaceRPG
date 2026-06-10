@@ -88,6 +88,18 @@
       <div class="mini">개별 stage가 이 시간 초과시 INFEASIBLE 표시 (UI 응답 보호)</div>
       <div class="mini">budget fraction = 한번 살 때 현재 quanta 중 사용할 최대 비율</div>
     </div>
+    <div class="ctrl-section"><h3>게이트 모드 (Entity Redesign)</h3>
+      <div class="ctrl-row"><label>Gate</label>
+        <select id="gateMode">
+          <option value="current">current (quanta + time)</option>
+          <option value="entropy">entropy (redesign D1)</option>
+        </select></div>
+      <div class="ctrl-row"><label>Entropy/quanta (click)</label><input type="number" id="entWClick" value="0.5" step="0.05" min="0"/></div>
+      <div class="ctrl-row"><label>Entropy/quanta (auto)</label><input type="number" id="entWAuto" value="0.25" step="0.05" min="0"/></div>
+      <div class="ctrl-row"><label>Fusion 주기 (active 초, 0=안함)</label><input type="number" id="entFusionIntervalSec" value="90" min="0"/></div>
+      <div class="ctrl-row"><label>Fusion 가치 (수익 N초분)</label><input type="number" id="entFusionValueSec" value="30" min="0"/></div>
+      <div class="ctrl-row"><label>Fusion 비용 (bank 비율)</label><input type="number" id="entFusionCostFrac" value="0.1" step="0.05" min="0" max="0.9"/></div>
+    </div>
     <div class="ctrl-section"><h3>스킬 비용 / 효과</h3>
       <div class="ctrl-row"><label>Click cost base (^L-1)</label><input type="number" id="cost_click" value="3" step="0.1" min="1.01"/></div>
       <div class="ctrl-row"><label>Auto cost base (^L-1)</label><input type="number" id="cost_auto" value="3" step="0.1" min="1.01"/></div>
@@ -142,22 +154,22 @@
 </div>
 <script>
 const DEFAULT_STAGES = [
-  { id:1,name:'Inflation',threshold:1725,cosmicTimeSec:1e-32,realPlayTargetSec:30,mechanic:'click_basic' },
-  { id:2,name:'Baryogenesis',threshold:4.693e7,cosmicTimeSec:1e-12,realPlayTargetSec:120,mechanic:'matter_asymmetry' },
-  { id:3,name:'Quark-Gluon Plasma',threshold:1.427e9,cosmicTimeSec:1e-6,realPlayTargetSec:300,mechanic:'click_basic' },
-  { id:4,name:'Nucleosynthesis',threshold:1.211e10,cosmicTimeSec:180,realPlayTargetSec:360,mechanic:'fusion_window' },
-  { id:5,name:'Recombination',threshold:1.285e11,cosmicTimeSec:6.8e12,realPlayTargetSec:540,mechanic:'recombination' },
-  { id:6,name:'Cosmic Dark Age',threshold:6e14,cosmicTimeSec:3.15e15,realPlayTargetSec:1800,mechanic:'dark_age' },
-  { id:7,name:'First Stars',threshold:2e16,cosmicTimeSec:6.3e15,realPlayTargetSec:3600,mechanic:'first_stars' },
-  { id:8,name:'Reionization',threshold:2e17,cosmicTimeSec:1.6e16,realPlayTargetSec:5400,mechanic:'reionization' },
-  { id:9,name:'Galaxy Formation',threshold:1e18,cosmicTimeSec:3.15e16,realPlayTargetSec:7200,mechanic:'galaxy_weaving' },
-  { id:10,name:'Solar System',threshold:8e19,cosmicTimeSec:2.9e17,realPlayTargetSec:10800,mechanic:'planet_formation' },
-  { id:11,name:'Life on Earth',threshold:2e20,cosmicTimeSec:4.35e17,realPlayTargetSec:14400,mechanic:'life_evolution' },
-  { id:12,name:'Death of Star',threshold:6e20,cosmicTimeSec:5.83e17,realPlayTargetSec:21600,mechanic:'red_giant' },
-  { id:13,name:'Stelliferous End',threshold:2e21,cosmicTimeSec:3.15e21,realPlayTargetSec:36000,mechanic:'remnant_cooling' },
-  { id:14,name:'Degenerate Era',threshold:8e22,cosmicTimeSec:2.29e34,realPlayTargetSec:54000,mechanic:'proton_decay' },
-  { id:15,name:'Black Hole Era',threshold:3e23,cosmicTimeSec:3.89e35,realPlayTargetSec:86400,mechanic:'hawking_radiation' },
-  { id:16,name:'The End',threshold:1.2e24,cosmicTimeSec:5.01e37,realPlayTargetSec:117450,mechanic:'ending_choice' },
+  { id:1,name:'Inflation',threshold:1725,cosmicTimeSec:1e-32,realPlayTargetSec:30,entropyThreshold:105.8,mechanic:'click_basic' },
+  { id:2,name:'Baryogenesis',threshold:4.693e7,cosmicTimeSec:1e-12,realPlayTargetSec:120,entropyThreshold:1.142e+06,mechanic:'matter_asymmetry' },
+  { id:3,name:'Quark-Gluon Plasma',threshold:1.427e9,cosmicTimeSec:1e-6,realPlayTargetSec:300,entropyThreshold:4.662e+07,mechanic:'click_basic' },
+  { id:4,name:'Nucleosynthesis',threshold:1.211e10,cosmicTimeSec:180,realPlayTargetSec:360,entropyThreshold:1.408e+09,mechanic:'fusion_window' },
+  { id:5,name:'Recombination',threshold:1.285e11,cosmicTimeSec:6.8e12,realPlayTargetSec:540,entropyThreshold:1.411e+10,mechanic:'recombination' },
+  { id:6,name:'Cosmic Dark Age',threshold:6e14,cosmicTimeSec:3.15e15,realPlayTargetSec:1800,entropyThreshold:3.922e+11,mechanic:'dark_age' },
+  { id:7,name:'First Stars',threshold:2e16,cosmicTimeSec:6.3e15,realPlayTargetSec:3600,entropyThreshold:3.704e+12,mechanic:'first_stars' },
+  { id:8,name:'Reionization',threshold:2e17,cosmicTimeSec:1.6e16,realPlayTargetSec:5400,entropyThreshold:1.443e+14,mechanic:'reionization' },
+  { id:9,name:'Galaxy Formation',threshold:1e18,cosmicTimeSec:3.15e16,realPlayTargetSec:7200,entropyThreshold:8.936e+14,mechanic:'galaxy_weaving' },
+  { id:10,name:'Solar System',threshold:8e19,cosmicTimeSec:2.9e17,realPlayTargetSec:10800,entropyThreshold:8.543e+15,mechanic:'planet_formation' },
+  { id:11,name:'Life on Earth',threshold:2e20,cosmicTimeSec:4.35e17,realPlayTargetSec:14400,entropyThreshold:1.243e+17,mechanic:'life_evolution' },
+  { id:12,name:'Death of Star',threshold:6e20,cosmicTimeSec:5.83e17,realPlayTargetSec:21600,entropyThreshold:4.774e+17,mechanic:'red_giant' },
+  { id:13,name:'Stelliferous End',threshold:2e21,cosmicTimeSec:3.15e21,realPlayTargetSec:36000,entropyThreshold:8.702e+17,mechanic:'remnant_cooling' },
+  { id:14,name:'Degenerate Era',threshold:8e22,cosmicTimeSec:2.29e34,realPlayTargetSec:54000,entropyThreshold:2.283e+18,mechanic:'proton_decay' },
+  { id:15,name:'Black Hole Era',threshold:3e23,cosmicTimeSec:3.89e35,realPlayTargetSec:86400,entropyThreshold:5.58e+18,mechanic:'hawking_radiation' },
+  { id:16,name:'The End',threshold:1.2e24,cosmicTimeSec:5.01e37,realPlayTargetSec:117450,entropyThreshold:4.5e+19,mechanic:'ending_choice' },
 ];
 const DEFAULT_CROSS_MULTS = {
   5:{click:1.4,auto:1.4,crit:1.15,time:1.25}, 10:{click:1.8,auto:1.8,crit:1.3,time:1.6}, 15:{click:2.4,auto:2.4,crit:1.5,time:2.1},
@@ -193,6 +205,8 @@ function defaultConfig() {
     },
     stages:DEFAULT_STAGES.map(s=>({...s})),
     stageStartCosmicTime:(idx)=>idx===0?1e-34:DEFAULT_STAGES[idx-1].cosmicTimeSec,
+    gateMode:'current',
+    entropy:{wClick:0.5,wAuto:0.25,fusionIntervalSec:90,fusionValueSec:30,fusionCostFrac:0.1},
     purchaseBudgetFraction:1, purchasesPerSecond:10, maxSkillLevel:50, maxTimeSkillLevel:40, maxHoursPerStage:1000,
     stageWallClockCapSec:3600*24*365*50,
   };
@@ -254,7 +268,7 @@ function tryOnePurchase(skills,quantaIn,cfg,stageIdx){
       for(const track of tracks){
         const id=`${track}_lv${tier}`;
         if(skills.crossNodes.has(id)) continue;
-        if(skills[track]<tier||!trackUnlocked(track,stageIdx)) continue;
+        if(skills[track]<tier||!trackUnlocked(track,stageIdx)||(cfg.gateMode==='entropy'&&track==='time')) continue;
         if(skills.sp<cfg.crossSPCost[tier]) continue;
         skills.sp-=cfg.crossSPCost[tier]; skills.crossNodes.add(id);
         return{bought:true,newQuanta:quanta};
@@ -278,7 +292,7 @@ function tryOnePurchase(skills,quantaIn,cfg,stageIdx){
   const budget=quanta*cfg.purchaseBudgetFraction;
   const plannedTarget=stageLevelTarget(cfg,stageIdx);
   for(const track of order){
-    if(!trackUnlocked(track,stageIdx)||skills[track]>=maxTrackLevel(track,cfg)) continue;
+    if(!trackUnlocked(track,stageIdx)||skills[track]>=maxTrackLevel(track,cfg)||(cfg.gateMode==='entropy'&&track==='time')) continue;
     if(cfg.skillStrategy==='balanced_targets'&&skills[track]>=plannedTarget) continue;
     const cost=trackCost(track,skills[track]+1,cfg);
     if(cost>budget||cost>quanta) continue;
@@ -390,8 +404,61 @@ function simulateStage(stageIdx,skills,carryQuanta,boosts,cfg){
     capped:elapsed>=stageMaxSec, infeasible:_infeasible,
   };
 }
+// Redesign (D1): single cumulative entropy gate. Entropy carries across stages.
+function simulateStageEntropy(stageIdx,skills,carryState,cfg){
+  const stage=cfg.stages[stageIdx];
+  let quanta=carryState.quanta, entropy=carryState.entropy;
+  let elapsed=0,safety=0,activeClock=0;
+  let nextFusionAt=(cfg.entropy.fusionIntervalSec>0&&cfg.activeFraction>0)?cfg.entropy.fusionIntervalSec:Infinity;
+  const stageMaxSec=(cfg.maxHoursPerStage||1000)*3600;
+  const thr=stage.entropyThreshold??Infinity;
+  const mechBoost=cfg.mechanicClickBoost[stage.mechanic]??1;
+  let lastPurchaseAt=-Infinity; const purchaseInterval=1/cfg.purchasesPerSecond;
+  while(entropy<thr && elapsed<stageMaxSec && safety++<400000){
+    const mods=computeMods(skills,cfg);
+    const cp=clickPower(mods)*mechBoost;
+    const cc=critChance(skills.crit,cfg.sustainedCombo,cfg);
+    const cm=critMultiplier(skills.crit,mods,cfg);
+    const eCrit=1+cc*(cm-1);
+    const cmu=comboMult(cfg.sustainedCombo,cfg);
+    const clickG=cfg.cps*cp*eCrit*cmu*cfg.activeFraction;
+    const autoG=autoRate(mods);
+    const eRate=clickG*cfg.entropy.wClick+autoG*cfg.entropy.wAuto;
+    let dt=30;
+    if(eRate>0) dt=Math.min(dt,Math.max(0.5,(thr-entropy)/eRate/8));
+    if(Number.isFinite(nextFusionAt)){
+      const dtF=(nextFusionAt-activeClock)/cfg.activeFraction;
+      if(dtF>0) dt=Math.min(dt,Math.max(0.5,dtF));
+    }
+    dt=Math.max(0.25,dt);
+    quanta+=(clickG+autoG)*dt; entropy+=eRate*dt; elapsed+=dt; activeClock+=cfg.activeFraction*dt;
+    if(activeClock>=nextFusionAt){
+      entropy+=cfg.entropy.fusionValueSec*Math.max(eRate,1e-9); // fusion burst (직결)
+      quanta*=1-cfg.entropy.fusionCostFrac;                     // quanta sink
+      nextFusionAt+=cfg.entropy.fusionIntervalSec;
+    }
+    if(elapsed-lastPurchaseAt>=purchaseInterval){
+      let bought=true;
+      while(bought){const r=tryOnePurchase(skills,quanta,cfg,stageIdx);bought=r.bought;quanta=r.newQuanta;}
+      lastPurchaseAt=elapsed;
+    }
+  }
+  if(stageIdx<cfg.stages.length-1) skills.sp+=cfg.spOnAdvance?.[stageIdx]??1;
+  skills.sp+=Math.floor((elapsed/3600)*(cfg.spPerHourFromEncounters||0));
+  const done=entropy>=thr;
+  if(!done) elapsed=stageMaxSec;
+  return{
+    stageIdx,name:stage.name,realTimeSec:elapsed,targetSec:stage.realPlayTargetSec,
+    deviation:(elapsed-stage.realPlayTargetSec)/stage.realPlayTargetSec,
+    finalQuanta:quanta,finalCosmicClock:0,quantaOK:true,timeOK:true,
+    bottleneck:done?'entropy':'infeasible',
+    skills:{click:skills.click,auto:skills.auto,crit:skills.crit,time:skills.time,sp:skills.sp,crossNodes:[...skills.crossNodes]},
+    carry:quanta,carryEntropy:entropy,
+    capped:elapsed>=stageMaxSec,infeasible:!done,
+  };
+}
 function runFullSimulation(cfg){
-  const skills=createSkillState(); const boosts=[]; const results=[]; let carry=0;
+  const skills=createSkillState(); const boosts=[]; const results=[]; let carry=0; let carryEntropy=0;
   let chainInfeasible=false;
   for(let i=0;i<cfg.stages.length;i++){
     if (chainInfeasible) {
@@ -407,7 +474,10 @@ function runFullSimulation(cfg){
       });
       continue;
     }
-    const r=simulateStage(i,skills,carry,boosts,cfg); results.push(r); carry=r.carry;
+    const r=cfg.gateMode==='entropy'
+      ? simulateStageEntropy(i,skills,{quanta:carry,entropy:carryEntropy},cfg)
+      : simulateStage(i,skills,carry,boosts,cfg);
+    results.push(r); carry=r.carry; if(r.carryEntropy!==undefined) carryEntropy=r.carryEntropy;
     if (r.infeasible) chainInfeasible = true;
   }
   return{
@@ -427,11 +497,12 @@ function fmtSec(s){
 }
 function buildStageTable(){
   const r=document.getElementById('stageTable');
-  let h='<table class="stage-grid"><thead><tr><th>#</th><th>name</th><th>quanta</th><th>cosmicSec</th><th>target s</th></tr></thead><tbody>';
+  let h='<table class="stage-grid"><thead><tr><th>#</th><th>name</th><th>quanta</th><th>cosmicSec</th><th>entropy</th><th>target s</th></tr></thead><tbody>';
   DEFAULT_STAGES.forEach((s,i)=>{
     h+=`<tr><td>${s.id}</td><td>${s.name}</td>
       <td><input class="stage-table-input" type="number" data-field="threshold" data-idx="${i}" value="${s.threshold}"/></td>
       <td><input class="stage-table-input" type="number" data-field="cosmicTimeSec" data-idx="${i}" value="${s.cosmicTimeSec}"/></td>
+      <td><input class="stage-table-input" type="number" data-field="entropyThreshold" data-idx="${i}" value="${s.entropyThreshold}"/></td>
       <td><input class="stage-table-input" type="number" data-field="realPlayTargetSec" data-idx="${i}" value="${s.realPlayTargetSec}"/></td></tr>`;
   });
   h+='</tbody></table>'; r.innerHTML=h;
@@ -461,6 +532,8 @@ function readConfig(){
   cfg.clickPowerPerLevel=num('clickPowerPerLevel'); cfg.autoRatePerLevel=num('autoRatePerLevel');
   cfg.critChancePerLevel=num('critChancePerLevel'); cfg.critMultBase=num('critMultBase'); cfg.critMultPerLevel=num('critMultPerLevel');
   cfg.timeFillBase=num('timeFillBase'); cfg.comboMultMax=num('comboMultMax');
+  cfg.gateMode=document.getElementById('gateMode').value;
+  cfg.entropy={wClick:num('entWClick'),wAuto:num('entWAuto'),fusionIntervalSec:num('entFusionIntervalSec'),fusionValueSec:num('entFusionValueSec'),fusionCostFrac:num('entFusionCostFrac')};
   cfg.useShop=checked('useShop');
   cfg.shopAeonSurgeFactor=num('shopAeonSurgeFactor'); cfg.shopAeonSurgeDurationMin=num('shopAeonSurgeDurationMin');
   cfg.shopQuantaBoostFactor=num('shopQuantaBoostFactor'); cfg.shopQuantaBoostDurationMin=num('shopQuantaBoostDurationMin');
@@ -478,7 +551,7 @@ function readConfig(){
   return cfg;
 }
 let charts={stageTime:null,skill:null,bottleneck:null};
-function bottleneckColor(b){return b==='quanta'?'#ff6a6a':b==='cosmicTime'?'#6d8fff':'#68d8a4';}
+function bottleneckColor(b){return b==='quanta'?'#ff6a6a':b==='cosmicTime'?'#6d8fff':b==='entropy'?'#bb8cff':'#68d8a4';}
 function renderResults(res){
   const totalH=res.totalSec/3600;
   document.getElementById('totalTime').textContent=fmtSec(res.totalSec)+` (${totalH.toFixed(1)} hr)`;

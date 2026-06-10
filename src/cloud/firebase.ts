@@ -1,5 +1,10 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAuth, browserLocalPersistence, type Auth } from 'firebase/auth';
+import {
+  initializeAuth,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  type Auth,
+} from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -18,9 +23,12 @@ let db: Firestore | null = null;
 try {
   if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     app = initializeApp(firebaseConfig);
-    // Use initializeAuth with localStorage persistence directly — avoids
-    // the async setPersistence hang in Capacitor WebView (IndexedDB issue).
-    auth = initializeAuth(app, { persistence: browserLocalPersistence });
+    // Keep localStorage persistence for Capacitor, but explicitly install the
+    // browser resolver because initializeAuth() does not add it automatically.
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
     db = getFirestore(app);
   } else {
     console.warn('[Firebase] Missing config — running in offline mode');
