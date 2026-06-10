@@ -56,6 +56,7 @@ import { useBoostNotifications } from '../hooks/useBoostNotifications';
 import { getChapterForStage, getChapterTrackUrls } from '../game/musicChapters';
 import { useAudioUnlockOnPointer } from '../hooks/useAudioUnlockOnPointer';
 import { useSaveErrorToast } from '../hooks/useSaveErrorToast';
+import { vibrateCollision } from '../game/haptics';
 
 interface FloatingEntry {
   id: number;
@@ -71,7 +72,7 @@ interface FloatingEntry {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field';
+  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field' | 'focus';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
@@ -104,6 +105,7 @@ interface GameScreenProps {
   onSetMusicVolume: (v: number) => void;
   onToggleLanguage: () => void;
   onRequestReset: () => void;
+  onForceReset?: () => void;
   onOpenLeaderboard?: () => void;
 }
 
@@ -136,6 +138,7 @@ export function GameScreen({
   onSetMusicVolume,
   onToggleLanguage,
   onRequestReset,
+  onForceReset,
   onOpenLeaderboard,
 }: GameScreenProps) {
   const [shopOpen, setShopOpen] = useState(false);
@@ -144,6 +147,7 @@ export function GameScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
+  const focusAnchorRef = useRef<HTMLButtonElement | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -329,6 +333,14 @@ export function GameScreen({
         autoCloseMs: 6000,
       };
     }
+    if (stage.id >= 3 && !state.tutorialFlags['focus-mode-intro']) {
+      return {
+        flagId: 'focus-mode-intro',
+        anchor: 'focus',
+        message: t(language, 'tutFocusMode'),
+        autoCloseMs: 7000,
+      };
+    }
     if (canShowShop && !state.hasSeenCashShopTutorial) {
       return {
         flagId: 'hasSeenCashShopTutorial',
@@ -354,12 +366,13 @@ export function GameScreen({
         autoCloseMs: 8000,
       };
     }
-    if (stage.id >= 3 && !state.tutorialFlags['focus-mode-intro']) {
+    if (state.tutorialFlags['milestone-seen'] && !state.tutorialFlags['info-hint-seen'] && !almanacOpen) {
       return {
-        flagId: 'focus-mode-intro',
-        anchor: 'field',
-        message: t(language, 'tutFocusMode'),
-        autoCloseMs: 7000,
+        flagId: 'info-hint-seen',
+        anchor: 'resource',
+        message: t(language, 'tutStageLog'),
+        ctaLabel: t(language, 'tutStageLogOpen'),
+        onCta: () => { setAlmanacOpen(true); soundManager?.playUIOpen(); },
       };
     }
     return null;
@@ -377,6 +390,7 @@ export function GameScreen({
     state.totalClicks,
     state.tutorialFlags,
     state.universeCount,
+    almanacOpen,
   ]);
 
 
@@ -523,6 +537,7 @@ export function GameScreen({
     ]);
     setShakeClass(event.tier === 'massive' ? 'shake-big' : 'shake');
     soundManager?.playCollision(event.tier);
+    vibrateCollision(event.tier);
     dispatch({ type: 'CLEAR_COLLISION_EVENT', id: event.id });
     const floatTimeoutId = window.setTimeout(() => {
       setFloatingEntries((current) => current.filter((entry) => entry.id !== event.id));
@@ -910,6 +925,7 @@ export function GameScreen({
           </button>
         </div>
         <button
+          ref={focusAnchorRef}
           type="button"
           className={`focus-toggle-btn ${focusMode ? 'focus-toggle-btn--active' : ''}`}
           onClick={() => { setFocusMode((v) => !v); soundManager?.playToggle(!focusMode); }}
@@ -997,6 +1013,7 @@ export function GameScreen({
           onToggleSfx={onToggleSfx}
           onToggleLanguage={onToggleLanguage}
           onRequestReset={() => { setSettingsOpen(false); soundManager?.playUIClose(); onRequestReset(); }}
+          onForceReset={onForceReset ? () => { setSettingsOpen(false); soundManager?.playUIClose(); onForceReset(); } : undefined}
           onOpenLeaderboard={onOpenLeaderboard}
           onClose={() => { setSettingsOpen(false); soundManager?.playUIClose(); }}
         />
@@ -1011,9 +1028,11 @@ export function GameScreen({
                 ? shopAnchorRef
                 : activeTutorialBubble.anchor === 'boost'
                   ? boostAnchorRef
-                  : activeTutorialBubble.anchor === 'field'
-                    ? fieldCenterAnchorRef
-                    : resourceAnchorRef
+                  : activeTutorialBubble.anchor === 'focus'
+                    ? focusAnchorRef
+                    : activeTutorialBubble.anchor === 'field'
+                      ? fieldCenterAnchorRef
+                      : resourceAnchorRef
           }
           position={
             activeTutorialBubble.anchor === 'resource'
@@ -1022,7 +1041,9 @@ export function GameScreen({
                 ? 'top'
                 : activeTutorialBubble.anchor === 'field'
                   ? 'top'
-                  : 'left'
+                  : activeTutorialBubble.anchor === 'focus'
+                    ? 'top'
+                    : 'left'
           }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
@@ -1049,20 +1070,7 @@ export function GameScreen({
         />
       ) : null}
 
-      {state.tutorialFlags['milestone-seen'] && !state.tutorialFlags['info-hint-seen'] && !almanacOpen ? (
-        <SpeechBubble
-          anchorRef={infoAnchorRef}
-          position="bottom"
-          message={t(language, 'tutStageLog')}
-          ctaLabel={t(language, 'tutStageLogOpen')}
-          onCta={() => {
-            setAlmanacOpen(true);
-            soundManager?.playUIOpen();
-            dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' });
-          }}
-          onDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' })}
-        />
-      ) : null}
+      {/* info-hint tutorial is now part of activeTutorialBubble system */}
 
       {canChooseEnding ? (
         <EndingChooser

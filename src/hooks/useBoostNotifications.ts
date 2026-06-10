@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import type { ShopBoost } from '../game/types';
 import type { Lang } from '../i18n';
+import {
+  scheduleBoostExpiryNotifications,
+  cancelBoostNotifications,
+} from '../game/nativeNotifications';
 
 // ---------------------------------------------------------------------------
-// Bilingual messages
+// Bilingual messages (web / SW path)
 // ---------------------------------------------------------------------------
 
 const MESSAGES = {
@@ -18,7 +23,7 @@ const MESSAGES = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Service Worker registration
+// Web Service Worker helpers (unchanged from before)
 // ---------------------------------------------------------------------------
 
 let swRegistration: ServiceWorkerRegistration | null = null;
@@ -37,21 +42,13 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> 
   }
 }
 
-// ---------------------------------------------------------------------------
-// Permission
-// ---------------------------------------------------------------------------
-
-async function requestPermission(): Promise<boolean> {
+async function requestWebPermission(): Promise<boolean> {
   if (!('Notification' in window)) return false;
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;
   const result = await Notification.requestPermission();
   return result === 'granted';
 }
-
-// ---------------------------------------------------------------------------
-// Schedule via Service Worker (survives tab close)
-// ---------------------------------------------------------------------------
 
 function scheduleViaSW(delayMs: number, key: keyof typeof MESSAGES, lang: Lang): void {
   if (!swReady || !swRegistration?.active) return;
@@ -64,10 +61,6 @@ function scheduleViaSW(delayMs: number, key: keyof typeof MESSAGES, lang: Lang):
     tag: key,
   });
 }
-
-// ---------------------------------------------------------------------------
-// Fallback: in-page Notification (when SW not available)
-// ---------------------------------------------------------------------------
 
 function sendFallbackNotification(key: keyof typeof MESSAGES, lang: Lang): void {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -90,19 +83,43 @@ export function useBoostNotifications(
 ): void {
   const timersRef = useRef<number[]>([]);
   const swInitiated = useRef(false);
+  // Track previous boost IDs so we can cancel removed ones
+  const prevBoostIdsRef = useRef<string[]>([]);
 
-  // Register SW + request permission on first boost
+  const isNative = Capacitor.isNativePlatform();
+
+  // ---- Native path (iOS / Android) ----------------------------------------
   useEffect(() => {
+    if (!isNative) return;
+    if (!boosts) return;
+
+    const now = Date.now();
+    const activeBoostIds = boosts.filter((b) => b.expiresAt > now).map((b) => b.id);
+
+    // Cancel notifications for boosts that disappeared
+    const removedIds = prevBoostIdsRef.current.filter((id) => !activeBoostIds.includes(id));
+    if (removedIds.length > 0) cancelBoostNotifications(removedIds);
+
+    prevBoostIdsRef.current = activeBoostIds;
+
+    // Schedule for all active boosts (plugin deduplicates by ID)
+    scheduleBoostExpiryNotifications(boosts, language);
+  }, [boosts, language, isNative]);
+
+  // ---- Web path (browser) -------------------------------------------------
+  useEffect(() => {
+    if (isNative) return;
     if (swInitiated.current || !boosts || boosts.length === 0) return;
     swInitiated.current = true;
     (async () => {
-      const granted = await requestPermission();
+      const granted = await requestWebPermission();
       if (granted) await ensureServiceWorker();
     })();
-  }, [boosts]);
+  }, [boosts, isNative]);
 
-  // Schedule notifications for active boosts
   useEffect(() => {
+    if (isNative) return;
+
     for (const id of timersRef.current) window.clearTimeout(id);
     timersRef.current = [];
 
@@ -112,11 +129,7 @@ export function useBoostNotifications(
     for (const boost of boosts) {
       const remaining = boost.expiresAt - now;
       if (remaining > 0) {
-        // SW-based (survives tab close)
-        if (swReady) {
-          scheduleViaSW(remaining, 'boost_expired', language);
-        }
-        // Fallback timer (in-page, only if tab stays open)
+        if (swReady) scheduleViaSW(remaining, 'boost_expired', language);
         const id = window.setTimeout(() => {
           sendFallbackNotification('boost_expired', language);
         }, remaining);
@@ -128,18 +141,19 @@ export function useBoostNotifications(
       for (const id of timersRef.current) window.clearTimeout(id);
       timersRef.current = [];
     };
-  }, [boosts, language]);
+  }, [boosts, language, isNative]);
 
-  // "Come back" notification — scheduled via SW when tab goes hidden
+  // "Come back" notification (web only — native doesn't need this since
+  // LocalNotifications already survive app close)
   useEffect(() => {
+    if (isNative) return;
+
     let fallbackTimer: number | null = null;
-    const COME_BACK_DELAY_MS = 30 * 60 * 1000; // 30 minutes
+    const COME_BACK_DELAY_MS = 30 * 60 * 1000;
 
     function handleVisibility() {
       if (document.visibilityState === 'hidden') {
-        if (swReady) {
-          scheduleViaSW(COME_BACK_DELAY_MS, 'come_back', language);
-        }
+        if (swReady) scheduleViaSW(COME_BACK_DELAY_MS, 'come_back', language);
         fallbackTimer = window.setTimeout(() => {
           sendFallbackNotification('come_back', language);
         }, COME_BACK_DELAY_MS);
@@ -156,5 +170,5 @@ export function useBoostNotifications(
       document.removeEventListener('visibilitychange', handleVisibility);
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
     };
-  }, [language]);
+  }, [language, isNative]);
 }

@@ -37,8 +37,10 @@ Decided:
   - Anonymous name: B (Google login required for name)
   - First name UX: A (forced modal, no skip)
   - Unique check: A (Firestore Transaction)
+  - Apple login: IN PROGRESS (code landed 2026-06-07; console setup pending) -> see APPLE_LOGIN_SETUP.md
+  - App Store target: YES -> native iOS via Capacitor (web GitHub Pages build unchanged)
 Last Checkpoint Passed: Phase 2
-  - Phase 3A (Apple): deferred (no Apple Developer account)
+  - Phase 3A (Apple): code complete (signInWithApple/linkWithApple; web popup + native iOS credential flow). Account deletion (Guideline 5.1.1(v)) implemented in SettingsPanel. Remaining: Apple Developer + Firebase console + Capacitor wrap (see APPLE_LOGIN_SETUP.md)
   - Phase 3B (Stripe): deferred (no Stripe account yet, will use existing shop items)
 Open Questions:
   - (none)

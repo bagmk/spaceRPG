@@ -1,0 +1,354 @@
+diff --git a/node_modules/@capacitor-firebase/authentication/.build/workspace-state.json b/node_modules/@capacitor-firebase/authentication/.build/workspace-state.json
+new file mode 100644
+index 0000000..71deae9
+--- /dev/null
++++ b/node_modules/@capacitor-firebase/authentication/.build/workspace-state.json
+@@ -0,0 +1,11 @@
++{
++  "object" : {
++    "artifacts" : [
++
++    ],
++    "dependencies" : [
++
++    ]
++  },
++  "version" : 6
++}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-firebase/authentication/.swiftpm/xcode/xcuserdata/saesunkim.xcuserdatad/xcschemes/xcschememanagement.plist b/node_modules/@capacitor-firebase/authentication/.swiftpm/xcode/xcuserdata/saesunkim.xcuserdatad/xcschemes/xcschememanagement.plist
+new file mode 100644
+index 0000000..11053be
+--- /dev/null
++++ b/node_modules/@capacitor-firebase/authentication/.swiftpm/xcode/xcuserdata/saesunkim.xcuserdatad/xcschemes/xcschememanagement.plist
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
++<plist version="1.0">
++<dict>
++	<key>SchemeUserState</key>
++	<dict>
++		<key>CapacitorFirebaseAuthentication.xcscheme_^#shared#^_</key>
++		<dict>
++			<key>orderHint</key>
++			<integer>2</integer>
++		</dict>
++	</dict>
++</dict>
++</plist>
+diff --git a/node_modules/@capacitor-firebase/authentication/Package.swift b/node_modules/@capacitor-firebase/authentication/Package.swift
+index 909c7f0..61560a6 100644
+--- a/node_modules/@capacitor-firebase/authentication/Package.swift
++++ b/node_modules/@capacitor-firebase/authentication/Package.swift
+@@ -13,7 +13,6 @@ let package = Package(
+         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.0"),
+         .package(url: "https://github.com/firebase/firebase-ios-sdk.git", .upToNextMajor(from: "12.7.0")),
+         .package(url: "https://github.com/google/GoogleSignIn-iOS", from: "9.0.0"),
+-        .package(url: "https://github.com/facebook/facebook-ios-sdk.git", from: "18.0.0")
+     ],
+     targets: [
+         .target(
+@@ -24,13 +23,10 @@ let package = Package(
+                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
+                 .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
+                 .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
+-                .product(name: "FacebookCore", package: "facebook-ios-sdk"),
+-                .product(name: "FacebookLogin", package: "facebook-ios-sdk")
+             ],
+             path: "ios/Plugin",
+             swiftSettings: [
+                 .define("RGCFA_INCLUDE_GOOGLE"),
+-                .define("RGCFA_INCLUDE_FACEBOOK")
+             ]),
+         .testTarget(
+             name: "FirebaseAuthenticationPluginTests",
+diff --git a/node_modules/@capacitor-firebase/authentication/ios/Plugin/CapacitorShim.swift b/node_modules/@capacitor-firebase/authentication/ios/Plugin/CapacitorShim.swift
+new file mode 100644
+index 0000000..4d56a5a
+--- /dev/null
++++ b/node_modules/@capacitor-firebase/authentication/ios/Plugin/CapacitorShim.swift
+@@ -0,0 +1,127 @@
++// CapacitorShim.swift
++// Provides missing CAPPluginCall/JSTypes APIs that the capacitor-swift-pm
++// xcframework conditionally hides behind $NonescapableTypes.
++
++import Foundation
++import WebKit
++import Capacitor
++
++// MARK: - CAPPluginCall shim
++
++extension CAPPluginCall {
++    @objc public func getString(_ key: String) -> String? {
++        return options?[key] as? String
++    }
++
++    public func getArray(_ key: String) -> JSArray? {
++        return options?[key] as? JSArray
++    }
++
++    public func getArray<T>(_ key: String, _ ofType: T.Type) -> [T]? {
++        return options?[key] as? [T]
++    }
++
++    public func getBool(_ key: String) -> Bool? {
++        return options?[key] as? Bool
++    }
++
++    public func getInt(_ key: String) -> Int? {
++        return options?[key] as? Int
++    }
++
++    public func getObject(_ key: String) -> JSObject? {
++        return options?[key] as? JSObject
++    }
++
++    @objc public func reject(_ message: String, _ code: String? = nil, _ error: Error? = nil, _ data: PluginCallResultData? = nil) {
++        // Use Obj-C runtime to construct CAPPluginCallError since its Swift
++        // init is gated behind $NonescapableTypes experimental feature.
++        let errorClass: AnyClass? = NSClassFromString("CAPPluginCallError")
++        if let errorClass = errorClass as? NSObject.Type {
++            let errorObj = errorClass.perform(
++                Selector(("initWithMessage:code:error:data:")),
++                with: message,
++                with: code
++            )?.takeUnretainedValue()
++            if let callError = errorObj as? CAPPluginCallError {
++                errorHandler?(callError)
++                return
++            }
++        }
++        // Fallback: just call the error handler via the original reject
++        // selector if it exists on self (CAPPluginCall is Obj-C)
++        let sel = NSSelectorFromString("reject:code:error:data:")
++        if responds(to: sel) {
++            perform(sel, with: message, with: code)
++        }
++    }
++
++    @objc public func resolve() {
++        resolve([:])
++    }
++
++    @objc public func resolve(_ data: PluginCallResultData) {
++        let resultClass: AnyClass? = NSClassFromString("CAPPluginCallResult")
++        if let resultClass = resultClass as? NSObject.Type {
++            let resultObj = resultClass.perform(
++                Selector(("init:")),
++                with: data
++            )?.takeUnretainedValue()
++            if let callResult = resultObj as? CAPPluginCallResult {
++                successHandler?(callResult, self)
++                return
++            }
++        }
++    }
++}
++
++// MARK: - CAPBridgeProtocol shim
++
++extension CAPBridgeProtocol {
++    public var viewController: UIViewController? {
++        return (self as? CAPBridgeViewController) ?? nil
++    }
++
++    public var webView: WKWebView? {
++        return (self as? CAPBridgeViewController)?.webView
++    }
++}
++
++// MARK: - PluginConfig shim
++
++extension PluginConfig {
++    public func getArray(_ configKey: String) -> JSArray? {
++        return getConfigJSON()[configKey] as? JSArray
++    }
++}
++
++// MARK: - JSTypes shim
++
++extension JSTypes {
++    public static func coerceDictionaryToJSObject(_ dictionary: [AnyHashable: Any]?, formattingDatesAsStrings: Bool = false) -> JSObject? {
++        guard let dict = dictionary else { return nil }
++        var result = JSObject()
++        for (key, value) in dict {
++            guard let stringKey = key as? String else { continue }
++            if let boolVal = value as? Bool {
++                result[stringKey] = boolVal
++            } else if let intVal = value as? Int {
++                result[stringKey] = intVal
++            } else if let doubleVal = value as? Double {
++                result[stringKey] = doubleVal
++            } else if let stringVal = value as? String {
++                result[stringKey] = stringVal
++            } else if let dateVal = value as? Date, formattingDatesAsStrings {
++                result[stringKey] = ISO8601DateFormatter().string(from: dateVal)
++            } else if let dictVal = value as? [AnyHashable: Any] {
++                result[stringKey] = coerceDictionaryToJSObject(dictVal, formattingDatesAsStrings: formattingDatesAsStrings) ?? [:]
++            }
++        }
++        return result
++    }
++
++    public static func coerceDictionaryToJSObject(_ dictionary: NSDictionary?, formattingDatesAsStrings: Bool = false) -> JSObject? {
++        guard let dict = dictionary else { return nil }
++        return coerceDictionaryToJSObject(dict as? [AnyHashable: Any], formattingDatesAsStrings: formattingDatesAsStrings)
++    }
++}
+diff --git a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Classes/RuntimeError.swift b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Classes/RuntimeError.swift
+index 3580901..1eda385 100644
+--- a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Classes/RuntimeError.swift
++++ b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Classes/RuntimeError.swift
+@@ -6,4 +6,8 @@ import Foundation
+     init(_ description: String) {
+         self.localizedDescription = description
+     }
++
++    override var description: String {
++        return "RuntimeError: \(localizedDescription)"
++    }
+ }
+diff --git a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/AppleAuthProviderHandler.swift b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/AppleAuthProviderHandler.swift
+index 66cf0a5..2af35ac 100644
+--- a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/AppleAuthProviderHandler.swift
++++ b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/AppleAuthProviderHandler.swift
+@@ -9,6 +9,7 @@ class AppleAuthProviderHandler: NSObject {
+     var pluginImplementation: FirebaseAuthentication
+     fileprivate var currentNonce: String?
+     fileprivate var isLink: Bool?
++    fileprivate var currentCall: CAPPluginCall?
+ 
+     init(_ pluginImplementation: FirebaseAuthentication) {
+         self.pluginImplementation = pluginImplementation
+@@ -17,6 +18,7 @@ class AppleAuthProviderHandler: NSObject {
+     func signIn(call: CAPPluginCall) {
+         if #available(iOS 13, *) {
+             self.isLink = false
++            self.currentCall = call
+             self.startSignInWithAppleFlow()
+         } else {
+             call.reject(self.pluginImplementation.getPlugin().errorDeviceUnsupported)
+@@ -26,6 +28,7 @@ class AppleAuthProviderHandler: NSObject {
+     func link(call: CAPPluginCall) {
+         if #available(iOS 13, *) {
+             self.isLink = true
++            self.currentCall = call
+             self.startSignInWithAppleFlow()
+         } else {
+             call.reject(self.pluginImplementation.getPlugin().errorDeviceUnsupported)
+@@ -37,7 +40,15 @@ class AppleAuthProviderHandler: NSObject {
+ @available(iOS 13.0, *)
+ extension AppleAuthProviderHandler: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+-        return (self.pluginImplementation.getPlugin().bridge?.webView?.window)!
++        // Capacitor 8 SPM: bridge?.webView?.window can be nil.
++        // Fall back to the key-window.
++        if let window = self.pluginImplementation.getPlugin().bridge?.webView?.window {
++            return window
++        }
++        return UIApplication.shared.connectedScenes
++            .compactMap { $0 as? UIWindowScene }
++            .flatMap { $0.windows }
++            .first { $0.isKeyWindow } ?? UIWindow()
+     }
+ 
+     // Adapted from https://auth0.com/docs/api-auth/tutorials/nonce#generate-a-cryptographically-random-nonce
+@@ -130,7 +141,23 @@ extension AppleAuthProviderHandler: ASAuthorizationControllerDelegate, ASAuthori
+         guard let isLink = self.isLink else {
+             return
+         }
+-        if isLink == true {
++
++        // Capacitor 8 SPM: savedCall.resolve() doesn't reach JS (weak bridge ref).
++        // Bypass via notifyListeners + direct call.resolve(), same pattern as Google.
++        let skipNativeAuth = self.currentCall?.getBool("skipNativeAuth",
++            self.pluginImplementation.getConfig().skipNativeAuth) ?? true
++
++        if !isLink && skipNativeAuth, let call = self.currentCall {
++            let signInResult = FirebaseAuthenticationHelper.createSignInResult(
++                credential: credential, user: nil, idToken: idTokenString,
++                nonce: nonce, accessToken: nil,
++                serverAuthCode: nil,
++                additionalUserInfo: nil, displayName: displayName,
++                authorizationCode: authorizationCode)
++            self.pluginImplementation.getPlugin().notifyListeners(
++                "appleSignInResult", data: signInResult, retainUntilConsumed: true)
++            call.resolve(signInResult)
++        } else if isLink == true {
+             self.pluginImplementation.handleSuccessfulLink(credential: credential, idToken: idTokenString, nonce: nonce,
+                                                            accessToken: nil, serverAuthCode: nil, displayName: displayName, authorizationCode: authorizationCode)
+         } else {
+diff --git a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/GoogleAuthProviderHandler.swift b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/GoogleAuthProviderHandler.swift
+index 2cc2e26..06c589a 100644
+--- a/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/GoogleAuthProviderHandler.swift
++++ b/node_modules/@capacitor-firebase/authentication/ios/Plugin/Handlers/GoogleAuthProviderHandler.swift
+@@ -33,11 +33,20 @@ class GoogleAuthProviderHandler: NSObject {
+         guard let clientId = FirebaseApp.app()?.options.clientID else { return }
+         let config = GIDConfiguration(clientID: clientId, serverClientID: clientId)
+         GIDSignIn.sharedInstance.configuration = config
+-        guard let controller = self.pluginImplementation.getPlugin().bridge?.viewController else { return }
+         let scopes = call.getArray("scopes", String.self) ?? []
+ 
+         DispatchQueue.main.async {
+-            GIDSignIn.sharedInstance.signIn(withPresenting: controller, hint: nil, additionalScopes: scopes) { [unowned self] result, error in
++            let controller: UIViewController? =
++                self.pluginImplementation.getPlugin().bridge?.viewController
++                ?? UIApplication.shared.connectedScenes
++                    .compactMap({ $0 as? UIWindowScene })
++                    .flatMap({ $0.windows })
++                    .first(where: { $0.isKeyWindow })?
++                    .rootViewController
++
++            guard let presenter = controller else { return }
++
++            GIDSignIn.sharedInstance.signIn(withPresenting: presenter, hint: nil, additionalScopes: scopes) { [unowned self] result, error in
+                 if let error = error {
+                     if isLink == true {
+                         self.pluginImplementation.handleFailedLink(message: nil, error: error)
+@@ -54,13 +63,40 @@ class GoogleAuthProviderHandler: NSObject {
+                 }
+                 let accessToken = user.accessToken.tokenString
+                 let serverAuthCode = result?.serverAuthCode
+-                let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
+-                if isLink == true {
+-                    self.pluginImplementation.handleSuccessfulLink(credential: credential, idToken: idToken, nonce: nil,
+-                                                                   accessToken: accessToken, serverAuthCode: serverAuthCode, displayName: nil, authorizationCode: nil)
++
++                // Bypass savedCall path — resolve the call directly to avoid
++                // Capacitor 8 SPM bridge issues where savedCall.resolve() fails
++                // to propagate back to JS.
++                let skipNativeAuth = call.getBool("skipNativeAuth",
++                    self.pluginImplementation.getConfig().skipNativeAuth)
++
++                if skipNativeAuth {
++                    let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
++                    let signInResult = FirebaseAuthenticationHelper.createSignInResult(
++                        credential: credential, user: nil, idToken: idToken,
++                        nonce: nil, accessToken: accessToken,
++                        serverAuthCode: serverAuthCode,
++                        additionalUserInfo: nil, displayName: nil,
++                        authorizationCode: nil)
++                    // Use notifyListeners as a fallback channel since
++                    // call.resolve() fails to reach JS in Capacitor 8 SPM.
++                    self.pluginImplementation.getPlugin().notifyListeners(
++                        "googleSignInResult", data: signInResult, retainUntilConsumed: true)
++                    // Also try resolve (might work in future Capacitor versions)
++                    call.resolve(signInResult)
+                 } else {
+-                    self.pluginImplementation.handleSuccessfulSignIn(credential: credential, idToken: idToken, nonce: nil,
+-                                                                     accessToken: accessToken, displayName: nil, authorizationCode: nil, serverAuthCode: serverAuthCode)
++                    let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
++                    if isLink == true {
++                        self.pluginImplementation.handleSuccessfulLink(
++                            credential: credential, idToken: idToken, nonce: nil,
++                            accessToken: accessToken, serverAuthCode: serverAuthCode,
++                            displayName: nil, authorizationCode: nil)
++                    } else {
++                        self.pluginImplementation.handleSuccessfulSignIn(
++                            credential: credential, idToken: idToken, nonce: nil,
++                            accessToken: accessToken, displayName: nil,
++                            authorizationCode: nil, serverAuthCode: serverAuthCode)
++                    }
+                 }
+             }
+         }

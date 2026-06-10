@@ -10,10 +10,13 @@ import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { NameSetupModal } from './components/NameSetupModal';
 import { LoginScreen } from './components/LoginScreen';
 import { useCloudSync } from './hooks/useCloudSync';
+import { initAdMob } from './lib/admob';
+import { initRevenueCat } from './game/shop/purchase';
 import { Leaderboard } from './components/Leaderboard';
 import {
   clearAllStoredState,
   clearSave,
+  saveGame,
   loadSfxMuted,
   saveSfxMuted,
   loadMusicMuted,
@@ -24,7 +27,7 @@ import {
   saveLanguage,
 } from './game/storage';
 import { useGameState } from './hooks/useGameState';
-import { createInitialGameState } from './game/reducer';
+import { createInitialGameState, toPersistentState } from './game/reducer';
 import { STAGES } from './game/stages';
 import { getStageStartCosmicTime } from './game/timeFlow';
 import { t } from './i18n';
@@ -65,6 +68,8 @@ type Route = 'login' | 'intro' | 'game' | 'final' | 'atlas';
 
 function AppInner() {
   const { state, dispatch, hadSavedGame } = useGameState();
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const { status: authStatus } = useAuth();
   useCloudSync({ state, dispatch });
   const [route, setRoute] = useState<Route>('login');
@@ -80,6 +85,8 @@ function AppInner() {
   const soundManagerRef = useRef<SoundManager | null>(null);
 
   useEffect(() => {
+    initAdMob().catch(console.warn);
+    initRevenueCat().catch(console.warn);
     const manager = new SoundManager(sfxMuted, musicMuted);
     manager.setMusicVolume(musicVolume);
     soundManagerRef.current = manager;
@@ -122,9 +129,34 @@ function AppInner() {
   }, [dispatch]);
 
   useEffect(() => {
-    const handler = () => soundManagerRef.current?.ensureRunning();
-    window.addEventListener('cc-visibility-resumed', handler);
-    return () => window.removeEventListener('cc-visibility-resumed', handler);
+    const resume = () => soundManagerRef.current?.ensureRunning();
+    let backgroundAt = 0;
+    // Custom app event
+    window.addEventListener('cc-visibility-resumed', resume);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        // Record when we went to background and snapshot lastSaveAt
+        backgroundAt = Date.now();
+        saveGame(stateRef.current);
+      } else if (document.visibilityState === 'visible') {
+        resume();
+        // If away > 30s, re-hydrate to trigger offline reward calculation
+        const awayMs = backgroundAt > 0 ? Date.now() - backgroundAt : 0;
+        if (awayMs > 30_000 && stateRef.current && !stateRef.current.completedRun) {
+          const persistent = toPersistentState(stateRef.current);
+          persistent.lastSaveAt = backgroundAt;
+          dispatch({ type: 'HYDRATE', payload: persistent, now: Date.now() });
+        }
+        backgroundAt = 0;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pointerdown', resume);
+    return () => {
+      window.removeEventListener('cc-visibility-resumed', resume);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pointerdown', resume);
+    };
   }, []);
 
   useEffect(() => {
@@ -146,10 +178,15 @@ function AppInner() {
     saveLanguage(language);
   }, [language]);
 
-  // Update resumeAvailable when cloud save arrives via HYDRATE
+  // When cloud save arrives via HYDRATE and we're still on login/intro,
+  // auto-forward to the game (skip the intro "Resume" button).
   useEffect(() => {
     if (state.totalClicks > 0 || state.stageIdx > 0) {
       setResumeAvailable(true);
+      if (route === 'login' || route === 'intro') {
+        soundManagerRef.current?.unlock();
+        setRoute(state.completedRun ? 'final' : 'game');
+      }
     }
   }, [state.totalClicks, state.stageIdx]);
 
@@ -161,9 +198,34 @@ function AppInner() {
 
   useEffect(() => {
     if (authStatus === 'signedOut') {
+      soundManagerRef.current?.fadeOutMusic(800);
+      soundManagerRef.current?.stopDrone(800);
+      dispatch({ type: 'HYDRATE', payload: createInitialGameState(Date.now()), now: Date.now() });
+      setResumeAvailable(false);
       setRoute('login');
     }
   }, [authStatus]);
+
+  // Start/stop ambient drone on login/intro screens.
+  // iOS requires a user gesture to unlock AudioContext, so we listen for
+  // the first pointerdown on login/intro and start the drone then.
+  useEffect(() => {
+    const sm = soundManagerRef.current;
+    if (!sm) return;
+    if (route === 'login' || route === 'intro') {
+      const tryStart = () => {
+        sm.unlock();
+        sm.startDrone();
+      };
+      // Try immediately (works if already unlocked from a previous session)
+      tryStart();
+      // Also listen for first tap in case context is still locked
+      window.addEventListener('pointerdown', tryStart);
+      return () => window.removeEventListener('pointerdown', tryStart);
+    }
+    sm.stopDrone(1500);
+    return undefined;
+  }, [route]);
 
   return (
     <>
@@ -171,7 +233,10 @@ function AppInner() {
         <LoginScreen
           language={language}
           onLanguageChange={setLanguage}
-          onContinue={() => setRoute('intro')}
+          onContinue={() => {
+            soundManagerRef.current?.unlock();
+            setRoute('intro');
+          }}
         />
       ) : null}
 
@@ -220,6 +285,13 @@ function AppInner() {
             onSetMusicVolume={setMusicVolumeState}
             onToggleLanguage={() => setLanguage((v) => (v === 'en' ? 'ko' : 'en'))}
             onRequestReset={() => setShowResetConfirm(true)}
+            onForceReset={() => {
+              clearAllStoredState();
+              const now = Date.now();
+              dispatch({ type: 'HYDRATE', payload: createInitialGameState(now), now });
+              setResumeAvailable(false);
+              setRoute('intro');
+            }}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
           />
         </ErrorBoundary>

@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { initializeAuth, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -18,7 +18,9 @@ let db: Firestore | null = null;
 try {
   if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
+    // Use initializeAuth with localStorage persistence directly — avoids
+    // the async setPersistence hang in Capacitor WebView (IndexedDB issue).
+    auth = initializeAuth(app, { persistence: browserLocalPersistence });
     db = getFirestore(app);
   } else {
     console.warn('[Firebase] Missing config — running in offline mode');

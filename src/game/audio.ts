@@ -78,6 +78,12 @@ export class SoundManager {
   // 80ms click-free fade for forced cleanup of orphaned sources.
   private static readonly CLEANUP_FADE_MS = 80;
 
+  // ── Procedural ambient drone (login/intro screens) ──────────────────────
+  private droneOscs: OscillatorNode[] = [];
+  private droneGain: GainNode | null = null;
+  private droneLfo: OscillatorNode | null = null;
+  private droneActive = false;
+
   constructor(sfxMuted: boolean, musicMuted = false) {
     this.sfxMuted = sfxMuted;
     this.musicMuted = musicMuted;
@@ -92,7 +98,9 @@ export class SoundManager {
       return; // skip redundant calls
     }
     this.unlocked = true;
-    void ctx.resume();
+    // iOS Capacitor: ctx.resume() must be awaited — fire-and-forget
+    // leaves the context suspended and subsequent decodeAudioData fails.
+    ctx.resume().catch(() => {});
   }
 
   // Call this when visibility returns. Safe to call multiple times.
@@ -362,9 +370,30 @@ export class SoundManager {
     if (!ctx) return null;
     const promise = (async () => {
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
-        const arrayBuffer = await res.arrayBuffer();
+        // iOS Capacitor: context may still be suspended even after unlock().
+        // Resume here so decodeAudioData doesn't fail.
+        if (ctx.state === 'suspended') {
+          await ctx.resume().catch(() => {});
+        }
+        // iOS Capacitor WKWebView: fetch() returns HTTP 0 for local files.
+        // Use XMLHttpRequest which handles the capacitor:// scheme correctly.
+        const arrayBuffer = typeof XMLHttpRequest !== 'undefined'
+          ? await new Promise<ArrayBuffer>((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open('GET', url, true);
+              xhr.responseType = 'arraybuffer';
+              xhr.onload = () => {
+                if (xhr.status === 0 || xhr.status === 200) resolve(xhr.response);
+                else reject(new Error(`HTTP ${xhr.status} loading ${url}`));
+              };
+              xhr.onerror = () => reject(new Error(`XHR failed loading ${url}`));
+              xhr.send();
+            })
+          : await (async () => {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
+              return res.arrayBuffer();
+            })();
         const decodeStart = performance.now();
         const buffer = await ctx.decodeAudioData(arrayBuffer);
         const decodeMs = performance.now() - decodeStart;
@@ -378,8 +407,8 @@ export class SoundManager {
         this.touchBuffer(chapterId);
         this.evictIfNeeded();
         return buffer;
-      } catch (err) {
-        this.logAudioError(err);
+      } catch (err: any) {
+        console.error('[music] loadChapter FAILED:', chapterId, url, 'error:', err?.message ?? err?.name ?? String(err), 'ctxState:', ctx.state);
         return null;
       } finally {
         this.inflightLoads.delete(chapterId);
@@ -460,6 +489,7 @@ export class SoundManager {
     const buffer = this.musicBuffers.get(chapterId);
     const master = this.masterGain;
     if (!this.isUsable() || !ctx || !this.unlocked || !buffer || !master) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     try {
       const next = ctx.createBufferSource();
       next.buffer = buffer;
@@ -502,6 +532,7 @@ export class SoundManager {
 
   /** Load all tracks for a chapter and start rotation. Idempotent per pool id. */
   async loadAndPlayChapterPool(chapterId: string, urls: string[], fadeMs?: number): Promise<void> {
+    console.log('[music] loadAndPlayChapterPool:', chapterId, 'unlocked:', this.unlocked, 'muted:', this.musicMuted, 'ctxState:', this.context?.state);
     if (this.currentPoolId === chapterId) return; // no-op within same pool
     if (!urls.length) return;
     // Bump epoch IMMEDIATELY so any pending chain timers from the previous
@@ -544,6 +575,7 @@ export class SoundManager {
     const ctx = this.ensureContext();
     const master = this.masterGain;
     if (!this.isUsable() || !ctx || !this.unlocked || !master) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     try {
       const next = ctx.createBufferSource();
       next.buffer = buffer;
@@ -594,6 +626,74 @@ export class SoundManager {
     } catch (err) {
       this.logAudioError(err);
     }
+  }
+
+  // ── Procedural ambient drone ──────────────────────────────────────────
+  // Lightweight generative pad for login/intro screens. No audio files needed.
+  // 3 detuned sine waves + LFO tremolo → slow-moving cosmic hum.
+  startDrone(): void {
+    if (this.droneActive || this.musicMuted) return;
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 3);
+    gain.connect(master);
+
+    // LFO: slow volume wobble for organic feel
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.15; // very slow
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.025;
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    lfo.start();
+
+    // 3 detuned sine pads: root, fifth, octave
+    const freqs = [55, 82.4, 110]; // A1, E2, A2
+    const oscs = freqs.map((f) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f + (Math.random() * 0.6 - 0.3); // slight detune
+      osc.connect(gain);
+      osc.start();
+      return osc;
+    });
+
+    this.droneOscs = oscs;
+    this.droneGain = gain;
+    this.droneLfo = lfo;
+    this.droneActive = true;
+  }
+
+  stopDrone(fadeMs = 1500): void {
+    if (!this.droneActive) return;
+    const ctx = this.context;
+    const gain = this.droneGain;
+    if (!ctx || !gain) {
+      this.droneActive = false;
+      return;
+    }
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+
+    const oscs = this.droneOscs;
+    const lfo = this.droneLfo;
+    window.setTimeout(() => {
+      oscs.forEach((o) => { try { o.stop(); o.disconnect(); } catch {} });
+      if (lfo) { try { lfo.stop(); lfo.disconnect(); } catch {} }
+      gain.disconnect();
+    }, fadeMs + 100);
+
+    this.droneOscs = [];
+    this.droneGain = null;
+    this.droneLfo = null;
+    this.droneActive = false;
   }
 
   fadeOutMusic(fadeMs: number = TUNING.MUSIC_FADE_OUT_MS): void {

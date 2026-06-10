@@ -18,6 +18,9 @@ service cloud.firestore {
     // Leaderboard — public read, owner write with validation
     match /leaderboard/{userId} {
       allow read: if true;
+      // Owner may remove their own entry (e.g. account deletion). The write rule
+      // below cannot cover delete because request.resource is null on delete.
+      allow delete: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.data.uid == userId

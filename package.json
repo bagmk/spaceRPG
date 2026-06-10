@@ -4,15 +4,27 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "sim": "tsx scripts/balance-design.ts",
-    "sim:economy": "tsx scripts/economy-detail-sim.ts"
+    "sim:economy": "tsx scripts/economy-detail-sim.ts",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
+    "@capacitor-firebase/authentication": "^8.3.0",
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.3.0",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@revenuecat/purchases-capacitor": "^13.1.5",
     "firebase": "^12.13.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -24,6 +36,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.4.1",
     "jsdom": "^26.1.0",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.15",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",

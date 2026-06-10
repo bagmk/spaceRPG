@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entity 재설계 — UI 목업</title>
+<style>
+  :root{
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","Apple SD Gothic Neo",sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --color-text-primary:#1a1c22;
+    --color-text-secondary:#5a6170;
+    --color-text-tertiary:#8b919e;
+    --color-background-primary:#ffffff;
+    --color-background-secondary:#f3f4f7;
+    --color-border-tertiary:rgba(0,0,0,.12);
+    --color-border-secondary:rgba(0,0,0,.22);
+    --border-radius-md:8px;
+    --border-radius-lg:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --color-text-primary:#e9ecf3;
+      --color-text-secondary:#a3abbd;
+      --color-text-tertiary:#6b7384;
+      --color-background-primary:#10141f;
+      --color-background-secondary:#161b27;
+      --color-border-tertiary:rgba(255,255,255,.12);
+      --color-border-secondary:rgba(255,255,255,.22);
+    }
+    body{background:#0b0e16;}
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 20px 56px;background:#fafbfc;font-family:var(--font-sans);}
+  .page{max-width:960px;margin:0 auto;}
+  .page > h1{font-size:24px;font-weight:500;color:var(--color-text-primary);margin:0 0 6px;}
+  .page > .lede{font-size:14px;color:var(--color-text-secondary);margin:0 0 28px;line-height:1.6;}
+  .divider{height:1px;background:var(--color-border-tertiary);margin:34px 0;border:0;}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Cosmic Coalescence — Entity 시스템 재설계 UI 목업</h1>
+  <p class="lede">드랍 → 융합(가챠) → 장착 → 엔트로피 루프. 보라=엔트로피(진행), 앰버=물질(quanta), 시안=우주시간(연출). 동반 문서: <b>ENTITY_REDESIGN_PROMPT.md</b>, <b>GAMEPLAY_REDESIGN_IDEAS.md</b>.</p>
+
+<!-- ===================== SECTION A: CORE LOOP & ECONOMY ===================== -->
+<div class="wrap">
+  <style>
+    .wrap{max-width:920px;margin:0 auto;font-family:var(--font-sans);color:var(--color-text-primary);}
+    .wrap h2{font-size:20px;font-weight:500;margin:0 0 4px;}
+    .wrap h3{font-size:16px;font-weight:500;margin:0 0 12px;}
+    .wrap p.sub{font-size:14px;color:var(--color-text-secondary);margin:0 0 22px;line-height:1.6;}
+    .sec{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:20px 22px;margin-bottom:18px;}
+    .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;}
+    .node{flex:1 1 120px;min-width:120px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 12px;}
+    .node .k{font-size:11px;letter-spacing:.04em;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:4px;}
+    .node .v{font-size:15px;font-weight:500;line-height:1.3;}
+    .node .d{font-size:12px;color:var(--color-text-secondary);margin-top:4px;line-height:1.45;}
+    .arr{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;flex:0 0 auto;}
+    .arr .g{font-size:18px;color:var(--color-text-tertiary);line-height:1;}
+    .arr .l{font-size:10.5px;color:var(--color-text-secondary);text-align:center;margin-top:3px;line-height:1.3;}
+    .loopback{font-size:12.5px;color:var(--color-text-secondary);margin-top:12px;display:flex;align-items:center;gap:8px;}
+    .loopback .pill{font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:2px 10px;}
+    .cur{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .ccard{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;border-left-width:3px;border-left-style:solid;}
+    .ccard .nm{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;}
+    .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+    .ccard .role{font-size:12px;color:var(--color-text-secondary);margin:6px 0 10px;line-height:1.5;}
+    .ccard table{width:100%;font-size:12px;border-collapse:collapse;}
+    .ccard td{padding:3px 0;vertical-align:top;line-height:1.45;}
+    .ccard td.h{color:var(--color-text-tertiary);width:42px;}
+    .map{display:flex;flex-direction:column;gap:10px;}
+    .row{display:grid;grid-template-columns:1fr 28px 1fr 1.1fr;gap:10px;align-items:center;}
+    .chip{font-size:12.5px;padding:7px 11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);line-height:1.35;}
+    .chip.old{color:var(--color-text-secondary);}
+    .chip b{font-weight:500;color:var(--color-text-primary);}
+    .row .ar{text-align:center;color:var(--color-text-tertiary);font-size:16px;}
+    .reuse{font-size:11.5px;color:var(--color-text-secondary);line-height:1.4;}
+    .reuse code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:4px;}
+    @media(max-width:680px){.cur{grid-template-columns:1fr;}.row{grid-template-columns:1fr;gap:4px;}.row .ar{display:none;}}
+  </style>
+
+  <h2>재배선 맵 — 새 코어 루프 & 3통화</h2>
+  <p class="sub">새 시스템을 처음부터 만드는 게 아니라, 이미 있는 자산(16 stage · entity 240종 · entropy)을 다시 연결한다. 핵심: <b>행동(클릭·융합)이 엔트로피를 키우고, 엔트로피가 시대를 연다.</b></p>
+
+  <div class="sec">
+    <h3>① 새 코어 루프</h3>
+    <div class="flow">
+      <div class="node"><div class="k">행동</div><div class="v">클릭</div><div class="d">물질(quanta) + 물질 아이템 드랍</div></div>
+      <div class="arr"><div class="g">→</div><div class="l">아이템<br>줍기</div></div>
+      <div class="node"><div class="k">제작</div><div class="v">융합 · 가챠</div><div class="d">아이템 N개 + quanta → 랜덤 상위 물질</div></div>
+      <div class="arr"><div class="g">→</div><div class="l">상위<br>아이템</div></div>
+      <div class="node"><div class="k">빌드</div><div class="v">장착</div><div class="d">슬롯 1→2→3 · 세트 보너스</div></div>
+      <div class="arr"><div class="g">→</div><div class="l">클릭 강화<br>+엔트로피↑</div></div>
+      <div class="node" style="border-left:3px solid #b98bff;"><div class="k">진행</div><div class="v">엔트로피 게이트</div><div class="d">임계 도달 시 시대 진화 (시간 게이트 대체)</div></div>
+    </div>
+    <div class="loopback"><span class="pill">↺ 반복</span> 시대가 오르면 새 물질 티어 해금 → 더 좋은 드랍 → 루프 가속 (자기강화)</div>
+  </div>
+
+  <div class="sec">
+    <h3>② 3통화 — 역할 분리</h3>
+    <div class="cur">
+      <div class="ccard" style="border-left-color:#e0a92e;">
+        <div class="nm"><span class="dot" style="background:#e0a92e;"></span>Quanta · 물질</div>
+        <div class="role">엔진/전략. 빠르게 모으고 빠르게 쓰는 돈.</div>
+        <table>
+          <tr><td class="h">획득</td><td>클릭 + auto</td></tr>
+          <tr><td class="h">소모</td><td>융합 · 장착 · 업그레이드</td></tr>
+          <tr><td class="h">색</td><td>앰버</td></tr>
+        </table>
+      </div>
+      <div class="ccard" style="border-left-color:#b98bff;">
+        <div class="nm"><span class="dot" style="background:#b98bff;"></span>Entropy · 진행</div>
+        <div class="role">진행 척추. 안 쓰고 쌓이기만 함 = 시대 게이트.</div>
+        <table>
+          <tr><td class="h">획득</td><td>행동 — 특히 융합·수집</td></tr>
+          <tr><td class="h">역할</td><td>stage 진행 게이트</td></tr>
+          <tr><td class="h">색</td><td>바이올렛</td></tr>
+        </table>
+      </div>
+      <div class="ccard" style="border-left-color:#3fd6c0;">
+        <div class="nm"><span class="dot" style="background:#3fd6c0;"></span>Meta · 프레스티지</div>
+        <div class="role">런 종료 시 누적 성장. 이미 코드에 존재.</div>
+        <table>
+          <tr><td class="h">획득</td><td>peak entropy → 변환</td></tr>
+          <tr><td class="h">코드</td><td>condensedMass · echoes</td></tr>
+          <tr><td class="h">색</td><td>시안</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>③ 기존 → 신규 (버리지 않고 역할 재배치)</h3>
+    <div class="map">
+      <div class="row">
+        <div class="chip old">시간 게이트 <b>cosmicClock ≥ cosmicTimeSec</b> (기다림)</div>
+        <div class="ar">→</div>
+        <div class="chip"><b>엔트로피 게이트</b> — 행동이 채움</div>
+        <div class="reuse">우주 시간은 <b>연출/서사 표시기</b>로 강등 (almanac·16시대 유지). <code>time</code> 스킬 → 오프라인 수익으로 재배치</div>
+      </div>
+      <div class="row">
+        <div class="chip old">스킬 트리 <b>click / auto / crit</b> 4트랙</div>
+        <div class="ar">→</div>
+        <div class="chip"><b>장착 · 세트 보너스</b>로 흡수</div>
+        <div class="reuse"><code>EntityGlyph</code> 패밀리를 세트 키로 재사용. UI 단순화 → 명료성↑</div>
+      </div>
+      <div class="row">
+        <div class="chip old">엔티티 랩 <b>quanta로 구매 → 패시브 %</b></div>
+        <div class="ar">→</div>
+        <div class="chip"><b>드랍 · 융합(가챠)</b> 인벤토리로 승격</div>
+        <div class="reuse"><code>stageItems.ts</code> 240종 · 등급 · 효과 그대로. 도감(almanac)에 <b>수집 완성 메타</b> 추가</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ===================== SECTION B: MOBILE UI MOCKUPS ===================== -->
+<div class="m2wrap">
+  <style>
+    .m2wrap{max-width:920px;margin:0 auto;font-family:var(--font-sans);color:var(--color-text-primary);}
+    .m2wrap h2{font-size:20px;font-weight:500;margin:0 0 4px;}
+    .m2wrap p.sub{font-size:14px;color:var(--color-text-secondary);margin:0 0 20px;line-height:1.6;}
+    .board{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px 22px;}
+    .cap{font-size:14px;font-weight:500;margin:0 0 10px;color:var(--color-text-primary);}
+    .cap span{color:var(--color-text-tertiary);font-weight:400;}
+    .fullw{grid-column:1 / -1;}
+    .m2 .ph{background:#04050b;border-radius:30px;padding:9px;box-shadow:0 6px 24px rgba(0,0,0,.28);max-width:300px;}
+    .m2 .scr{--bg:#0a0e1a;--panel:#161c2e;--panel2:#1d2438;--line:rgba(255,255,255,.09);--tx:#e8ecf5;--tx2:#99a3bd;--tx3:#5f6982;--q:#e9b94a;--e:#bb8cff;--tcy:#46d8c4;--cC:#8b93a7;--cR:#54a8e0;--cE:#b07dff;--cL:#ffb347;background:var(--bg);border-radius:22px;padding:13px 13px 0;overflow:hidden;color:var(--tx);}
+    .m2 .scr,.m2 .scr *{box-sizing:border-box;}
+    .notch{width:64px;height:5px;border-radius:3px;background:rgba(255,255,255,.16);margin:2px auto 11px;}
+    .trow{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:11px;}
+    .chip2{font-size:11px;color:var(--tx);background:var(--panel);border:0.5px solid var(--line);border-radius:999px;padding:3px 9px;}
+    .ic{width:22px;height:22px;border-radius:6px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--tx2);}
+    .lbl{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--tx3);}
+    .ev{font-size:18px;font-weight:500;color:var(--e);}
+    .bar{height:9px;border-radius:6px;background:#222a40;overflow:hidden;margin-top:5px;}
+    .bar > i{display:block;height:100%;border-radius:6px;}
+    .bar.e > i{background:linear-gradient(90deg,#8a5cff,#c79bff);}
+    .bar.q > i{background:#e9b94a;}
+    .subline{display:flex;align-items:center;justify-content:space-between;margin-top:9px;font-size:11.5px;}
+    .qv{color:var(--q);font-weight:500;}
+    .auto{color:var(--tx2);}
+    .timev{color:var(--tcy);opacity:.8;}
+    .core{position:relative;height:128px;display:flex;align-items:center;justify-content:center;margin:6px 0 2px;}
+    .coreball{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 38% 34%,#fff7e6 0%,#ffd27a 28%,#ff9a52 60%,#7a3bd1 100%);box-shadow:0 0 34px 6px rgba(255,170,90,.32),0 0 60px 14px rgba(150,90,230,.22);}
+    .corelbl{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--tx2);background:rgba(8,11,22,.7);padding:2px 8px;border-radius:999px;}
+    .pop{position:absolute;font-size:11px;font-weight:500;padding:2px 7px;border-radius:999px;background:var(--panel2);border:0.5px solid var(--line);}
+    .tray{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--tx2);margin:8px 0;}
+    .badge{background:var(--e);color:#1a0c33;font-weight:500;border-radius:999px;padding:1px 7px;font-size:10.5px;}
+    .slots{display:flex;gap:8px;margin:6px 0 11px;}
+    .slot{flex:1;aspect-ratio:1;border-radius:13px;background:var(--panel);border:0.5px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+    .slot.lock{border-style:dashed;color:var(--tx3);}
+    .gl{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid var(--cR);background:#0f1424;}
+    .gl.ep{border-color:var(--cE);} .gl.lg{border-color:var(--cL);} .gl.cm{border-color:var(--cC);} .gl.rr{border-color:var(--cR);}
+    .slot .sn{font-size:9.5px;color:var(--tx2);}
+    .tabs{display:flex;border-top:0.5px solid var(--line);margin:0 -13px;}
+    .tab{flex:1;text-align:center;font-size:10.5px;color:var(--tx3);padding:9px 0;}
+    .tab.on{color:var(--e);box-shadow:inset 0 2px 0 var(--e);}
+    .ctop{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+    .compl{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx2);margin-bottom:4px;}
+    .rew{font-size:10.5px;color:#1a0c33;background:var(--e);border-radius:6px;padding:3px 8px;display:inline-block;margin:7px 0 11px;font-weight:500;}
+    .eratabs{display:flex;gap:4px;overflow:hidden;margin-bottom:11px;}
+    .et{width:20px;height:20px;border-radius:6px;background:var(--panel);font-size:9.5px;display:flex;align-items:center;justify-content:center;color:var(--tx3);}
+    .et.on{background:var(--e);color:#1a0c33;font-weight:500;}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+    .cell{aspect-ratio:1;border-radius:12px;background:var(--panel);display:flex;align-items:center;justify-content:center;}
+    .cell .gg{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid var(--cC);background:#0f1424;}
+    .cell.lk{color:var(--tx3);font-size:14px;border:0.5px dashed var(--line);}
+    .cell.sel{outline:2px solid var(--e);outline-offset:1px;}
+    .inrow{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0 10px;}
+    .inslot{width:54px;height:54px;border-radius:13px;background:var(--panel);border:0.5px solid var(--line);display:flex;align-items:center;justify-content:center;}
+    .inslot.empty{border-style:dashed;color:var(--tx3);font-size:18px;}
+    .plus{color:var(--tx3);font-size:14px;}
+    .cost{text-align:center;font-size:11px;color:var(--tx2);margin-bottom:8px;}
+    .fbtn{background:linear-gradient(90deg,#7a45e8,#b07dff);color:#fff;text-align:center;font-size:13px;font-weight:500;padding:10px;border-radius:12px;margin-bottom:11px;}
+    .result{background:var(--panel);border:0.5px solid var(--cL);border-radius:13px;padding:11px;text-align:center;margin-bottom:11px;}
+    .result .tag{font-size:10px;letter-spacing:.08em;color:var(--cL);font-weight:500;}
+    .result .rn{font-size:15px;font-weight:500;margin:3px 0;}
+    .result .eb{font-size:11px;color:var(--e);}
+    .odds{height:8px;border-radius:5px;overflow:hidden;display:flex;margin-bottom:5px;}
+    .odds i{display:block;height:100%;}
+    .oleg{display:flex;justify-content:space-between;font-size:9.5px;color:var(--tx2);}
+    .ladder{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:9px;}
+    .eq{display:flex;align-items:center;gap:10px;background:var(--panel);border:0.5px solid var(--line);border-radius:13px;padding:9px 10px;margin-bottom:8px;}
+    .eq .meta{flex:1;min-width:0;}
+    .eq .en{font-size:12.5px;font-weight:500;}
+    .eq .ee{font-size:10.5px;color:var(--tx2);}
+    .eq .lv{font-size:10px;color:var(--e);background:rgba(187,140,255,.14);border-radius:6px;padding:2px 6px;}
+    .setb{font-size:11px;color:var(--cL);background:rgba(255,179,71,.1);border:0.5px solid rgba(255,179,71,.3);border-radius:8px;padding:7px 9px;margin:3px 0 11px;}
+    .stat4{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+    .stat{background:var(--panel2);border-radius:9px;padding:8px 9px;}
+    .stat .sl{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;}
+    .stat .sv{font-size:14px;font-weight:500;margin-top:2px;}
+    .anat{display:grid;grid-template-columns:286px 1fr;gap:24px;align-items:start;}
+    .icard{--tx:#e8ecf5;--tx2:#99a3bd;--tx3:#5f6982;--panel:#161c2e;--panel2:#1d2438;--line:rgba(255,255,255,.09);--e:#bb8cff;--q:#e9b94a;--cE:#b07dff;background:#0a0e1a;border:1.5px solid var(--cE);border-radius:18px;padding:16px;color:var(--tx);box-shadow:0 0 26px rgba(176,125,255,.18);}
+    .icard .ihead{display:flex;align-items:center;gap:12px;}
+    .icard .ibig{width:58px;height:58px;border-radius:50%;border:2.5px solid var(--cE);background:radial-gradient(circle at 38% 34%,#cfe0ff,#5f7bd6 70%,#2b3a78);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+    .icard .iname{font-size:16px;font-weight:500;}
+    .icard .imeta{font-size:11px;color:var(--tx2);margin-top:2px;}
+    .tagrow{display:flex;gap:6px;margin-top:6px;}
+    .t2{font-size:10px;padding:2px 8px;border-radius:6px;}
+    .t2.tier{background:rgba(233,185,74,.14);color:var(--q);}
+    .t2.rar{background:rgba(176,125,255,.16);color:var(--cE);font-weight:500;}
+    .ieff{border-top:0.5px solid var(--line);border-bottom:0.5px solid var(--line);margin:13px 0;padding:11px 0;display:flex;flex-direction:column;gap:6px;}
+    .ieff .ef{display:flex;justify-content:space-between;font-size:12px;}
+    .ieff .ef b{font-weight:500;color:var(--e);}
+    .ilv{font-size:11px;color:var(--tx2);margin-bottom:5px;display:flex;justify-content:space-between;}
+    .iacts{display:flex;gap:7px;margin-top:13px;}
+    .ab{flex:1;text-align:center;font-size:11px;padding:8px;border-radius:9px;}
+    .ab.p{background:var(--e);color:#1a0c33;font-weight:500;}
+    .ab.s{background:var(--panel2);color:var(--tx);border:0.5px solid var(--line);}
+    .legend .li{display:flex;gap:10px;margin-bottom:13px;}
+    .legend .num{flex:0 0 22px;height:22px;border-radius:50%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--color-text-primary);}
+    .legend .lt{font-size:13.5px;font-weight:500;color:var(--color-text-primary);}
+    .legend .ld{font-size:12.5px;color:var(--color-text-secondary);line-height:1.5;margin-top:1px;}
+    .legend code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:4px;}
+    @media(max-width:680px){.board{grid-template-columns:1fr;}.anat{grid-template-columns:1fr;}}
+  </style>
+
+  <h2>UI 목업 — 4개 핵심 화면 + 아이템 카드</h2>
+  <p class="sub">세로 모바일 기준. 보라색 = <b>엔트로피(진행)</b>, 앰버 = <b>물질(quanta)</b>, 시안 = <b>우주 시간(연출만)</b>. 하단 탭으로 4개 화면 전환.</p>
+
+  <div class="board m2">
+
+    <div>
+      <p class="cap">① 메인 플레이 <span>— 엔트로피 게이트 + 장착 슬롯</span></p>
+      <div class="ph"><div class="scr">
+        <div class="notch"></div>
+        <div class="trow"><div class="ic">☰</div><div class="chip2">시대 7 · First Stars</div><div class="ic">⚙</div></div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+          <span class="lbl">Entropy ▸ 다음 시대</span><span class="ev">12.4 TB</span>
+        </div>
+        <div class="bar e"><i style="width:64%"></i></div>
+        <div class="subline"><span class="qv">⬡ 8.9K 물질</span><span class="auto">+340/s</span><span class="timev">◷ 13.8 Gyr</span></div>
+        <div class="core">
+          <span class="pop" style="top:14px;left:30px;color:#e9b94a;">+120 ⬡</span>
+          <span class="pop" style="top:30px;right:24px;color:#54a8e0;">+H ●</span>
+          <div class="coreball"></div>
+          <span class="corelbl">Protostar · 별 tier</span>
+        </div>
+        <div class="tray">새 물질 <span class="badge">3</span> 수집 대기 →</div>
+        <div class="slots">
+          <div class="slot"><div class="gl rr">●</div><div class="sn">수소</div></div>
+          <div class="slot"><div class="gl ep">✦</div><div class="sn">광자</div></div>
+          <div class="slot lock"><div class="gl cm" style="border-style:dashed;border-color:#5f6982;">🔒</div><div class="sn">잠김</div></div>
+        </div>
+        <div class="tabs"><div class="tab on">플레이</div><div class="tab">도감</div><div class="tab">융합</div><div class="tab">장착</div></div>
+      </div></div>
+    </div>
+
+    <div>
+      <p class="cap">② 도감 <span>— 수집 · 시대별 세트 완성</span></p>
+      <div class="ph"><div class="scr">
+        <div class="notch"></div>
+        <div class="ctop"><div class="chip2">도감 · First Stars</div><div class="ic">✕</div></div>
+        <div class="compl"><span>14 / 20 수집</span><div class="bar e" style="flex:1;margin:0;"><i style="width:70%"></i></div><span style="color:var(--e);font-weight:500;">70%</span></div>
+        <div class="rew">★ 세트 완성 보너스: 클릭 +25%</div>
+        <div class="eratabs"><div class="et">5</div><div class="et">6</div><div class="et on">7</div><div class="et">8</div><div class="et">9</div><div class="et">10</div><div class="et" style="color:#3a4258;">…</div></div>
+        <div class="grid">
+          <div class="cell"><div class="gg" style="border-color:#8b93a7;">●</div></div>
+          <div class="cell"><div class="gg" style="border-color:#54a8e0;">◌</div></div>
+          <div class="cell sel"><div class="gg" style="border-color:#b07dff;">✦</div></div>
+          <div class="cell"><div class="gg" style="border-color:#54a8e0;">☄</div></div>
+          <div class="cell"><div class="gg" style="border-color:#ffb347;">★</div></div>
+          <div class="cell"><div class="gg" style="border-color:#8b93a7;">γ</div></div>
+          <div class="cell lk">?</div>
+          <div class="cell"><div class="gg" style="border-color:#54a8e0;">❄</div></div>
+          <div class="cell lk">?</div>
+          <div class="cell"><div class="gg" style="border-color:#8b93a7;">⬡</div></div>
+          <div class="cell"><div class="gg" style="border-color:#b07dff;">✸</div></div>
+          <div class="cell lk">?</div>
+          <div class="cell"><div class="gg" style="border-color:#8b93a7;">∿</div></div>
+          <div class="cell lk">?</div>
+          <div class="cell"><div class="gg" style="border-color:#54a8e0;">◍</div></div>
+          <div class="cell lk">?</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <p class="cap">③ 융합로 (가챠) <span>— 아이템+물질 → 랜덤 상위</span></p>
+      <div class="ph"><div class="scr">
+        <div class="notch"></div>
+        <div class="ctop"><div class="chip2">융합로 · Fusion</div><div class="ic">✕</div></div>
+        <div class="inrow">
+          <div class="inslot"><div class="gl rr" style="border-color:#54a8e0;">●</div></div>
+          <span class="plus">+</span>
+          <div class="inslot"><div class="gl rr" style="border-color:#54a8e0;">●</div></div>
+          <span class="plus">+</span>
+          <div class="inslot empty">＋</div>
+        </div>
+        <div class="cost">비용 <span class="qv">⬡ 2.4K</span> · 보유 8.9K</div>
+        <div class="fbtn">⚛ 융합 (FUSE)</div>
+        <div class="result">
+          <div class="tag">★ LEGENDARY</div>
+          <div class="rn">Helium-4 · He</div>
+          <div class="eb">엔트로피 +480 ▲ 획득</div>
+        </div>
+        <div class="odds"><i style="width:60%;background:#8b93a7"></i><i style="width:28%;background:#54a8e0"></i><i style="width:10%;background:#b07dff"></i><i style="width:2%;background:#ffb347"></i></div>
+        <div class="oleg"><span>일반 60</span><span>레어 28</span><span>에픽 10</span><span>전설 2</span></div>
+        <div class="ladder">물질 사다리:  H → <b style="color:#bb8cff;">He</b> → Li → … → 별 → 블랙홀</div>
+      </div></div>
+    </div>
+
+    <div>
+      <p class="cap">④ 장착 (빌드) <span>— 슬롯 · 세트 · 업그레이드</span></p>
+      <div class="ph"><div class="scr">
+        <div class="notch"></div>
+        <div class="ctop"><div class="chip2">장착 · 빌드</div><div class="ic">✕</div></div>
+        <div class="eq"><div class="gl ep" style="width:36px;height:36px;">✦</div><div class="meta"><div class="en">광자 · γ</div><div class="ee">클릭 +18% · 엔트로피 +6%</div></div><span class="lv">Lv.3 ⤴</span></div>
+        <div class="eq"><div class="gl rr" style="width:36px;height:36px;">●</div><div class="meta"><div class="en">수소 · H</div><div class="ee">초당 산출 +12%</div></div><span class="lv">Lv.2 ⤴</span></div>
+        <div class="eq" style="border-style:dashed;opacity:.7;"><div class="gl cm" style="width:36px;height:36px;border-style:dashed;border-color:#5f6982;">＋</div><div class="meta"><div class="en" style="color:#99a3bd;">슬롯 3 잠김</div><div class="ee">도감 50% 또는 프레스티지 1회</div></div></div>
+        <div class="setb">✦ Stellar 세트 2/3 활성 — 엔트로피율 +12%</div>
+        <div class="stat4">
+          <div class="stat"><div class="sl">클릭 파워</div><div class="sv qv" style="color:#e9b94a;">×3.4</div></div>
+          <div class="stat"><div class="sl">초당 산출</div><div class="sv" style="color:#e9b94a;">340/s</div></div>
+          <div class="stat"><div class="sl">크리 확률</div><div class="sv">22%</div></div>
+          <div class="stat"><div class="sl">엔트로피율</div><div class="sv" style="color:#bb8cff;">+58%</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="fullw">
+      <p class="cap">⑤ 아이템 카드 해부 <span>— "아이템은 이런 식으로" + 구성 요소</span></p>
+      <div class="anat">
+        <div class="icard">
+          <div class="ihead">
+            <div class="ibig">●</div>
+            <div>
+              <div class="iname">Hydrogen Atom · H</div>
+              <div class="imeta">우주 최초의 안정 원자</div>
+              <div class="tagrow"><span class="t2 tier">원자 TIER</span><span class="t2 rar">EPIC</span></div>
+            </div>
+          </div>
+          <div class="ieff">
+            <div class="ef"><span>클릭 파워</span><b>+18%</b></div>
+            <div class="ef"><span>엔트로피율</span><b>+6%</b></div>
+            <div class="ef"><span>세트</span><b style="color:#ffb347;">Stellar (2/3)</b></div>
+          </div>
+          <div class="ilv"><span>Lv.3 → Lv.4</span><span>중복 2 / 3</span></div>
+          <div class="bar e" style="margin-top:0;"><i style="width:66%"></i></div>
+          <div class="iacts"><div class="ab p">장착</div><div class="ab s">융합 투입</div><div class="ab s">⤴ 업그레이드</div></div>
+        </div>
+        <div class="legend">
+          <div class="li"><div class="num">1</div><div><div class="lt">글리프 + 등급 테두리</div><div class="ld"><code>EntityGlyph</code> 패밀리 재사용. 테두리색 = 등급(일반·레어·에픽·전설). 세트 키로도 사용.</div></div></div>
+          <div class="li"><div class="num">2</div><div><div class="lt">티어 배지 (물질 사다리)</div><div class="ld">진공→전자→원자→…→별→블랙홀 중 위치. 컨셉 A "물질 진화"를 카드에 노출.</div></div></div>
+          <div class="li"><div class="num">3</div><div><div class="lt">효과 (장착 시 적용)</div><div class="ld">기존 <code>EntityEffect</code> 타입 그대로: click·auto·crit·entropy. 스킬 트리 흡수분.</div></div></div>
+          <div class="li"><div class="num">4</div><div><div class="lt">레벨 + 중복 진행</div><div class="ld">같은 아이템 중복 → 레벨업(효과↑). 가챠 중복이 버려지지 않게 하는 sink.</div></div></div>
+          <div class="li"><div class="num">5</div><div><div class="lt">액션 3종</div><div class="ld"><b>장착</b>(빌드) · <b>융합 투입</b>(상위 제작) · <b>업그레이드</b>(중복 소모). 한 아이템이 3루프에 모두 연결.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</body>
+</html>

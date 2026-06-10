@@ -23,8 +23,10 @@ tsconfig.tsbuildinfo
 
 # Misc
 .cache/
+.firebase/
 public/build/
 *.local
+*.bak.*
 
 # Mac
 .DS_Store
@@ -47,3 +49,13 @@ REFACTOR_TEST*.md
 # Vite/Vitest dev artifacts
 *.timestamp-*.mjs
 .cc-write-test
+
+# Local agent state
+.claude/
+
+# Firebase native app configs — public repo, restore from backups/ or Firebase console
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+
+# Local backups (pre-redesign snapshots)
+backups/

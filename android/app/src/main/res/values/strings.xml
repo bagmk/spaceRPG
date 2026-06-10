@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Big Bang</string>
+    <string name="title_activity_main">Big Bang</string>
+    <string name="package_name">com.cosmiccoalescence.app</string>
+    <string name="custom_url_scheme">com.cosmiccoalescence.app</string>
+</resources>

@@ -21,6 +21,11 @@ export interface UserProfile {
   createdAt: number;
   lastLoginAt: number;
   providers: string[];
+  // Consent tracking — version string matches CONSENT_VERSION in consent.ts.
+  // Written to Firestore on every sign-in so there is an auditable record of
+  // which policy version the user accepted and when.
+  consentVersion?: string;
+  consentAcceptedAt?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,4 +131,40 @@ export async function isNameAvailable(name: string): Promise<boolean> {
   if (!trimmed) return false;
   const snap = await getDoc(doc(db, 'displayNames', trimmed));
   return !snap.exists();
+}
+
+// ---------------------------------------------------------------------------
+// Account deletion - wipe all owned documents (App Store Guideline 5.1.1(v))
+// ---------------------------------------------------------------------------
+
+// Deletes every Firestore document this user owns. Best-effort: a missing doc
+// or a single failed delete does not abort the rest. There are no deep
+// subcollections today; if added, clean them up via a Cloud Function or the
+// "Delete User Data" Firebase extension.
+export async function deleteAccountData(uid: string): Promise<void> {
+  if (!db) {
+    console.warn('[deleteAccountData] db is null — skipping');
+    return;
+  }
+  let nameLower: string | null = null;
+  try {
+    const snap = await getDoc(doc(db, 'users', uid, 'profile', 'main'));
+    nameLower = (snap.data() as UserProfile | undefined)?.displayNameLower ?? null;
+  } catch (e) {
+    console.warn('[deleteAccountData] failed to read profile:', e);
+  }
+  const targets = [
+    doc(db, 'users', uid, 'profile', 'main'),
+    doc(db, 'users', uid, 'saves', 'main'),
+    doc(db, 'leaderboard', uid),
+  ];
+  if (nameLower) targets.push(doc(db, 'displayNames', nameLower));
+  const results = await Promise.allSettled(targets.map((ref) => deleteDoc(ref)));
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`[deleteAccountData] failed to delete doc ${targets[i].path}:`, r.reason);
+    } else {
+      console.log(`[deleteAccountData] deleted ${targets[i].path}`);
+    }
+  });
 }

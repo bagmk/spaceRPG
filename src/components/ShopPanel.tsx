@@ -5,11 +5,14 @@ import type { GameAction } from '../game/reducer';
 import {
   PAID_SHOP_PRODUCTS,
   REWARDED_AD_PRODUCTS,
+  findPaidShopProduct,
   type PaidShopProduct,
   type RewardedAdProduct,
   type ShopCatalogEntry,
 } from '../game/shop/items';
-import { completePurchase } from '../game/shop/purchase';
+import { completePurchase, restorePurchases } from '../game/shop/purchase';
+import { recordPurchaseEvent } from '../cloud/purchases';
+import { Capacitor } from '@capacitor/core';
 import { completeRewardedAd } from '../game/shop/adRewards';
 import {
   getActiveBoostSummary,
@@ -196,6 +199,7 @@ function ShopCard({
 export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const unlocked = isCashShopUnlocked(state);
 
   useEffect(() => {
@@ -216,9 +220,15 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
   const handlePaid = async (product: PaidShopProduct) => {
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
-    await completePurchase(product);
-    // Stripe redirects the page — if we're still here, it means the checkout
-    // didn't start (no extension, or user not logged in)
+    const result = await completePurchase(product);
+    // Native (RevenueCat): success === true means the store charged the user, so
+    // grant the product client-side here. Web (Stripe) returns success: false
+    // because it redirects the page; fulfillment happens server-side there.
+    if (result.success) {
+      dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: product.id, now: Date.now() });
+      // Track native purchase in Firestore (web Stripe is tracked server-side).
+      void recordPurchaseEvent({ type: 'purchase', productId: product.id, priceUSD: product.priceUSD });
+    }
     setPendingId(null);
   };
 
@@ -229,6 +239,23 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
     if (completed) {
       dispatch({ type: 'CLAIM_AD_REWARD', rewardId: product.id, now: Date.now() });
     }
+    setPendingId(null);
+  };
+
+  const handleRestore = async () => {
+    if (pendingId) return;
+    setPendingId('__restore__');
+    setRestoreMsg(null);
+    const ownedIds = await restorePurchases();
+    let restored = 0;
+    for (const id of ownedIds) {
+      if (findPaidShopProduct(id)) {
+        dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: id, now: Date.now() });
+        void recordPurchaseEvent({ type: 'restore', productId: id });
+        restored += 1;
+      }
+    }
+    setRestoreMsg(t(language, restored > 0 ? 'shopRestoreDone' : 'shopRestoreNone'));
     setPendingId(null);
   };
 
@@ -274,8 +301,7 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
       >
         <div className="shop-panel2__header">
           <div>
-            <div className="shop-panel2__eyebrow">{t(language, 'shopEyebrow')}</div>
-            <div className="shop-panel2__title">{t(language, 'shopBoosts')}</div>
+            <div className="shop-panel2__title">{t(language, 'shopEyebrow')}</div>
           </div>
           <button
             type="button"
@@ -298,6 +324,32 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
         <div className="shop-panel2__footer">
           {`${t(language, 'shopTotalSpent')}: $${state.totalShopSpentUSD.toFixed(2)} (${t(language, 'shopTestMode')})`}
         </div>
+
+        {Capacitor.isNativePlatform() && (
+          <div style={{ textAlign: 'center', padding: '2px 0 10px' }}>
+            <button
+              type="button"
+              onClick={handleRestore}
+              disabled={pendingId !== null}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.55)',
+                font: 'inherit',
+                fontSize: '12px',
+                textDecoration: 'underline',
+                cursor: pendingId !== null ? 'default' : 'pointer',
+              }}
+            >
+              {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
+            </button>
+            {restoreMsg && (
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
+                {restoreMsg}
+              </div>
+            )}
+          </div>
+        )}
       </aside>
     </div>
   );

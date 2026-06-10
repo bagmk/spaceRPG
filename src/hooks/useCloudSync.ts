@@ -32,8 +32,18 @@ function toCloudSave(state: GameState): ReturnType<typeof toPersistentState> {
 export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
   const { user, status, profile } = useAuth();
   const hasPulled = useRef(false);
+  const lastPulledUid = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // Reset pull flag when user changes (logout → login with same or different account)
+  useEffect(() => {
+    const uid = user?.uid ?? null;
+    if (uid !== lastPulledUid.current) {
+      hasPulled.current = false;
+      lastPulledUid.current = uid;
+    }
+  }, [user]);
 
   // Pull remote save on first authenticated login
   useEffect(() => {

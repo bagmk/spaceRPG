@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../cloud/firebase';
 import { useAuth } from '../auth/AuthProvider';
 import { t, type Lang } from '../i18n';
+import { recordConsent, PRIVACY_URL, TERMS_URL } from '../auth/consent'; // [+ CONSENT]
 
 interface LoginScreenProps {
   language: Lang;
@@ -11,27 +10,42 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScreenProps) {
-  const { status } = useAuth();
+  const { status, signInWithGoogle, signInWithApple } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const ko = language === 'ko';
 
   const [signingIn, setSigningIn] = useState(false);
 
-  const handleGoogle = () => {
-    if (!auth) return;
+  const handleGoogle = async () => {
     setError(null);
     setSigningIn(true);
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider)
-      .then(() => {
-        // onAuthStateChanged will handle status update → auto-proceed
-      })
-      .catch((e) => {
-        setSigningIn(false);
-        console.error('[LoginScreen] Google sign-in error:', e);
-        if (e.code === 'auth/popup-closed-by-user') return;
-        setError(e.message ?? 'Login failed');
-      });
+    recordConsent();
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      console.error('[LoginScreen] Google sign-in error:', e);
+      if (e?.code !== 'auth/popup-closed-by-user') {
+        setError(e?.message ?? 'Login failed');
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleApple = async () => {
+    setError(null);
+    setSigningIn(true);
+    recordConsent();
+    try {
+      await signInWithApple();
+    } catch (e: any) {
+      console.error('[LoginScreen] Apple sign-in error:', e);
+      if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== '1001') {
+        setError(e?.message ?? 'Login failed');
+      }
+    } finally {
+      setSigningIn(false);
+    }
   };
 
   // If already authed (e.g. returning Google user), auto-proceed
@@ -51,7 +65,7 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
             className="login-screen__google-btn"
             type="button"
             onClick={handleGoogle}
-            disabled={signingIn || !auth || status === 'loading'}
+            disabled={signingIn || status === 'loading'}
           >
             <svg viewBox="0 0 24 24" width="20" height="20">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -62,11 +76,46 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
             <span>{ko ? 'Google로 계속하기' : 'Continue with Google'}</span>
           </button>
 
+          <button
+            className="login-screen__apple-btn"
+            type="button"
+            onClick={handleApple}
+            disabled={signingIn || status === 'loading'}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <path d="M16.365 1.43c0 1.14-.42 2.2-1.13 2.99-.77.86-2.02 1.52-3.06 1.44-.13-1.09.42-2.24 1.1-2.97.77-.83 2.1-1.45 3.09-1.46.01.001.01.001 0 0zM20.79 17.06c-.57 1.31-.84 1.89-1.57 3.05-1.02 1.62-2.46 3.64-4.25 3.65-1.58.01-1.99-1.03-4.13-1.02-2.14.01-2.59 1.04-4.18 1.03-1.79-.01-3.15-1.83-4.17-3.45-2.86-4.53-3.16-9.85-1.39-12.68 1.25-2.01 3.23-3.19 5.09-3.19 1.89 0 3.08 1.04 4.65 1.04 1.52 0 2.45-1.04 4.64-1.04 1.65 0 3.4.9 4.65 2.45-4.09 2.24-3.43 8.08.66 10.16z"/>
+            </svg>
+            <span>{ko ? 'Apple로 계속하기' : 'Continue with Apple'}</span>
+          </button>
+
           {status === 'loading' && <p className="login-screen__status">{ko ? '연결 중...' : 'Connecting...'}</p>}
           {signingIn && <p className="login-screen__status">{ko ? '로그인 중...' : 'Signing in...'}</p>}
           {error && <p className="login-screen__error">{error}</p>}
-          {!auth && status !== 'loading' && <p className="login-screen__error">{ko ? '서버 연결 실패' : 'Server connection failed'}</p>}
+          {status === 'signedOut' && error && <p className="login-screen__error">{error}</p>}
         </div>
+
+        {/* [+ CONSENT] Store-required notice. Tapping a sign-in button = acceptance. */}
+        <p
+          className="login-screen__consent"
+          style={{ marginTop: 18, maxWidth: 300, fontSize: 12, lineHeight: 1.5, color: '#9b93ad', textAlign: 'center' }}
+        >
+          {ko ? (
+            <>
+              계속하면{' '}
+              <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#b9a8e0' }}>서비스 약관</a>
+              과{' '}
+              <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#b9a8e0' }}>개인정보처리방침</a>
+              에 동의하는 것으로 간주됩니다.
+            </>
+          ) : (
+            <>
+              By continuing, you agree to our{' '}
+              <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#b9a8e0' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" style={{ color: '#b9a8e0' }}>Privacy Policy</a>.
+            </>
+          )}
+        </p>
 
         <div className="login-screen__bottom">
           <button
