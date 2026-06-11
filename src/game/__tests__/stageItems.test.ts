@@ -88,25 +88,24 @@ describe('stage entity definitions', () => {
   });
 
   it('rebalance-scales stage two and later entity effects', () => {
-    const stage1Click = getEntitiesForStage(1).find((entity) => entity.name === 'False Vacuum Bubble');
-    const stage2Click = getEntitiesForStage(2).find((entity) => entity.name === 'Down Quark');
-    const stage2Auto = getEntitiesForStage(2).find((entity) => entity.name === 'Up Quark');
-    const stage2Crit = getEntitiesForStage(2).find((entity) => entity.name === 'Electron');
+    // Identity pass: effects are assigned by theme, not position. The value
+    // tier per (rarity, effect type) is preserved, so find by effect type.
+    const byTypeRarity = (stageId: number, type: string, rarity: string) =>
+      getEntitiesForStage(stageId).find((e) => e.effect.type === type && e.rarity === rarity);
 
-    expect(stage1Click?.effect.value).toBeCloseTo(15);
-    expect(stage2Click?.effect.value).toBeCloseTo(15 / 4);
-    expect(stage2Auto?.effect.value).toBeCloseTo(0.8 / 10);
-    expect(stage2Crit?.effect.value).toBeCloseTo(0.3 / 4);
+    expect(byTypeRarity(1, 'click', 'common')?.effect.value).toBeCloseTo(15);
+    expect(byTypeRarity(2, 'click', 'common')?.effect.value).toBeCloseTo(15 / 4);
+    expect(byTypeRarity(2, 'auto', 'common')?.effect.value).toBeCloseTo(0.8 / 10);
+    expect(byTypeRarity(2, 'crit', 'common')?.effect.value).toBeCloseTo(0.3 / 4);
   });
 
   it('uses one-tenth auto scaling from stage six onward', () => {
-    const stage5Auto = getEntitiesForStage(5).find((entity) => entity.name === 'Hydrogen Atom');
-    const stage6CommonAuto = getEntitiesForStage(6).find((entity) => entity.name === 'Cold Hydrogen');
-    const stage6RareAuto = getEntitiesForStage(6).find((entity) => entity.name === 'Molecular Hydrogen');
+    const autoOf = (stageId: number, rarity: string) =>
+      getEntitiesForStage(stageId).find((e) => e.effect.type === 'auto' && e.rarity === rarity);
 
-    expect(stage5Auto?.effect.value).toBeCloseTo(1.5 / 10);
-    expect(stage6CommonAuto?.effect.value).toBeCloseTo(1.5 / 10);
-    expect(stage6RareAuto?.effect.value).toBeCloseTo(5 / 10);
+    expect(autoOf(5, 'common')?.effect.value).toBeCloseTo(1.5 / 10);
+    expect(autoOf(6, 'common')?.effect.value).toBeCloseTo(1.5 / 10);
+    expect(autoOf(6, 'rare')?.effect.value).toBeCloseTo(5 / 10);
   });
 
   it('gives stages 4-16 at least two legendary entities', () => {
@@ -129,8 +128,8 @@ describe('stage entity definitions', () => {
     const stage16 = getEntitiesForStage(16);
     const rareAndEpic = stage16.filter((entity) => entity.rarity === 'rare' || entity.rarity === 'epic');
 
-    expect(stage16.find((entity) => entity.name === 'Max Entropy')?.effect.type).toBe('time');
-    expect(stage16.find((entity) => entity.name === 'Quantum Fluctuation Final')?.effect.type).toBe('time');
+    // Structural invariant (survives the identity pass): the endgame stage's
+    // rare/epic slots avoid crit (a capped resource) and keep exactly 2 time.
     expect(rareAndEpic.some((entity) => entity.effect.type === 'crit')).toBe(false);
     expect(rareAndEpic.filter((entity) => entity.effect.type === 'time')).toHaveLength(2);
   });

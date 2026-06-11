@@ -117,6 +117,13 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- 아이템 정체성 패스 (2026-06-11, 스펙 §4 — 이름↔효과↔외형 정합):
+  - **진단**: 효과가 테마 무관 **순수 위치 배정**이었음(각 등급 행 [auto,click,crit,time] 기계적). "Pulsar=crit, Supernova Precursor=time, Dark Matter Halo=auto" 등 이름↔효과 불일치의 근본 원인. 실제 엔티티 수 = **205종**(문서의 "240"은 근사).
+  - **수정(코드모드)**: 각 등급 행 안에서 effect 3요소(type/value/flat)를 글리프 친화도 페널티 최적으로 **재배치**, 앵커(Sun/Earth Formation) 고정. 70건 변경. **행 멀티셋 보존 → 스테이지 카테고리(rift6/click8)·효과분포·ID·glyph·비용·시각 전부 불변 → 밸런스/세이브 0 리스크.** 0-친화 배정 44→19(데이터 구조상 같은 글리프 2개가 한 행이면 일부 강제).
+  - 결과: Pulsar→auto(맥동 오토), Supernova/Nova/Helium Flash→crit(폭발 치명), Free Quark 등 quark 5/8→click(연타), Dark Matter 4종→time(느림/오프라인), Magnetar→time. 마퀴 전부 의도대로.
+  - **계열 정체성**: `families.ts` — glyph(=setKey=계열)마다 계열명+역할 1줄(EN/KO). 상세 카드에 "항성 · 꾸준한 오토 엔진" 식 배지. 33개 글리프 전부 라벨링.
+  - 테스트: 205종/카테고리 스냅샷/효과분포/마퀴 코히런스 가드 9건. 713/713, build 통과.
+  - 잔여: 중복 역할 통합·삭제는 미실시(세이브 보존 우선, 등급 게이팅으로 "samey" 체감은 완화). multi-hit/burst 신규 효과 타입은 Phase 4 후보. 모바일 검증(사용자).
 - 장비 시스템 통합 패스 (2026-06-11, 대형 스펙 — 카테고리 순수성/환급/파티클 연동):
   - **카테고리 순수성(§1/§10)**: 보조 스탯 풀 이원화(`SECONDARY_STAT_POOLS`) — 클릭 장비: 크리확률/크리배율/콤보캡/엔트로피/드랍률/융합버스트/클릭%, 균열 장비: 오토%/엔트로피/드랍률/융합버스트/**오프라인 효율(신규 offlineEff → offlineGainMult)**. `multiplier`(클릭 장비)의 오토 누수 제거 — 클릭+크리만. `getEquipCategory`는 entities/types.ts로 이동(순환 의존 해소).
   - **강화 투자 추적 + 융합 환급(§6/§7)**: `EntityInstance.invested`(옵션 필드 — v14 호환, 가드 옵션 처리). 강화 시 누적, 융합 소모 시 지분 비례 × `ENHANCE_REFUND_RATE(0.6)` 환급(트레이에 예상 환급 표시 = 실지급 동일 함수). **캡 중복 융합은 소멸 대신 환급**(`FUSION_CAP_DUP_REFUND_FRAC(0.5)`×baseCost, 결과 카드 '최대치 — 환급' 표기).

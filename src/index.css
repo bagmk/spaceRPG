@@ -12555,3 +12555,21 @@ button.stat-header-item {
   color: #e9b94a;
   font-size: 11px;
 }
+
+/* Family identity badge on the entity detail card (정체성 패스) */
+.entity-detail-card__family {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin: 2px 0 6px;
+}
+.entity-detail-card__family-name {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.entity-detail-card__family-role {
+  font-size: 10px;
+  opacity: 0.6;
+}

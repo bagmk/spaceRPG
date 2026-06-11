@@ -21,6 +21,7 @@ import { getAutoOutputAnchor, getEquipCategory, getSetKey, type EquipCategory } 
 import { getExpectedFusionRefund, getMaxFusionRarityIdx } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getSecondaryStats, getStagePowerMult, type SecondaryStat } from '../game/entities/substats';
+import { familyLabel, familyRole } from '../game/entities/families';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -1049,6 +1050,12 @@ function EntityDetailCard({
           {entity.formula}
         </div>
         <h3 className="entity-detail-card__name">{entityName(entity, language)}</h3>
+        <div className="entity-detail-card__family">
+          <span className="entity-detail-card__family-name" style={{ color: rarityColor }}>
+            {familyLabel(entity.visual.glyph, language)}
+          </span>
+          <span className="entity-detail-card__family-role">{familyRole(entity.visual.glyph, language)}</span>
+        </div>
         <p className="entity-detail-card__description">{entityDescription(entity, language)}</p>
         <div className="entity-detail-card__stats">
           <span style={{ color: rarityColor }}>{effectLabel}</span>
