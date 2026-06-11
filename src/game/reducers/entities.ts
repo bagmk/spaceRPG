@@ -13,6 +13,8 @@ import {
   rollFusionRarity,
   validateFusionInputs,
 } from '../entities/fusion';
+import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
+import { RARITY_STAGE_GATES } from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
@@ -24,6 +26,7 @@ type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
 type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
 type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
 type FuseAction = Extract<GameAction, { type: 'FUSE_ENTITIES' }>;
+type EnhanceAction = Extract<GameAction, { type: 'ENHANCE_ENTITY' }>;
 
 /** Raise slot counts when stage/almanac progress earns new slots (never lowers). */
 export function syncSlotUnlocks(state: GameState): GameState {
@@ -96,6 +99,10 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   const currentStage = STAGES[state.stageIdx];
   if (!currentStage || entity.stageId > currentStage.id) return state;
 
+  // Rarity gate: higher tiers unlock as the run progresses (fusion can craft
+  // one tier early, but the shop never sells ahead of the gate).
+  if ((RARITY_STAGE_GATES[entity.rarity] ?? 1) > currentStage.id) return state;
+
   const existing = state.inventory.find((entry) => entityMatchesId(entity, entry.entityId));
   const currentCount = existing?.count ?? 0;
 
@@ -138,7 +145,10 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   const validation = validateFusionInputs(state.inventory, action.inputEntityIds);
   if (!validation.ok || !validation.rarity || !validation.stageId) return state;
 
-  const rarityResult = rollFusionRarity(validation.rarity, action.rarityRoll, state.fusionPity);
+  const currentStageIdForFusion = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+  const rarityResult = rollFusionRarity(
+    validation.rarity, action.rarityRoll, state.fusionPity, currentStageIdForFusion,
+  );
   const output = pickFusionOutput(validation.stageId, rarityResult.rarity, action.pickRoll);
   if (!output) return state;
 
@@ -146,9 +156,11 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   const consumed = consumeFusionInputs(state.inventory, action.inputEntityIds);
   const { inventory, leveledUp } = applyFusionOutput(consumed, output);
 
+  const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   const burst =
-    getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(getCurrentModifiers(state))) *
+    getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
+    fusionModifiers.fusionBurstMult *
     entropyEchoMult;
   const nextEntropy = safeAdd(state.entropy, burst);
   const eventId = nextEventId(state);
@@ -173,4 +185,30 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       entropyBurst: burst,
     },
   }));
+}
+
+/**
+ * ENHANCE_ENTITY (강화소): spend quanta to level an owned stack directly.
+ * Shares the level field with the fusion duplicate sink; capped by rarity.
+ */
+export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
+  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
+    return state;
+  }
+  const entity = findEntityById(action.entityId);
+  if (!entity) return state;
+  const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
+  if (!owned || owned.count <= 0) return state;
+  if (owned.level >= getEnhanceLevelCap(entity)) return state;
+
+  const cost = getEnhanceCost(entity, owned.level);
+  if (state.quanta < cost) return state;
+
+  return withCurrentUniverseEndingProgress({
+    ...state,
+    quanta: state.quanta - cost,
+    inventory: state.inventory.map((e) =>
+      e.entityId === owned.entityId ? { ...e, level: e.level + 1 } : e,
+    ),
+  });
 }

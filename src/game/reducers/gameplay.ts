@@ -118,7 +118,8 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   const entropyFromMatter = canAccrue
-    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult
+    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold, 'auto') *
+      entropyEchoMult * modifiers.entropyGainMult
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
   return withCurrentUniverseEndingProgress({
@@ -156,7 +157,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
-  const comboMult = getComboMult(combo, getComboCapBonus(state));
+  const comboMult = getComboMult(combo, getComboCapBonus(state) + modifiers.comboCapAdd);
   const critEnabled = stage.id > 2 || state.skills.crit.level > 0 || modifiers.critChanceAdd > 0;
   const isCrit =
     critEnabled &&
@@ -177,13 +178,13 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const particleName = pickParticleName(stage.id, nextProgress);
   const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   const clickEntropy = (gained + boostedMechanicQuanta) * ENTROPY_W_CLICK;
-  const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult;
+  const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
   // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
   const droppedEntity =
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
           stage.id,
-          getClickDropChance(isCrit),
+          getClickDropChance(isCrit) * modifiers.dropChanceMult,
           { roll: action.dropRoll, pickRoll: action.dropPickRoll },
           { isCrit, combo },
         )
@@ -260,13 +261,15 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
   const tierEntropyFloor = action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
   const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', Date.now());
   const boostedBonus = cappedBonus * matterBoost;
-  const entropyGained = boostedBonus * ENTROPY_W_CLICK + Math.max(action.entropyBonus, tierEntropyFloor) * mult;
+  const entropyGained =
+    (boostedBonus * ENTROPY_W_CLICK + Math.max(action.entropyBonus, tierEntropyFloor) * mult) *
+    modifiers.entropyGainMult;
   const eventId = nextEventId(state);
   const droppedEntity =
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
           stage.id,
-          getCollisionDropChance(),
+          getCollisionDropChance() * modifiers.dropChanceMult,
           { roll: action.dropRoll, pickRoll: action.dropPickRoll },
           { isCrit: true },
         )

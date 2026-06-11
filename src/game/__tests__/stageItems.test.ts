@@ -3,7 +3,7 @@ import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, LEGACY_TIME_ENTITY_EFFECT_FACTOR } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, LEGACY_TIME_ENTITY_EFFECT_FACTOR, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE } from '../balance';
 import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -213,6 +213,13 @@ describe('stage entity definitions', () => {
     const withSun = { ...baseline };
     applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }]);
 
-    expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(1050e6, 0);
+    // Auto output anchor (item progression): rarity weight within the stage
+    // times the gentle per-stage growth curve — NOT multiplied by autoRateMult.
+    const expectedFlat =
+      (sun.baseCost / ENTITY_COST_ANCHORS[10]) *
+      ENTITY_COST_ANCHORS[1] *
+      Math.pow(AUTO_STAGE_POWER_BASE, 9) *
+      (sun.effect.value / 100);
+    expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(expectedFlat, 0);
   });
 });

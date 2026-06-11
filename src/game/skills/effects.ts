@@ -45,6 +45,12 @@ export interface Modifiers {
   waveCollapse: boolean;
   manyWorldsCapMult: number;
   encounterBonusMult: number;
+  /** Secondary stat: multiplies entity drop chance (clicks + collisions). */
+  dropChanceMult: number;
+  /** Secondary stat: multiplies entropy earned from play income. */
+  entropyGainMult: number;
+  /** Secondary stat: multiplies the fusion entropy burst. */
+  fusionBurstMult: number;
   apexMult: number;
   inflatonEchoSec: number;
   dilation: boolean;
@@ -78,6 +84,9 @@ export function defaultModifiers(): Modifiers {
     waveCollapse: false,
     manyWorldsCapMult: 1,
     encounterBonusMult: 1,
+    dropChanceMult: 1,
+    entropyGainMult: 1,
+    fusionBurstMult: 1,
     apexMult: 1,
     inflatonEchoSec: 0,
     dilation: false,

@@ -14,6 +14,8 @@ import {
   DROP_COMBO_BIAS_THRESHOLD,
   DROP_CRIT_RARITY_BIAS,
   DROP_RARITY_WEIGHTS,
+  RARITY_GATE_RAMP_STAGES,
+  RARITY_STAGE_GATES,
 } from '../balance';
 import { getEntitiesForStage } from './stageItems';
 import type { EntityInstance, EntityRarity, StageEntity } from './types';
@@ -37,15 +39,26 @@ export function getClickDropChance(isCrit: boolean): number {
   return DROP_CHANCE_BASE * (isCrit ? DROP_CHANCE_CRIT_MULT : 1);
 }
 
-function getRarityWeights(context: DropContext): Record<EntityRarity, number> {
+/**
+ * Rarity gate ramp: 0 before the gate stage, then a linear climb to full
+ * weight over RARITY_GATE_RAMP_STAGES — epics trickle in at stage 7 and are
+ * common drops by stage 9.
+ */
+export function getRarityGateRamp(rarity: EntityRarity, stageId: number): number {
+  const gate = RARITY_STAGE_GATES[rarity] ?? 1;
+  if (stageId < gate) return 0;
+  return Math.min(1, (stageId - gate + 1) / RARITY_GATE_RAMP_STAGES);
+}
+
+function getRarityWeights(stageId: number, context: DropContext): Record<EntityRarity, number> {
   const biased =
     context.isCrit === true || (context.combo ?? 0) >= DROP_COMBO_BIAS_THRESHOLD;
-  if (!biased) return DROP_RARITY_WEIGHTS;
+  const bias = biased ? DROP_CRIT_RARITY_BIAS : 1;
   return {
-    common: DROP_RARITY_WEIGHTS.common,
-    rare: DROP_RARITY_WEIGHTS.rare * DROP_CRIT_RARITY_BIAS,
-    epic: DROP_RARITY_WEIGHTS.epic * DROP_CRIT_RARITY_BIAS,
-    legendary: DROP_RARITY_WEIGHTS.legendary * DROP_CRIT_RARITY_BIAS,
+    common: DROP_RARITY_WEIGHTS.common * getRarityGateRamp('common', stageId),
+    rare: DROP_RARITY_WEIGHTS.rare * bias * getRarityGateRamp('rare', stageId),
+    epic: DROP_RARITY_WEIGHTS.epic * bias * getRarityGateRamp('epic', stageId),
+    legendary: DROP_RARITY_WEIGHTS.legendary * bias * getRarityGateRamp('legendary', stageId),
   };
 }
 
@@ -89,7 +102,7 @@ export function rollEntityDrop(
   context: DropContext = {},
 ): StageEntity | null {
   if (rolls.roll >= chance) return null;
-  const rarity = pickRarity(rolls.pickRoll, getRarityWeights(context));
+  const rarity = pickRarity(rolls.pickRoll, getRarityWeights(stageId, context));
   return pickEntityByRarity(stageId, rarity, rolls.pickRoll);
 }
 

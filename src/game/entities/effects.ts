@@ -3,6 +3,8 @@
 import type { Modifiers } from '../skills/effects';
 import type { EntityInstance, StageEntity } from './types';
 import {
+  AUTO_STAGE_POWER_BASE,
+  ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
@@ -10,6 +12,7 @@ import {
   SET_BONUS,
 } from '../balance';
 import { entityMatchesId, findEntityById } from './stageItems';
+import { getSecondaryStats, getStagePowerMult } from './substats';
 
 /**
  * Resolve equipped slot ids to their inventory stacks (entity redesign Phase 2).
@@ -32,8 +35,15 @@ export function getEquippedInstances(
   return result;
 }
 
-function scaledFlatGain(baseCost: number, totalEffect: number): number {
-  return Math.max(0, baseCost * (totalEffect / 100));
+/**
+ * Rift/auto output anchor: the entity's rarity weight within its stage
+ * (baseCost ÷ stage cost anchor) times a gentle per-stage growth curve.
+ * Decoupled from raw baseCost so rift gear isn't obsoleted ×15 per stage.
+ */
+export function getAutoOutputAnchor(entity: StageEntity): number {
+  const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
+  const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
+  return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, entity.stageId - 1);
 }
 
 export function applyEntityModifiers(
@@ -48,22 +58,25 @@ export function applyEntityModifiers(
 
     const { type, value, isFlat } = entity.effect;
     const count = entity.maxCount > 0 ? Math.min(entry.count, entity.maxCount) : entry.count;
-    // Levels come from the fusion duplicate sink (Phase 3) and scale the effect.
+    // Levels come from enhancement + the fusion duplicate sink and scale everything.
     const levelMult = 1 + Math.max(0, (entry.level ?? 1) - 1) * ENTITY_LEVEL_EFFECT_BONUS;
+    // Percentage effects ride the stage power curve so later gear outgrows earlier
+    // gear; capped/flat resources (crit chance, combo cap) and auto (own anchor) don't.
+    const stagePower = getStagePowerMult(entity.stageId);
     const total = value * count * levelMult;
 
     switch (type) {
       case 'auto':
-        mods.autoRateFlatAdd += scaledFlatGain(entity.baseCost, total);
+        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity) * (total / 100));
         break;
       case 'click':
-        mods.clickPowerMult *= 1 + total / 100;
+        mods.clickPowerMult *= 1 + (total * stagePower) / 100;
         break;
       case 'crit':
         if (isFlat) {
           mods.critChanceAdd += total / 100;
         } else {
-          mods.critMultMult *= 1 + total / 100;
+          mods.critMultMult *= 1 + (total * stagePower) / 100;
         }
         break;
       case 'time':
@@ -77,7 +90,7 @@ export function applyEntityModifiers(
         break;
       case 'entropy':
         // entropy entities boost encounter rewards
-        mods.encounterBonusMult *= 1 + total / 100;
+        mods.encounterBonusMult *= 1 + (total * stagePower) / 100;
         break;
       case 'combo_cap':
         mods.comboCapAdd += total;
@@ -85,10 +98,41 @@ export function applyEntityModifiers(
       case 'multiplier':
         // All-source bonus: boosts click, auto, and crit — NOT time fill rate.
         // Time is governed solely by 'time' entities and the time skill tree.
-        mods.clickPowerMult *= 1 + total / 100;
-        mods.autoRateMult *= 1 + total / 100;
-        mods.critMultMult *= 1 + total / 200;
+        mods.clickPowerMult *= 1 + (total * stagePower) / 100;
+        mods.autoRateMult *= 1 + (total * stagePower) / 100;
+        mods.critMultMult *= 1 + (total * stagePower) / 200;
         break;
+    }
+
+    // Secondary stats (A안): rare+ entities mix extra stats into the build.
+    for (const sub of getSecondaryStats(entity)) {
+      const subTotal = sub.value * levelMult;
+      switch (sub.type) {
+        case 'critChance':
+          mods.critChanceAdd += subTotal / 100;
+          break;
+        case 'critMult':
+          mods.critMultMult *= 1 + subTotal / 100;
+          break;
+        case 'comboCap':
+          mods.comboCapAdd += subTotal;
+          break;
+        case 'entropyGain':
+          mods.entropyGainMult *= 1 + subTotal / 100;
+          break;
+        case 'dropRate':
+          mods.dropChanceMult *= 1 + subTotal / 100;
+          break;
+        case 'fusionBurst':
+          mods.fusionBurstMult *= 1 + subTotal / 100;
+          break;
+        case 'autoPct':
+          mods.autoRateMult *= 1 + subTotal / 100;
+          break;
+        case 'clickPct':
+          mods.clickPowerMult *= 1 + subTotal / 100;
+          break;
+      }
     }
   }
 }

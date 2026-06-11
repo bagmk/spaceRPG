@@ -118,7 +118,7 @@ export function useGameState(): UseGameStateResult {
       const nextQuanta = safeAdd(baseState.quanta, gained);
       const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
       const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
-      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult;
+      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult * modifiers.entropyGainMult;
       const stageStartCosmic = getStageStartCosmicTime(payload.stageIdx);
       const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
       const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);

@@ -117,6 +117,13 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- 아이템 진행 패스 (2026-06-11, 사용자 승인 A안 + 확장):
+  - **스테이지 파워 커브**: %효과(click/critMult/multiplier/entropy)에 `STAGE_POWER_BASE(1.3)^(stage-1)` — 같은 스테이지 전설≈커먼 13×라 전설이 ~9스테이지 우위 유지 후 세대교체. 크리확률/콤보캡(캡 자원)은 비스케일. **오토 앵커 분리**: 출력 = (baseCost/스테이지 앵커)×앵커1×`AUTO_STAGE_POWER_BASE(8)^(stage-1)` — 구 ×15/스테이지 폭주 완화, 균열 장비 수명 연장.
+  - **등급 게이팅**: `RARITY_STAGE_GATES` 레어3/에픽7/전설12. 드랍 가중치 0→3스테이지 램프(`getRarityGateRamp`), 상점 게이트 차단 + 연구소 "???" 미스터리 카드, **융합은 게이트+1 생성**(`getMaxFusionRarityIdx`, 캡 도달 입력은 pity 동결). 초반 커먼 → 중반 레어~에픽 → 12+ 전설 진행감 확보.
+  - **강화소**: `ENHANCE_ENTITY` — 물질로 스택 레벨 직접 상승(비용 baseCost×1.5×1.9^lv), 등급별 캡 10/15/20/25(`ENHANCE_LEVEL_CAPS`), 융합 중복 sink도 캡 준수. UI: 장착 슬롯 카드 + 상세 카드 강화 버튼.
+  - **A안 보조 스탯**: `substats.ts` — FNV-1a(entityId) 결정적 유도, 레어1/에픽2/전설3개, 8종 풀(크리확률/크리배율/콤보캡/엔트로피획득/드랍률/융합버스트/오토%/클릭%). 신규 Modifiers 3종(dropChanceMult/entropyGainMult/fusionBurstMult) → 클릭·틱·충돌 엔트로피 및 드랍 확률, 융합 버스트에 배선. 레벨이 주+보조 동반 증폭. 카드/슬롯/상세에 표시.
+  - 검증: tsc 클린, 697/697 테스트(신규 progression 12건), build 통과. 멀티에이전트 적대 리뷰 수행.
+  - Phase 4 이월 추가: 커브/게이트/강화 싱크를 simulator에 반영해 재캘리브레이션.
 - UI 패스 3 (2026-06-11, 사용자 피드백):
   - **출력 디버프 제거**: CLICK_OUTPUT_MULTIPLIER ⅓→1, AUTO_OUTPUT_MULTIPLIER ½→1. 근거: Phase 0 sim(임계값 캘리브레이션)은 디버프 없는 모델 — 라이브를 설계 모델에 정렬, "클릭이 너무 약함" 직접 해소.
   - 균열 가시성: 할로(radial gradient r34) + 균열 1.7배 확대 + 엣지 스파크, 히트 반경 42px.

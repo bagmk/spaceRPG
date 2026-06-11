@@ -3,7 +3,7 @@ import type { CSSProperties, MouseEvent } from 'react';
 import type { EntityInstance, FusionEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
-import { findEntityById, getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { entityMatchesId, findEntityById, getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   ENTROPY_FUSION_COST_FRAC,
   EQUIP_SLOT_UNLOCKS,
@@ -11,10 +11,16 @@ import {
   FUSION_PITY_THRESHOLD,
   FUSION_UP1_CHANCE,
   FUSION_UP2_CHANCE,
+  ENTITY_LEVEL_EFFECT_BONUS,
+  RARITY_STAGE_GATES,
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
+  type SecondaryStatType,
 } from '../game/balance';
-import { getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
+import { getAutoOutputAnchor, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
+import { getMaxFusionRarityIdx } from '../game/entities/fusion';
+import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
+import { getSecondaryStats, getStagePowerMult, type SecondaryStat } from '../game/entities/substats';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -32,6 +38,35 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   rare: '#4a8fff',
   epic: '#b060f0',
   legendary: '#ffa500',
+};
+
+const SUBSTAT_LABEL_KEY: Record<SecondaryStatType, Parameters<typeof t>[1]> = {
+  critChance: 'effectCritChance',
+  critMult: 'effectCritMult',
+  comboCap: 'substatComboCap',
+  entropyGain: 'substatEntropyGain',
+  dropRate: 'substatDropRate',
+  fusionBurst: 'substatFusionBurst',
+  autoPct: 'hudAuto',
+  clickPct: 'effectClickPower',
+};
+
+function getLevelMult(level: number): number {
+  return 1 + Math.max(0, level - 1) * ENTITY_LEVEL_EFFECT_BONUS;
+}
+
+function formatSubstat(sub: SecondaryStat, lang: Lang, level = 1): string {
+  const label = t(lang, SUBSTAT_LABEL_KEY[sub.type]);
+  const v = sub.value * getLevelMult(level);
+  const value = sub.type === 'comboCap' ? `+${v.toFixed(1)}` : `+${v.toFixed(1)}%`;
+  return `${value} ${label}`;
+}
+
+const RARITY_LABEL_KEY: Record<EntityRarity, Parameters<typeof t>[1]> = {
+  common: 'rarityCommon',
+  rare: 'rarityRare',
+  epic: 'rarityEpic',
+  legendary: 'rarityLegendary',
 };
 
 function formatEntityCost(value: number): string {
@@ -52,8 +87,9 @@ function formatPct(value: number): string {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
-function getEntityAutoRate(entity: StageEntity, count = 1): number {
-  return Math.max(0, entity.baseCost * entity.effect.value * count / 100);
+// Labels share the EXACT applied formula (entities/effects.ts) — anchor + level.
+function getEntityAutoRate(entity: StageEntity, count = 1, level = 1): number {
+  return Math.max(0, getAutoOutputAnchor(entity) * (entity.effect.value * count * getLevelMult(level)) / 100);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, displayStageId: number): number {
@@ -96,23 +132,26 @@ function formatEntityEffect(
   lang: Lang,
   displayStageId = entity.stageId,
   count = 0,
+  level = 1,
 ): string {
   const { type, value, isFlat } = entity.effect;
+  const lvl = getLevelMult(level);
+  const curved = value * lvl * getStagePowerMult(entity.stageId);
   if (type === 'click') {
-    return `+${formatPct(value)} ${t(lang, 'effectClickPower')}`;
+    return `+${formatPct(curved)} ${t(lang, 'effectClickPower')}`;
   }
   if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity))}${t(lang, 'effectAutoRateUnit')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity, 1, level))}${t(lang, 'effectAutoRateUnit')}`;
   }
   if (type === 'crit') {
     return isFlat
-      ? `+${formatPct(value)} ${t(lang, 'effectCritChance')}`
-      : `+${formatPct(value)} ${t(lang, 'effectCritMult')}`;
+      ? `+${formatPct(value * lvl)} ${t(lang, 'effectCritChance')}`
+      : `+${formatPct(curved)} ${t(lang, 'effectCritMult')}`;
   }
   if (type === 'time') return `+${formatPct(getNextTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
-  if (type === 'multiplier') return `+${formatPct(value)} ${t(lang, 'effectAllSources')}`;
-  if (type === 'entropy') return `+${formatPct(value)} ${t(lang, 'effectEncounterBonus')}`;
-  return `+${formatPct(value)} ${type}`;
+  if (type === 'multiplier') return `+${formatPct(curved)} ${t(lang, 'effectAllSources')}`;
+  if (type === 'entropy') return `+${formatPct(curved)} ${t(lang, 'effectEncounterBonus')}`;
+  return `+${formatPct(value * lvl)} ${type}`;
 }
 
 /** Returns the cumulative effect label across all owned levels. */
@@ -121,24 +160,28 @@ function formatEntityEffectTotal(
   count: number,
   lang: Lang,
   displayStageId = entity.stageId,
+  level = 1,
 ): string {
   if (count === 0) return '';
   const { type, value, isFlat } = entity.effect;
+  const cappedCount = entity.maxCount > 0 ? Math.min(count, entity.maxCount) : count;
+  const lvl = getLevelMult(level);
+  const curvedTotal = value * cappedCount * lvl * getStagePowerMult(entity.stageId);
   if (type === 'click') {
-    return `+${formatPct(value * count)} ${t(lang, 'effectTotal')}`;
+    return `+${formatPct(curvedTotal)} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity, count))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity, cappedCount, level))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'crit') {
     return isFlat
-      ? `+${formatPct(value * count)} ${t(lang, 'effectCritChance')}`
-      : `+${formatPct(value * count)} ${t(lang, 'effectCritMult')}`;
+      ? `+${formatPct(value * cappedCount * lvl)} ${t(lang, 'effectCritChance')}`
+      : `+${formatPct(curvedTotal)} ${t(lang, 'effectCritMult')}`;
   }
   if (type === 'time') return `+${formatPct(getTotalTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
-  if (type === 'multiplier') return `+${formatPct(value * count)} ${t(lang, 'effectAllSources')}`;
-  if (type === 'entropy') return `+${formatPct(value * count)} ${t(lang, 'effectEncounter')}`;
-  return `+${formatPct(value * count)} ${type}`;
+  if (type === 'multiplier') return `+${formatPct(curvedTotal)} ${t(lang, 'effectAllSources')}`;
+  if (type === 'entropy') return `+${formatPct(curvedTotal)} ${t(lang, 'effectEncounter')}`;
+  return `+${formatPct(value * cappedCount * lvl)} ${type}`;
 }
 
 /** Live combat stats shown on the equip page (computed by GameScreen). */
@@ -169,6 +212,7 @@ interface Props {
   onPurchase: (entityId: string) => void;
   onEquip: (entityId: string, slot?: number) => void;
   onUnequip: (slot: number, target: EquipCategory) => void;
+  onEnhance: (entityId: string) => void;
   onFuse: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
   onClose: () => void;
@@ -176,7 +220,7 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const tab = page;
@@ -273,6 +317,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
   const entities = stageEntities;
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
+  // Alias-aware stack lookup — migrated saves may store entries under legacy ids.
+  const ownedEntryOf = (entity: StageEntity) =>
+    inventory.find((e) => entityMatchesId(entity, e.entityId));
   const equippedSlotOf = (entity: StageEntity) =>
     (getEquipCategory(entity) === 'rift' ? riftSlots : equippedSlots).indexOf(entity.id);
   const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
@@ -398,6 +445,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
             const prereq = getEntityLockPrerequisite(entity, inventory);
             const anchorLocked = prereq !== undefined;
             const anchorName = prereq ? entityName(prereq, language) : undefined;
+            const rarityLocked =
+              (RARITY_STAGE_GATES[entity.rarity] ?? 1) > currentStageId && countOf(entity) === 0;
             return (
               <EntityCard
                 key={entity.id}
@@ -407,12 +456,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                 language={language}
                 rarityColor={RARITY_COLORS[entity.rarity]}
                 onPurchase={onPurchase}
-                onInspect={() => { setInspectedEntityId(entity.id); onUITap?.(); }}
+                onInspect={() => {
+                  if (rarityLocked) return;
+                  setInspectedEntityId(entity.id); onUITap?.();
+                }}
                 animDelay={idx * 45}
-                canPurchase={selectedStageId <= currentStageId && !anchorLocked}
+                canPurchase={selectedStageId <= currentStageId && !anchorLocked && !rarityLocked}
                 anchorLockedBy={anchorLocked ? anchorName : undefined}
                 displayStageId={selectedStageId}
                 isEquipped={equippedSlotOf(entity) >= 0}
+                rarityLocked={rarityLocked}
+                ownedLevel={ownedEntryOf(entity)?.level ?? 1}
               />
             );
           })}
@@ -455,7 +509,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                   );
                 }
                 const slotEntity = equippedEntities[i];
-                const entry = slotEntity ? inventory.find((e) => e.entityId === slotEntity.id) : undefined;
+                const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
                 return (
                   <button
                     key={i}
@@ -474,8 +528,34 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                           {`Lv.${entry?.level ?? 1} · ×${entry?.count ?? 1}`}
                         </div>
                         <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, currentStageId)}
+                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, currentStageId, entry?.level ?? 1)}
                         </div>
+                        {getSecondaryStats(slotEntity).length > 0 ? (
+                          <div className="equip-slot-card__substats">
+                            {getSecondaryStats(slotEntity).map((sub) => (
+                              <span key={sub.type}>{formatSubstat(sub, language, entry?.level ?? 1)}</span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {(() => {
+                          const level = entry?.level ?? 1;
+                          const cap = getEnhanceLevelCap(slotEntity);
+                          const atCap = level >= cap;
+                          const cost = getEnhanceCost(slotEntity, level);
+                          return (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              className={`equip-slot-card__enhance ${atCap || quanta < cost ? 'equip-slot-card__enhance--off' : ''}`}
+                              onClick={(e) => { e.stopPropagation(); if (!atCap && quanta >= cost) onEnhance(slotEntity.id); }}
+                              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !atCap && quanta >= cost) { e.stopPropagation(); onEnhance(slotEntity.id); } }}
+                            >
+                              {atCap
+                                ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')}`
+                                : `${t(language, 'enhanceLabel')} ⚛${formatEntityCost(cost)}`}
+                            </span>
+                          );
+                        })()}
                         <span
                           role="button"
                           tabIndex={0}
@@ -596,14 +676,30 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                 <span>{t(language, 'fuseHint')}</span>
               ) : (
                 <>
-                  <span>
-                    {`${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}% · ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%`}
-                  </span>
-                  {trayRarity !== 'legendary' ? (
-                    <span className="fusion-tray__pity">
-                      {t(language, 'fusePity').replace('{n}', String(Math.max(0, FUSION_PITY_THRESHOLD - fusionPity)))}
-                    </span>
-                  ) : null}
+                  {(() => {
+                    // Upgrade odds + pity only apply below the stage's fusion cap;
+                    // a capped tray shows the cap instead of impossible odds.
+                    const maxIdx = getMaxFusionRarityIdx(currentStageId);
+                    const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
+                    if (trayIdx >= maxIdx) {
+                      return (
+                        <span className="fusion-tray__cap">
+                          {t(language, 'fuseMaxRarity').replace('{r}', t(language, RARITY_LABEL_KEY[RARITY_ORDER[maxIdx]]))}
+                        </span>
+                      );
+                    }
+                    const up2Possible = trayIdx + 2 <= maxIdx;
+                    return (
+                      <>
+                        <span>
+                          {`${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}%${up2Possible ? ` · ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%` : ''}`}
+                        </span>
+                        <span className="fusion-tray__pity">
+                          {t(language, 'fusePity').replace('{n}', String(Math.max(0, FUSION_PITY_THRESHOLD - fusionPity)))}
+                        </span>
+                      </>
+                    );
+                  })()}
                   <span>{`${t(language, 'fuseCostLabel')} ⚛${formatEntityCost(quanta * ENTROPY_FUSION_COST_FRAC)}`}</span>
                 </>
               )}
@@ -663,9 +759,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
           }
           displayStageId={selectedStageId}
           equippedSlot={equippedSlotOf(inspectedEntity)}
+          ownedLevel={ownedEntryOf(inspectedEntity)?.level ?? 1}
           onPurchase={onPurchase}
           onEquip={onEquip}
           onUnequip={(slot) => onUnequip(slot, getEquipCategory(inspectedEntity))}
+          onEnhance={onEnhance}
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}
@@ -686,9 +784,12 @@ interface CardProps {
   anchorLockedBy?: string;
   displayStageId: number;
   isEquipped: boolean;
+  /** Rarity gate not reached yet — render as a "???" mystery teaser. */
+  rarityLocked?: boolean;
+  ownedLevel?: number;
 }
 
-function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, displayStageId, isEquipped }: CardProps) {
+function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, displayStageId, isEquipped, rarityLocked, ownedLevel = 1 }: CardProps) {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const cost = getEntityCost(entity, count);
@@ -722,7 +823,7 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
     }, entity.rarity === 'legendary' ? 1050 : 650);
   };
 
-  const effectLabel = formatEntityEffect(entity, language, displayStageId, count);
+  const effectLabel = formatEntityEffect(entity, language, displayStageId, count, ownedLevel);
   const displayName = entityName(entity, language);
 
   return (
@@ -735,6 +836,7 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
         canAfford ? 'entity-card--affordable' : '',
         maxed ? 'entity-card--maxed' : '',
         isCelebrating ? 'entity-card--celebrate' : '',
+        rarityLocked ? 'entity-card--mystery' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -769,12 +871,14 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
 
       {/* Info */}
       <div className="entity-card__info">
-        <div className="entity-card__name">{displayName}</div>
+        <div className="entity-card__name">{rarityLocked ? '???' : displayName}</div>
         <div className="entity-card__meta">
           <span className="entity-card__effect" style={{ color: rarityColor }}>
-            {anchorLockedBy
-              ? t(language, 'entityLabAnchorLockHint').replace('{anchor}', anchorLockedBy)
-              : effectLabel}
+            {rarityLocked
+              ? t(language, 'equipSlotLockedStage').replace('{n}', String(RARITY_STAGE_GATES[entity.rarity] ?? 1))
+              : anchorLockedBy
+                ? t(language, 'entityLabAnchorLockHint').replace('{anchor}', anchorLockedBy)
+                : effectLabel}
           </span>
         </div>
         {showLevelProgress ? (
@@ -850,9 +954,11 @@ interface DetailCardProps {
   displayStageId: number;
   /** Slot index this entity occupies, or -1 when not equipped. */
   equippedSlot: number;
+  ownedLevel: number;
   onPurchase: (entityId: string) => void;
   onEquip: (entityId: string) => void;
   onUnequip: (slot: number) => void;
+  onEnhance: (entityId: string) => void;
   onClose: () => void;
 }
 
@@ -866,16 +972,18 @@ function EntityDetailCard({
   canPurchase,
   displayStageId,
   equippedSlot,
+  ownedLevel,
   onPurchase,
   onEquip,
   onUnequip,
+  onEnhance,
   onClose,
 }: DetailCardProps) {
   const maxed = entity.maxCount > 0 && count >= entity.maxCount;
   const canAfford = canPurchase && !maxed && quanta >= cost;
   const isEquipped = equippedSlot >= 0;
-  const effectLabel = formatEntityEffect(entity, language, displayStageId, count);
-  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, displayStageId) : '';
+  const effectLabel = formatEntityEffect(entity, language, displayStageId, count, ownedLevel);
+  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, displayStageId, ownedLevel) : '';
 
   return (
     <div
@@ -914,6 +1022,13 @@ function EntityDetailCard({
           <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'entityLabUnowned')}</span>
           {totalEffectLabel ? <span style={{ color: rarityColor }}>{totalEffectLabel}</span> : null}
         </div>
+        {getSecondaryStats(entity).length > 0 ? (
+          <div className="entity-detail-card__substats">
+            {getSecondaryStats(entity).map((sub) => (
+              <span key={sub.type} style={{ color: rarityColor }}>{formatSubstat(sub, language, ownedLevel)}</span>
+            ))}
+          </div>
+        ) : null}
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
         <button
           type="button"
@@ -934,6 +1049,25 @@ function EntityDetailCard({
             {isEquipped ? t(language, 'entityUnequip') : t(language, 'entityEquip')}
           </button>
         ) : null}
+        {count > 0 ? (() => {
+          const cap = getEnhanceLevelCap(entity);
+          const atCap = ownedLevel >= cap;
+          const enhCost = getEnhanceCost(entity, ownedLevel);
+          const affordable = !atCap && quanta >= enhCost;
+          return (
+            <button
+              type="button"
+              className="entity-detail-card__equip entity-detail-card__enhance"
+              style={affordable ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+              disabled={!affordable}
+              onClick={() => onEnhance(entity.id)}
+            >
+              {atCap
+                ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${ownedLevel})`
+                : `${t(language, 'enhanceLabel')} Lv.${ownedLevel} → ${ownedLevel + 1} · ⚛${formatEntityCost(enhCost)}`}
+            </button>
+          );
+        })() : null}
       </article>
     </div>
   );

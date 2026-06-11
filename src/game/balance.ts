@@ -225,6 +225,90 @@ export const FUSION_REF_CPS = 3;
 /** Each entity level above 1 adds this fraction to the entity's effect. */
 export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
 
+// ── Item progression (stage power curve + rarity gates) ─────────────────────
+
+/**
+ * Percentage effects (click / crit-mult / multiplier / entropy) scale by
+ * base^(stageId-1) so later-stage gear genuinely outgrows earlier gear.
+ * A same-stage legendary ≈ 13× a common, so with 1.3 a legendary stays ahead
+ * of newer commons for ~9 stages before being overtaken. Flat chance-type
+ * stats (crit chance, combo cap) do NOT scale — they are capped resources.
+ */
+export const STAGE_POWER_BASE = 1.3;
+/**
+ * Rift/auto output anchor growth per stage. Replaces the old baseCost
+ * coupling (~×15/stage) that obsoleted rift gear at every stage transition.
+ * Output per copy = (baseCost / stage cost anchor) × anchor(stage1) × base^(stageId-1) × value%.
+ */
+export const AUTO_STAGE_POWER_BASE = 8;
+
+/** Stage at which each rarity starts dropping and selling. Fusion crafts one tier above. */
+export const RARITY_STAGE_GATES: Record<EntityRarity, number> = {
+  common: 1,
+  rare: 3,
+  epic: 7,
+  legendary: 12,
+};
+/** Drop weight ramps from ~0 to full over this many stages after a gate opens. */
+export const RARITY_GATE_RAMP_STAGES = 3;
+
+// ── Enhancement (강화소) ─────────────────────────────────────────────────────
+
+/** First enhance costs this multiple of the item's base cost. */
+export const ENHANCE_COST_FACTOR = 1.5;
+/** Each further level multiplies the enhance cost by this. */
+export const ENHANCE_COST_GROWTH = 1.9;
+/** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
+export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
+  common: 10,
+  rare: 15,
+  epic: 20,
+  legendary: 25,
+};
+
+// ── Secondary stats (A안 — deterministic per-entity composite stats) ────────
+
+export type SecondaryStatType =
+  | 'critChance'
+  | 'critMult'
+  | 'comboCap'
+  | 'entropyGain'
+  | 'dropRate'
+  | 'fusionBurst'
+  | 'autoPct'
+  | 'clickPct';
+
+/**
+ * Base magnitudes at stage 1 / level 1 before the rarity multiplier.
+ * `scales` stats ride STAGE_POWER_BASE; capped/flat resources do not.
+ */
+export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scales: boolean }> = {
+  critChance: { base: 0.4, scales: false }, // +% crit chance (capped resource)
+  critMult: { base: 4, scales: true },      // +% crit multiplier
+  comboCap: { base: 0.5, scales: false },   // flat combo cap add
+  entropyGain: { base: 3, scales: false },  // +% entropy from all play income
+  dropRate: { base: 5, scales: false },     // +% drop chance
+  fusionBurst: { base: 6, scales: false },  // +% fusion entropy burst
+  autoPct: { base: 4, scales: true },       // +% auto rate
+  clickPct: { base: 3, scales: true },      // +% click power
+};
+
+/** How many secondary stats each rarity carries (deterministic from entity id). */
+export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
+  common: 0,
+  rare: 1,
+  epic: 2,
+  legendary: 3,
+};
+
+/** Secondary magnitudes scale with rarity on top of the per-stat base. */
+export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
+  common: 0,
+  rare: 1,
+  epic: 1.5,
+  legendary: 2.2,
+};
+
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 
 /** Click-gear slot unlock conditions. Slot 1 is always available. */

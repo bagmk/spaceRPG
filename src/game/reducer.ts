@@ -36,7 +36,7 @@ import {
   handlePrestige,
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
-import { handleEquipEntity, handleFuseEntities, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
+import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -132,6 +132,7 @@ export type GameAction =
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
   | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number }
+  | { type: 'ENHANCE_ENTITY'; entityId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
@@ -243,6 +244,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);
     case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
     case 'FUSE_ENTITIES':         return handleFuseEntities(state, action);
+    case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {

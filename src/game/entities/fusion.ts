@@ -19,8 +19,10 @@ import {
   FUSION_REF_CPS,
   FUSION_UP1_CHANCE,
   FUSION_UP2_CHANCE,
+  RARITY_STAGE_GATES,
 } from '../balance';
 import { pickEntityByRarity } from './drops';
+import { getEnhanceLevelCap } from './enhance';
 import { findEntityById } from './stageItems';
 import type { EntityInstance, EntityRarity, StageEntity } from './types';
 
@@ -67,17 +69,35 @@ export interface FusionRarityRoll {
   pityApplicable: boolean;
 }
 
-/** Resolve the output rarity from the input rarity, a 0..1 roll, and the pity counter. */
+/**
+ * Highest rarity fusion can produce at this stage: one tier above what drops
+ * (gates) — fusion is always the way to reach the next tier early.
+ */
+export function getMaxFusionRarityIdx(stageId: number): number {
+  let droppable = 0;
+  for (let i = 0; i < RARITY_ORDER.length; i++) {
+    if ((RARITY_STAGE_GATES[RARITY_ORDER[i]] ?? 1) <= stageId) droppable = i;
+  }
+  return Math.min(RARITY_ORDER.length - 1, droppable + 1);
+}
+
+/**
+ * Resolve the output rarity from the input rarity, a 0..1 roll, the pity
+ * counter, and the stage's fusion rarity cap (gate + 1).
+ */
 export function rollFusionRarity(
   inputRarity: EntityRarity,
   roll: number,
   pity: number,
+  stageId = 16,
 ): FusionRarityRoll {
   const idx = RARITY_ORDER.indexOf(inputRarity);
-  if (idx >= RARITY_ORDER.length - 1) {
-    return { rarity: 'legendary', rarityUp: false, pityApplicable: false };
+  const maxIdx = getMaxFusionRarityIdx(stageId);
+  if (idx >= RARITY_ORDER.length - 1 || idx >= maxIdx) {
+    // No upgrade possible (legendary inputs, or inputs already at the stage cap).
+    return { rarity: inputRarity, rarityUp: false, pityApplicable: false };
   }
-  const up2 = roll < FUSION_UP2_CHANCE && idx + 2 < RARITY_ORDER.length;
+  const up2 = roll < FUSION_UP2_CHANCE && idx + 2 <= maxIdx;
   const up1 = roll < FUSION_UP2_CHANCE + FUSION_UP1_CHANCE;
   const pityForced = pity >= FUSION_PITY_THRESHOLD;
   if (up2) return { rarity: RARITY_ORDER[idx + 2], rarityUp: true, pityApplicable: true };
@@ -132,6 +152,10 @@ export function applyFusionOutput(
 ): FusionOutputResult {
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
+    // Duplicate sink levels up — but never past the rarity's enhance cap.
+    if (existing.level >= getEnhanceLevelCap(output)) {
+      return { inventory, leveledUp: false };
+    }
     return {
       inventory: inventory.map((e) =>
         e.entityId === output.id ? { ...e, level: e.level + 1 } : e,

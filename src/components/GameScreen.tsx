@@ -728,6 +728,7 @@ export function GameScreen({
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
+            onEnhance={(entityId) => { dispatch({ type: 'ENHANCE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onFuse={(inputEntityIds) => {
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random() });
               soundManager?.playEntityLevelUp();
