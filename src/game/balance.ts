@@ -119,9 +119,13 @@ export const SKILL_TIME_RATE_BASE = 1.8;
 export const TIME_MIN_STAGE_SECONDS = 12;
 /** Previous-stage time entities keep a weaker legacy effect in later stages. */
 export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
-/** Global output debuffs for slower overall pacing. */
-export const CLICK_OUTPUT_MULTIPLIER = 1 / 3;
-export const AUTO_OUTPUT_MULTIPLIER = 0.5;
+/**
+ * Global output multipliers. The entropy-gate thresholds (Phase 0 sim) were
+ * calibrated WITHOUT the old 1/3 click / 0.5 auto debuffs, so these now sit at
+ * 1 — clicks/auto land at the strength the pacing model expects.
+ */
+export const CLICK_OUTPUT_MULTIPLIER = 1;
+export const AUTO_OUTPUT_MULTIPLIER = 1;
 /** Fully upgraded Stage 4+ time gauges should settle around 3-4 minutes. */
 export const TIME_MAXED_STAGE_SECONDS = 210;
 /** Fastest a fresh Stage 4+ can feel before buying that stage's time entities. */

@@ -191,8 +191,9 @@ describe('scaling formulas', () => {
       progress01: 0,
       clickLevel: 5,
     });
-    expect(getClickPower(modifiers)).toBeCloseTo(1 + (32 - 1) / 3, 10);   // baseline 1 plus globally 1/3 debuffed click bonus
-    expect(getAutoRate(modifiers)).toBe(16);      // 2^5 with global 1/2 auto debuff
+    // Output multipliers now sit at 1 (aligned with the entropy-gate sim).
+    expect(getClickPower(modifiers)).toBeCloseTo(32, 10); // 2^5, output multiplier 1
+    expect(getAutoRate(modifiers)).toBe(32);               // 2^5, output multiplier 1
     expect(getTimeMultiplier(skills.time.level, modifiers)).toBeCloseTo(Math.pow(SKILL_TIME_RATE_BASE, 5), 10);
     expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(
       100 / getUnupgradedTimeGaugeSeconds(5),

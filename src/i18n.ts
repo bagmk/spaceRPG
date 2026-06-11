@@ -15,7 +15,7 @@ export const STRINGS = {
   hudCrit:       { en: 'Crit',    ko: '치명타' },
   hudTime:       { en: 'Time',    ko: '시간' },
   hudEntropy:    { en: 'Entropy', ko: '엔트로피' },
-  hudPerClick:   { en: '/click', ko: '클릭당' },
+  hudPerClick:   { en: '/click', ko: '/클릭' },
   hudCondense:   { en: 'Condense', ko: '응축' },
   hudCompleted:  { en: 'Completed', ko: '완료' },
   hudLab:        { en: 'Lab',      ko: '연구소' },

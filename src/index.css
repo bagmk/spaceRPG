@@ -12451,3 +12451,43 @@ button.stat-header-item {
   .lore-modal__title { font-size: 18px; }
   .lore-modal__body { font-size: 13px; }
 }
+
+/* ── Bottom bar: five uniform icon buttons in one row ───────────────────────
+   Late in the file on purpose — overrides the per-theme button sizings so the
+   bar never wraps into the uneven two-row layout. */
+.bottom-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.bottom-buttons .entity-lab-button,
+.bottom-buttons .shop-button,
+.bottom-buttons .bottom-settings-button {
+  width: 62px;
+  min-width: 62px;
+  max-width: 62px;
+  height: 52px;
+  display: grid;
+  grid-template-columns: none;
+  grid-template-rows: auto auto;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border-radius: 10px;
+}
+
+.bottom-buttons .hud-action-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bottom-buttons .hud-action-label {
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 58px;
+}

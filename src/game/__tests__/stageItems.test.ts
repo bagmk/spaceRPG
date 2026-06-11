@@ -213,6 +213,6 @@ describe('stage entity definitions', () => {
     const withSun = { ...baseline };
     applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }]);
 
-    expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(525e6, 0);
+    expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(1050e6, 0);
   });
 });

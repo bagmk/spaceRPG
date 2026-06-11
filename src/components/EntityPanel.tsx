@@ -190,18 +190,19 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
   const gearSlotCount = equipCategory === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
   const gearRules = equipCategory === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
 
-  // Owned stacks resolved to entities, current stage only (tracking stays simple).
+  // Owned stacks resolved to entities, selected stage only (tracking stays simple;
+  // the timeline switches stages on every page).
   const ownedEntities = useMemo(() => {
     return inventory
       .filter((entry) => entry.count > 0)
       .map((entry) => ({ entry, entity: findEntityById(entry.entityId) }))
       .filter((x): x is { entry: EntityInstance; entity: StageEntity } => Boolean(x.entity))
-      .filter((x) => x.entity.stageId === currentStageId)
+      .filter((x) => x.entity.stageId === selectedStageId)
       .sort((a, b) => {
         if (a.entity.stageId !== b.entity.stageId) return a.entity.stageId - b.entity.stageId;
         return (RARITY_RANK.get(a.entity.rarity) ?? 0) - (RARITY_RANK.get(b.entity.rarity) ?? 0);
       });
-  }, [inventory, currentStageId]);
+  }, [inventory, selectedStageId]);
 
   // Picker shows only the matching gear category.
   const pickerEntities = useMemo(
@@ -318,8 +319,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
           <button className="entity-panel__close" onClick={onClose}>✕</button>
         </div>
 
-        {tab === 'lab' ? (<>
-        {/* Stage Timeline */}
+        {/* Stage Timeline — shared by all pages (filters equip picker + fusion grid too) */}
         <div className="entity-timeline" ref={timelineRef}>
           <div className="entity-timeline__track">
             {accessibleStages.map((s, i) => {
@@ -364,6 +364,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
         </div>
 
 
+        {tab === 'lab' ? (<>
         {/* Cleared stage banner + back button */}
         {selectedStage && selectedStage.id < currentStageId && (
           <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
@@ -423,7 +424,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
           <div className="equip-page">
             <div className="equip-page__stats">
               {([
-                [t(language, 'effectClickPower'), `×${formatAutoRateValue(stats.clickPower)}`],
+                [t(language, 'effectClickPower'), `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`],
                 [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
                 [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
                 [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],

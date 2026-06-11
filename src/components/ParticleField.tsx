@@ -125,31 +125,49 @@ function updateAndDrawRift(
       }
     }
 
-    // The crack itself — jagged violet line with a pulsing glow.
-    const pulse = 0.5 + 0.28 * Math.sin(now / 310);
+    // The crack itself — a torn violet rift with a breathing halo.
+    const pulse = 0.55 + 0.3 * Math.sin(now / 310);
     ctx.save();
     ctx.translate(rx, ry);
+    // Halo so the rift reads even on bright stages.
+    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 34);
+    halo.addColorStop(0, `rgba(187, 140, 255, ${0.34 * pulse + 0.12})`);
+    halo.addColorStop(0.55, 'rgba(140, 90, 220, 0.10)');
+    halo.addColorStop(1, 'rgba(140, 90, 220, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, 34, 0, Math.PI * 2);
+    ctx.fill();
     ctx.rotate(-0.55);
     ctx.lineCap = 'round';
     ctx.shadowColor = '#bb8cff';
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = `rgba(187, 140, 255, ${pulse})`;
-    ctx.lineWidth = 2;
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = `rgba(187, 140, 255, ${Math.min(1, pulse + 0.15)})`;
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.moveTo(-13, 1);
-    ctx.lineTo(-5, -3);
-    ctx.lineTo(1, 2);
-    ctx.lineTo(8, -2);
-    ctx.lineTo(15, 1);
+    ctx.moveTo(-21, 2);
+    ctx.lineTo(-9, -5);
+    ctx.lineTo(2, 3);
+    ctx.lineTo(13, -4);
+    ctx.lineTo(24, 2);
     ctx.stroke();
-    ctx.shadowBlur = 5;
-    ctx.strokeStyle = `rgba(240, 230, 255, ${Math.min(1, pulse + 0.25)})`;
-    ctx.lineWidth = 0.8;
+    ctx.shadowBlur = 7;
+    ctx.strokeStyle = `rgba(244, 236, 255, ${Math.min(1, pulse + 0.3)})`;
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.moveTo(-9, -1);
-    ctx.lineTo(0, 1);
-    ctx.lineTo(9, -1);
+    ctx.moveTo(-14, -2);
+    ctx.lineTo(0, 2);
+    ctx.lineTo(14, -2);
     ctx.stroke();
+    // Edge sparks drifting out of the tear.
+    for (let k = 0; k < 3; k++) {
+      const sparkA = now / 700 + k * 2.1;
+      const sx = Math.cos(sparkA) * (10 + k * 5);
+      const sy = Math.sin(sparkA * 1.3) * 6 - 4;
+      ctx.globalAlpha = 0.4 + 0.3 * Math.sin(sparkA * 2);
+      ctx.fillStyle = '#d9c4ff';
+      ctx.fillRect(sx, sy, 1.6, 1.6);
+    }
     ctx.restore();
   }
 
@@ -1503,7 +1521,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         if (onRiftClick) {
           const rawX = event.clientX - rect.left;
           const rawY = event.clientY - rect.top;
-          if (Math.hypot(rawX - 46, rawY - (rect.height - 84)) <= 32) {
+          if (Math.hypot(rawX - 46, rawY - (rect.height - 84)) <= 42) {
             onRiftClick();
             return;
           }
