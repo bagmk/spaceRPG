@@ -124,9 +124,14 @@ function updateAndDrawRift(
         });
       }
     }
+  }
 
-    // The crack itself — a torn violet rift with a breathing halo.
-    const pulse = 0.55 + 0.3 * Math.sin(now / 310);
+  {
+    // The crack is a permanent fixture (it opens the rift gear page) — dormant
+    // and dim with no auto income, breathing bright once auto flows.
+    const active = autoRate > 0;
+    const intensity = active ? 1 : 0.5;
+    const pulse = (0.55 + 0.3 * Math.sin(now / (active ? 310 : 620))) * intensity;
     ctx.save();
     ctx.translate(rx, ry);
     // Halo so the rift reads even on bright stages.
@@ -164,7 +169,7 @@ function updateAndDrawRift(
       const sparkA = now / 700 + k * 2.1;
       const sx = Math.cos(sparkA) * (10 + k * 5);
       const sy = Math.sin(sparkA * 1.3) * 6 - 4;
-      ctx.globalAlpha = 0.4 + 0.3 * Math.sin(sparkA * 2);
+      ctx.globalAlpha = (0.4 + 0.3 * Math.sin(sparkA * 2)) * intensity;
       ctx.fillStyle = '#d9c4ff';
       ctx.fillRect(sx, sy, 1.6, 1.6);
     }
