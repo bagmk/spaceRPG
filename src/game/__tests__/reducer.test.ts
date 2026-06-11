@@ -163,7 +163,7 @@ describe('gameReducer', () => {
     expect(next.lastClickEvent?.particleName).toBeTruthy();
   });
 
-  it('turns passive matter gain into visible entropy over time', () => {
+  it('turns equipped auto-entity matter gain into entropy over time', () => {
     const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'auto');
     expect(entity).toBeDefined();
     if (!entity) return;
@@ -173,12 +173,14 @@ describe('gameReducer', () => {
       quanta: getEntityCost(entity, 0) * 10,
     };
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
-    const ticked = gameReducer(purchased, { type: 'TICK', now: 30_000, dt: 30_000 });
+    // Phase 2: owning an entity is not enough — it must be equipped.
+    const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    const ticked = gameReducer(equipped, { type: 'TICK', now: 30_000, dt: 30_000 });
 
-    expect(Math.floor(ticked.entropy)).toBeGreaterThan(Math.floor(purchased.entropy));
+    expect(Math.floor(ticked.entropy)).toBeGreaterThan(Math.floor(equipped.entropy));
   });
 
-  it('applies purchased click entities to click gains immediately', () => {
+  it('applies equipped click entities to click gains (and not unequipped ones)', () => {
     const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'click');
     expect(entity).toBeDefined();
     if (!entity) return;
@@ -195,7 +197,15 @@ describe('gameReducer', () => {
       y: 100,
     });
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
-    const boosted = gameReducer(purchased, {
+    const unequippedClick = gameReducer(purchased, {
+      type: 'CLICK',
+      now: 1000,
+      randomValue: 1,
+      x: 100,
+      y: 100,
+    });
+    const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    const boosted = gameReducer(equipped, {
       type: 'CLICK',
       now: 1000,
       randomValue: 1,
@@ -204,10 +214,13 @@ describe('gameReducer', () => {
     });
 
     expect(purchased.inventory).toEqual([{ entityId: entity.id, count: 1, level: 1 }]);
+    // Absorption (Phase 2): unequipped ownership gives no passive click bonus.
+    expect(unequippedClick.lastClickEvent?.gained).toBe(baseline.lastClickEvent?.gained);
+    // CHECKPOINT: equipping changes click output.
     expect(boosted.lastClickEvent?.gained).toBeGreaterThan(baseline.lastClickEvent?.gained ?? 0);
   });
 
-  it('applies purchased crit entities to critical hit chance before the crit track unlocks', () => {
+  it('applies equipped crit entities to critical hit chance before the crit track unlocks', () => {
     const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'crit');
     expect(entity).toBeDefined();
     if (!entity) return;
@@ -224,7 +237,8 @@ describe('gameReducer', () => {
       y: 100,
     });
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
-    const boosted = gameReducer(purchased, {
+    const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    const boosted = gameReducer(equipped, {
       type: 'CLICK',
       now: 1000,
       randomValue: 0.004,

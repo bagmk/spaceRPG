@@ -8,6 +8,37 @@ import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
+type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
+type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
+
+/** Equip an owned entity into a slot (entity redesign Phase 2 — slot 0 only for now). */
+export function handleEquipEntity(state: GameState, action: EquipAction): GameState {
+  const entity = findEntityById(action.entityId);
+  if (!entity) return state;
+
+  const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
+  if (!owned || owned.count <= 0) return state;
+
+  const slot = action.slot ?? 0;
+  if (slot < 0 || slot >= state.unlockedSlotCount) return state;
+  // Same entity cannot occupy two slots.
+  if (state.equippedSlots.some((id, i) => i !== slot && id === action.entityId)) return state;
+
+  // Dense array — empty slots hold '' so JSON round-trips cleanly (no holes).
+  const next: string[] = [];
+  for (let i = 0; i < state.unlockedSlotCount; i++) next[i] = state.equippedSlots[i] ?? '';
+  next[slot] = action.entityId;
+  while (next.length > 0 && next[next.length - 1] === '') next.pop();
+  return { ...state, equippedSlots: next };
+}
+
+export function handleUnequipEntity(state: GameState, action: UnequipAction): GameState {
+  if (action.slot < 0 || action.slot >= state.equippedSlots.length) return state;
+  if (!state.equippedSlots[action.slot]) return state;
+  const next = state.equippedSlots.map((id, i) => (i === action.slot ? '' : id));
+  while (next.length > 0 && next[next.length - 1] === '') next.pop();
+  return { ...state, equippedSlots: next };
+}
 
 export function handlePurchaseEntity(state: GameState, action: PurchaseAction): GameState {
   const entity = findEntityById(action.entityId);

@@ -20,6 +20,7 @@ import {
   getTimeMultiplier,
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
+import { getEquippedInstances } from '../game/entities/effects';
 import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
@@ -185,7 +186,7 @@ export function GameScreen({
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  }, state.inventory, state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, state.equippedSlots), state.prestigeUpgrades);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
     stage.mechanic === 'reionization'
@@ -715,9 +716,12 @@ export function GameScreen({
           <EntityPanel
             currentStageId={stage.id}
             inventory={state.inventory}
+            equippedSlots={state.equippedSlots}
             quanta={state.quanta}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
+            onEquip={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot: 0 }); soundManager?.playUITap(); }}
+            onUnequip={(slot) => { dispatch({ type: 'UNEQUIP_ENTITY', slot }); soundManager?.playUITap(); }}
             onClose={() => { setEntityPanelOpen(false); soundManager?.playUIClose(); }}
             onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
             onUITap={() => soundManager?.playUITap()}

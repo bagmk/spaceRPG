@@ -116,7 +116,15 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 1 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 2 진입**
+- Current Phase: **Phase 2 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 3 진입**
+- Phase 2 결과 (장착 슬롯 1 + 흡수 시작):
+  - 액션: `EQUIP_ENTITY {entityId, slot?}` / `UNEQUIP_ENTITY {slot}`. 검증: 소유 필수, slot < unlockedSlotCount(현재 1), 동일 엔티티 중복 슬롯 금지. 점유 슬롯에 장착 시 교체. 슬롯 배열은 ''로 dense 유지(JSON 안전).
+  - **흡수 시작: 엔티티 효과는 이제 장착된 것만 적용.** `getEquippedInstances(inventory, equippedSlots)`가 슬롯→인벤토리 스택 해석(stale id 무시), 모든 getActiveModifiers 호출부(tick/click/collision/offline/HUD) 전환. 보유=패시브 버프 모델 폐기.
+  - UI: EntityPanel 카드에 '장착됨' 배지, 상세 카드에 장착/해제 버튼(소유 시). i18n: entityEquip/entityUnequip/entityEquipped (EN/KO).
+  - 프레스티지: equippedSlots 리셋(런과 함께), 도감은 보존 — D2 그대로.
+  - 검증: tsc 클린, vitest 673/673 (신규 equip 8건, 기존 3건을 구매=패시브 → 장착 기준으로 갱신 — "장착이 클릭 산출을 바꾼다" CHECKPOINT 테스트 포함), build 통과.
+  - 의도된 시퀀싱: **스킬 트리(click/auto/crit/time 트랙)는 아직 살아 있음.** Phase 0 캘리브레이션이 스킬 구매를 경제 싱크로 가정하므로, 트리 제거+오프라인 수익 전환(D3 완성)은 Phase 3(융합이 대체 성장 제공) 이후 Phase 4 리밸런스에서 수행. 장착 1슬롯 효과는 기존 엔티티 수치 그대로(레벨 배율은 Phase 3 가챠 중복 sink와 함께).
+  - 밸런스 노트: 기존 세이브는 보유 엔티티 패시브가 사라져 산출 하락 — 흡수 설계 의도. Phase 4에서 장착/세트 보너스 스케일 재조정.
 - Phase 1 결과 (SaveState v13→14 + 엔트로피 게이트 라이브 + 드랍/수집):
   - 데이터 모델: `inventory: EntityInstance[]`(entityId/count/level), `equippedSlots`, `unlockedSlotCount`, `almanacCollected` 추가. `purchasedEntities` 제거(마이그레이션 변환). 튜너블은 전부 `balance.ts`(ENTROPY_THRESHOLDS 16개, ENTROPY_W_CLICK/W_AUTO, DROP_* 6종).
   - 게이트 전환(D1): `canCondense = entropy >= stage.entropyThreshold` 단일 조건. 16스테이지 엔딩 게이트도 동일. 엔트로피 가중: 클릭 0.5 / auto 0.25 (sim과 모델 일치). HUD: 시간 게이지 → 엔트로피 게이트 바(보라 #bb8cff), 우주시간은 흐릿한 readout으로 강등.

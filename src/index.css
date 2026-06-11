@@ -484,6 +484,37 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 8px #bb8cff;
 }
 
+/* Equip system (entity redesign Phase 2) */
+.entity-card__equipped-badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  background: #bb8cff;
+  color: #14101f;
+  white-space: nowrap;
+}
+
+.entity-detail-card__equip {
+  margin-top: 8px;
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: #14101f;
+  cursor: pointer;
+}
+
+.entity-detail-card__equip--on {
+  background: transparent;
+}
+
 .hud-time-readout-faint {
   display: flex;
   justify-content: space-between;

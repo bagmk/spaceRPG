@@ -5,6 +5,7 @@
 
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
+import { getEquippedInstances } from '../entities/effects';
 import { getClickPower, getProgress, getEffectiveThreshold } from '../formulas';
 import type { GameState } from '../types';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from '../types/events';
@@ -55,7 +56,7 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, state.inventory, state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, state.equippedSlots), state.prestigeUpgrades);
 }
 
 export function getAdjustedClickPower(state: GameState): number {

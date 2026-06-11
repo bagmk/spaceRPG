@@ -16,6 +16,7 @@ import {
   pruneExpiredShopBoosts,
 } from '../game/shop/boosts';
 import { getActiveModifiers } from '../game/skills/effects';
+import { getEquippedInstances } from '../game/entities/effects';
 import { getPrestigeMultiplier } from '../game/prestige';
 import { STAGES } from '../game/stages';
 import { getStageStartCosmicTime } from '../game/timeFlow';
@@ -94,7 +95,7 @@ export function useGameState(): UseGameStateResult {
           stageId: stage.id,
           clickLevel: payload.skills.click.level,
         },
-        payload.inventory ?? [],
+        getEquippedInstances(payload.inventory ?? [], payload.equippedSlots ?? []),
         payload.prestigeUpgrades,
       );
       const autoRate = getAutoRate(modifiers);

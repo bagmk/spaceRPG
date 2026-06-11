@@ -98,7 +98,7 @@ export function handleAdminSetProgress(state: GameState, action: AdminSetProgres
     getStageStartCosmicTime(state.stageIdx) +
     (stage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
   const reset = action.fraction === 0
-    ? { inventory: [], clickLevel: 0, autoLevel: 0, critLevel: 0 }
+    ? { inventory: [], equippedSlots: [], clickLevel: 0, autoLevel: 0, critLevel: 0 }
     : {};
   return {
     ...state,

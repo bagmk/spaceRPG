@@ -36,7 +36,7 @@ import {
   handlePrestige,
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
-import { handlePurchaseEntity } from './reducers/entities';
+import { handleEquipEntity, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -128,6 +128,8 @@ export type GameAction =
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
   | { type: 'PURCHASE_ENTITY'; entityId: string }
+  | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
+  | { type: 'UNEQUIP_ENTITY'; slot: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
 
@@ -232,6 +234,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
     case 'MARK_CASH_SHOP_TUTORIAL_SEEN': return handleMarkCashShopTutorialSeen(state);
     case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
+    case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);
+    case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;

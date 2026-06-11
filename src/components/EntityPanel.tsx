@@ -133,15 +133,18 @@ function formatEntityEffectTotal(
 interface Props {
   currentStageId: number;
   inventory: EntityInstance[];
+  equippedSlots: string[];
   quanta: number;
   language: Lang;
   onPurchase: (entityId: string) => void;
+  onEquip: (entityId: string) => void;
+  onUnequip: (slot: number) => void;
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
   onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, inventory, quanta, language, onPurchase, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ currentStageId, inventory, equippedSlots, quanta, language, onPurchase, onEquip, onUnequip, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -166,6 +169,7 @@ export function EntityPanel({ currentStageId, inventory, quanta, language, onPur
   const entities = stageEntities;
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
+  const equippedSlotOf = (entity: StageEntity) => equippedSlots.indexOf(entity.id);
   const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
 
   useEffect(() => {
@@ -297,6 +301,7 @@ export function EntityPanel({ currentStageId, inventory, quanta, language, onPur
                 canPurchase={selectedStageId <= currentStageId && !anchorLocked}
                 anchorLockedBy={anchorLocked ? anchorName : undefined}
                 displayStageId={selectedStageId}
+                isEquipped={equippedSlotOf(entity) >= 0}
               />
             );
           })}
@@ -315,7 +320,10 @@ export function EntityPanel({ currentStageId, inventory, quanta, language, onPur
             !isEntityLockedByAnchor(inspectedEntity, inventory)
           }
           displayStageId={selectedStageId}
+          equippedSlot={equippedSlotOf(inspectedEntity)}
           onPurchase={onPurchase}
+          onEquip={onEquip}
+          onUnequip={onUnequip}
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}
@@ -335,9 +343,10 @@ interface CardProps {
   canPurchase: boolean;
   anchorLockedBy?: string;
   displayStageId: number;
+  isEquipped: boolean;
 }
 
-function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, displayStageId }: CardProps) {
+function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, displayStageId, isEquipped }: CardProps) {
   const [isCelebrating, setIsCelebrating] = useState(false);
   const celebrationTimeoutRef = useRef<number | null>(null);
   const cost = getEntityCost(entity, count);
@@ -407,6 +416,11 @@ function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, 
         {count > 0 && (
           <div className="entity-card__count" style={{ background: rarityColor }}>
             ×{count}
+          </div>
+        )}
+        {isEquipped && (
+          <div className="entity-card__equipped-badge" title={t(language, 'entityEquipped')}>
+            {t(language, 'entityEquipped')}
           </div>
         )}
       </div>
@@ -492,7 +506,11 @@ interface DetailCardProps {
   rarityColor: string;
   canPurchase: boolean;
   displayStageId: number;
+  /** Slot index this entity occupies, or -1 when not equipped. */
+  equippedSlot: number;
   onPurchase: (entityId: string) => void;
+  onEquip: (entityId: string) => void;
+  onUnequip: (slot: number) => void;
   onClose: () => void;
 }
 
@@ -505,11 +523,15 @@ function EntityDetailCard({
   rarityColor,
   canPurchase,
   displayStageId,
+  equippedSlot,
   onPurchase,
+  onEquip,
+  onUnequip,
   onClose,
 }: DetailCardProps) {
   const maxed = entity.maxCount > 0 && count >= entity.maxCount;
   const canAfford = canPurchase && !maxed && quanta >= cost;
+  const isEquipped = equippedSlot >= 0;
   const effectLabel = formatEntityEffect(entity, language, displayStageId, count);
   const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, displayStageId) : '';
 
@@ -560,6 +582,16 @@ function EntityDetailCard({
         >
           {maxed ? t(language, 'entityLabMaxed') : canPurchase ? `${t(language, 'entityLabGet')} · ${formatEntityCost(cost)}` : t(language, 'entityLabLocked')}
         </button>
+        {count > 0 ? (
+          <button
+            type="button"
+            className={`entity-detail-card__equip ${isEquipped ? 'entity-detail-card__equip--on' : ''}`}
+            style={isEquipped ? { borderColor: rarityColor, color: rarityColor } : { background: rarityColor }}
+            onClick={() => (isEquipped ? onUnequip(equippedSlot) : onEquip(entity.id))}
+          >
+            {isEquipped ? t(language, 'entityUnequip') : t(language, 'entityEquip')}
+          </button>
+        ) : null}
       </article>
     </div>
   );

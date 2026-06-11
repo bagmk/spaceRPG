@@ -1,9 +1,30 @@
-/** Applies purchased entity bonuses on top of existing Modifiers. */
+/** Applies entity bonuses on top of existing Modifiers (equipped items only since Phase 2). */
 
 import type { Modifiers } from '../skills/effects';
 import type { EntityInstance } from './types';
 import { LEGACY_TIME_ENTITY_EFFECT_FACTOR } from '../balance';
-import { findEntityById } from './stageItems';
+import { entityMatchesId, findEntityById } from './stageItems';
+
+/**
+ * Resolve equipped slot ids to their inventory stacks (entity redesign Phase 2).
+ * Only these instances feed applyEntityModifiers — owning an entity no longer
+ * grants its effect passively; it must be equipped. Stale slot ids (entity no
+ * longer owned) are silently dropped.
+ */
+export function getEquippedInstances(
+  inventory: EntityInstance[],
+  equippedSlots: string[],
+): EntityInstance[] {
+  const result: EntityInstance[] = [];
+  for (const slotId of equippedSlots) {
+    if (!slotId) continue;
+    const entity = findEntityById(slotId);
+    if (!entity) continue;
+    const owned = inventory.find((e) => entityMatchesId(entity, e.entityId));
+    if (owned && owned.count > 0) result.push(owned);
+  }
+  return result;
+}
 
 function scaledFlatGain(baseCost: number, totalEffect: number): number {
   return Math.max(0, baseCost * (totalEffect / 100));
