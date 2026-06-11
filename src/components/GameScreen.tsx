@@ -7,6 +7,7 @@ import {
   formatCosmicTimeProgressParts,
   formatEntropyAmount,
   formatEntropyParts,
+  formatGameNumberShort,
   formatProgressNumberParts,
   formatWhole,
   canCondense as canCondenseNow,
@@ -237,7 +238,6 @@ export function GameScreen({
       : cosmicClockFromGauge;
   const matterReadout = formatProgressNumberParts(displayQuanta, displayEffectiveThreshold);
   const timeReadout = formatCosmicTimeProgressParts(displayedCosmicClock, displayStage.cosmicTimeSec);
-  const entropyReadout = formatEntropyParts(state.entropy);
   const entropyPreviewReadout = formatEntropyParts(entropyPreview);
   const canShowShop = isCashShopUnlocked(state);
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > wallNow);
@@ -754,15 +754,27 @@ export function GameScreen({
                   <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
                     <span className="hud-entropy-readout">
-                      <span>{t(language, 'hudEntropy')}</span>
-                      <strong>{entropyReadout.value}</strong>
-                      <span className="hud-entropy-unit">{entropyReadout.unit}</span>
+                      <span>{t(language, 'hudQuanta')}</span>
+                      <strong>{formatGameNumberShort(state.quanta)}</strong>
                     </span>
                 </div>
               </div>
             </div>
             {!showCondenseGate ? (
               <div className="hud-progress-stack">
+                <div className="hud-meter hud-meter--entropy">
+                  <div className="hud-meter-row">
+                    <span className="hud-meter-label">
+                      <span className="hud-meter-label-text">{t(language, 'hudEntropy')}</span>
+                    </span>
+                    <span className="hud-readout hud-entropy-gate">
+                      <span className="hud-readout-value">{`${formatEntropyAmount(state.entropy)} / ${formatEntropyAmount(stage.entropyThreshold)}`}</span>
+                    </span>
+                  </div>
+                  <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
+                    <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
+                  </div>
+                </div>
                 <div className="hud-meter">
                   <div className="hud-meter-row">
                     <span className="hud-meter-label">
@@ -779,19 +791,6 @@ export function GameScreen({
                   </div>
                   <div className="hud-gauge hud-quanta-gauge" aria-label="Matter progress">
                     <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
-                  </div>
-                </div>
-                <div className="hud-meter hud-meter--entropy">
-                  <div className="hud-meter-row">
-                    <span className="hud-meter-label">
-                      <span className="hud-meter-label-text">{t(language, 'hudEntropy')}</span>
-                    </span>
-                    <span className="hud-readout hud-entropy-gate">
-                      <span className="hud-readout-value">{`${formatEntropyAmount(state.entropy)} / ${formatEntropyAmount(stage.entropyThreshold)}`}</span>
-                    </span>
-                  </div>
-                  <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
-                    <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
                   </div>
                   <div className="hud-time-readout-faint">
                     <span>{t(language, 'hudTime')}</span>
