@@ -116,7 +116,11 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 3 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 4 진입**
+- Current Phase: **Phase 3 — 완료. UI 패스(2026-06-11) 완료. 다음: Phase 4**
+- UI 패스 (2026-06-11, 사용자 피드백 반영):
+  - EntityPanel 3탭 분리: **연구소**(타임라인+구매/수집 카드) / **장착**(스탯 4종 패널 + 세트 배너 + 슬롯 카드 3 + 장착 피커) / **융합로**(보유 그리드 + 트레이 + odds/pity + FUSE). 슬롯 행/융합 토글 바 제거.
+  - HUD: 엔트로피 readout 짤림 근본 원인 = 구 `hud-readout` 3컬럼 그리드의 지수/단위 예약폭 66px → 게이트 readout은 그리드 미사용으로 전환. 우주시간 readout 완전 제거.
+  - 캔버스: 좌하단 **공간 균열(rift)** — 오토 수입 시각화(방출 간격 log 스케일), 장착 엔티티 심볼 모양의 파티클이 코어로 수렴. 클릭 시에도 장착 심볼 퍼프(슬롯 수만큼 1~3개). 모트 캡 14, 화면 공간 드로우.
 - Phase 3 결과 (융합/가챠 + 슬롯 2·3 + 세트):
   - 융합(D4): `FUSE_ENTITIES` — 동일 등급 3개 소모 + 물질 10%(은행 비례 싱크) → 같은 스테이지(입력 중 최고) 풀에서 가중 랜덤 출력. odds: +1등급 40% / +2등급 5% / 유지 55%. **pity: 연속 5회 실패 시 +1 보장**(`fusionPity` 세이브 필드 — v14에 합산, v14 미배포라 버전 범프 불필요). 전설 입력은 pity 비적용.
   - 엔트로피 버스트: `ENTROPY_FUSION_VALUE_SEC(30s) × (wClick×clickPower×refCps3 + wAuto×autoRate)` — Phase 0 sim의 버스트 모델 미러링(active 기여 29~43% 유지 목표). entropy_echo 프레스티지 배율 적용, peakEntropy 갱신.

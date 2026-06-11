@@ -11,6 +11,9 @@ import {
   formatWhole,
   canCondense as canCondenseNow,
   getAutoRate,
+  getClickPower,
+  getCritChance,
+  getCritMultiplier,
   getEffectiveThreshold,
   getEntropyGateProgress,
   getEntropyOnCondense,
@@ -647,6 +650,7 @@ export function GameScreen({
           gravityMod={state.currentUniverseSeed.gravityMod}
           anomaly={state.currentUniverseSeed.anomaly}
           inventory={state.inventory}
+          equippedSlots={state.equippedSlots}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -708,9 +712,15 @@ export function GameScreen({
             fusionPity={state.fusionPity}
             lastFusionEvent={state.lastFusionEvent}
             quanta={state.quanta}
+            stats={{
+              clickPower: getClickPower(modifiers),
+              autoRate: displayedAutoRate,
+              critChance: getCritChance(state.skills.crit.level, 0, modifiers),
+              critMult: getCritMultiplier(state.skills.crit.level, modifiers),
+            }}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
-            onEquip={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId }); soundManager?.playUITap(); }}
+            onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onUnequip={(slot) => { dispatch({ type: 'UNEQUIP_ENTITY', slot }); soundManager?.playUITap(); }}
             onFuse={(inputEntityIds) => {
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random() });
@@ -769,8 +779,8 @@ export function GameScreen({
                     <span className="hud-meter-label">
                       <span className="hud-meter-label-text">{t(language, 'hudEntropy')}</span>
                     </span>
-                    <span className="hud-readout hud-entropy-gate">
-                      <span className="hud-readout-value">{formatEntropyPair(state.entropy, stage.entropyThreshold)}</span>
+                    <span className="hud-entropy-gate">
+                      {formatEntropyPair(state.entropy, stage.entropyThreshold)}
                     </span>
                   </div>
                   <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">

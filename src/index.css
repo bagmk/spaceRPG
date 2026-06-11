@@ -484,12 +484,13 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 8px #bb8cff;
 }
 
-/* Gate readout must never wrap or clip mid-number. */
+/* Gate readout: plain inline text — never the 3-column hud-readout grid
+   (its reserved exponent/unit columns clipped the pair). */
 .hud-meter-row > span.hud-entropy-gate {
   white-space: nowrap;
-  overflow: visible;
   overflow-wrap: normal;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Equip system (entity redesign Phase 2) */
@@ -523,88 +524,241 @@ button.hud-stage-title--clickable:hover {
   background: transparent;
 }
 
-/* Equip slots row + fusion forge (entity redesign Phase 3) */
-.equip-fuse-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+/* Panel tabs: Lab / Equip / Fusion Forge (entity redesign UI pass) */
+.entity-panel__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.equip-slots-row {
-  display: flex;
-  flex: 1;
-  gap: 6px;
-  min-width: 0;
+.entity-panel__tab {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(245, 247, 250, 0.75);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.equip-slot {
+.entity-panel__tab--active {
+  border-color: #bb8cff;
+  background: rgba(187, 140, 255, 0.16);
+  color: #e7dbff;
+}
+
+/* ── Equip page ── */
+.equip-page {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  align-content: start;
+  flex: 1;
+}
+
+.equip-page__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.equip-page__stat {
+  display: grid;
+  gap: 2px;
+  padding: 8px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.equip-page__stat-label {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.equip-page__stat-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.equip-page__set {
+  padding: 7px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.equip-page__set--active {
+  border-style: solid;
+  border-color: rgba(187, 140, 255, 0.55);
+  background: rgba(187, 140, 255, 0.1);
+  color: #e7dbff;
+  opacity: 1;
+}
+
+.equip-page__slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.equip-slot-card {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 4px;
-  flex: 1;
-  min-width: 0;
-  min-height: 28px;
-  padding: 2px 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  font-size: 11px;
-}
-
-.equip-slot--filled {
-  border-style: solid;
-  border-color: rgba(187, 140, 255, 0.5);
-  background: rgba(187, 140, 255, 0.08);
-}
-
-.equip-slot--locked {
-  opacity: 0.45;
-}
-
-.equip-slot__name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.equip-slot__empty {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.6;
-}
-
-.equip-slot__remove {
-  border: none;
-  background: transparent;
+  min-height: 128px;
+  padding: 12px 8px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
   color: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  opacity: 0.7;
-  padding: 2px;
-}
-
-.fuse-toggle {
-  min-height: 28px;
-  padding: 2px 12px;
-  border: 1px solid rgba(187, 140, 255, 0.5);
-  border-radius: 8px;
-  background: transparent;
-  color: #bb8cff;
   font: inherit;
-  font-size: 11px;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.fuse-toggle--on {
-  background: #bb8cff;
-  color: #14101f;
+.equip-slot-card--filled {
+  border-style: solid;
+  border-color: var(--rarity-color);
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--rarity-color) 16%, transparent), transparent),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rarity-color) 25%, transparent);
+}
+
+.equip-slot-card--locked {
+  opacity: 0.45;
+  cursor: default;
+  justify-content: center;
+}
+
+.equip-slot-card__glyph {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+}
+
+.equip-slot-card__name {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.equip-slot-card__meta {
+  font-family: var(--mono);
+  font-size: 9px;
+  opacity: 0.65;
+}
+
+.equip-slot-card__effect {
+  font-size: 9px;
+  text-align: center;
+}
+
+.equip-slot-card__remove {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 11px;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.equip-slot-card__plus {
+  font-size: 22px;
+  opacity: 0.5;
+}
+
+.equip-slot-card__hint,
+.equip-slot-card__lock {
+  font-size: 10px;
+  opacity: 0.65;
+  text-align: center;
+}
+
+.equip-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.equip-picker__title {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+/* Owned entity grid — shared by equip picker and fusion forge */
+.owned-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.owned-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border: 1px solid color-mix(in srgb, var(--rarity-color) 55%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rarity-color) 7%, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.owned-card--dim {
+  opacity: 0.35;
+}
+
+.owned-card__formula {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.owned-card__name {
+  font-size: 9.5px;
+  text-align: center;
+  line-height: 1.2;
+  max-height: 24px;
+  overflow: hidden;
+}
+
+.owned-card__count {
+  font-family: var(--mono);
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ── Fusion page ── */
+.fuse-page {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  align-content: start;
+  flex: 1;
+}
+
+.fuse-page__hint {
+  font-size: 11px;
+  opacity: 0.65;
 }
 
 .fusion-tray {

@@ -11,7 +11,9 @@ import {
   FUSION_PITY_THRESHOLD,
   FUSION_UP1_CHANCE,
   FUSION_UP2_CHANCE,
+  SET_BONUS,
 } from '../game/balance';
+import { getSetKey } from '../game/entities/effects';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -138,6 +140,16 @@ function formatEntityEffectTotal(
   return `+${formatPct(value * count)} ${type}`;
 }
 
+/** Live combat stats shown on the equip page (computed by GameScreen). */
+export interface PanelStats {
+  clickPower: number;
+  autoRate: number;
+  critChance: number;
+  critMult: number;
+}
+
+type PanelTab = 'lab' | 'equip' | 'fuse';
+
 interface Props {
   currentStageId: number;
   inventory: EntityInstance[];
@@ -146,9 +158,10 @@ interface Props {
   fusionPity: number;
   lastFusionEvent: FusionEvent | null;
   quanta: number;
+  stats: PanelStats;
   language: Lang;
   onPurchase: (entityId: string) => void;
-  onEquip: (entityId: string) => void;
+  onEquip: (entityId: string, slot?: number) => void;
   onUnequip: (slot: number) => void;
   onFuse: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
@@ -157,13 +170,48 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, inventory, equippedSlots, unlockedSlotCount, fusionPity, lastFusionEvent, quanta, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ currentStageId, inventory, equippedSlots, unlockedSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
-  const [fuseMode, setFuseMode] = useState(false);
+  const [tab, setTab] = useState<PanelTab>('lab');
+  const [pickingSlot, setPickingSlot] = useState<number | null>(null);
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   const timelineRef = useRef<HTMLDivElement>(null);
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
+
+  // Owned stacks resolved to entities — feeds the equip picker and fusion grid.
+  const ownedEntities = useMemo(() => {
+    return inventory
+      .filter((entry) => entry.count > 0)
+      .map((entry) => ({ entry, entity: findEntityById(entry.entityId) }))
+      .filter((x): x is { entry: EntityInstance; entity: StageEntity } => Boolean(x.entity))
+      .sort((a, b) => {
+        if (a.entity.stageId !== b.entity.stageId) return a.entity.stageId - b.entity.stageId;
+        return (RARITY_RANK.get(a.entity.rarity) ?? 0) - (RARITY_RANK.get(b.entity.rarity) ?? 0);
+      });
+  }, [inventory]);
+
+  // Active set bonus from equipped glyph families (largest family counts).
+  const equippedEntities = useMemo(
+    () => equippedSlots.map((id) => (id ? findEntityById(id) : undefined)),
+    [equippedSlots],
+  );
+  const setInfo = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entity of equippedEntities) {
+      if (!entity) continue;
+      const key = getSetKey(entity);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    let bestKey = '';
+    let best = 0;
+    for (const [key, count] of counts) {
+      if (count > best) { best = count; bestKey = key; }
+    }
+    const tier = Math.min(best, 3);
+    const bonus = tier >= 2 ? SET_BONUS[tier] ?? SET_BONUS[2] : undefined;
+    return bonus ? { key: bestKey, count: best, bonus } : null;
+  }, [equippedEntities]);
 
   const addFuseInput = (entity: StageEntity) => {
     if (fuseInputs.length >= FUSION_INPUT_COUNT) return;
@@ -243,6 +291,7 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
           <button className="entity-panel__close" onClick={onClose}>✕</button>
         </div>
 
+        {tab === 'lab' ? (<>
         {/* Stage Timeline */}
         <div className="entity-timeline" ref={timelineRef}>
           <div className="entity-timeline__track">
@@ -287,53 +336,22 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
           </div>
         </div>
 
-        {/* Equip slots + fusion forge toggle (entity redesign Phase 2/3) */}
-        <div className="equip-fuse-bar">
-          <div className="equip-slots-row">
-            {Array.from({ length: 3 }, (_, i) => {
-              if (i < unlockedSlotCount) {
-                const slotId = equippedSlots[i];
-                const slotEntity = slotId ? findEntityById(slotId) : undefined;
-                return (
-                  <div key={i} className={`equip-slot ${slotEntity ? 'equip-slot--filled' : ''}`}>
-                    {slotEntity ? (
-                      <>
-                        <span className="equip-slot__name" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                          {entityName(slotEntity, language)}
-                        </span>
-                        <button
-                          type="button"
-                          className="equip-slot__remove"
-                          aria-label={t(language, 'entityUnequip')}
-                          onClick={() => onUnequip(i)}
-                        >
-                          ✕
-                        </button>
-                      </>
-                    ) : (
-                      <span className="equip-slot__empty">{t(language, 'equipSlotEmpty')}</span>
-                    )}
-                  </div>
-                );
-              }
-              const rule = EQUIP_SLOT_UNLOCKS.find((r) => r.slot === i + 1);
-              const hint = rule?.minStageId !== undefined
-                ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
-                : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
-              return (
-                <div key={i} className="equip-slot equip-slot--locked">
-                  <span className="equip-slot__empty">{`🔒 ${hint}`}</span>
-                </div>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            className={`fuse-toggle ${fuseMode ? 'fuse-toggle--on' : ''}`}
-            onClick={() => { setFuseMode((on) => !on); setFuseInputs([]); onUITap?.(); }}
-          >
-            {t(language, 'fuseTitle')}
-          </button>
+        {/* Tab bar: Lab / Equip / Fusion Forge */}
+        <div className="entity-panel__tabs">
+          {([
+            ['lab', t(language, 'hudLab')],
+            ['equip', t(language, 'entityEquip')],
+            ['fuse', t(language, 'fuseTitle')],
+          ] as [PanelTab, string][]).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`entity-panel__tab ${tab === id ? 'entity-panel__tab--active' : ''}`}
+              onClick={() => { setTab(id); setPickingSlot(null); setInspectedEntityId(null); onUITap?.(); }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Cleared stage banner + back button */}
@@ -378,10 +396,7 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
                 language={language}
                 rarityColor={RARITY_COLORS[entity.rarity]}
                 onPurchase={onPurchase}
-                onInspect={() => {
-                  if (fuseMode) { addFuseInput(entity); return; }
-                  setInspectedEntityId(entity.id); onUITap?.();
-                }}
+                onInspect={() => { setInspectedEntityId(entity.id); onUITap?.(); }}
                 animDelay={idx * 45}
                 canPurchase={selectedStageId <= currentStageId && !anchorLocked}
                 anchorLockedBy={anchorLocked ? anchorName : undefined}
@@ -391,9 +406,156 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
             );
           })}
         </div>
+        </>) : null}
+
+        {/* ── Equip page ── */}
+        {tab === 'equip' ? (
+          <div className="equip-page">
+            <div className="equip-page__stats">
+              {([
+                [t(language, 'effectClickPower'), `×${formatAutoRateValue(stats.clickPower)}`],
+                [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
+                [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
+                [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="equip-page__stat">
+                  <span className="equip-page__stat-label">{label}</span>
+                  <span className="equip-page__stat-value">{value}</span>
+                </div>
+              ))}
+            </div>
+            <div className={`equip-page__set ${setInfo ? 'equip-page__set--active' : ''}`}>
+              {setInfo
+                ? `${t(language, 'setBonusLabel')}: ${setInfo.key} ×${setInfo.count} — ${t(language, 'effectClickPower')}/${t(language, 'hudAuto')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`
+                : t(language, 'setBonusNone')}
+            </div>
+            <div className="equip-page__slots">
+              {Array.from({ length: 3 }, (_, i) => {
+                if (i >= unlockedSlotCount) {
+                  const rule = EQUIP_SLOT_UNLOCKS.find((r) => r.slot === i + 1);
+                  const hint = rule?.minStageId !== undefined
+                    ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
+                    : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
+                  return (
+                    <div key={i} className="equip-slot-card equip-slot-card--locked">
+                      <span className="equip-slot-card__lock">🔒</span>
+                      <span className="equip-slot-card__hint">{hint}</span>
+                    </div>
+                  );
+                }
+                const slotEntity = equippedEntities[i];
+                const entry = slotEntity ? inventory.find((e) => e.entityId === slotEntity.id) : undefined;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''}`}
+                    style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                    onClick={() => { setPickingSlot(pickingSlot === i ? null : i); onUITap?.(); }}
+                  >
+                    {slotEntity ? (
+                      <>
+                        <div className="equip-slot-card__glyph">
+                          <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
+                        </div>
+                        <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
+                        <div className="equip-slot-card__meta">
+                          {`Lv.${entry?.level ?? 1} · ×${entry?.count ?? 1}`}
+                        </div>
+                        <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, currentStageId)}
+                        </div>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="equip-slot-card__remove"
+                          aria-label={t(language, 'entityUnequip')}
+                          onClick={(e) => { e.stopPropagation(); onUnequip(i); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onUnequip(i); } }}
+                        >
+                          ✕
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="equip-slot-card__plus">＋</span>
+                        <span className="equip-slot-card__hint">{t(language, 'equipSlotEmpty')}</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {pickingSlot !== null ? (
+              <div className="equip-picker">
+                <div className="equip-picker__title">{t(language, 'equipPickTitle')}</div>
+                {ownedEntities.length === 0 ? (
+                  <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
+                ) : (
+                  <div className="owned-grid">
+                    {ownedEntities.map(({ entry, entity }) => {
+                      const alreadyAt = equippedSlots.indexOf(entity.id);
+                      return (
+                        <button
+                          key={entity.id}
+                          type="button"
+                          className={`owned-card ${alreadyAt >= 0 ? 'owned-card--dim' : ''}`}
+                          style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
+                          disabled={alreadyAt >= 0 && alreadyAt !== pickingSlot}
+                          onClick={() => {
+                            onEquip(entity.id, pickingSlot);
+                            setPickingSlot(null);
+                          }}
+                        >
+                          <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
+                          <span className="owned-card__name">{entityName(entity, language)}</span>
+                          <span className="owned-card__count">{`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* ── Fusion forge page ── */}
+        {tab === 'fuse' ? (
+          <div className="fuse-page">
+            <div className="fuse-page__hint">{t(language, 'fuseHint')}</div>
+            <div className="owned-grid fuse-page__grid">
+              {ownedEntities.length === 0 ? (
+                <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
+              ) : (
+                ownedEntities.map(({ entry, entity }) => {
+                  const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
+                  const blocked =
+                    fuseInputs.length >= FUSION_INPUT_COUNT ||
+                    entry.count <= usedCopies ||
+                    (trayRarity !== undefined && entity.rarity !== trayRarity);
+                  return (
+                    <button
+                      key={entity.id}
+                      type="button"
+                      className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
+                      style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
+                      disabled={blocked}
+                      onClick={() => addFuseInput(entity)}
+                    >
+                      <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
+                      <span className="owned-card__name">{entityName(entity, language)}</span>
+                      <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {/* Fusion tray (Phase 3) */}
-        {fuseMode ? (
+        {tab === 'fuse' ? (
           <div className="fusion-tray">
             <div className="fusion-tray__slots">
               {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {

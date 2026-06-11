@@ -61,7 +61,144 @@ import type {
   Star,
   WakeTrail,
 } from '../game/types';
-import type { EntityInstance } from '../game/entities/types';
+import type { EntityInstance, StageEntity } from '../game/entities/types';
+import { findEntityById } from '../game/entities/stageItems';
+
+// ── Spatial rift (entity redesign): bottom-left crack that visualizes auto
+// income. Emits motes shaped like the equipped entities; clicks also puff
+// equipped symbols. Purely cosmetic — capped and cheap to draw.
+interface RiftMote {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  symbol: string;
+  color: string;
+  born: number;
+  lifeMs: number;
+  seekCore: boolean;
+}
+
+interface RiftState {
+  nextSpawnAt: number;
+  spawnIdx: number;
+  motes: RiftMote[];
+}
+
+const RIFT_MOTE_CAP = 14;
+
+function updateAndDrawRift(
+  ctx: CanvasRenderingContext2D,
+  rift: RiftState,
+  equipped: StageEntity[],
+  autoRate: number,
+  now: number,
+  dtMs: number,
+  height: number,
+  cx: number,
+  cy: number,
+  accent: string,
+): void {
+  const rx = 46;
+  const ry = height - 84;
+
+  if (autoRate > 0) {
+    // Faster auto income → faster emission (log-scaled, clamped).
+    if (now >= rift.nextSpawnAt) {
+      const interval = Math.min(2200, Math.max(240, 1500 / Math.log10(10 + autoRate)));
+      rift.nextSpawnAt = now + interval;
+      if (rift.motes.length < RIFT_MOTE_CAP) {
+        const source = equipped.length > 0 ? equipped[rift.spawnIdx++ % equipped.length] : null;
+        const ang = Math.atan2(cy - ry, cx - rx) + (Math.random() - 0.5) * 0.55;
+        const speed = 44 + Math.random() * 24;
+        rift.motes.push({
+          x: rx + (Math.random() - 0.5) * 10,
+          y: ry + (Math.random() - 0.5) * 6,
+          vx: Math.cos(ang) * speed,
+          vy: Math.sin(ang) * speed,
+          symbol: source?.visual.symbol ?? '✦',
+          color: source?.visual.color ?? accent,
+          born: now,
+          lifeMs: 6500,
+          seekCore: true,
+        });
+      }
+    }
+
+    // The crack itself — jagged violet line with a pulsing glow.
+    const pulse = 0.5 + 0.28 * Math.sin(now / 310);
+    ctx.save();
+    ctx.translate(rx, ry);
+    ctx.rotate(-0.55);
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#bb8cff';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = `rgba(187, 140, 255, ${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-13, 1);
+    ctx.lineTo(-5, -3);
+    ctx.lineTo(1, 2);
+    ctx.lineTo(8, -2);
+    ctx.lineTo(15, 1);
+    ctx.stroke();
+    ctx.shadowBlur = 5;
+    ctx.strokeStyle = `rgba(240, 230, 255, ${Math.min(1, pulse + 0.25)})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-9, -1);
+    ctx.lineTo(0, 1);
+    ctx.lineTo(9, -1);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const dt = dtMs / 1000;
+  for (let i = rift.motes.length - 1; i >= 0; i--) {
+    const m = rift.motes[i];
+    const age = now - m.born;
+    if (age > m.lifeMs) {
+      rift.motes.splice(i, 1);
+      continue;
+    }
+    if (m.seekCore) {
+      const dx = cx - m.x;
+      const dy = cy - m.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < 38) {
+        rift.motes.splice(i, 1);
+        continue;
+      }
+      m.vx += (dx / dist) * 64 * dt;
+      m.vy += (dy / dist) * 64 * dt;
+      const sp = Math.hypot(m.vx, m.vy);
+      const maxSp = 115;
+      if (sp > maxSp) {
+        m.vx *= maxSp / sp;
+        m.vy *= maxSp / sp;
+      }
+    } else {
+      m.vx *= 0.965;
+      m.vy = m.vy * 0.965 - 16 * dt;
+    }
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    const fade = m.seekCore
+      ? Math.min(1, age / 280) * Math.min(1, (m.lifeMs - age) / 480)
+      : 1 - age / m.lifeMs;
+    if (fade <= 0) continue;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, fade));
+    ctx.shadowColor = m.color;
+    ctx.shadowBlur = 9;
+    ctx.fillStyle = m.color;
+    ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(m.symbol, m.x, m.y);
+    ctx.restore();
+  }
+}
 
 interface CollisionPayload {
   x: number;
@@ -90,6 +227,7 @@ interface ParticleFieldProps {
   gravityMod: number;
   anomaly: AnomalyType | null;
   inventory: EntityInstance[];
+  equippedSlots: string[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   onCollision: (payload: CollisionPayload) => void;
 }
@@ -664,12 +802,20 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   gravityMod,
   anomaly,
   inventory,
+  equippedSlots,
   onGatherClick,
   onCollision,
 }: ParticleFieldProps, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<CanvasWorld | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
+  const riftRef = useRef<RiftState>({ nextSpawnAt: 0, spawnIdx: 0, motes: [] });
+  const equippedRef = useRef<StageEntity[]>([]);
+  useEffect(() => {
+    equippedRef.current = equippedSlots
+      .map((id) => (id ? findEntityById(id) : undefined))
+      .filter((e): e is StageEntity => Boolean(e));
+  }, [equippedSlots]);
   const lastStageId = useRef(stage.id);
   const lastClickId = useRef<number | null>(null);
   const transitionExplosionAt = useRef<number | null>(null);
@@ -906,6 +1052,23 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           clickEmissionCount >= 6 ? 3 : 2,
         ),
       );
+    }
+    // Equipped entities shape the click emissions — one symbol puff per slot.
+    const equipped = equippedRef.current;
+    const puffNow = performance.now();
+    for (let i = 0; i < equipped.length; i += 1) {
+      const a = (i / equipped.length) * Math.PI * 2 + Math.random() * 0.8;
+      riftRef.current.motes.push({
+        x: lastClickEvent.x,
+        y: lastClickEvent.y,
+        vx: Math.cos(a) * 46,
+        vy: Math.sin(a) * 46 - 22,
+        symbol: equipped[i].visual.symbol,
+        color: equipped[i].visual.color,
+        born: puffNow,
+        lifeMs: 1100,
+        seekCore: false,
+      });
     }
   }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 
@@ -1292,6 +1455,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       height,
     );
     ctx.restore();
+
+    // Spatial rift + equipped-shape motes (screen space, above the world layer).
+    updateAndDrawRift(ctx, riftRef.current, equippedRef.current, autoRate, now, dt, height, cx, cy, stage.accent);
 
     if (transitionActive && transitionElapsed !== null) {
       const washOpacity = Math.max(
