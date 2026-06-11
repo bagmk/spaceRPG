@@ -116,7 +116,12 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 3 — 완료. UI 패스(2026-06-11) 완료. 다음: Phase 4**
+- Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- UI 패스 2 (2026-06-11, 사용자 피드백):
+  - **장비 이원화**: 클릭 장착(equippedSlots) vs **균열 장착(riftSlots — 신규 v14 필드)**. 카테고리는 엔티티에서 자동 유도(`getEquipCategory`: auto/time → 균열, 나머지 → 클릭). EQUIP_ENTITY가 자동 라우팅, UNEQUIP_ENTITY에 target. 균열 슬롯 해금: 2=6시대, 3=도감 60종(`RIFT_SLOT_UNLOCKS`). 효과는 두 배열 합산 적용, 세트도 합산 기준.
+  - **하단 바 분리 진입**: 연구소 ⚗ / 장착 ⌖ / 융합로 ⚛ 각각 버튼. 패널 내부 탭 제거(page는 컨트롤드 prop). **균열 클릭 → 균열 장착 페이지** (캔버스 히트테스트 반경 32px).
+  - 클릭 시 장착 심볼 퍼프 제거(요청). 클릭 파워 레벨 스케일은 ENTITY_LEVEL_EFFECT_BONUS로 기존 적용 중. 균열 방출 심볼은 riftSlots 기준.
+  - 장착 피커/융합 그리드는 **현재 스테이지 엔티티만** 표시(트래킹 단순화). 685/685 테스트, build 통과.
 - UI 패스 (2026-06-11, 사용자 피드백 반영):
   - EntityPanel 3탭 분리: **연구소**(타임라인+구매/수집 카드) / **장착**(스탯 4종 패널 + 세트 배너 + 슬롯 카드 3 + 장착 피커) / **융합로**(보유 그리드 + 트레이 + odds/pity + FUSE). 슬롯 행/융합 토글 바 제거.
   - HUD: 엔트로피 readout 짤림 근본 원인 = 구 `hud-readout` 3컬럼 그리드의 지수/단위 예약폭 66px → 게이트 readout은 그리드 미사용으로 전환. 우주시간 readout 완전 제거.

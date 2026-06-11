@@ -223,10 +223,16 @@ export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
 
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 
-/** Slot unlock conditions. Slot 1 is always available. */
+/** Click-gear slot unlock conditions. Slot 1 is always available. */
 export const EQUIP_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
   { slot: 2, minStageId: 4 },
   { slot: 3, minAlmanacCount: 30 },
+];
+
+/** Rift (auto-gear) slot unlock conditions. Slot 1 is always available. */
+export const RIFT_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
+  { slot: 2, minStageId: 6 },
+  { slot: 3, minAlmanacCount: 60 },
 ];
 
 /** Set bonus by number of equipped entities sharing a setKey (glyph family). */
@@ -333,6 +339,7 @@ export const BALANCE = {
   },
   equip: {
     slotUnlocks: EQUIP_SLOT_UNLOCKS,
+    riftSlotUnlocks: RIFT_SLOT_UNLOCKS,
     setBonus: SET_BONUS,
   },
 } as const;

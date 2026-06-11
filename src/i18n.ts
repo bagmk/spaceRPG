@@ -43,6 +43,8 @@ export const STRINGS = {
   setBonusLabel:  { en: 'Set bonus', ko: '세트 보너스' },
   setBonusNone:   { en: 'No set bonus — equip 2 entities of the same family', ko: '세트 없음 — 같은 계열 2개를 장착하면 보너스' },
   equipPickTitle: { en: 'Choose an entity to equip', ko: '장착할 엔티티 선택' },
+  equipClickTitle: { en: 'Click Gear', ko: '클릭 장착' },
+  equipRiftTitle:  { en: 'Rift Gear — Auto', ko: '균열 장착 — 오토' },
   equipPickEmpty: { en: 'No owned entities yet — collect drops or buy in the Lab', ko: '보유한 엔티티가 없습니다 — 드랍을 모으거나 연구소에서 구매하세요' },
   hudViewInfo:   { en: 'View Info / Tutorial', ko: '정보 / 튜토리얼 보기' },
   hudSettings:   { en: 'Settings', ko: '설정' },

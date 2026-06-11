@@ -275,10 +275,14 @@ export interface SaveState {
   totalShopSpentUSD: number;
   /** Owned entity stacks — purchases + drops (replaces purchasedEntities in v14). */
   inventory: EntityInstance[];
-  /** Entity ids equipped into slots (Phase 2 — effects move here). */
+  /** Click-gear entity ids equipped into slots (Phase 2 — effects move here). */
   equippedSlots: string[];
-  /** How many equip slots are unlocked (1..3). */
+  /** How many click-gear slots are unlocked (1..3). */
   unlockedSlotCount: number;
+  /** Rift (auto-gear) entity ids — equipped via the spatial rift. */
+  riftSlots: string[];
+  /** How many rift slots are unlocked (1..3). */
+  unlockedRiftSlotCount: number;
   /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
   almanacCollected: Record<number, string[]>;
   /** Consecutive fusions without a rarity upgrade — D4 pity counter. */

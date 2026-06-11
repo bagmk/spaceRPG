@@ -11,9 +11,10 @@ import {
   FUSION_PITY_THRESHOLD,
   FUSION_UP1_CHANCE,
   FUSION_UP2_CHANCE,
+  RIFT_SLOT_UNLOCKS,
   SET_BONUS,
 } from '../game/balance';
-import { getSetKey } from '../game/entities/effects';
+import { getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -148,13 +149,18 @@ export interface PanelStats {
   critMult: number;
 }
 
-type PanelTab = 'lab' | 'equip' | 'fuse';
+export type PanelPage = 'lab' | 'equip' | 'fuse';
 
 interface Props {
+  page: PanelPage;
+  /** Which gear category the equip page edits — click gear or the rift (auto). */
+  equipCategory: EquipCategory;
   currentStageId: number;
   inventory: EntityInstance[];
   equippedSlots: string[];
   unlockedSlotCount: number;
+  riftSlots: string[];
+  unlockedRiftSlotCount: number;
   fusionPity: number;
   lastFusionEvent: FusionEvent | null;
   quanta: number;
@@ -162,7 +168,7 @@ interface Props {
   language: Lang;
   onPurchase: (entityId: string) => void;
   onEquip: (entityId: string, slot?: number) => void;
-  onUnequip: (slot: number) => void;
+  onUnequip: (slot: number, target: EquipCategory) => void;
   onFuse: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
   onClose: () => void;
@@ -170,35 +176,51 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, inventory, equippedSlots, unlockedSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
-  const [tab, setTab] = useState<PanelTab>('lab');
+  const tab = page;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   const timelineRef = useRef<HTMLDivElement>(null);
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
-  // Owned stacks resolved to entities — feeds the equip picker and fusion grid.
+  // The gear array this equip page edits.
+  const gearSlots = equipCategory === 'rift' ? riftSlots : equippedSlots;
+  const gearSlotCount = equipCategory === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
+  const gearRules = equipCategory === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
+
+  // Owned stacks resolved to entities, current stage only (tracking stays simple).
   const ownedEntities = useMemo(() => {
     return inventory
       .filter((entry) => entry.count > 0)
       .map((entry) => ({ entry, entity: findEntityById(entry.entityId) }))
       .filter((x): x is { entry: EntityInstance; entity: StageEntity } => Boolean(x.entity))
+      .filter((x) => x.entity.stageId === currentStageId)
       .sort((a, b) => {
         if (a.entity.stageId !== b.entity.stageId) return a.entity.stageId - b.entity.stageId;
         return (RARITY_RANK.get(a.entity.rarity) ?? 0) - (RARITY_RANK.get(b.entity.rarity) ?? 0);
       });
-  }, [inventory]);
+  }, [inventory, currentStageId]);
 
-  // Active set bonus from equipped glyph families (largest family counts).
+  // Picker shows only the matching gear category.
+  const pickerEntities = useMemo(
+    () => ownedEntities.filter(({ entity }) => getEquipCategory(entity) === equipCategory),
+    [ownedEntities, equipCategory],
+  );
+
+  // Active set bonus spans both gear categories (largest glyph family counts).
   const equippedEntities = useMemo(
-    () => equippedSlots.map((id) => (id ? findEntityById(id) : undefined)),
-    [equippedSlots],
+    () => gearSlots.map((id) => (id ? findEntityById(id) : undefined)),
+    [gearSlots],
+  );
+  const allEquippedEntities = useMemo(
+    () => [...equippedSlots, ...riftSlots].map((id) => (id ? findEntityById(id) : undefined)),
+    [equippedSlots, riftSlots],
   );
   const setInfo = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const entity of equippedEntities) {
+    for (const entity of allEquippedEntities) {
       if (!entity) continue;
       const key = getSetKey(entity);
       counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -211,7 +233,7 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
     const tier = Math.min(best, 3);
     const bonus = tier >= 2 ? SET_BONUS[tier] ?? SET_BONUS[2] : undefined;
     return bonus ? { key: bestKey, count: best, bonus } : null;
-  }, [equippedEntities]);
+  }, [allEquippedEntities]);
 
   const addFuseInput = (entity: StageEntity) => {
     if (fuseInputs.length >= FUSION_INPUT_COUNT) return;
@@ -250,7 +272,8 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
   const entities = stageEntities;
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
-  const equippedSlotOf = (entity: StageEntity) => equippedSlots.indexOf(entity.id);
+  const equippedSlotOf = (entity: StageEntity) =>
+    (getEquipCategory(entity) === 'rift' ? riftSlots : equippedSlots).indexOf(entity.id);
   const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
 
   useEffect(() => {
@@ -286,7 +309,11 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
           style={{ '--stage-accent': selectedStage?.accent ?? '#8090b0' } as CSSProperties}
         >
           <div className="entity-panel__stage" style={{ color: selectedStage?.accent }}>
-            {selectedStage ? `${String(selectedStage.id).padStart(2, '0')} · ${stageName(language, selectedStage.id, selectedStage.name)}` : ''}
+            {tab === 'equip'
+              ? t(language, equipCategory === 'rift' ? 'equipRiftTitle' : 'equipClickTitle')
+              : tab === 'fuse'
+                ? t(language, 'fuseTitle')
+                : selectedStage ? `${String(selectedStage.id).padStart(2, '0')} · ${stageName(language, selectedStage.id, selectedStage.name)}` : ''}
           </div>
           <button className="entity-panel__close" onClick={onClose}>✕</button>
         </div>
@@ -336,23 +363,6 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
           </div>
         </div>
 
-        {/* Tab bar: Lab / Equip / Fusion Forge */}
-        <div className="entity-panel__tabs">
-          {([
-            ['lab', t(language, 'hudLab')],
-            ['equip', t(language, 'entityEquip')],
-            ['fuse', t(language, 'fuseTitle')],
-          ] as [PanelTab, string][]).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={`entity-panel__tab ${tab === id ? 'entity-panel__tab--active' : ''}`}
-              onClick={() => { setTab(id); setPickingSlot(null); setInspectedEntityId(null); onUITap?.(); }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
 
         {/* Cleared stage banner + back button */}
         {selectedStage && selectedStage.id < currentStageId && (
@@ -431,8 +441,8 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
             </div>
             <div className="equip-page__slots">
               {Array.from({ length: 3 }, (_, i) => {
-                if (i >= unlockedSlotCount) {
-                  const rule = EQUIP_SLOT_UNLOCKS.find((r) => r.slot === i + 1);
+                if (i >= gearSlotCount) {
+                  const rule = gearRules.find((r) => r.slot === i + 1);
                   const hint = rule?.minStageId !== undefined
                     ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
                     : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
@@ -470,8 +480,8 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
                           tabIndex={0}
                           className="equip-slot-card__remove"
                           aria-label={t(language, 'entityUnequip')}
-                          onClick={(e) => { e.stopPropagation(); onUnequip(i); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onUnequip(i); } }}
+                          onClick={(e) => { e.stopPropagation(); onUnequip(i, equipCategory); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onUnequip(i, equipCategory); } }}
                         >
                           ✕
                         </span>
@@ -489,12 +499,12 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
             {pickingSlot !== null ? (
               <div className="equip-picker">
                 <div className="equip-picker__title">{t(language, 'equipPickTitle')}</div>
-                {ownedEntities.length === 0 ? (
+                {pickerEntities.length === 0 ? (
                   <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
                 ) : (
                   <div className="owned-grid">
-                    {ownedEntities.map(({ entry, entity }) => {
-                      const alreadyAt = equippedSlots.indexOf(entity.id);
+                    {pickerEntities.map(({ entry, entity }) => {
+                      const alreadyAt = gearSlots.indexOf(entity.id);
                       return (
                         <button
                           key={entity.id}
@@ -654,7 +664,7 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, unlocked
           equippedSlot={equippedSlotOf(inspectedEntity)}
           onPurchase={onPurchase}
           onEquip={onEquip}
-          onUnequip={onUnequip}
+          onUnequip={(slot) => onUnequip(slot, getEquipCategory(inspectedEntity))}
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}

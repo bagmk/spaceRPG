@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { getEntitiesForStage } from '../entities/stageItems';
-import { getEquippedInstances } from '../entities/effects';
+import { getEquipCategory, getEquippedInstances } from '../entities/effects';
 import { getEntityCost } from '../entities/types';
 
 function ownedState(entityId: string, count = 1) {
@@ -12,7 +12,9 @@ function ownedState(entityId: string, count = 1) {
 }
 
 describe('equip system (Phase 2)', () => {
-  const entity = getEntitiesForStage(1)[0];
+  // Click-category entity — auto/time entities route to the rift slots instead.
+  const entity = getEntitiesForStage(1).find((e) => getEquipCategory(e) === 'click')!;
+  const riftEntity = getEntitiesForStage(1).find((e) => getEquipCategory(e) === 'rift')!;
 
   it('equips an owned entity into slot 0', () => {
     const next = gameReducer(ownedState(entity.id), { type: 'EQUIP_ENTITY', entityId: entity.id });
@@ -32,7 +34,7 @@ describe('equip system (Phase 2)', () => {
   });
 
   it('replaces the occupant when equipping into an occupied slot', () => {
-    const other = getEntitiesForStage(1)[1];
+    const other = getEntitiesForStage(1).filter((e) => getEquipCategory(e) === 'click')[1];
     const state = {
       ...createInitialGameState(0),
       inventory: [
@@ -63,6 +65,25 @@ describe('equip system (Phase 2)', () => {
     const state = { ...ownedState(entity.id), equippedSlots: [entity.id] };
     const next = gameReducer(state, { type: 'PRESTIGE', now: 1000 });
     expect(next.equippedSlots).toEqual([]);
+  });
+
+  it('routes auto/time entities to the rift slots automatically', () => {
+    const state = ownedState(riftEntity.id);
+    const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: riftEntity.id });
+    expect(next.riftSlots).toEqual([riftEntity.id]);
+    expect(next.equippedSlots).toEqual([]);
+
+    const unequipped = gameReducer(next, { type: 'UNEQUIP_ENTITY', slot: 0, target: 'rift' });
+    expect(unequipped.riftSlots).toEqual([]);
+  });
+
+  it('rift gear effects apply through the combined equipped instances', () => {
+    const state = {
+      ...ownedState(riftEntity.id),
+      riftSlots: [riftEntity.id],
+    };
+    const combined = getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]);
+    expect(combined).toEqual(state.inventory);
   });
 
   it('equip changes click output for a click-type entity (CHECKPOINT)', () => {

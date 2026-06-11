@@ -72,7 +72,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, getEquippedInstances(state.inventory, state.equippedSlots), state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
@@ -152,7 +152,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, getEquippedInstances(state.inventory, state.equippedSlots), state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);

@@ -3,7 +3,7 @@ import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
 import { addToAlmanac } from '../entities/drops';
-import { getDerivedUnlockedSlotCount } from '../entities/effects';
+import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
 import {
   applyFusionOutput,
   consumeFusionInputs,
@@ -25,15 +25,24 @@ type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
 type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
 type FuseAction = Extract<GameAction, { type: 'FUSE_ENTITIES' }>;
 
-/** Raise unlockedSlotCount when stage/almanac progress earns a new slot (never lowers). */
+/** Raise slot counts when stage/almanac progress earns new slots (never lowers). */
 export function syncSlotUnlocks(state: GameState): GameState {
   const stage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
   const derived = getDerivedUnlockedSlotCount(stage.id, state.almanacCollected);
-  if (derived <= state.unlockedSlotCount) return state;
-  return { ...state, unlockedSlotCount: derived };
+  const derivedRift = getDerivedRiftSlotCount(stage.id, state.almanacCollected);
+  if (derived <= state.unlockedSlotCount && derivedRift <= state.unlockedRiftSlotCount) return state;
+  return {
+    ...state,
+    unlockedSlotCount: Math.max(state.unlockedSlotCount, derived),
+    unlockedRiftSlotCount: Math.max(state.unlockedRiftSlotCount, derivedRift),
+  };
 }
 
-/** Equip an owned entity into a slot. Without an explicit slot, the first empty one is used. */
+/**
+ * Equip an owned entity. The gear category is derived from the entity itself —
+ * auto/time entities go to the rift slots, everything else to click slots.
+ * Without an explicit slot, the first empty unlocked one is used.
+ */
 export function handleEquipEntity(state: GameState, action: EquipAction): GameState {
   const entity = findEntityById(action.entityId);
   if (!entity) return state;
@@ -41,32 +50,42 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
   if (!owned || owned.count <= 0) return state;
 
+  const category = getEquipCategory(entity);
+  const slots = category === 'rift' ? state.riftSlots : state.equippedSlots;
+  const slotCount = category === 'rift' ? state.unlockedRiftSlotCount : state.unlockedSlotCount;
+
   let slot = action.slot ?? -1;
   if (slot === -1) {
     // First empty unlocked slot; fall back to replacing slot 0.
     slot = 0;
-    for (let i = 0; i < state.unlockedSlotCount; i++) {
-      if (!state.equippedSlots[i]) { slot = i; break; }
+    for (let i = 0; i < slotCount; i++) {
+      if (!slots[i]) { slot = i; break; }
     }
   }
-  if (slot < 0 || slot >= state.unlockedSlotCount) return state;
+  if (slot < 0 || slot >= slotCount) return state;
   // Same entity cannot occupy two slots.
-  if (state.equippedSlots.some((id, i) => i !== slot && id === action.entityId)) return state;
+  if (slots.some((id, i) => i !== slot && id === action.entityId)) return state;
 
   // Dense array — empty slots hold '' so JSON round-trips cleanly (no holes).
   const next: string[] = [];
-  for (let i = 0; i < state.unlockedSlotCount; i++) next[i] = state.equippedSlots[i] ?? '';
+  for (let i = 0; i < slotCount; i++) next[i] = slots[i] ?? '';
   next[slot] = action.entityId;
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
-  return { ...state, equippedSlots: next };
+  return category === 'rift'
+    ? { ...state, riftSlots: next }
+    : { ...state, equippedSlots: next };
 }
 
 export function handleUnequipEntity(state: GameState, action: UnequipAction): GameState {
-  if (action.slot < 0 || action.slot >= state.equippedSlots.length) return state;
-  if (!state.equippedSlots[action.slot]) return state;
-  const next = state.equippedSlots.map((id, i) => (i === action.slot ? '' : id));
+  const category = action.target ?? 'click';
+  const slots = category === 'rift' ? state.riftSlots : state.equippedSlots;
+  if (action.slot < 0 || action.slot >= slots.length) return state;
+  if (!slots[action.slot]) return state;
+  const next = slots.map((id, i) => (i === action.slot ? '' : id));
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
-  return { ...state, equippedSlots: next };
+  return category === 'rift'
+    ? { ...state, riftSlots: next }
+    : { ...state, equippedSlots: next };
 }
 
 export function handlePurchaseEntity(state: GameState, action: PurchaseAction): GameState {

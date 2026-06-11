@@ -145,7 +145,8 @@ export function GameScreen({
   onOpenLeaderboard,
 }: GameScreenProps) {
   const [shopOpen, setShopOpen] = useState(false);
-  const [entityPanelOpen, setEntityPanelOpen] = useState(false);
+  const [panelView, setPanelView] = useState<null | { page: 'lab' | 'equip' | 'fuse'; category: 'click' | 'rift' }>(null);
+  const entityPanelOpen = panelView !== null;
   const [almanacOpen, setAlmanacOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -186,7 +187,7 @@ export function GameScreen({
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  }, getEquippedInstances(state.inventory, state.equippedSlots), state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
     stage.mechanic === 'reionization'
@@ -235,9 +236,9 @@ export function GameScreen({
   const hasShopNotification = canShowShop && !state.hasSeenCashShopTutorial;
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
   const displayStageNumber = String(displayStage.id).padStart(2, '0');
-  const openEntityPanel = () => {
+  const openEntityPanel = (page: 'lab' | 'equip' | 'fuse' = 'lab', category: 'click' | 'rift' = 'click') => {
     setViewingStageId(null);
-    setEntityPanelOpen(true);
+    setPanelView({ page, category });
     soundManager?.playUIOpen();
   };
   const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
@@ -650,7 +651,8 @@ export function GameScreen({
           gravityMod={state.currentUniverseSeed.gravityMod}
           anomaly={state.currentUniverseSeed.anomaly}
           inventory={state.inventory}
-          equippedSlots={state.equippedSlots}
+          riftSlots={state.riftSlots}
+          onRiftClick={() => openEntityPanel('equip', 'rift')}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -703,12 +705,16 @@ export function GameScreen({
         {shopOpen && canShowShop ? (
           <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => { setShopOpen(false); soundManager?.playUIClose(); }} />
         ) : null}
-        {entityPanelOpen ? (
+        {panelView ? (
           <EntityPanel
+            page={panelView.page}
+            equipCategory={panelView.category}
             currentStageId={stage.id}
             inventory={state.inventory}
             equippedSlots={state.equippedSlots}
             unlockedSlotCount={state.unlockedSlotCount}
+            riftSlots={state.riftSlots}
+            unlockedRiftSlotCount={state.unlockedRiftSlotCount}
             fusionPity={state.fusionPity}
             lastFusionEvent={state.lastFusionEvent}
             quanta={state.quanta}
@@ -721,13 +727,13 @@ export function GameScreen({
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
-            onUnequip={(slot) => { dispatch({ type: 'UNEQUIP_ENTITY', slot }); soundManager?.playUITap(); }}
+            onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
             onFuse={(inputEntityIds) => {
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random() });
               soundManager?.playEntityLevelUp();
             }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
-            onClose={() => { setEntityPanelOpen(false); soundManager?.playUIClose(); }}
+            onClose={() => { setPanelView(null); soundManager?.playUIClose(); }}
             onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
             onUITap={() => soundManager?.playUITap()}
           />
@@ -861,12 +867,30 @@ export function GameScreen({
             ref={entityAnchorRef}
             type="button"
             className={`entity-lab-button ${hasAffordableEntity ? 'affordable' : ''}`}
-            onClick={openEntityPanel}
+            onClick={() => openEntityPanel('lab')}
             aria-label="Open Entity Lab"
           >
             <span className="hud-action-icon" aria-hidden="true">⚗</span>
             <span className="hud-action-label">{t(language, 'entityLabTitle')}</span>
             {hasAffordableEntity ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
+          </button>
+          <button
+            type="button"
+            className="entity-lab-button"
+            onClick={() => openEntityPanel('equip', 'click')}
+            aria-label={t(language, 'equipClickTitle')}
+          >
+            <span className="hud-action-icon" aria-hidden="true">⌖</span>
+            <span className="hud-action-label">{t(language, 'entityEquip')}</span>
+          </button>
+          <button
+            type="button"
+            className="entity-lab-button"
+            onClick={() => openEntityPanel('fuse')}
+            aria-label={t(language, 'fuseTitle')}
+          >
+            <span className="hud-action-icon" aria-hidden="true">⚛</span>
+            <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
           </button>
           <button
             type="button"

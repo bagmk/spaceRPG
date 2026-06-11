@@ -6,6 +6,7 @@ import {
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
+  RIFT_SLOT_UNLOCKS,
   SET_BONUS,
 } from '../balance';
 import { entityMatchesId, findEntityById } from './stageItems';
@@ -122,17 +123,43 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
   }
 }
 
-/** How many equip slots the player has earned (slot 1 free; 2/3 per balance rules). */
-export function getDerivedUnlockedSlotCount(
+/**
+ * Gear category (entity redesign): auto/time entities power the spatial rift;
+ * everything else (click/crit/multiplier/...) is click gear.
+ */
+export type EquipCategory = 'click' | 'rift';
+
+export function getEquipCategory(entity: StageEntity): EquipCategory {
+  return entity.effect.type === 'auto' || entity.effect.type === 'time' ? 'rift' : 'click';
+}
+
+function deriveSlotCount(
+  rules: { slot: number; minStageId?: number; minAlmanacCount?: number }[],
   stageId: number,
   almanacCollected: Record<number, string[]>,
 ): number {
   const almanacTotal = Object.values(almanacCollected).reduce((sum, ids) => sum + ids.length, 0);
   let slots = 1;
-  for (const rule of EQUIP_SLOT_UNLOCKS) {
+  for (const rule of rules) {
     const stageOk = rule.minStageId === undefined || stageId >= rule.minStageId;
     const almanacOk = rule.minAlmanacCount === undefined || almanacTotal >= rule.minAlmanacCount;
     if (stageOk && almanacOk) slots = Math.max(slots, rule.slot);
   }
   return Math.min(3, slots);
+}
+
+/** How many click-gear slots the player has earned (slot 1 free; 2/3 per balance rules). */
+export function getDerivedUnlockedSlotCount(
+  stageId: number,
+  almanacCollected: Record<number, string[]>,
+): number {
+  return deriveSlotCount(EQUIP_SLOT_UNLOCKS, stageId, almanacCollected);
+}
+
+/** How many rift (auto-gear) slots the player has earned. */
+export function getDerivedRiftSlotCount(
+  stageId: number,
+  almanacCollected: Record<number, string[]>,
+): number {
+  return deriveSlotCount(RIFT_SLOT_UNLOCKS, stageId, almanacCollected);
 }

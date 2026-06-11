@@ -130,7 +130,7 @@ export type GameAction =
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
   | { type: 'PURCHASE_ENTITY'; entityId: string }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
-  | { type: 'UNEQUIP_ENTITY'; slot: number }
+  | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
   | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
@@ -190,6 +190,8 @@ export function toPersistentState(state: GameState): PersistentGameState {
     inventory: state.inventory,
     equippedSlots: state.equippedSlots,
     unlockedSlotCount: state.unlockedSlotCount,
+    riftSlots: state.riftSlots,
+    unlockedRiftSlotCount: state.unlockedRiftSlotCount,
     almanacCollected: state.almanacCollected,
     fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,

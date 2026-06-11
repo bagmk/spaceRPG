@@ -111,6 +111,8 @@ export function createSaveSnapshot(state: GameState): SaveState {
     inventory: state.inventory,
     equippedSlots: state.equippedSlots,
     unlockedSlotCount: state.unlockedSlotCount,
+    riftSlots: state.riftSlots,
+    unlockedRiftSlotCount: state.unlockedRiftSlotCount,
     almanacCollected: state.almanacCollected,
     fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,

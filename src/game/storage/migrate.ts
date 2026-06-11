@@ -71,7 +71,8 @@ function clampEntropyForGate(entropy: number, stageIdx: number): number {
 
 type EntityModelFields = Pick<
   PersistentGameState,
-  'inventory' | 'equippedSlots' | 'unlockedSlotCount' | 'almanacCollected' | 'entropy' | 'peakEntropy' | 'fusionPity'
+  | 'inventory' | 'equippedSlots' | 'unlockedSlotCount' | 'riftSlots' | 'unlockedRiftSlotCount'
+  | 'almanacCollected' | 'entropy' | 'peakEntropy' | 'fusionPity'
 >;
 
 /**
@@ -103,8 +104,17 @@ function convertEntityModelV14(record: Partial<SaveState>): EntityModelFields {
   const equippedSlots = isStringArray(record.equippedSlots)
     ? record.equippedSlots.slice(0, unlockedSlotCount)
     : [];
+  const unlockedRiftSlotCount = isFiniteNumber(record.unlockedRiftSlotCount)
+    ? Math.max(1, Math.min(3, Math.floor(record.unlockedRiftSlotCount)))
+    : 1;
+  const riftSlots = isStringArray(record.riftSlots)
+    ? record.riftSlots.slice(0, unlockedRiftSlotCount)
+    : [];
   const fusionPity = isFiniteNumber(record.fusionPity) ? Math.max(0, Math.floor(record.fusionPity)) : 0;
-  return { inventory, equippedSlots, unlockedSlotCount, almanacCollected, entropy, peakEntropy, fusionPity };
+  return {
+    inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount,
+    almanacCollected, entropy, peakEntropy, fusionPity,
+  };
 }
 
 function createDefaultSkillState() {

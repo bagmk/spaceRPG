@@ -227,8 +227,11 @@ interface ParticleFieldProps {
   gravityMod: number;
   anomaly: AnomalyType | null;
   inventory: EntityInstance[];
-  equippedSlots: string[];
+  /** Rift gear ids — shapes the auto-income motes leaking from the rift. */
+  riftSlots: string[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
+  /** Tapping the bottom-left spatial rift opens the rift gear page. */
+  onRiftClick?: () => void;
   onCollision: (payload: CollisionPayload) => void;
 }
 
@@ -802,8 +805,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   gravityMod,
   anomaly,
   inventory,
-  equippedSlots,
+  riftSlots,
   onGatherClick,
+  onRiftClick,
   onCollision,
 }: ParticleFieldProps, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -812,10 +816,10 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   const riftRef = useRef<RiftState>({ nextSpawnAt: 0, spawnIdx: 0, motes: [] });
   const equippedRef = useRef<StageEntity[]>([]);
   useEffect(() => {
-    equippedRef.current = equippedSlots
+    equippedRef.current = riftSlots
       .map((id) => (id ? findEntityById(id) : undefined))
       .filter((e): e is StageEntity => Boolean(e));
-  }, [equippedSlots]);
+  }, [riftSlots]);
   const lastStageId = useRef(stage.id);
   const lastClickId = useRef<number | null>(null);
   const transitionExplosionAt = useRef<number | null>(null);
@@ -1052,23 +1056,6 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           clickEmissionCount >= 6 ? 3 : 2,
         ),
       );
-    }
-    // Equipped entities shape the click emissions — one symbol puff per slot.
-    const equipped = equippedRef.current;
-    const puffNow = performance.now();
-    for (let i = 0; i < equipped.length; i += 1) {
-      const a = (i / equipped.length) * Math.PI * 2 + Math.random() * 0.8;
-      riftRef.current.motes.push({
-        x: lastClickEvent.x,
-        y: lastClickEvent.y,
-        vx: Math.cos(a) * 46,
-        vy: Math.sin(a) * 46 - 22,
-        symbol: equipped[i].visual.symbol,
-        color: equipped[i].visual.color,
-        born: puffNow,
-        lifeMs: 1100,
-        seekCore: false,
-      });
     }
   }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 
@@ -1512,6 +1499,15 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         dragPointerId.current = event.pointerId;
         event.currentTarget.setPointerCapture(event.pointerId);
         const rect = event.currentTarget.getBoundingClientRect();
+        // Tapping the spatial rift opens the rift gear page instead of gathering.
+        if (onRiftClick) {
+          const rawX = event.clientX - rect.left;
+          const rawY = event.clientY - rect.top;
+          if (Math.hypot(rawX - 46, rawY - (rect.height - 84)) <= 32) {
+            onRiftClick();
+            return;
+          }
+        }
         const { x, y, hitRogue } = applySteerNudge(rect, event.clientX, event.clientY);
         const pressureStrength = event.pointerType === 'touch' ? 1.0 : 1.05;
         updatePointerPressure(x, y, event.pointerType, pressureStrength);

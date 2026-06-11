@@ -95,7 +95,7 @@ export function useGameState(): UseGameStateResult {
           stageId: stage.id,
           clickLevel: payload.skills.click.level,
         },
-        getEquippedInstances(payload.inventory ?? [], payload.equippedSlots ?? []),
+        getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? [])]),
         payload.prestigeUpgrades,
       );
       const autoRate = getAutoRate(modifiers);

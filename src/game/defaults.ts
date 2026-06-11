@@ -125,6 +125,8 @@ export function createInitialGameState(now: number): GameState {
     inventory: createDefaultInventory(),
     equippedSlots: [],
     unlockedSlotCount: 1,
+    riftSlots: [],
+    unlockedRiftSlotCount: 1,
     almanacCollected: createDefaultAlmanacCollected(),
     fusionPity: 0,
     prestigeUpgrades: createDefaultPrestigeUpgrades(),
