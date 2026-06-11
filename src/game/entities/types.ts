@@ -98,6 +98,19 @@ export interface EntityInstance {
   count: number;
   /** Upgrade level — duplicates feed level-ups (Phase 3 fusion sink). Starts at 1. */
   level: number;
+  /** Cumulative quanta spent enhancing this stack — partially refunded on fusion. */
+  invested?: number;
+}
+
+/**
+ * Gear category (장비 이원화): auto/time entities power the spatial rift;
+ * everything else (click/crit/multiplier/...) is click gear.
+ * Lives here (dependency-free) so substats/effects can both use it.
+ */
+export type EquipCategory = 'click' | 'rift';
+
+export function getEquipCategory(entity: StageEntity): EquipCategory {
+  return entity.effect.type === 'auto' || entity.effect.type === 'time' ? 'rift' : 'click';
 }
 
 /** Cost of the next purchase given current count. */

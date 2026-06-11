@@ -43,4 +43,8 @@ export interface FusionEvent {
   /** Output hit max count and fed a level-up instead (duplicate sink). */
   leveledUp: boolean;
   entropyBurst: number;
+  /** Quanta returned: enhance-investment refund + at-cap duplicate payout. */
+  refund: number;
+  /** Output was already at max count AND max level — refunded instead. */
+  atCap: boolean;
 }

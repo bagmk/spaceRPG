@@ -133,7 +133,12 @@ export function isPurchasedEntityEntry(value: unknown): value is PurchasedEntity
 export function isEntityInstance(value: unknown): value is EntityInstance {
   if (!value || typeof value !== 'object') return false;
   const r = value as Record<string, unknown>;
-  return typeof r.entityId === 'string' && isFiniteNumber(r.count) && isFiniteNumber(r.level);
+  return (
+    typeof r.entityId === 'string' &&
+    isFiniteNumber(r.count) &&
+    isFiniteNumber(r.level) &&
+    (r.invested === undefined || isFiniteNumber(r.invested))
+  );
 }
 
 export function isAlmanacCollected(value: unknown): value is Record<number, string[]> {

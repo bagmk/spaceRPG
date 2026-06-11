@@ -13,10 +13,11 @@ import {
   SECONDARY_RARITY_COUNT,
   SECONDARY_RARITY_SCALE,
   SECONDARY_STAT_DEFS,
+  SECONDARY_STAT_POOLS,
   STAGE_POWER_BASE,
   type SecondaryStatType,
 } from '../balance';
-import type { StageEntity } from './types';
+import { getEquipCategory, type StageEntity } from './types';
 
 export interface SecondaryStat {
   type: SecondaryStatType;
@@ -24,7 +25,6 @@ export interface SecondaryStat {
   value: number;
 }
 
-const STAT_POOL = Object.keys(SECONDARY_STAT_DEFS) as SecondaryStatType[];
 
 /** FNV-1a — tiny, stable string hash so substats never change between sessions. */
 function hashString(input: string): number {
@@ -49,14 +49,16 @@ export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
 
   const count = SECONDARY_RARITY_COUNT[entity.rarity] ?? 0;
   const rarityScale = SECONDARY_RARITY_SCALE[entity.rarity] ?? 0;
+  // Category-pure pool: click gear never rolls auto stats and vice versa.
+  const pool = SECONDARY_STAT_POOLS[getEquipCategory(entity)];
   const stats: SecondaryStat[] = [];
   if (count > 0 && rarityScale > 0) {
     const taken = new Set<SecondaryStatType>();
-    for (let k = 0; k < count; k++) {
+    for (let k = 0; k < Math.min(count, pool.length); k++) {
       // Linear probe from the hashed start so the k stats are distinct.
-      let idx = hashString(`${entity.id}:${k}`) % STAT_POOL.length;
-      while (taken.has(STAT_POOL[idx])) idx = (idx + 1) % STAT_POOL.length;
-      const type = STAT_POOL[idx];
+      let idx = hashString(`${entity.id}:${k}`) % pool.length;
+      while (taken.has(pool[idx])) idx = (idx + 1) % pool.length;
+      const type = pool[idx];
       taken.add(type);
       const def = SECONDARY_STAT_DEFS[type];
       const stageMult = def.scales ? getStagePowerMult(entity.stageId) : 1;

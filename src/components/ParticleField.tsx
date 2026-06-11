@@ -252,6 +252,8 @@ interface ParticleFieldProps {
   inventory: EntityInstance[];
   /** Rift gear ids — shapes the auto-income motes leaking from the rift. */
   riftSlots: string[];
+  /** Click gear ids — shapes the click emission motes (스펙 §8). */
+  clickSlots: string[];
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   /** Tapping the bottom-left spatial rift opens the rift gear page. */
   onRiftClick?: () => void;
@@ -829,6 +831,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   anomaly,
   inventory,
   riftSlots,
+  clickSlots,
   onGatherClick,
   onRiftClick,
   onCollision,
@@ -843,6 +846,13 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       .map((id) => (id ? findEntityById(id) : undefined))
       .filter((e): e is StageEntity => Boolean(e));
   }, [riftSlots]);
+  const clickGearRef = useRef<StageEntity[]>([]);
+  const clickGearIdxRef = useRef(0);
+  useEffect(() => {
+    clickGearRef.current = clickSlots
+      .map((id) => (id ? findEntityById(id) : undefined))
+      .filter((e): e is StageEntity => Boolean(e));
+  }, [clickSlots]);
   const lastStageId = useRef(stage.id);
   const lastClickId = useRef<number | null>(null);
   const transitionExplosionAt = useRef<number | null>(null);
@@ -1079,6 +1089,28 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           clickEmissionCount >= 6 ? 3 : 2,
         ),
       );
+    }
+    // Equipped click gear shapes the click emission — UI card visuals
+    // (symbol + color) and field particles share entity.visual (스펙 §8).
+    const clickGear = clickGearRef.current;
+    if (clickGear.length > 0) {
+      const puffNow = performance.now();
+      const puffs = lastClickEvent.isCrit ? 2 : 1;
+      for (let i = 0; i < puffs; i += 1) {
+        const gear = clickGear[clickGearIdxRef.current++ % clickGear.length];
+        const a = Math.random() * Math.PI * 2;
+        riftRef.current.motes.push({
+          x: lastClickEvent.x,
+          y: lastClickEvent.y,
+          vx: Math.cos(a) * (lastClickEvent.isCrit ? 64 : 44),
+          vy: Math.sin(a) * (lastClickEvent.isCrit ? 64 : 44) - 20,
+          symbol: gear.visual.symbol,
+          color: gear.visual.color,
+          born: puffNow,
+          lifeMs: lastClickEvent.isCrit ? 1400 : 950,
+          seekCore: false,
+        });
+      }
     }
   }, [clickEmissionCount, clickVfxScale, effectiveThreshold, lastClickEvent, quanta, stage]);
 

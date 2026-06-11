@@ -10,10 +10,13 @@
  */
 
 import {
+  ENHANCE_REFUND_RATE,
   ENTROPY_FUSION_COST_FRAC,
   ENTROPY_FUSION_VALUE_SEC,
   ENTROPY_W_AUTO,
   ENTROPY_W_CLICK,
+  FUSION_CAP_DUP_REFUND_FRAC,
+  FUSION_FAMILY_BIAS,
   FUSION_INPUT_COUNT,
   FUSION_PITY_THRESHOLD,
   FUSION_REF_CPS,
@@ -21,10 +24,11 @@ import {
   FUSION_UP2_CHANCE,
   RARITY_STAGE_GATES,
 } from '../balance';
+import { getSetKey } from './effects';
+import { getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
 import { getEnhanceLevelCap } from './enhance';
-import { findEntityById } from './stageItems';
-import type { EntityInstance, EntityRarity, StageEntity } from './types';
+import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
 
@@ -33,6 +37,10 @@ export interface FusionValidation {
   rarity?: EntityRarity;
   /** Highest stage among the inputs — the output rolls from this stage's pool. */
   stageId?: number;
+  /** Set when ALL inputs share a gear category — the output stays in it. */
+  category?: EquipCategory;
+  /** Set when ALL inputs share a glyph family — biases the output toward it. */
+  familyKey?: string;
 }
 
 /**
@@ -50,6 +58,10 @@ export function validateFusionInputs(
 
   let rarity: EntityRarity | undefined;
   let stageId = 0;
+  let category: EquipCategory | undefined;
+  let mixedCategory = false;
+  let familyKey: string | undefined;
+  let mixedFamily = false;
   for (const [id, count] of needed) {
     const entity = findEntityById(id);
     if (!entity) return { ok: false };
@@ -58,8 +70,20 @@ export function validateFusionInputs(
     if (rarity === undefined) rarity = entity.rarity;
     else if (entity.rarity !== rarity) return { ok: false };
     stageId = Math.max(stageId, entity.stageId);
+    const entityCategory = getEquipCategory(entity);
+    if (category === undefined) category = entityCategory;
+    else if (category !== entityCategory) mixedCategory = true;
+    const family = getSetKey(entity);
+    if (familyKey === undefined) familyKey = family;
+    else if (familyKey !== family) mixedFamily = true;
   }
-  return { ok: true, rarity, stageId };
+  return {
+    ok: true,
+    rarity,
+    stageId,
+    category: mixedCategory ? undefined : category,
+    familyKey: mixedFamily ? undefined : familyKey,
+  };
 }
 
 export interface FusionRarityRoll {
@@ -105,9 +129,43 @@ export function rollFusionRarity(
   return { rarity: inputRarity, rarityUp: false, pityApplicable: true };
 }
 
-/** Pick the output entity for a resolved rarity (same fallback ladder as drops). */
-export function pickFusionOutput(stageId: number, rarity: EntityRarity, pick01: number): StageEntity | null {
-  return pickEntityByRarity(stageId, rarity, pick01);
+export interface FusionOutputBias {
+  /** Same-category inputs guarantee a same-category output (스펙 §7). */
+  category?: EquipCategory;
+  /** Same-family inputs keep the output in that family FUSION_FAMILY_BIAS of the time. */
+  familyKey?: string;
+}
+
+/**
+ * Pick the output entity for a resolved rarity. Category is a hard filter
+ * (falls back to the unfiltered pool only when the stage has no candidate);
+ * family is a probabilistic bias derived from the same pick roll.
+ */
+export function pickFusionOutput(
+  stageId: number,
+  rarity: EntityRarity,
+  pick01: number,
+  bias: FusionOutputBias = {},
+): StageEntity | null {
+  const pool = getEntitiesForStage(stageId);
+  if (pool.length === 0) return null;
+
+  let candidates = pool.filter((e) => e.rarity === rarity);
+  if (candidates.length === 0) return pickEntityByRarity(stageId, rarity, pick01);
+
+  if (bias.category) {
+    const sameCategory = candidates.filter((e) => getEquipCategory(e) === bias.category);
+    if (sameCategory.length > 0) candidates = sameCategory;
+  }
+  if (bias.familyKey) {
+    const familyRoll = (pick01 * 7919) % 1;
+    if (familyRoll < FUSION_FAMILY_BIAS) {
+      const sameFamily = candidates.filter((e) => getSetKey(e) === bias.familyKey);
+      if (sameFamily.length > 0) candidates = sameFamily;
+    }
+  }
+  const index = Math.floor(((pick01 * 9973) % 1) * candidates.length);
+  return candidates[Math.min(index, candidates.length - 1)];
 }
 
 /** Quanta consumed by one fusion — a fixed fraction of the current bank (sink). */
@@ -127,22 +185,60 @@ export function getFusionEntropyBurst(clickPower: number, autoRate: number): num
   return ENTROPY_FUSION_VALUE_SEC * Math.max(rate, 1e-9);
 }
 
+/**
+ * Quanta refunded for the enhance investment riding on the consumed copies:
+ * each consumed copy carries its proportional share of the stack's invested
+ * total, refunded at ENHANCE_REFUND_RATE (스펙 §7 — 투자 비용 일부 환급).
+ */
+export function getExpectedFusionRefund(
+  inventory: EntityInstance[],
+  inputEntityIds: string[],
+): number {
+  const needed = new Map<string, number>();
+  for (const id of inputEntityIds) needed.set(id, (needed.get(id) ?? 0) + 1);
+  let refund = 0;
+  for (const [id, consumed] of needed) {
+    const owned = inventory.find((e) => e.entityId === id);
+    if (!owned || owned.count <= 0) continue;
+    const share = Math.min(1, consumed / owned.count);
+    refund += (owned.invested ?? 0) * share * ENHANCE_REFUND_RATE;
+  }
+  return refund;
+}
+
+export interface ConsumeResult {
+  inventory: EntityInstance[];
+  /** Enhance-investment refund earned by consuming these copies. */
+  refund: number;
+}
+
 /** Consume the input copies (counts may reach 0; entries are kept for the almanac/UI). */
 export function consumeFusionInputs(
   inventory: EntityInstance[],
   inputEntityIds: string[],
-): EntityInstance[] {
+): ConsumeResult {
   const needed = new Map<string, number>();
   for (const id of inputEntityIds) needed.set(id, (needed.get(id) ?? 0) + 1);
-  return inventory.map((e) =>
-    needed.has(e.entityId) ? { ...e, count: e.count - (needed.get(e.entityId) ?? 0) } : e,
-  );
+  const refund = getExpectedFusionRefund(inventory, inputEntityIds);
+  const next = inventory.map((e) => {
+    const consumed = needed.get(e.entityId);
+    if (consumed === undefined) return e;
+    const share = e.count > 0 ? Math.min(1, consumed / e.count) : 0;
+    return {
+      ...e,
+      count: e.count - consumed,
+      invested: Math.max(0, (e.invested ?? 0) * (1 - share)),
+    };
+  });
+  return { inventory: next, refund };
 }
 
 export interface FusionOutputResult {
   inventory: EntityInstance[];
   /** True when the output hit max count and fed a level-up instead (dup sink). */
   leveledUp: boolean;
+  /** Quanta refunded when the output was at max count AND max level (nothing to gain). */
+  capRefund: number;
 }
 
 /** Add the fusion output: stack a copy, or level up when already at max count. */
@@ -153,14 +249,16 @@ export function applyFusionOutput(
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
     // Duplicate sink levels up — but never past the rarity's enhance cap.
+    // Fully capped duplicates pay out quanta instead of vanishing (스펙 §10).
     if (existing.level >= getEnhanceLevelCap(output)) {
-      return { inventory, leveledUp: false };
+      return { inventory, leveledUp: false, capRefund: output.baseCost * FUSION_CAP_DUP_REFUND_FRAC };
     }
     return {
       inventory: inventory.map((e) =>
         e.entityId === output.id ? { ...e, level: e.level + 1 } : e,
       ),
       leveledUp: true,
+      capRefund: 0,
     };
   }
   if (existing) {
@@ -169,7 +267,12 @@ export function applyFusionOutput(
         e.entityId === output.id ? { ...e, count: e.count + 1 } : e,
       ),
       leveledUp: false,
+      capRefund: 0,
     };
   }
-  return { inventory: [...inventory, { entityId: output.id, count: 1, level: 1 }], leveledUp: false };
+  return {
+    inventory: [...inventory, { entityId: output.id, count: 1, level: 1 }],
+    leveledUp: false,
+    capRefund: 0,
+  };
 }

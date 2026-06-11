@@ -51,6 +51,8 @@ export interface Modifiers {
   entropyGainMult: number;
   /** Secondary stat: multiplies the fusion entropy burst. */
   fusionBurstMult: number;
+  /** Secondary stat: multiplies offline income (rift gear). */
+  offlineGainMult: number;
   apexMult: number;
   inflatonEchoSec: number;
   dilation: boolean;
@@ -87,6 +89,7 @@ export function defaultModifiers(): Modifiers {
     dropChanceMult: 1,
     entropyGainMult: 1,
     fusionBurstMult: 1,
+    offlineGainMult: 1,
     apexMult: 1,
     inflatonEchoSec: 0,
     dilation: false,

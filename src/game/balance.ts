@@ -265,6 +265,12 @@ export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   epic: 20,
   legendary: 25,
 };
+/** Fraction of a consumed stack's invested enhance quanta refunded on fusion. */
+export const ENHANCE_REFUND_RATE = 0.6;
+/** At-cap duplicate fusion output refunds this fraction of the output's base cost. */
+export const FUSION_CAP_DUP_REFUND_FRAC = 0.5;
+/** When all fusion inputs share a glyph family, the output stays in that family this often. */
+export const FUSION_FAMILY_BIAS = 0.6;
 
 // ── Secondary stats (A안 — deterministic per-entity composite stats) ────────
 
@@ -276,7 +282,8 @@ export type SecondaryStatType =
   | 'dropRate'
   | 'fusionBurst'
   | 'autoPct'
-  | 'clickPct';
+  | 'clickPct'
+  | 'offlineEff';
 
 /**
  * Base magnitudes at stage 1 / level 1 before the rarity multiplier.
@@ -291,6 +298,17 @@ export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scal
   fusionBurst: { base: 6, scales: false },  // +% fusion entropy burst
   autoPct: { base: 4, scales: true },       // +% auto rate
   clickPct: { base: 3, scales: true },      // +% click power
+  offlineEff: { base: 5, scales: false },   // +% offline income efficiency
+};
+
+/**
+ * Category-pure substat pools (장비 이원화): click gear never rolls auto
+ * stats and rift gear never rolls click stats, so card stats, page stats and
+ * the math all stay in one lane per category.
+ */
+export const SECONDARY_STAT_POOLS: Record<'click' | 'rift', SecondaryStatType[]> = {
+  click: ['critChance', 'critMult', 'comboCap', 'entropyGain', 'dropRate', 'fusionBurst', 'clickPct'],
+  rift: ['autoPct', 'entropyGain', 'dropRate', 'fusionBurst', 'offlineEff'],
 };
 
 /** How many secondary stats each rarity carries (deterministic from entity id). */

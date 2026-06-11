@@ -18,7 +18,7 @@ import {
   type SecondaryStatType,
 } from '../game/balance';
 import { getAutoOutputAnchor, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
-import { getMaxFusionRarityIdx } from '../game/entities/fusion';
+import { getExpectedFusionRefund, getMaxFusionRarityIdx } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getSecondaryStats, getStagePowerMult, type SecondaryStat } from '../game/entities/substats';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
@@ -49,6 +49,7 @@ const SUBSTAT_LABEL_KEY: Record<SecondaryStatType, Parameters<typeof t>[1]> = {
   fusionBurst: 'substatFusionBurst',
   autoPct: 'hudAuto',
   clickPct: 'effectClickPower',
+  offlineEff: 'statOffline',
 };
 
 function getLevelMult(level: number): number {
@@ -190,6 +191,14 @@ export interface PanelStats {
   autoRate: number;
   critChance: number;
   critMult: number;
+  /** Max combo multiplier (base cap + gear bonuses). */
+  comboCapMult: number;
+  /** Offline income efficiency 0..1+. */
+  offlineEff: number;
+  /** Rift emission interval in ms (visual cadence of auto income). */
+  emissionIntervalMs: number;
+  /** Entropy income multiplier from gear. */
+  entropyGainMult: number;
 }
 
 export type PanelPage = 'lab' | 'equip' | 'fuse';
@@ -477,12 +486,20 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
         {tab === 'equip' ? (
           <div className="equip-page">
             <div className="equip-page__stats">
-              {([
-                [t(language, 'effectClickPower'), `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`],
-                [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
-                [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
-                [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
-              ] as [string, string][]).map(([label, value]) => (
+              {(equipCategory === 'click'
+                ? ([
+                    [t(language, 'effectClickPower'), `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`],
+                    [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
+                    [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
+                    [t(language, 'statComboCapMax'), `×${stats.comboCapMult.toFixed(1)}`],
+                  ] as [string, string][])
+                : ([
+                    [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
+                    [t(language, 'statEmission'), `${(stats.emissionIntervalMs / 1000).toFixed(1)}s`],
+                    [t(language, 'statOffline'), `${Math.round(stats.offlineEff * 100)}%`],
+                    [t(language, 'substatEntropyGain'), `×${stats.entropyGainMult.toFixed(2)}`],
+                  ] as [string, string][])
+              ).map(([label, value]) => (
                 <div key={label} className="equip-page__stat">
                   <span className="equip-page__stat-label">{label}</span>
                   <span className="equip-page__stat-value">{value}</span>
@@ -701,6 +718,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                     );
                   })()}
                   <span>{`${t(language, 'fuseCostLabel')} ⚛${formatEntityCost(quanta * ENTROPY_FUSION_COST_FRAC)}`}</span>
+                  {(() => {
+                    const expected = getExpectedFusionRefund(inventory, fuseInputs);
+                    if (expected <= 0) return null;
+                    return (
+                      <span className="fusion-tray__refund">
+                        {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(expected)}`}
+                      </span>
+                    );
+                  })()}
                 </>
               )}
             </div>
@@ -730,17 +756,24 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
               style={{ '--rarity-color': RARITY_COLORS[output.rarity] } as CSSProperties}
             >
               <div className="fusion-result__tag">
-                {lastFusionEvent.rarityUp
-                  ? t(language, 'fuseResultUp')
-                  : lastFusionEvent.leveledUp
-                    ? t(language, 'fuseResultLevel')
-                    : t(language, 'fuseResultNew')}
+                {lastFusionEvent.atCap
+                  ? t(language, 'fuseResultRefund')
+                  : lastFusionEvent.rarityUp
+                    ? t(language, 'fuseResultUp')
+                    : lastFusionEvent.leveledUp
+                      ? t(language, 'fuseResultLevel')
+                      : t(language, 'fuseResultNew')}
               </div>
               <EntityGlyph entity={output} color={RARITY_COLORS[output.rarity]} />
               <div className="fusion-result__name">{entityName(output, language)}</div>
               <div className="fusion-result__burst">
                 {`+${formatEntropyAmount(lastFusionEvent.entropyBurst)} ${t(language, 'hudEntropy')}`}
               </div>
+              {lastFusionEvent.refund > 0 ? (
+                <div className="fusion-result__refund">
+                  {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(lastFusionEvent.refund)}`}
+                </div>
+              ) : null}
             </div>
           </div>
         );

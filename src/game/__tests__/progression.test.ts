@@ -10,10 +10,18 @@ import { isEntityLockedByAnchor } from '../entities/anchors';
 import { defaultModifiers } from '../skills/effects';
 import {
   ENHANCE_LEVEL_CAPS,
+  ENHANCE_REFUND_RATE,
   RARITY_STAGE_GATES,
   SECONDARY_RARITY_COUNT,
+  SECONDARY_STAT_POOLS,
   STAGE_POWER_BASE,
 } from '../balance';
+import { getEquipCategory } from '../entities/types';
+import {
+  applyFusionOutput,
+  getExpectedFusionRefund,
+  pickFusionOutput,
+} from '../entities/fusion';
 import type { GameState } from '../types';
 
 describe('stage power curve', () => {
@@ -147,6 +155,100 @@ describe('enhancement (강화소)', () => {
     applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }]);
     applyEntityModifiers(lv5, [{ entityId: clickEntity.id, count: 1, level: 5 }]);
     expect(lv5.clickPowerMult).toBeGreaterThan(lv1.clickPowerMult);
+  });
+});
+
+describe('gear system (category purity + refunds)', () => {
+  it('substats are category-pure: click gear never rolls auto stats and vice versa', () => {
+    for (const entity of STAGE_ENTITIES) {
+      const pool = SECONDARY_STAT_POOLS[getEquipCategory(entity)];
+      for (const stat of getSecondaryStats(entity)) {
+        expect(pool).toContain(stat.type);
+      }
+    }
+  });
+
+  it("multiplier (click gear) no longer leaks into the auto calculation", () => {
+    const multiplierEntity = STAGE_ENTITIES.find((e) => e.effect.type === 'multiplier')!;
+    const mods = defaultModifiers();
+    applyEntityModifiers(mods, [{ entityId: multiplierEntity.id, count: 1, level: 1 }]);
+    expect(mods.clickPowerMult).toBeGreaterThan(1);
+    // autoRateMult may only move via an autoPct substat — impossible for click gear now.
+    expect(mods.autoRateMult).toBe(1);
+  });
+
+  it('ENHANCE_ENTITY accumulates invested quanta on the stack', () => {
+    const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
+    const cost1 = getEnhanceCost(entity, 1);
+    const cost2 = getEnhanceCost(entity, 2);
+    let state: GameState = {
+      ...createInitialGameState(0),
+      quanta: cost1 + cost2 + 10,
+      inventory: [{ entityId: entity.id, count: 1, level: 1 }],
+    };
+    state = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
+    state = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
+    expect(state.inventory[0].level).toBe(3);
+    expect(state.inventory[0].invested).toBeCloseTo(cost1 + cost2, 5);
+  });
+
+  it('fusing enhanced copies refunds part of the investment (UI estimate matches payout)', () => {
+    const commons = getEntitiesForStage(1).filter((e) => e.rarity === 'common');
+    const input = commons[0];
+    const invested = 900;
+    const state: GameState = {
+      ...createInitialGameState(0),
+      quanta: 1000,
+      inventory: [{ entityId: input.id, count: 3, level: 4, invested }],
+    };
+    const inputIds = [input.id, input.id, input.id];
+    const expected = getExpectedFusionRefund(state.inventory, inputIds);
+    expect(expected).toBeCloseTo(invested * ENHANCE_REFUND_RATE, 5);
+
+    const next = gameReducer(state, {
+      type: 'FUSE_ENTITIES', inputEntityIds: inputIds, rarityRoll: 0.99, pickRoll: 0.1,
+    });
+    expect(next.lastFusionEvent!.refund).toBeCloseTo(expected, 5);
+    // quanta = start - 10% cost + refund (event may add nothing else at this roll)
+    expect(next.quanta).toBeCloseTo(1000 - 100 + expected, 3);
+    // remaining stack keeps no stale investment (all copies consumed)
+    const remaining = next.inventory.find((e) => e.entityId === input.id);
+    expect(remaining?.invested ?? 0).toBeCloseTo(0, 5);
+  });
+
+  it('at-cap duplicates refund instead of vanishing', () => {
+    const target = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
+    const result = applyFusionOutput(
+      [{ entityId: target.id, count: Math.max(1, target.maxCount), level: ENHANCE_LEVEL_CAPS.common }],
+      target,
+    );
+    expect(result.leveledUp).toBe(false);
+    expect(result.capRefund).toBeGreaterThan(0);
+  });
+
+  it('same-category inputs guarantee a same-category fusion output', () => {
+    // Every pick roll at a late stage must stay in the rift category.
+    for (let i = 0; i < 25; i++) {
+      const out = pickFusionOutput(10, 'rare', i / 25, { category: 'rift' });
+      expect(out).not.toBeNull();
+      expect(getEquipCategory(out!)).toBe('rift');
+    }
+    for (let i = 0; i < 25; i++) {
+      const out = pickFusionOutput(10, 'rare', i / 25, { category: 'click' });
+      expect(out).not.toBeNull();
+      expect(getEquipCategory(out!)).toBe('click');
+    }
+  });
+
+  it('offlineEff substat feeds offlineGainMult', () => {
+    const carrier = STAGE_ENTITIES.find((e) =>
+      getSecondaryStats(e).some((sub) => sub.type === 'offlineEff'),
+    );
+    expect(carrier).toBeDefined();
+    if (!carrier) return;
+    const mods = defaultModifiers();
+    applyEntityModifiers(mods, [{ entityId: carrier.id, count: 1, level: 1 }]);
+    expect(mods.offlineGainMult).toBeGreaterThan(1);
   });
 });
 

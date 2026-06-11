@@ -652,6 +652,7 @@ export function GameScreen({
           anomaly={state.currentUniverseSeed.anomaly}
           inventory={state.inventory}
           riftSlots={state.riftSlots}
+          clickSlots={state.equippedSlots}
           onRiftClick={() => openEntityPanel('equip', 'rift')}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
@@ -723,6 +724,16 @@ export function GameScreen({
               autoRate: displayedAutoRate,
               critChance: getCritChance(state.skills.crit.level, 0, modifiers),
               critMult: getCritMultiplier(state.skills.crit.level, modifiers),
+              comboCapMult:
+                TUNING.COMBO_MULT_MAX +
+                (state.singularityUnlocks.includes('free_combo') ? 2 : 0) +
+                modifiers.comboCapAdd,
+              offlineEff:
+                (modifiers.hawkingEcho || state.singularityUnlocks.includes('hawking_echo')
+                  ? 1
+                  : TUNING.OFFLINE_BASE_RATE) * modifiers.offlineGainMult,
+              emissionIntervalMs: Math.min(2200, Math.max(240, 1500 / Math.log10(10 + displayedAutoRate))),
+              entropyGainMult: modifiers.entropyGainMult,
             }}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}

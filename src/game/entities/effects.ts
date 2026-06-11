@@ -96,10 +96,9 @@ export function applyEntityModifiers(
         mods.comboCapAdd += total;
         break;
       case 'multiplier':
-        // All-source bonus: boosts click, auto, and crit — NOT time fill rate.
-        // Time is governed solely by 'time' entities and the time skill tree.
+        // Click-gear "all sources": click + crit only. Auto belongs to rift
+        // gear — click gear must never leak into the auto calculation (스펙 §10).
         mods.clickPowerMult *= 1 + (total * stagePower) / 100;
-        mods.autoRateMult *= 1 + (total * stagePower) / 100;
         mods.critMultMult *= 1 + (total * stagePower) / 200;
         break;
     }
@@ -131,6 +130,9 @@ export function applyEntityModifiers(
           break;
         case 'clickPct':
           mods.clickPowerMult *= 1 + subTotal / 100;
+          break;
+        case 'offlineEff':
+          mods.offlineGainMult *= 1 + subTotal / 100;
           break;
       }
     }
@@ -167,15 +169,8 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
   }
 }
 
-/**
- * Gear category (entity redesign): auto/time entities power the spatial rift;
- * everything else (click/crit/multiplier/...) is click gear.
- */
-export type EquipCategory = 'click' | 'rift';
-
-export function getEquipCategory(entity: StageEntity): EquipCategory {
-  return entity.effect.type === 'auto' || entity.effect.type === 'time' ? 'rift' : 'click';
-}
+// Category helper lives in ./types (dependency-free); re-exported for callers.
+export { getEquipCategory, type EquipCategory } from './types';
 
 function deriveSlotCount(
   rules: { slot: number; minStageId?: number; minAlmanacCount?: number }[],

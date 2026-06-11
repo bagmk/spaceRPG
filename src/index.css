@@ -12549,3 +12549,9 @@ button.stat-header-item {
 .fusion-tray__cap {
   color: #ffb347;
 }
+
+.fusion-tray__refund,
+.fusion-result__refund {
+  color: #e9b94a;
+  font-size: 11px;
+}

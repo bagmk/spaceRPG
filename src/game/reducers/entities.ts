@@ -149,12 +149,16 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   const rarityResult = rollFusionRarity(
     validation.rarity, action.rarityRoll, state.fusionPity, currentStageIdForFusion,
   );
-  const output = pickFusionOutput(validation.stageId, rarityResult.rarity, action.pickRoll);
+  const output = pickFusionOutput(validation.stageId, rarityResult.rarity, action.pickRoll, {
+    category: validation.category,
+    familyKey: validation.familyKey,
+  });
   if (!output) return state;
 
   const cost = getFusionQuantaCost(state.quanta);
-  const consumed = consumeFusionInputs(state.inventory, action.inputEntityIds);
-  const { inventory, leveledUp } = applyFusionOutput(consumed, output);
+  const { inventory: consumed, refund: enhanceRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
+  const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output);
+  const totalRefund = enhanceRefund + capRefund;
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
@@ -170,7 +174,7 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
-    quanta: Math.max(0, state.quanta - cost),
+    quanta: Math.max(0, state.quanta - cost + totalRefund),
     entropy: nextEntropy,
     peakEntropy: Math.max(state.peakEntropy, nextEntropy),
     inventory,
@@ -183,6 +187,8 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       rarityUp: rarityResult.rarityUp,
       leveledUp,
       entropyBurst: burst,
+      refund: totalRefund,
+      atCap: capRefund > 0,
     },
   }));
 }
@@ -208,7 +214,9 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     ...state,
     quanta: state.quanta - cost,
     inventory: state.inventory.map((e) =>
-      e.entityId === owned.entityId ? { ...e, level: e.level + 1 } : e,
+      e.entityId === owned.entityId
+        ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
+        : e,
     ),
   });
 }
