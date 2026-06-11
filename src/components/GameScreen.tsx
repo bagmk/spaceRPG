@@ -8,7 +8,6 @@ import {
   formatEntropyAmount,
   formatEntropyParts,
   formatGameNumberShort,
-  formatProgressNumberParts,
   formatWhole,
   canCondense as canCondenseNow,
   getAutoRate,
@@ -178,7 +177,6 @@ export function GameScreen({
     ? getEffectiveThreshold(displayStage, state.cumulativeBoost)
     : effectiveThreshold;
   const displayQuanta = state.quanta;
-  const displayProgress01 = getProgress(displayQuanta, displayEffectiveThreshold);
   const modifiers = getActiveModifiers(state.skills, {
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
@@ -237,7 +235,6 @@ export function GameScreen({
           stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
         )
       : cosmicClockFromGauge;
-  const matterReadout = formatProgressNumberParts(displayQuanta, displayEffectiveThreshold);
   const timeReadout = formatCosmicTimeProgressParts(displayedCosmicClock, displayStage.cosmicTimeSec);
   const entropyPreviewReadout = formatEntropyParts(entropyPreview);
   const canShowShop = isCashShopUnlocked(state);
@@ -760,6 +757,9 @@ export function GameScreen({
                     <span className="hud-entropy-readout">
                       <span>{t(language, 'hudQuanta')}</span>
                       <strong>{formatGameNumberShort(state.quanta)}</strong>
+                      {displayedAutoRate > 0 && !isViewingPastStage ? (
+                        <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
+                      ) : null}
                     </span>
                 </div>
               </div>
@@ -777,24 +777,6 @@ export function GameScreen({
                   </div>
                   <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
-                  </div>
-                </div>
-                <div className="hud-meter">
-                  <div className="hud-meter-row">
-                    <span className="hud-meter-label">
-                      <span className="hud-meter-label-text">{t(language, 'hudQuanta')}</span>
-                      {displayedAutoRate > 0 && !isViewingPastStage ? (
-                        <span className="hud-auto-rate">{`${formatAutoRateValue(displayedAutoRate)}/s`}</span>
-                      ) : null}
-                    </span>
-                    <span className="hud-readout">
-                      <span className="hud-readout-value">{matterReadout.value}</span>
-                      <span className="hud-readout-exponent">{matterReadout.exponent ?? ''}</span>
-                      <span className="hud-readout-unit">{matterReadout.unit}</span>
-                    </span>
-                  </div>
-                  <div className="hud-gauge hud-quanta-gauge" aria-label="Matter progress">
-                    <div className="hud-gauge-fill hud-quanta-fill" style={{ width: `${Math.min(100, displayProgress01 * 100)}%` }} />
                   </div>
                   <div className="hud-time-readout-faint">
                     <span>{t(language, 'hudTime')}</span>
