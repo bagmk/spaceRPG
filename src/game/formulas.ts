@@ -129,6 +129,16 @@ export function formatEntropyAmount(entropyKilobytes: number): string {
   return `${readout.value} ${readout.unit}`;
 }
 
+/** Compact "current / target" entropy pair — merges the unit when both share it. */
+export function formatEntropyPair(currentKilobytes: number, targetKilobytes: number): string {
+  const current = formatEntropyParts(currentKilobytes);
+  const target = formatEntropyParts(targetKilobytes);
+  if (current.unit === target.unit) {
+    return `${current.value} / ${target.value} ${target.unit}`;
+  }
+  return `${current.value} ${current.unit} / ${target.value} ${target.unit}`;
+}
+
 function trimCompactNumber(value: string): string {
   return value
     .replace(/\.0+(?=($|E|e))/, '')

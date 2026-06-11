@@ -484,6 +484,14 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 8px #bb8cff;
 }
 
+/* Gate readout must never wrap or clip mid-number. */
+.hud-meter-row > span.hud-entropy-gate {
+  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: normal;
+  flex-shrink: 0;
+}
+
 /* Equip system (entity redesign Phase 2) */
 .entity-card__equipped-badge {
   position: absolute;
@@ -711,14 +719,6 @@ button.hud-stage-title--clickable:hover {
   100% { transform: scale(1); opacity: 1; }
 }
 
-.hud-time-readout-faint {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 3px;
-  font-size: 9px;
-  color: #46d8c4;
-  opacity: 0.45;
-}
 
 .hud-time-estimate {
   margin-top: 3px;

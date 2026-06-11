@@ -4,9 +4,9 @@ import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
 import {
   formatAutoRateValue,
-  formatCosmicTimeProgressParts,
   formatEntropyAmount,
   formatEntropyParts,
+  formatEntropyPair,
   formatGameNumberShort,
   formatWhole,
   canCondense as canCondenseNow,
@@ -23,7 +23,6 @@ import { getEquippedInstances } from '../game/entities/effects';
 import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
-import { getStageStartCosmicTime } from '../game/timeFlow';
 import {
   getActiveShopBoostMultiplier,
   getOfflineRewardCapSec,
@@ -227,15 +226,6 @@ export function GameScreen({
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
-  const cosmicClockFromGauge = state.cosmicClockSec;
-  const displayedCosmicClock =
-    state.currentUniverseSeed.anomaly === 'inverted_time'
-      ? Math.max(
-          getStageStartCosmicTime(state.stageIdx),
-          stage.cosmicTimeSec - (cosmicClockFromGauge - getStageStartCosmicTime(state.stageIdx)),
-        )
-      : cosmicClockFromGauge;
-  const timeReadout = formatCosmicTimeProgressParts(displayedCosmicClock, displayStage.cosmicTimeSec);
   const entropyPreviewReadout = formatEntropyParts(entropyPreview);
   const canShowShop = isCashShopUnlocked(state);
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > wallNow);
@@ -780,15 +770,11 @@ export function GameScreen({
                       <span className="hud-meter-label-text">{t(language, 'hudEntropy')}</span>
                     </span>
                     <span className="hud-readout hud-entropy-gate">
-                      <span className="hud-readout-value">{`${formatEntropyAmount(state.entropy)} / ${formatEntropyAmount(stage.entropyThreshold)}`}</span>
+                      <span className="hud-readout-value">{formatEntropyPair(state.entropy, stage.entropyThreshold)}</span>
                     </span>
                   </div>
                   <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
-                  </div>
-                  <div className="hud-time-readout-faint">
-                    <span>{t(language, 'hudTime')}</span>
-                    <span>{`${timeReadout.value}${timeReadout.exponent ?? ''}${timeReadout.unit}`}</span>
                   </div>
                 </div>
               </div>
