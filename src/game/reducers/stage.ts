@@ -28,6 +28,7 @@ import {
   buildAtlasEntry,
 } from './helpers';
 import { createDefaultEndingProgressFlags } from '../defaults';
+import { syncSlotUnlocks } from './entities';
 
 type StartCondenseAction = Extract<GameAction, { type: 'START_CONDENSE' }>;
 type AdvanceStageAction = Extract<GameAction, { type: 'ADVANCE_STAGE' }>;
@@ -110,7 +111,7 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     clickRateLog: nextClickRateLog,
     stageClicksAtStageStart: progressedState.totalClicks,
   };
-  return withCurrentUniverseEndingProgress({ ...nextState, ...resetMechanicState(nextState) });
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({ ...nextState, ...resetMechanicState(nextState) }));
 }
 
 export function handleSelectEnding(state: GameState, action: SelectEndingAction): GameState {

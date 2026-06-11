@@ -60,6 +60,25 @@ function pickRarity(pick01: number, weights: Record<EntityRarity, number>): Enti
 }
 
 /**
+ * Pick an entity of the target rarity from a stage pool, falling back down the
+ * rarity ladder when the pool lacks that rarity. Shared by drops and fusion.
+ */
+export function pickEntityByRarity(stageId: number, rarity: EntityRarity, pick01: number): StageEntity | null {
+  const pool = getEntitiesForStage(stageId);
+  if (pool.length === 0) return null;
+  const rarityIdx = RARITY_ORDER.indexOf(rarity);
+  let candidates: StageEntity[] = [];
+  for (let i = rarityIdx; i >= 0; i--) {
+    candidates = pool.filter((e) => e.rarity === RARITY_ORDER[i]);
+    if (candidates.length > 0) break;
+  }
+  if (candidates.length === 0) candidates = pool;
+  // Re-spread the roll so one 0..1 value covers both rarity and index decisions.
+  const index = Math.floor(((pick01 * 9973) % 1) * candidates.length);
+  return candidates[Math.min(index, candidates.length - 1)];
+}
+
+/**
  * Roll an entity drop from the stage pool. Returns null when nothing drops.
  * `chance` is the pre-computed drop probability (click vs collision differ).
  */
@@ -70,22 +89,8 @@ export function rollEntityDrop(
   context: DropContext = {},
 ): StageEntity | null {
   if (rolls.roll >= chance) return null;
-  const pool = getEntitiesForStage(stageId);
-  if (pool.length === 0) return null;
-
   const rarity = pickRarity(rolls.pickRoll, getRarityWeights(context));
-  // Fall back down the rarity ladder when the stage pool lacks that rarity.
-  const rarityIdx = RARITY_ORDER.indexOf(rarity);
-  let candidates: StageEntity[] = [];
-  for (let i = rarityIdx; i >= 0; i--) {
-    candidates = pool.filter((e) => e.rarity === RARITY_ORDER[i]);
-    if (candidates.length > 0) break;
-  }
-  if (candidates.length === 0) candidates = pool;
-
-  // Reuse pickRoll's fractional spread for the index so one roll covers both decisions.
-  const index = Math.floor(((rolls.pickRoll * 9973) % 1) * candidates.length);
-  return candidates[Math.min(index, candidates.length - 1)];
+  return pickEntityByRarity(stageId, rarity, rolls.pickRoll);
 }
 
 /** Collision drops use a flat, higher chance. */

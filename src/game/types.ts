@@ -11,7 +11,7 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from './types/events';
+import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent } from './types/events';
 import type { SkillState, SkillTreeId } from './skills/types';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
@@ -281,6 +281,8 @@ export interface SaveState {
   unlockedSlotCount: number;
   /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
   almanacCollected: Record<number, string[]>;
+  /** Consecutive fusions without a rarity upgrade — D4 pity counter. */
+  fusionPity: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
   peakEntropy: number;
 }
@@ -297,6 +299,7 @@ export interface GameState extends PersistentGameState {
   lastClickEvent: FloatingClickEvent | null;
   lastCollisionEvent: FloatingCollisionEvent | null;
   lastEncounterEvent: EncounterEvent | null;
+  lastFusionEvent: FusionEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
   offlineEntropyGained: number;

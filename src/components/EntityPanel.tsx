@@ -1,15 +1,23 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
-import type { EntityInstance } from '../game/types';
+import type { EntityInstance, FusionEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
-import { getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { findEntityById, getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import {
+  ENTROPY_FUSION_COST_FRAC,
+  EQUIP_SLOT_UNLOCKS,
+  FUSION_INPUT_COUNT,
+  FUSION_PITY_THRESHOLD,
+  FUSION_UP1_CHANCE,
+  FUSION_UP2_CHANCE,
+} from '../game/balance';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
-import { formatAutoRateValue, getCosmicTimeFillRate } from '../game/formulas';
+import { formatAutoRateValue, formatEntropyAmount, getCosmicTimeFillRate } from '../game/formulas';
 import { EntityGlyph } from './EntityGlyph';
 import { t, stageName, type Lang } from '../i18n';
 
@@ -134,20 +142,45 @@ interface Props {
   currentStageId: number;
   inventory: EntityInstance[];
   equippedSlots: string[];
+  unlockedSlotCount: number;
+  fusionPity: number;
+  lastFusionEvent: FusionEvent | null;
   quanta: number;
   language: Lang;
   onPurchase: (entityId: string) => void;
   onEquip: (entityId: string) => void;
   onUnequip: (slot: number) => void;
+  onFuse: (inputEntityIds: string[]) => void;
+  onClearFusionEvent: (id: number) => void;
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
   onUITap?: () => void;
 }
 
-export function EntityPanel({ currentStageId, inventory, equippedSlots, quanta, language, onPurchase, onEquip, onUnequip, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ currentStageId, inventory, equippedSlots, unlockedSlotCount, fusionPity, lastFusionEvent, quanta, language, onPurchase, onEquip, onUnequip, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
+  const [fuseMode, setFuseMode] = useState(false);
+  const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
+
+  const addFuseInput = (entity: StageEntity) => {
+    if (fuseInputs.length >= FUSION_INPUT_COUNT) return;
+    const owned = inventory.find((e) => e.entityId === entity.id);
+    const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
+    if (!owned || owned.count <= usedCopies) return;
+    if (trayRarity && entity.rarity !== trayRarity) return;
+    setFuseInputs((current) => [...current, entity.id]);
+    onUITap?.();
+  };
+
+  // Auto-dismiss the fusion result reveal.
+  useEffect(() => {
+    if (!lastFusionEvent) return undefined;
+    const timeoutId = window.setTimeout(() => onClearFusionEvent(lastFusionEvent.id), 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [lastFusionEvent, onClearFusionEvent]);
 
   const accessibleStages = useMemo(
     () => STAGES.filter((s) => s.id <= currentStageId),
@@ -254,6 +287,55 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, quanta, 
           </div>
         </div>
 
+        {/* Equip slots + fusion forge toggle (entity redesign Phase 2/3) */}
+        <div className="equip-fuse-bar">
+          <div className="equip-slots-row">
+            {Array.from({ length: 3 }, (_, i) => {
+              if (i < unlockedSlotCount) {
+                const slotId = equippedSlots[i];
+                const slotEntity = slotId ? findEntityById(slotId) : undefined;
+                return (
+                  <div key={i} className={`equip-slot ${slotEntity ? 'equip-slot--filled' : ''}`}>
+                    {slotEntity ? (
+                      <>
+                        <span className="equip-slot__name" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                          {entityName(slotEntity, language)}
+                        </span>
+                        <button
+                          type="button"
+                          className="equip-slot__remove"
+                          aria-label={t(language, 'entityUnequip')}
+                          onClick={() => onUnequip(i)}
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : (
+                      <span className="equip-slot__empty">{t(language, 'equipSlotEmpty')}</span>
+                    )}
+                  </div>
+                );
+              }
+              const rule = EQUIP_SLOT_UNLOCKS.find((r) => r.slot === i + 1);
+              const hint = rule?.minStageId !== undefined
+                ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
+                : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
+              return (
+                <div key={i} className="equip-slot equip-slot--locked">
+                  <span className="equip-slot__empty">{`🔒 ${hint}`}</span>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className={`fuse-toggle ${fuseMode ? 'fuse-toggle--on' : ''}`}
+            onClick={() => { setFuseMode((on) => !on); setFuseInputs([]); onUITap?.(); }}
+          >
+            {t(language, 'fuseTitle')}
+          </button>
+        </div>
+
         {/* Cleared stage banner + back button */}
         {selectedStage && selectedStage.id < currentStageId && (
           <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
@@ -296,7 +378,10 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, quanta, 
                 language={language}
                 rarityColor={RARITY_COLORS[entity.rarity]}
                 onPurchase={onPurchase}
-                onInspect={() => { setInspectedEntityId(entity.id); onUITap?.(); }}
+                onInspect={() => {
+                  if (fuseMode) { addFuseInput(entity); return; }
+                  setInspectedEntityId(entity.id); onUITap?.();
+                }}
                 animDelay={idx * 45}
                 canPurchase={selectedStageId <= currentStageId && !anchorLocked}
                 anchorLockedBy={anchorLocked ? anchorName : undefined}
@@ -306,7 +391,91 @@ export function EntityPanel({ currentStageId, inventory, equippedSlots, quanta, 
             );
           })}
         </div>
+
+        {/* Fusion tray (Phase 3) */}
+        {fuseMode ? (
+          <div className="fusion-tray">
+            <div className="fusion-tray__slots">
+              {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {
+                const inputId = fuseInputs[i];
+                const inputEntity = inputId ? findEntityById(inputId) : undefined;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`fusion-tray__slot ${inputEntity ? 'fusion-tray__slot--filled' : ''}`}
+                    onClick={() => {
+                      if (!inputId) return;
+                      setFuseInputs((current) => current.filter((_, j) => j !== i));
+                    }}
+                  >
+                    {inputEntity ? (
+                      <span style={{ color: RARITY_COLORS[inputEntity.rarity] }}>{inputEntity.formula}</span>
+                    ) : (
+                      <span className="fusion-tray__plus">+</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="fusion-tray__info">
+              {fuseInputs.length === 0 ? (
+                <span>{t(language, 'fuseHint')}</span>
+              ) : (
+                <>
+                  <span>
+                    {`${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}% · ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%`}
+                  </span>
+                  {trayRarity !== 'legendary' ? (
+                    <span className="fusion-tray__pity">
+                      {t(language, 'fusePity').replace('{n}', String(Math.max(0, FUSION_PITY_THRESHOLD - fusionPity)))}
+                    </span>
+                  ) : null}
+                  <span>{`${t(language, 'fuseCostLabel')} ⚛${formatEntityCost(quanta * ENTROPY_FUSION_COST_FRAC)}`}</span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              className="fusion-tray__fuse"
+              disabled={fuseInputs.length !== FUSION_INPUT_COUNT}
+              onClick={() => { onFuse(fuseInputs); setFuseInputs([]); }}
+            >
+              {t(language, 'fuseButton')}
+            </button>
+          </div>
+        ) : null}
       </aside>
+      {/* Fusion result reveal */}
+      {lastFusionEvent ? (() => {
+        const output = findEntityById(lastFusionEvent.outputEntityId);
+        if (!output) return null;
+        return (
+          <div
+            className="fusion-result"
+            role="status"
+            onClick={(e) => { e.stopPropagation(); onClearFusionEvent(lastFusionEvent.id); }}
+          >
+            <div
+              className={`fusion-result__card fusion-result__card--${output.rarity} ${lastFusionEvent.rarityUp ? 'fusion-result__card--up' : ''}`}
+              style={{ '--rarity-color': RARITY_COLORS[output.rarity] } as CSSProperties}
+            >
+              <div className="fusion-result__tag">
+                {lastFusionEvent.rarityUp
+                  ? t(language, 'fuseResultUp')
+                  : lastFusionEvent.leveledUp
+                    ? t(language, 'fuseResultLevel')
+                    : t(language, 'fuseResultNew')}
+              </div>
+              <EntityGlyph entity={output} color={RARITY_COLORS[output.rarity]} />
+              <div className="fusion-result__name">{entityName(output, language)}</div>
+              <div className="fusion-result__burst">
+                {`+${formatEntropyAmount(lastFusionEvent.entropyBurst)} ${t(language, 'hudEntropy')}`}
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
       {inspectedEntity ? (
         <EntityDetailCard
           entity={inspectedEntity}

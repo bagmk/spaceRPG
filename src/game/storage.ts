@@ -112,6 +112,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     equippedSlots: state.equippedSlots,
     unlockedSlotCount: state.unlockedSlotCount,
     almanacCollected: state.almanacCollected,
+    fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
   };

@@ -102,6 +102,7 @@ export function createInitialGameState(now: number): GameState {
     lastClickEvent: null,
     lastCollisionEvent: null,
     lastEncounterEvent: null,
+    lastFusionEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -125,6 +126,7 @@ export function createInitialGameState(now: number): GameState {
     equippedSlots: [],
     unlockedSlotCount: 1,
     almanacCollected: createDefaultAlmanacCollected(),
+    fusionPity: 0,
     prestigeUpgrades: createDefaultPrestigeUpgrades(),
     peakEntropy: 0,
   };

@@ -116,7 +116,16 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 2 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 3 진입**
+- Current Phase: **Phase 3 — 완료 (2026-06-10). CHECKPOINT 사용자 검토 대기, 통과 시 Phase 4 진입**
+- Phase 3 결과 (융합/가챠 + 슬롯 2·3 + 세트):
+  - 융합(D4): `FUSE_ENTITIES` — 동일 등급 3개 소모 + 물질 10%(은행 비례 싱크) → 같은 스테이지(입력 중 최고) 풀에서 가중 랜덤 출력. odds: +1등급 40% / +2등급 5% / 유지 55%. **pity: 연속 5회 실패 시 +1 보장**(`fusionPity` 세이브 필드 — v14에 합산, v14 미배포라 버전 범프 불필요). 전설 입력은 pity 비적용.
+  - 엔트로피 버스트: `ENTROPY_FUSION_VALUE_SEC(30s) × (wClick×clickPower×refCps3 + wAuto×autoRate)` — Phase 0 sim의 버스트 모델 미러링(active 기여 29~43% 유지 목표). entropy_echo 프레스티지 배율 적용, peakEntropy 갱신.
+  - 중복 sink: 출력이 maxCount 도달 엔티티면 **레벨업**(+25%/레벨 효과 배율 — `ENTITY_LEVEL_EFFECT_BONUS`). applyEntityModifiers가 level 반영.
+  - 세트 보너스: setKey = glyph 패밀리(별도 데이터 불필요). 장착 2개 일치 ×1.25 click/auto, 3개 일치 ×1.6 + 크리확률 +5% (`SET_BONUS`).
+  - 슬롯 해금(데이터: `EQUIP_SLOT_UNLOCKS`): 슬롯2 = 4시대 진입, 슬롯3 = 도감 30종. `syncSlotUnlocks`가 ADVANCE_STAGE/구매/드랍/융합에서 동기화(내려가지 않음). 장착은 기본 첫 빈 슬롯.
+  - UI(D5 점진 개조): EntityPanel 상단 장착 슬롯 행(해제 ✕, 잠금 힌트) + 융합로 토글 → 카드 탭으로 입력 트레이(3칸, 등급 강제) + odds/pity/비용 + FUSE + 결과 리빌 카드(등급 플래시 + 엔트로피 버스트, 2.6s 자동 닫힘). i18n 16키 EN/KO.
+  - 검증: tsc 클린, vitest 683/683 (신규 fusion/sets/slots 10건), build 통과.
+  - Phase 4 이월: 스킬 트리 제거 + time→오프라인 수익(D3 완성), 페이싱 재검증(simulator에 융합 버스트 실측 반영), casual/hardcore 스프레드 압축, idle stage 13 floor, 장착/세트 스케일 재조정, 도감 완성 % 메타 보너스 + 프레스티지 carry 선택 UI(D2).
 - Phase 2 결과 (장착 슬롯 1 + 흡수 시작):
   - 액션: `EQUIP_ENTITY {entityId, slot?}` / `UNEQUIP_ENTITY {slot}`. 검증: 소유 필수, slot < unlockedSlotCount(현재 1), 동일 엔티티 중복 슬롯 금지. 점유 슬롯에 장착 시 교체. 슬롯 배열은 ''로 dense 유지(JSON 안전).
   - **흡수 시작: 엔티티 효과는 이제 장착된 것만 적용.** `getEquippedInstances(inventory, equippedSlots)`가 슬롯→인벤토리 스택 해석(stale id 무시), 모든 getActiveModifiers 호출부(tick/click/collision/offline/HUD) 전환. 보유=패시브 버프 모델 폐기.

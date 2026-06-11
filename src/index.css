@@ -515,6 +515,202 @@ button.hud-stage-title--clickable:hover {
   background: transparent;
 }
 
+/* Equip slots row + fusion forge (entity redesign Phase 3) */
+.equip-fuse-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.equip-slots-row {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.equip-slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.equip-slot--filled {
+  border-style: solid;
+  border-color: rgba(187, 140, 255, 0.5);
+  background: rgba(187, 140, 255, 0.08);
+}
+
+.equip-slot--locked {
+  opacity: 0.45;
+}
+
+.equip-slot__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.equip-slot__empty {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
+}
+
+.equip-slot__remove {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 2px;
+}
+
+.fuse-toggle {
+  min-height: 28px;
+  padding: 2px 12px;
+  border: 1px solid rgba(187, 140, 255, 0.5);
+  border-radius: 8px;
+  background: transparent;
+  color: #bb8cff;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fuse-toggle--on {
+  background: #bb8cff;
+  color: #14101f;
+}
+
+.fusion-tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(187, 140, 255, 0.3);
+  background: rgba(187, 140, 255, 0.06);
+}
+
+.fusion-tray__slots {
+  display: flex;
+  gap: 6px;
+}
+
+.fusion-tray__slot {
+  width: 44px;
+  height: 36px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fusion-tray__slot--filled {
+  border-style: solid;
+}
+
+.fusion-tray__plus {
+  opacity: 0.5;
+}
+
+.fusion-tray__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.fusion-tray__pity {
+  color: #bb8cff;
+}
+
+.fusion-tray__fuse {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #bb8cff;
+  color: #14101f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fusion-tray__fuse:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.fusion-result {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.fusion-result__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 32px;
+  border: 1px solid var(--rarity-color);
+  border-radius: 14px;
+  background: #0b0d14;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--rarity-color) 55%, transparent);
+  animation: fusion-pop 0.35s ease-out;
+}
+
+.fusion-result__card--up {
+  box-shadow: 0 0 48px var(--rarity-color);
+}
+
+.fusion-result__tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--rarity-color);
+}
+
+.fusion-result__name {
+  font-size: 15px;
+}
+
+.fusion-result__burst {
+  font-size: 11px;
+  color: #bb8cff;
+}
+
+@keyframes fusion-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .hud-time-readout-faint {
   display: flex;
   justify-content: space-between;

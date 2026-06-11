@@ -34,3 +34,13 @@ export interface EncounterEvent {
   name: string;
   color: string;
 }
+
+/** Result of a FUSE_ENTITIES action — drives the forge reveal UI. */
+export interface FusionEvent {
+  id: number;
+  outputEntityId: string;
+  rarityUp: boolean;
+  /** Output hit max count and fed a level-up instead (duplicate sink). */
+  leveledUp: boolean;
+  entropyBurst: number;
+}

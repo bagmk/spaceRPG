@@ -201,6 +201,40 @@ export const DROP_CRIT_RARITY_BIAS = 2;
 /** Combo at/above this threshold also applies the rarity bias. */
 export const DROP_COMBO_BIAS_THRESHOLD = 100;
 
+// ── Fusion / gacha (entity redesign Phase 3) ─────────────────────────────────
+
+/** Copies consumed per fusion (all inputs must share one rarity). */
+export const FUSION_INPUT_COUNT = 3;
+/** Chance the output is one rarity above the inputs. */
+export const FUSION_UP1_CHANCE = 0.4;
+/** Chance the output is two rarities above the inputs (rolled within up window). */
+export const FUSION_UP2_CHANCE = 0.05;
+/** D4 pity: after this many consecutive non-upgrades, the next fusion guarantees +1 rarity. */
+export const FUSION_PITY_THRESHOLD = 5;
+/**
+ * Entropy burst per fusion ≈ ENTROPY_FUSION_VALUE_SEC seconds of entropy income
+ * at the reference click rate. Keeps fusion's progression share near the
+ * Phase 0 sim (29–43% for active players).
+ */
+export const FUSION_REF_CPS = 3;
+
+/** Each entity level above 1 adds this fraction to the entity's effect. */
+export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
+
+// ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
+
+/** Slot unlock conditions. Slot 1 is always available. */
+export const EQUIP_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
+  { slot: 2, minStageId: 4 },
+  { slot: 3, minAlmanacCount: 30 },
+];
+
+/** Set bonus by number of equipped entities sharing a setKey (glyph family). */
+export const SET_BONUS: Record<number, { clickAutoMult: number; critChanceAdd: number }> = {
+  2: { clickAutoMult: 1.25, critChanceAdd: 0 },
+  3: { clickAutoMult: 1.6, critChanceAdd: 0.05 },
+};
+
 export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
   click_lv5: 1.4,
   click_lv10: 1.8,
@@ -286,5 +320,19 @@ export const BALANCE = {
     rarityWeights: DROP_RARITY_WEIGHTS,
     critRarityBias: DROP_CRIT_RARITY_BIAS,
     comboBiasThreshold: DROP_COMBO_BIAS_THRESHOLD,
+  },
+  fusion: {
+    inputCount: FUSION_INPUT_COUNT,
+    up1Chance: FUSION_UP1_CHANCE,
+    up2Chance: FUSION_UP2_CHANCE,
+    pityThreshold: FUSION_PITY_THRESHOLD,
+    refCps: FUSION_REF_CPS,
+    valueSec: ENTROPY_FUSION_VALUE_SEC,
+    costFrac: ENTROPY_FUSION_COST_FRAC,
+    levelEffectBonus: ENTITY_LEVEL_EFFECT_BONUS,
+  },
+  equip: {
+    slotUnlocks: EQUIP_SLOT_UNLOCKS,
+    setBonus: SET_BONUS,
   },
 } as const;

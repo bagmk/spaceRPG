@@ -32,6 +32,7 @@ import {
   rollEntityDrop,
 } from '../entities/drops';
 import { getEquippedInstances } from '../entities/effects';
+import { syncSlotUnlocks } from './entities';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
@@ -187,7 +188,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
           { isCrit, combo },
         )
       : null;
-  return withCurrentUniverseEndingProgress({
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: nextQuanta,
     entropy: safeAdd(state.entropy, entropyGained),
@@ -206,7 +207,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),
     mechanicStep: action.mechanicStep ?? (stage.mechanic === 'life_evolution' ? getLifeStep(nextProgress) : state.mechanicStep),
     mechanicTriggered: state.mechanicTriggered || Boolean(action.trigger),
-  });
+  }));
 }
 
 function isInteractionBlocked(state: GameState): boolean {
@@ -270,7 +271,7 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
           { isCrit: true },
         )
       : null;
-  return withCurrentUniverseEndingProgress({
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: safeAdd(state.quanta, boostedBonus),
     entropy: safeAdd(state.entropy, entropyGained),
@@ -284,7 +285,7 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
       eventId, action.x, action.y, boostedBonus, entropyGained, action.name, action.tier,
       droppedEntity?.id,
     ),
-  });
+  }));
 }
 
 export function handleReportEncounter(state: GameState, action: ReportEncounterAction): GameState {

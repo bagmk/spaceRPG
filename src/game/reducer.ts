@@ -36,7 +36,7 @@ import {
   handlePrestige,
 } from './reducers/stage';
 import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
-import { handleEquipEntity, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
+import { handleEquipEntity, handleFuseEntities, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -57,6 +57,7 @@ import {
   handleMarkCashShopTutorialSeen,
   handleMarkTutorialStageSeen,
   handleClearClickEvent,
+  handleClearFusionEvent,
   handleClearCollisionEvent,
   handleClearEncounterEvent,
 } from './reducers/meta';
@@ -130,6 +131,8 @@ export type GameAction =
   | { type: 'PURCHASE_ENTITY'; entityId: string }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number }
+  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number }
+  | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
 
@@ -188,6 +191,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     equippedSlots: state.equippedSlots,
     unlockedSlotCount: state.unlockedSlotCount,
     almanacCollected: state.almanacCollected,
+    fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
   };
@@ -236,6 +240,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
     case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);
     case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
+    case 'FUSE_ENTITIES':         return handleFuseEntities(state, action);
+    case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;

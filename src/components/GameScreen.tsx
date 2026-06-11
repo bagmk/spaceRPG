@@ -714,11 +714,19 @@ export function GameScreen({
             currentStageId={stage.id}
             inventory={state.inventory}
             equippedSlots={state.equippedSlots}
+            unlockedSlotCount={state.unlockedSlotCount}
+            fusionPity={state.fusionPity}
+            lastFusionEvent={state.lastFusionEvent}
             quanta={state.quanta}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
-            onEquip={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot: 0 }); soundManager?.playUITap(); }}
+            onEquip={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId }); soundManager?.playUITap(); }}
             onUnequip={(slot) => { dispatch({ type: 'UNEQUIP_ENTITY', slot }); soundManager?.playUITap(); }}
+            onFuse={(inputEntityIds) => {
+              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random() });
+              soundManager?.playEntityLevelUp();
+            }}
+            onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
             onClose={() => { setEntityPanelOpen(false); soundManager?.playUIClose(); }}
             onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
             onUITap={() => soundManager?.playUITap()}

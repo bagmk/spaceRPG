@@ -2,7 +2,7 @@ import type { SkillState } from './types';
 import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier } from '../prestige';
-import { applyEntityModifiers } from '../entities/effects';
+import { applyEntityModifiers, applySetBonuses } from '../entities/effects';
 import {
   SKILL_CLICK_POWER_BASE,
   SKILL_AUTO_RATE_BASE,
@@ -141,6 +141,7 @@ export function getActiveModifiers(
 
   if (inventory && inventory.length > 0) {
     applyEntityModifiers(mods, inventory, ctx.stageId);
+    applySetBonuses(mods, inventory);
   }
 
   // Apply permanent prestige multipliers

@@ -20,6 +20,7 @@ type UnlockTrackAction = Extract<GameAction, { type: 'UNLOCK_TRACK' }>;
 type MarkTutorialFlagAction = Extract<GameAction, { type: 'MARK_TUTORIAL_FLAG' }>;
 type MarkTutorialStageSeenAction = Extract<GameAction, { type: 'MARK_TUTORIAL_STAGE_SEEN' }>;
 type ClearClickEventAction = Extract<GameAction, { type: 'CLEAR_CLICK_EVENT' }>;
+type ClearFusionEventAction = Extract<GameAction, { type: 'CLEAR_FUSION_EVENT' }>;
 type ClearCollisionEventAction = Extract<GameAction, { type: 'CLEAR_COLLISION_EVENT' }>;
 type ClearEncounterEventAction = Extract<GameAction, { type: 'CLEAR_ENCOUNTER_EVENT' }>;
 
@@ -34,6 +35,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastClickEvent: null,
     lastCollisionEvent: null,
     lastEncounterEvent: null,
+    lastFusionEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -59,6 +61,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     totalShopSpentUSD: payload.totalShopSpentUSD ?? 0,
     prestigeUpgrades: payload.prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
     peakEntropy: payload.peakEntropy ?? payload.entropy ?? 0,
+    fusionPity: payload.fusionPity ?? 0,
   };
 }
 
@@ -121,6 +124,10 @@ export function handleMarkTutorialStageSeen(
 
 export function handleClearClickEvent(state: GameState, action: ClearClickEventAction): GameState {
   return state.lastClickEvent?.id === action.id ? { ...state, lastClickEvent: null } : state;
+}
+
+export function handleClearFusionEvent(state: GameState, action: ClearFusionEventAction): GameState {
+  return state.lastFusionEvent?.id === action.id ? { ...state, lastFusionEvent: null } : state;
 }
 
 export function handleClearCollisionEvent(
