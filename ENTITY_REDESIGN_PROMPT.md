@@ -117,6 +117,10 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- 표준모형 완성(타우·Z·힉스) + glyph 회귀 수정 (2026-06-11, 사용자 — "타우랑 힉스 z도 넣어줘, 이후 안중요한것 가져와서"):
+  - **빈자리 채움 4종**(후반 저중요 엔티티 재활용, 멀티에이전트 워크플로로 후보 검증 후 적용): Relic Electron(s16_01)→**Tau**, Relic Neutrino(s16_04)→**Tau Neutrino**, GUT Monopole Decay(s14_09)→**Z Boson**, Quantum Tunneling(s14_07)→**Higgs Boson**. → 표준모형 **경입자 6(3세대 전부)** · **보손 7**(gluon/W/Z/photon/Higgs + 중간자 pion/kaon) 완성. (워크플로가 Tau를 Muon으로 잘못 라우팅 → 기존 로스터 파괴 위험, 사용자 의도대로 후반 relic로 오버라이드.)
+  - **glyph 회귀 수정**(직전 주기율표 커밋의 잠재 버그): 리네임은 이름기반 glyph 추론을 잃어 Hydrogen→particle·Helium→nucleus·Carbon→star로 **무음 변경**됐었음(카드 비주얼+세트보너스 키 영향). `ENTITY_GLYPH_OVERRIDES`에 H/He/C/Fe→atom 고정 + stale 'Carbon First' 키 제거. 신규 4종도 lepton/boson 고정.
+  - **가드 테스트**: 리네임 8종 이름·alias·glyph 불변식. 715 통과, tsc, build.
 - 도감 실(實)로스터: 표준모형 + 주기율표 (2026-06-11, 사용자 결정 — 정격 로스터 / 1주기~경원소):
   - **큐레이션 멤버십**: `CodexSubset.match`에 `entityIds?` 추가(명시 ID 로스터). 표준모형·주기율표 하위셋을 glyph 스윕에서 명시 ID로 전환 → 진짜 과학 로스터만 노출(Dust Grain·Habitable World 등 이질 멤버 제거).
   - **표준 모형**: 쿼크(6 완성) up/down/strange/charm/bottom/top · 경입자(4) e/νₑ/μ/νμ · 보손(5) gluon/W/photon/pion/kaon · 장(3) CP위반/QCD상경계/갇힘. 빈자리 채움 리네임 4: Top Quark Decay→Top Quark, Neutrino→Electron Neutrino, Neutrino Freeze-out→Muon Neutrino, Gamma Ray→Photon. (타우 세대·Z·Higgs는 정합한 엔티티 자리 없음 — 엔티티 신규 추가는 밸런스 변경이라 보류.)

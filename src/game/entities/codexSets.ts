@@ -84,12 +84,12 @@ export const CODEX_SETS: CodexSet[] = [
     subsets: [
       // Curated to the real Standard Model roster (explicit ids), so the codex
       // shows the genuine particle set instead of whatever a glyph sweeps in.
-      // Quarks: up · down · strange · charm · bottom · top.
+      // Quarks (6, complete): up · down · strange · charm · bottom · top.
       { id: 'quarks', label: { en: 'Quarks', ko: '쿼크' }, match: { entityIds: ['s2_01', 's2_02', 's2_06', 's3_06', 's3_08', 's3_10'] }, reward: { stat: 'clickPower', value: 8 } },
-      // Leptons present in the lepton epoch: electron, electron neutrino, muon, muon neutrino.
-      { id: 'leptons', label: { en: 'Leptons', ko: '경입자' }, match: { entityIds: ['s2_03', 's2_04', 's3_04', 's4_11'] }, reward: { stat: 'critChance', value: 3 } },
-      // Bosons (integer spin): gluon, W, photon + the residual-force mesons pion & kaon.
-      { id: 'bosons', label: { en: 'Bosons', ko: '보손' }, match: { entityIds: ['s2_05', 's2_07', 's4_04', 's3_03', 's3_07'] }, reward: { stat: 'autoPower', value: 8 } },
+      // Leptons (6, all three generations): electron · electron-ν · muon · muon-ν · tau · tau-ν.
+      { id: 'leptons', label: { en: 'Leptons', ko: '경입자' }, match: { entityIds: ['s2_03', 's2_04', 's3_04', 's4_11', 's16_01', 's16_04'] }, reward: { stat: 'critChance', value: 4 } },
+      // Bosons (7, integer spin): gluon · W · Z · photon · Higgs + residual-force mesons pion & kaon.
+      { id: 'bosons', label: { en: 'Bosons', ko: '보손' }, match: { entityIds: ['s2_05', 's2_07', 's14_09', 's4_04', 's14_07', 's3_03', 's3_07'] }, reward: { stat: 'autoPower', value: 10 } },
       // Fields & symmetry: CP violation, QCD phase boundary, confinement.
       { id: 'fields', label: { en: 'Fields', ko: '장(場)' }, match: { entityIds: ['s2_08', 's3_11', 's3_12'] }, reward: { stat: 'entropyGain', value: 8 } },
     ],

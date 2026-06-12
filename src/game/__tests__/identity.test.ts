@@ -157,12 +157,44 @@ describe('codex thematic sets', () => {
     expect(getSubsetMembers(quarks, STAGE_ENTITIES).map((e) => e.name)).toEqual([
       'Up Quark', 'Down Quark', 'Strange Quark', 'Charm Quark', 'Bottom Quark', 'Top Quark',
     ]);
-    // The four gap-fill renames landed and kept their old ids as aliases.
-    expect(findEntityById('s3_10')?.name).toBe('Top Quark');
-    expect(findEntityById('s3_10_top_quark_decay')?.id).toBe('s3_10');
-    expect(findEntityById('s2_04')?.name).toBe('Electron Neutrino');
-    expect(findEntityById('s4_04')?.name).toBe('Photon');
-    expect(findEntityById('s4_11')?.name).toBe('Muon Neutrino');
+    // All three lepton generations + all integer-spin bosons are present.
+    const leptons = sm.subsets.find((s) => s.id === 'leptons')!;
+    expect(new Set(getSubsetMembers(leptons, STAGE_ENTITIES).map((e) => e.name))).toEqual(
+      new Set(['Electron', 'Electron Neutrino', 'Muon', 'Muon Neutrino', 'Tau', 'Tau Neutrino']),
+    );
+    const bosons = sm.subsets.find((s) => s.id === 'bosons')!;
+    expect(new Set(getSubsetMembers(bosons, STAGE_ENTITIES).map((e) => e.name))).toEqual(
+      new Set(['Gluon', 'W Boson', 'Z Boson', 'Photon', 'Higgs Boson', 'Pion', 'Kaon']),
+    );
+    // Gap-fill renames landed and kept their old ids as aliases (save back-compat).
+    const renames: [string, string, string][] = [
+      ['s3_10', 'Top Quark', 's3_10_top_quark_decay'],
+      ['s2_04', 'Electron Neutrino', 's2_04_neutrino'],
+      ['s4_04', 'Photon', 's4_04_gamma_ray'],
+      ['s4_11', 'Muon Neutrino', 's4_11_neutrino_freeze_out'],
+      ['s16_01', 'Tau', 's16_01_relic_electron'],
+      ['s16_04', 'Tau Neutrino', 's16_04_relic_neutrino'],
+      ['s14_09', 'Z Boson', 's14_09_gut_monopole_decay'],
+      ['s14_07', 'Higgs Boson', 's14_07_quantum_tunneling'],
+    ];
+    for (const [id, name, alias] of renames) {
+      expect(findEntityById(id)?.name).toBe(name);
+      expect(findEntityById(alias)?.id).toBe(id);
+    }
+  });
+
+  it('renamed elements/particles keep their intended glyph (rename must not shift the visual)', () => {
+    // Renaming drops the name-inferred glyph keyword, so these are pinned in
+    // ENTITY_GLYPH_OVERRIDES. Guard against a future rename silently shifting them.
+    const glyphOf = (id: string) => findEntityById(id)?.visual.glyph;
+    expect(glyphOf('s5_01')).toBe('atom');  // Hydrogen
+    expect(glyphOf('s5_03')).toBe('atom');  // Helium
+    expect(glyphOf('s7_08')).toBe('atom');  // Carbon
+    expect(glyphOf('s7_10')).toBe('atom');  // Iron
+    expect(glyphOf('s16_01')).toBe('lepton'); // Tau
+    expect(glyphOf('s16_04')).toBe('lepton'); // Tau Neutrino
+    expect(glyphOf('s14_09')).toBe('boson');  // Z Boson
+    expect(glyphOf('s14_07')).toBe('boson');  // Higgs Boson
   });
 
   it('Periodic Table is a real element roster (curated ids, element renames landed)', () => {

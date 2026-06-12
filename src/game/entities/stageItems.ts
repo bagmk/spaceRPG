@@ -306,7 +306,13 @@ const ENTITY_GLYPH_OVERRIDES: Record<string, EntityGlyph> = {
   'Cosmic Transparency':   'void',      // 빛이 자유로워진 결과의 "투명함"
   'First Cosmic Dawn Seed':'cloud',     // 아직 점화 전 단계 — 가스 구름
   'Oxygen':                'atom',      // 원소 자체는 원자
-  'Carbon First':          'atom',      // 같은 이유 (탄소 원자)
+  // Periodic-table elements (renamed): pin 'atom' so the rename doesn't drop the
+  // name-inferred glyph. Without these, Hydrogen→particle, Helium→nucleus,
+  // Carbon→star (keyword fall-through), shifting their visual + set-bonus key.
+  'Carbon':                'atom',      // (renamed from Carbon First)
+  'Hydrogen':              'atom',      // (renamed from Hydrogen Atom)
+  'Helium':                'atom',      // (renamed from Helium Atom)
+  'Iron':                  'atom',      // (renamed from First Heavy Elements)
   'Stellar Feedback':      'wave',      // 별이 주변에 미치는 흐름·방출
   'Star Formation Cloud':  'cloud',     // 아직 별이 되기 전 구름
   'Proton Decay':          'entropy',   // 사라지는 과정 강조
@@ -326,6 +332,12 @@ const ENTITY_GLYPH_OVERRIDES: Record<string, EntityGlyph> = {
   'Planetary Nebula':      'nebula',    // 색채 있는 양극 로브 (전용 glyph)
   'Diamond Star':          'crystal',   // 결정화 격자 (전용 glyph)
   'Iron Star':             'crystal',   // 양자 터널링으로 철 격자로 수렴
+
+  // --- Standard Model gap-fills (late disposable entities repurposed) ---
+  'Tau':                   'lepton',    // 3세대 하전 경입자 (from Relic Electron)
+  'Tau Neutrino':          'lepton',    // 3세대 중성미자 (from Relic Neutrino)
+  'Z Boson':               'boson',     // 중성 약력 게이지 보손 (from GUT Monopole Decay)
+  'Higgs Boson':           'boson',     // 힉스 장의 스칼라 (from Quantum Tunneling)
 };
 
 /**
@@ -950,9 +962,9 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Proton Decay':           { name: '양성자 붕괴',      description: '모든 바리온 물질의 가설적 느린 분해.' },
   'Diamond Star':           { name: '다이아몬드 별',    description: '깊은 어둠 속에서 결정화한 탄소 잔해가 빛난다.' },
   'GW Echo':                { name: '중력파 메아리',    description: '고대 병합의 희미한 중력파 기억.' },
-  'Quantum Tunneling':      { name: '양자 터널링',      description: '확률만으로 장벽을 건너는 입자.' },
+  'Higgs Boson':            { name: '힉스 보손',        description: '대칭 깨짐을 통해 입자에 질량을 부여하는 힉스 장의 스칼라 들뜸.' },
   'Relic Neutrino Background':{ name: '잔존 중성미자 배경',description: '거의 정지 상태로 식어버린 빅뱅 중성미자.' },
-  'GUT Monopole Decay':     { name: 'GUT 단극자 붕괴',  description: '오래된 자기 단극자가 마침내 불안정해진다.' },
+  'Z Boson':                { name: 'Z 보손',           description: '약한 상호작용을 매개하는 전기적으로 중성인 게이지 보손 — W의 짝.' },
   'Positronium Atom':       { name: '포지트로늄',       description: '전자와 양전자가 잠시 서로를 도는 원자.' },
   'Dark Matter Annihilation':{ name: '암흑물질 소멸',   description: '암흑물질 후보들이 마침내 서로를 지운다.' },
   'BH Domination':          { name: '블랙홀 지배기',    description: '블랙홀이 남은 질량-에너지의 대부분을 차지한다.' },
@@ -976,10 +988,10 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Last Black Hole':        { name: '마지막 블랙홀',    description: '궁극의 방출을 준비하는 바로 그 마지막 지평선.' },
 
   // Stage 16
-  'Relic Electron':         { name: '잔존 전자',        description: '짝이 어디에도 남지 않은 외로운 전자.' },
+  'Tau':                    { name: '타우',             description: '가장 무거운 하전 경입자 — 거의 즉시 붕괴하는 3세대 전자의 형제.' },
   'Lone Photon':            { name: '외로운 광자',      description: '결코 산란되지 않을 우주를 가로지르는 단 하나의 광자.' },
   'Relic Positron':         { name: '잔존 양전자',      description: '끝없이 팽창하는 공허 속을 떠도는 양전자.' },
-  'Relic Neutrino':         { name: '잔존 중성미자',    description: '거의 정지 상태로 영원을 가로지르는 차가운 중성미자.' },
+  'Tau Neutrino':           { name: '타우 중성미자',    description: '타우와 짝을 이루는 3세대 중성미자 — 질량이 거의 없고 약하게만 상호작용한다.' },
   'Cosmic Background Photon':{ name: '우주 배경 광자',  description: '남아 있는 모든 빛이 배경 잡음으로 잦아든다.' },
   'Thermal Equilibrium':    { name: '열적 평형',        description: '온도 차이가 어디서나 한꺼번에 사라진다.' },
   'Max Entropy':             { name: '최대 엔트로피',    description: '어떤 물리 과정도 더 이상 일으킬 자유 에너지가 없다.' },
@@ -1305,9 +1317,15 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Proton Decay',              'p→',  'Hypothetical slow dissolution of all baryonic matter.',   'common', 'auto_mult',  2.0),
     item('Diamond Star',              '💎★', 'Crystallized carbon remnant glowing in deep dark.',      'rare',   'auto',  4.0),
     item('GW Echo',                   '◌·',  'Faint gravitational-wave memory of ancient mergers.',    'rare', 'auto_mult', 3.0),
-    item('Quantum Tunneling',         '⇢',   'Particles crossing barriers by probability alone.',      'rare', 'click', 22.0),
+    withAliases(
+      item('Higgs Boson',               'H',   'Scalar excitation of the Higgs field that gives particles their mass through symmetry breaking.', 'rare', 'click', 22.0),
+      ['s14_07_quantum_tunneling'],
+    ),
     item('Relic Neutrino Background', 'νBG', 'Big-bang neutrinos cooled almost to rest.',              'rare', 'crit', 1.5, true),
-    item('GUT Monopole Decay',        'M→',  'Ancient magnetic monopoles finally destabilizing.',       'epic', 'click', 35.0),
+    withAliases(
+      item('Z Boson',                   'Z⁰',  'Neutral weak gauge boson — the chargeless partner of the W that mediates the weak force.', 'epic', 'click', 35.0),
+      ['s14_09_gut_monopole_decay'],
+    ),
     item('Positronium Atom',          'Ps',  'Electron and positron briefly orbiting each other.',     'epic', 'auto', 7.0),
     item('Dark Matter Annihilation',  'DM⊕', 'Dark matter candidates finally erasing each other.',    'epic', 'auto_mult', 5.0),
     item('BH Domination',             '⚫>', 'Black holes now hold most remaining mass-energy.',       'epic', 'crit', 3.0, true),
@@ -1335,10 +1353,16 @@ export const STAGE_ENTITIES: StageEntity[] = [
 
   // ── Stage 16: The End (4C + 3R + 2E + 5L endings) ──────────────────────────
   ...stage(16, [
-    item('Relic Electron',           'e⁻∞',  'An electron with no partner remaining anywhere.',        'common', 'click', 15.0),
+    withAliases(
+      item('Tau',                      'τ',    'The heaviest charged lepton — a third-generation electron sibling that decays almost instantly.', 'common', 'click', 15.0),
+      ['s16_01_relic_electron'],
+    ),
     item('Lone Photon',              'γ',     'A single photon crossing space that will never scatter.','common', 'auto', 2.0),
     item('Relic Positron',           'e⁺∞',  'A positron adrift in ever-expanding emptiness.',         'common', 'crit',  0.5, true),
-    item('Relic Neutrino',           'ν∞',   'Cold neutrino drifting at near-rest through eternity.',  'common', 'auto_mult',  2.0),
+    withAliases(
+      item('Tau Neutrino',             'ντ',   'Third-generation neutrino paired with the tau — nearly massless and weakly interacting.', 'common', 'auto_mult',  2.0),
+      ['s16_04_relic_neutrino'],
+    ),
     item('Cosmic Background Photon', 'CBG',  'All remaining light fading into background noise.',      'rare', 'click', 22.0),
     item('Thermal Equilibrium',      'ΔT→0', 'Temperature differences vanish everywhere at once.',    'rare', 'auto', 3.0),
     item('Max Entropy',              'S_max','No free energy remains to run any physical process.',    'rare',   'auto_mult',  1.5),
