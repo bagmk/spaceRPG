@@ -33,9 +33,9 @@ export const ENTITY_FAMILIES: Partial<Record<EntityGlyph, FamilyIdentity>> = {
   accretion: { label: { en: 'Accretion', ko: '강착' }, role: { en: 'Inflowing auto + click', ko: '유입 오토·클릭' } },
   molecule:  { label: { en: 'Molecular Cloud', ko: '분자운' }, role: { en: 'Cold auto fuel', ko: '냉각 오토 연료' } },
   atom:      { label: { en: 'Atom', ko: '원자' }, role: { en: 'Stable auto base', ko: '안정 오토 기반' } },
-  cloud:     { label: { en: 'Gas Cloud', ko: '가스운' }, role: { en: 'Slow auto / time', ko: '느린 오토·시간' } },
+  cloud:     { label: { en: 'Gas Cloud', ko: '가스운' }, role: { en: 'Slow auto power', ko: '느린 오토 파워' } },
   water:     { label: { en: 'Water World', ko: '물의 세계' }, role: { en: 'Life-bearing auto', ko: '생명의 오토' } },
-  planet:    { label: { en: 'World', ko: '행성' }, role: { en: 'Orbital auto / time', ko: '궤도 오토·시간' } },
+  planet:    { label: { en: 'World', ko: '행성' }, role: { en: 'Orbital auto power', ko: '궤도 오토 파워' } },
 
   // ── Remnants: dim rhythmic auto (Pulsar identity) ──
   remnant:   { label: { en: 'Remnant', ko: '잔해' }, role: { en: 'Pulsing auto burst', ko: '맥동 오토 버스트' } },
@@ -60,13 +60,13 @@ export const ENTITY_FAMILIES: Partial<Record<EntityGlyph, FamilyIdentity>> = {
   neuron:    { label: { en: 'Mind', ko: '정신' }, role: { en: 'Neural click + crit', ko: '신경 클릭·치명' } },
 
   // ── Structure: large-scale / slow (time / field) ──
-  galaxy:    { label: { en: 'Galaxy', ko: '은하' }, role: { en: 'Structural time / auto', ko: '구조 시간·오토' } },
+  galaxy:    { label: { en: 'Galaxy', ko: '은하' }, role: { en: 'Structural auto power', ko: '구조 오토 파워' } },
   halo:      { label: { en: 'Dark Matter', ko: '암흑물질' }, role: { en: 'Offline / entropy lean', ko: '오프라인·엔트로피' } },
   field:     { label: { en: 'Field', ko: '장(場)' }, role: { en: 'Slow field shaping', ko: '느린 장 형성' } },
-  wave:      { label: { en: 'Wave', ko: '파동' }, role: { en: 'Propagating time / crit', ko: '전파 시간·치명' } },
+  wave:      { label: { en: 'Wave', ko: '파동' }, role: { en: 'Propagating crit / power', ko: '전파 치명·파워' } },
 
   // ── Gravity wells: deep / accumulating (Black Hole identity) ──
-  black_hole:{ label: { en: 'Black Hole', ko: '블랙홀' }, role: { en: 'Deep slow accumulation', ko: '심연의 축적' } },
+  black_hole:{ label: { en: 'Black Hole', ko: '블랙홀' }, role: { en: 'Deep auto accumulation', ko: '심연의 오토 축적' } },
   singularity:{ label: { en: 'Singularity', ko: '특이점' }, role: { en: 'Endgame all-source', ko: '종말 전방위' } },
   void:      { label: { en: 'Void', ko: '공허' }, role: { en: 'Emptiness amplifier', ko: '공허 증폭' } },
 

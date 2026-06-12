@@ -69,6 +69,11 @@ export function applyEntityModifiers(
       case 'auto':
         mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity) * (total / 100));
         break;
+      case 'auto_mult':
+        // Auto Power — % multiplier on entity flat-auto. Isolated modifier so
+        // it never entangles autoRateMult (substats/set bonuses/skill auto).
+        mods.autoFlatMult *= 1 + total / 100;
+        break;
       case 'click':
         mods.clickPowerMult *= 1 + (total * stagePower) / 100;
         break;

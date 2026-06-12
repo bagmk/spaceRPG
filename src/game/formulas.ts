@@ -295,7 +295,7 @@ export function formatCosmicTimeSigFigs(seconds: number, sigFigs = 6): string {
 }
 
 export function getAutoRate(mods: Modifiers): number {
-  return Math.max(0, (mods.autoRateAdd * mods.autoRateMult + mods.autoRateFlatAdd) * AUTO_OUTPUT_MULTIPLIER);
+  return Math.max(0, (mods.autoRateAdd * mods.autoRateMult + mods.autoRateFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
 }
 
 export function getCritMultiplier(critLevel: number, mods: Modifiers): number {

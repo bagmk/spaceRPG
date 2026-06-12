@@ -3,7 +3,7 @@ import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, LEGACY_TIME_ENTITY_EFFECT_FACTOR, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE } from '../balance';
 import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -56,22 +56,20 @@ describe('stage entity definitions', () => {
     expect(ENTITY_BASE_COST_FACTOR.legendary).toBeCloseTo(3.6);
   });
 
-  it('uses the requested caps for time-speed entities', () => {
-    const commonTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'common' && entity.effect.type === 'time');
-    const rareTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare' && entity.effect.type === 'time');
-    const epicTimeEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic' && entity.effect.type === 'time');
-
-    expect(commonTimeEntities.length).toBeGreaterThan(0);
-    expect(rareTimeEntities.length).toBeGreaterThan(0);
-    expect(epicTimeEntities.length).toBeGreaterThan(0);
-    expect(commonTimeEntities.every((entity) => entity.maxCount === 20)).toBe(true);
-    expect(rareTimeEntities.every((entity) => entity.maxCount === 10)).toBe(true);
-    expect(epicTimeEntities.every((entity) => entity.maxCount === 5)).toBe(true);
+  it('uses standard caps for Auto Power (former time-slot) entities', () => {
+    const byRar = (rar: string) =>
+      STAGE_ENTITIES.filter((entity) => entity.rarity === rar && entity.effect.type === 'auto_mult');
+    expect(byRar('common').length).toBeGreaterThan(0);
+    expect(byRar('rare').length).toBeGreaterThan(0);
+    expect(byRar('epic').length).toBeGreaterThan(0);
+    expect(byRar('common').every((entity) => entity.maxCount === 20)).toBe(true);
+    expect(byRar('rare').every((entity) => entity.maxCount === 10)).toBe(true);
+    expect(byRar('epic').every((entity) => entity.maxCount === 5)).toBe(true);
   });
 
   it('keeps non-time rare and epic entities at the standard caps', () => {
-    const rareEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare' && entity.effect.type !== 'time');
-    const epicEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic' && entity.effect.type !== 'time');
+    const rareEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'rare');
+    const epicEntities = STAGE_ENTITIES.filter((entity) => entity.rarity === 'epic');
 
     expect(rareEntities.length).toBeGreaterThan(0);
     expect(epicEntities.length).toBeGreaterThan(0);
@@ -124,14 +122,14 @@ describe('stage entity definitions', () => {
     }
   });
 
-  it('uses Stage 16 rare and epic slots for time speed instead of crit', () => {
+  it('uses Stage 16 rare and epic slots for Auto Power instead of crit', () => {
     const stage16 = getEntitiesForStage(16);
     const rareAndEpic = stage16.filter((entity) => entity.rarity === 'rare' || entity.rarity === 'epic');
 
-    // Structural invariant (survives the identity pass): the endgame stage's
-    // rare/epic slots avoid crit (a capped resource) and keep exactly 2 time.
+    // Structural invariant: the endgame stage's rare/epic slots avoid crit
+    // (a capped resource) and keep exactly 2 Auto Power (former time) slots.
     expect(rareAndEpic.some((entity) => entity.effect.type === 'crit')).toBe(false);
-    expect(rareAndEpic.filter((entity) => entity.effect.type === 'time')).toHaveLength(2);
+    expect(rareAndEpic.filter((entity) => entity.effect.type === 'auto_mult')).toHaveLength(2);
   });
 
   it('keeps every effect value positive', () => {
@@ -167,40 +165,22 @@ describe('stage entity definitions', () => {
   it('turns entity purchases into active gameplay modifiers', () => {
     const autoEntity = STAGE_ENTITIES.find((entity) => entity.effect.type === 'auto');
     const clickEntity = STAGE_ENTITIES.find((entity) => entity.effect.type === 'click');
-    const timeEntity = STAGE_ENTITIES.find((entity) => entity.effect.type === 'time');
+    const autoPowerEntity = STAGE_ENTITIES.find((entity) => entity.effect.type === 'auto_mult');
 
     expect(autoEntity).toBeDefined();
     expect(clickEntity).toBeDefined();
-    expect(timeEntity).toBeDefined();
+    expect(autoPowerEntity).toBeDefined();
 
     const mods = defaultModifiers();
     applyEntityModifiers(mods, [
       { entityId: autoEntity?.id ?? '', count: 1, level: 1 },
       { entityId: clickEntity?.id ?? '', count: 1, level: 1 },
-      { entityId: timeEntity?.id ?? '', count: 1, level: 1 },
+      { entityId: autoPowerEntity?.id ?? '', count: 1, level: 1 },
     ]);
 
     expect(mods.autoRateFlatAdd).toBeGreaterThan(0);
     expect(mods.clickPowerMult).toBeGreaterThan(1);
-    expect(mods.timeMultMult).toBeGreaterThan(1);
-  });
-
-  it('applies previous-stage time entities as weaker legacy bonuses', () => {
-    const timeEntity = getEntitiesForStage(5).find((entity) => entity.effect.type === 'time');
-    expect(timeEntity).toBeDefined();
-    if (!timeEntity) return;
-
-    const currentStageMods = defaultModifiers();
-    applyEntityModifiers(currentStageMods, [{ entityId: timeEntity.id, count: 1, level: 1 }], timeEntity.stageId);
-
-    const laterStageMods = defaultModifiers();
-    applyEntityModifiers(laterStageMods, [{ entityId: timeEntity.id, count: 1, level: 1 }], timeEntity.stageId + 1);
-
-    expect(currentStageMods.timeMultMult).toBeCloseTo(1 + timeEntity.effect.value / 100);
-    expect(laterStageMods.timeMultMult).toBeCloseTo(
-      1 + (timeEntity.effect.value * LEGACY_TIME_ENTITY_EFFECT_FACTOR) / 100,
-    );
-    expect(laterStageMods.timeMultMult).toBeLessThan(currentStageMods.timeMultMult);
+    expect(mods.autoFlatMult).toBeGreaterThan(1);
   });
 
   it('keeps flat auto entity gains from being multiplied by existing auto multipliers', () => {

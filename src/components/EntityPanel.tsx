@@ -150,6 +150,7 @@ function formatEntityEffect(
       ? `+${formatPct(value * lvl)} ${t(lang, 'effectCritChance')}`
       : `+${formatPct(curved)} ${t(lang, 'effectCritMult')}`;
   }
+  if (type === 'auto_mult') return `+${formatPct(value * lvl)} ${t(lang, 'effectAutoPower')}`;
   if (type === 'time') return `+${formatPct(getNextTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
   if (type === 'multiplier') return `+${formatPct(curved)} ${t(lang, 'effectAllSources')}`;
   if (type === 'entropy') return `+${formatPct(curved)} ${t(lang, 'effectEncounterBonus')}`;
@@ -180,6 +181,7 @@ function formatEntityEffectTotal(
       ? `+${formatPct(value * cappedCount * lvl)} ${t(lang, 'effectCritChance')}`
       : `+${formatPct(curvedTotal)} ${t(lang, 'effectCritMult')}`;
   }
+  if (type === 'auto_mult') return `+${formatPct(value * cappedCount * lvl)} ${t(lang, 'effectAutoPower')}`;
   if (type === 'time') return `+${formatPct(getTotalTimeRatePct(entity, count, displayStageId))} ${t(lang, 'effectTimeRate')}`;
   if (type === 'multiplier') return `+${formatPct(curvedTotal)} ${t(lang, 'effectAllSources')}`;
   if (type === 'entropy') return `+${formatPct(curvedTotal)} ${t(lang, 'effectEncounter')}`;
@@ -200,6 +202,8 @@ export interface PanelStats {
   emissionIntervalMs: number;
   /** Entropy income multiplier from gear. */
   entropyGainMult: number;
+  /** Auto Power — multiplier on entity flat-auto output. */
+  autoFlatMult: number;
 }
 
 export type PanelPage = 'lab' | 'equip' | 'fuse';
@@ -496,9 +500,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                   ] as [string, string][])
                 : ([
                     [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
+                    [t(language, 'effectAutoPower'), `×${stats.autoFlatMult.toFixed(2)}`],
                     [t(language, 'statEmission'), `${(stats.emissionIntervalMs / 1000).toFixed(1)}s`],
                     [t(language, 'statOffline'), `${Math.round(stats.offlineEff * 100)}%`],
-                    [t(language, 'substatEntropyGain'), `×${stats.entropyGainMult.toFixed(2)}`],
                   ] as [string, string][])
               ).map(([label, value]) => (
                 <div key={label} className="equip-page__stat">

@@ -48,6 +48,7 @@ export const STRINGS = {
   substatDropRate:    { en: 'Drop Rate', ko: '드랍률' },
   substatFusionBurst: { en: 'Fusion Burst', ko: '융합 버스트' },
   statOffline:        { en: 'Offline Eff.', ko: '오프라인 효율' },
+  effectAutoPower:    { en: 'Auto Power', ko: '오토 파워' },
   statEmission:       { en: 'Emission', ko: '방출 주기' },
   statComboCapMax:    { en: 'Combo Cap', ko: '콤보 상한' },
   fuseRefund:         { en: 'Refund', ko: '환급' },

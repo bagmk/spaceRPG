@@ -734,6 +734,7 @@ export function GameScreen({
                   : TUNING.OFFLINE_BASE_RATE) * modifiers.offlineGainMult,
               emissionIntervalMs: Math.min(2200, Math.max(240, 1500 / Math.log10(10 + displayedAutoRate))),
               entropyGainMult: modifiers.entropyGainMult,
+              autoFlatMult: modifiers.autoFlatMult,
             }}
             language={language}
             onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}

@@ -53,6 +53,8 @@ export interface Modifiers {
   fusionBurstMult: number;
   /** Secondary stat: multiplies offline income (rift gear). */
   offlineGainMult: number;
+  /** Auto Power primary: multiplies entity flat-auto output (rift gear). */
+  autoFlatMult: number;
   apexMult: number;
   inflatonEchoSec: number;
   dilation: boolean;
@@ -90,6 +92,7 @@ export function defaultModifiers(): Modifiers {
     entropyGainMult: 1,
     fusionBurstMult: 1,
     offlineGainMult: 1,
+    autoFlatMult: 1,
     apexMult: 1,
     inflatonEchoSec: 0,
     dilation: false,

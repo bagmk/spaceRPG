@@ -41,9 +41,9 @@ describe('identity pass: structure preserved', () => {
       const pool = getEntitiesForStage(s);
       const counts: Record<string, number> = {};
       for (const e of pool) counts[e.effect.type] = (counts[e.effect.type] ?? 0) + 1;
-      // Stages 4-15: 3 auto, 3 click, 3 crit, 3 time, 2 multiplier.
+      // Stages 4-15: 3 auto, 3 click, 3 crit, 3 auto_mult, 2 multiplier (time replaced by Auto Power).
       if (s >= 4 && s <= 15) {
-        expect(counts).toEqual({ auto: 3, click: 3, crit: 3, time: 3, multiplier: 2 });
+        expect(counts).toEqual({ auto: 3, click: 3, crit: 3, auto_mult: 3, multiplier: 2 });
       }
     }
   });
@@ -82,12 +82,12 @@ describe('identity pass: name↔effect coherence', () => {
     expect(effectOf('s3_01_free_quark')).toBe('click');
   });
 
-  it('Dark Matter (halo) family leans to time/offline — most items, never crit', () => {
+  it('Dark Matter (halo) family leans to auto/power — most items, never crit', () => {
     const halos = STAGE_ENTITIES.filter((e) => e.visual.glyph === 'halo' && e.rarity !== 'legendary');
     expect(halos.length).toBeGreaterThan(0);
     // No halo item is crit (a click-combat stat alien to dark matter).
     expect(halos.some((e) => e.effect.type === 'crit')).toBe(false);
-    const slow = halos.filter((e) => e.effect.type === 'time' || e.effect.type === 'auto').length;
+    const slow = halos.filter((e) => e.effect.type === 'auto_mult' || e.effect.type === 'auto').length;
     expect(slow / halos.length).toBeGreaterThanOrEqual(0.7);
   });
 

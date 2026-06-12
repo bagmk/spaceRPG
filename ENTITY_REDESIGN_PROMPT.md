@@ -117,6 +117,13 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- Time 효과 제거 → Auto Power 대체 (2026-06-11, 사용자 요청):
+  - **근거**: cosmic-time 게이트가 엔트로피 게이트로 대체된 뒤 `time` 효과는 진행을 못 막는 **죽은 스탯**. 엔티티 44개의 `time` → 신규 **`auto_mult` ("Auto Power")**.
+  - **격리 설계**: 신규 모디파이어 `autoFlatMult`(기본 1)가 **엔티티 flat-auto만 곱함**(`getAutoRate`에 항 추가). autoRateMult/substat/세트와 안 엮여 밸런스 무회귀. 항상 유용(오프라인 전용 X). 카테고리는 rift 유지(스테이지 카운트 불변).
+  - **세이브**: 효과는 ID로 조회되므로 **마이그레이션 불필요** — 모든 세이브 자동 적용.
+  - UI: 카드 효과 라벨 "+X% Auto Power"(라벨=적용값), 균열 스탯 패널에 Auto Power(×) 행 추가. families 역할 문구의 "시간" 표현 → 오토 파워. i18n effectAutoPower(EN/KO).
+  - 테스트: time 엔티티 검사 7건 정리 — 4건 auto_mult로 갱신, 죽은 cosmic-gauge 테스트 6건 제거(엔트로피 게이트로 대체된 연출 시스템, Phase 4에서 time 스킬 트랙도 제거 예정). 706 통과, build.
+  - 잔여: `EntityEffectType`에 `time`은 union에 남김(스킬 time 트랙 timeMultMult 경로용 — Phase 4에서 트랙째 제거).
 - 아이템 정체성 패스 (2026-06-11, 스펙 §4 — 이름↔효과↔외형 정합):
   - **진단**: 효과가 테마 무관 **순수 위치 배정**이었음(각 등급 행 [auto,click,crit,time] 기계적). "Pulsar=crit, Supernova Precursor=time, Dark Matter Halo=auto" 등 이름↔효과 불일치의 근본 원인. 실제 엔티티 수 = **205종**(문서의 "240"은 근사).
   - **수정(코드모드)**: 각 등급 행 안에서 effect 3요소(type/value/flat)를 글리프 친화도 페널티 최적으로 **재배치**, 앵커(Sun/Earth Formation) 고정. 70건 변경. **행 멀티셋 보존 → 스테이지 카테고리(rift6/click8)·효과분포·ID·glyph·비용·시각 전부 불변 → 밸런스/세이브 0 리스크.** 0-친화 배정 44→19(데이터 구조상 같은 글리프 2개가 한 행이면 일부 강제).

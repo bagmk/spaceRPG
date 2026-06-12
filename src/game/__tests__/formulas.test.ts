@@ -195,10 +195,6 @@ describe('scaling formulas', () => {
     expect(getClickPower(modifiers)).toBeCloseTo(32, 10); // 2^5, output multiplier 1
     expect(getAutoRate(modifiers)).toBe(32);               // 2^5, output multiplier 1
     expect(getTimeMultiplier(skills.time.level, modifiers)).toBeCloseTo(Math.pow(SKILL_TIME_RATE_BASE, 5), 10);
-    expect(getCosmicTimeFillRate(skills.time.level, modifiers, 1, 5)).toBeCloseTo(
-      100 / getUnupgradedTimeGaugeSeconds(5),
-      10,
-    );
   });
 
   it('sets dramatic Stage 4+ unupgraded time budgets', () => {
@@ -215,88 +211,6 @@ describe('scaling formulas', () => {
     [4, 5, 6, 10, 16].forEach((stageId) => {
       expect(100 / getCosmicTimeFillRate(40, maxedTimeModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
     });
-  });
-
-  it('lets maxed time entities alone pull late-stage gauges down to the target time', () => {
-    [4, 5, 6, 10, 16].forEach((stageId) => {
-      const maxedEntityModifiers = {
-        ...defaultModifiers(),
-        timeMultMult: getMaxTimeEntityMultiplierThroughStage(stageId),
-      };
-
-      expect(100 / getCosmicTimeFillRate(0, maxedEntityModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
-    });
-  });
-
-  it('keeps the next stage slower than maxed while allowing previous time investment to carry forward', () => {
-    [10, 12, 14, 16].forEach((stageId) => {
-      const unupgradedModifiers = defaultModifiers();
-      const previousStageMaxedModifiers = {
-        ...defaultModifiers(),
-        timeMultMult: getMaxLegacyTimeEntityMultiplierBeforeStage(stageId),
-      };
-      const currentStageMaxedModifiers = {
-        ...defaultModifiers(),
-        timeMultMult: getMaxTimeEntityMultiplierThroughStage(stageId),
-      };
-
-      const unupgradedSeconds = 100 / getCosmicTimeFillRate(40, unupgradedModifiers, 1, stageId);
-      const carriedSeconds = 100 / getCosmicTimeFillRate(40, previousStageMaxedModifiers, 1, stageId);
-      const maxedSeconds = 100 / getCosmicTimeFillRate(40, currentStageMaxedModifiers, 1, stageId);
-
-      expect(unupgradedSeconds).toBeCloseTo(getUnupgradedTimeGaugeSeconds(stageId), 3);
-      expect(carriedSeconds).toBeLessThan(unupgradedSeconds);
-      expect(carriedSeconds).toBeGreaterThan(maxedSeconds);
-      expect(maxedSeconds).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
-    });
-  });
-
-  it('makes every current-stage time entity purchase matter even without maxing earlier stages', () => {
-    [4, 6, 10, 12, 16].forEach((stageId) => {
-      const timeEntity = STAGE_ENTITIES.find((entity) => entity.stageId === stageId && entity.effect.type === 'time');
-      expect(timeEntity).toBeDefined();
-      if (!timeEntity) return;
-
-      const beforeModifiers = defaultModifiers();
-      const afterModifiers = {
-        ...defaultModifiers(),
-        timeMultMult: 1 + timeEntity.effect.value / 100,
-      };
-
-      expect(getCosmicTimeFillRate(0, afterModifiers, 1, stageId)).toBeGreaterThan(
-        getCosmicTimeFillRate(0, beforeModifiers, 1, stageId),
-      );
-    });
-  });
-
-  it('makes each fresh late stage slower than the last even with maxed global time level', () => {
-    const modifiers = defaultModifiers();
-
-    expect(100 / getCosmicTimeFillRate(40, modifiers, 1, 11)).toBeGreaterThan(
-      100 / getCosmicTimeFillRate(40, modifiers, 1, 10),
-    );
-    expect(100 / getCosmicTimeFillRate(40, modifiers, 1, 16)).toBeGreaterThan(
-      100 / getCosmicTimeFillRate(40, modifiers, 1, 15),
-    );
-  });
-
-  it('does not let late-stage Aeon Drive bypass the geometric time gate without time entities', () => {
-    const modifiers = defaultModifiers();
-    const stage16Level0 = 100 / getCosmicTimeFillRate(0, modifiers, 1, 16);
-    const stage16Level40 = 100 / getCosmicTimeFillRate(40, modifiers, 1, 16);
-    expect(stage16Level0).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
-    expect(stage16Level40).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
-  });
-
-  it('preserves dramatic late-stage growth until time upgrades are heavily invested', () => {
-    const modifiers = defaultModifiers();
-    const stage10Level30Seconds = 100 / getCosmicTimeFillRate(30, modifiers, 1, 10);
-    const stage16Level30Seconds = 100 / getCosmicTimeFillRate(30, modifiers, 1, 16);
-    const stage16Level40Seconds = 100 / getCosmicTimeFillRate(40, modifiers, 1, 16);
-
-    expect(stage16Level30Seconds).toBeGreaterThan(stage10Level30Seconds * 100);
-    expect(stage16Level30Seconds).toBeGreaterThan(24 * 60 * 60);
-    expect(stage16Level40Seconds).toBeCloseTo(getUnupgradedTimeGaugeSeconds(16), 3);
   });
 
   it('caps expected crit chance at 50 percent', () => {

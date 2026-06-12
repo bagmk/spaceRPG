@@ -43,9 +43,10 @@ export type EntityGlyph =
 
 export type EntityEffectType =
   | 'auto'        // auto-rate flat economy gain
+  | 'auto_mult'   // Auto Power — % multiplier on entity flat-auto (rift gear)
   | 'click'       // click power percentage multiplier
   | 'crit'        // crit chance flat add
-  | 'time'        // cosmic time multiplier
+  | 'time'        // DEPRECATED cosmic time multiplier — no entity uses it (entropy gate replaced it)
   | 'entropy'     // legacy; avoid for new Entity Lab data
   | 'combo_cap'   // combo cap flat add
   | 'multiplier'; // all-source quanta multiplier
@@ -110,7 +111,8 @@ export interface EntityInstance {
 export type EquipCategory = 'click' | 'rift';
 
 export function getEquipCategory(entity: StageEntity): EquipCategory {
-  return entity.effect.type === 'auto' || entity.effect.type === 'time' ? 'rift' : 'click';
+  const t = entity.effect.type;
+  return t === 'auto' || t === 'auto_mult' || t === 'time' ? 'rift' : 'click';
 }
 
 /** Cost of the next purchase given current count. */
