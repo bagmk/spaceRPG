@@ -125,6 +125,27 @@ describe('codex thematic sets', () => {
     }
   });
 
+  it('every entity belongs to at least one codex subset (no orphans)', () => {
+    const claimed = new Set<string>();
+    for (const set of CODEX_SETS) {
+      for (const sub of set.subsets) {
+        for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) claimed.add(m.id);
+      }
+    }
+    const orphans = STAGE_ENTITIES.filter((e) => !claimed.has(e.id)).map((e) => `${e.id}:${e.name}`);
+    expect(orphans).toEqual([]);
+  });
+
+  it('curated subset rosters reference only resolvable entity ids', () => {
+    for (const set of CODEX_SETS) {
+      for (const sub of set.subsets) {
+        for (const id of sub.match.entityIds ?? []) {
+          expect(findEntityById(id), `${set.id}/${sub.id} references unknown id ${id}`).toBeDefined();
+        }
+      }
+    }
+  });
+
   it('Genesis "first_light" subset is exactly the stage-1 entities', () => {
     const genesis = CODEX_SETS.find((s) => s.id === 'genesis')!;
     const firstLight = genesis.subsets.find((s) => s.id === 'first_light')!;

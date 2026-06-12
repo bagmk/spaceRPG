@@ -117,6 +117,12 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- 도감 전수 커버 — 고아 27종 전부 편입 (2026-06-12, 사용자 — "코히런한것만 새 서브셋, 스테이지에 묶일 필요 없음(힉스도 인류가 늦게 발견)"):
+  - **설계 원칙 확정**: 도감 멤버십은 주제 기반이지 스테이지 기반이 아님 — 후반 드랍 엔티티도 초기 테마 컬렉션에 들어감.
+  - **신규 서브셋 3**: 표준모형 **반물질**(Decay Positron·Positronium·Relic Positron, critMult+6) · 우주거대구조 **구조의 씨앗**(최후산란면·Structure Seed·중력퍼텐셜·중력붕괴, entropyGain+6) · 종말 **양자의 운명**(Last Baryon·Virtual Particle Pair·Quantum Fluctuation Final·True Vacuum Bubble, entropyGain+8).
+  - **기존 서브셋 확장**(glyph + entityIds 병행): 장→**장·QCD**(+Free Quark·Color Flux Tube), 원시핵→**빅뱅 핵합성**(+n/p Ratio·BBN Completion), 잔해(+Degenerate Electron), 가스·파동(+Cold/Molecular H·H Cloud·Free Electron·**재이온화 2종**), 은하(+Gravitational Lens), 세계(+Dust Grain·Habitable World), 공허(+Decay Neutrino·Relic ν Background).
+  - **멀티에이전트 정합성 리뷰**: 27곳 배치 전수 검증 — 25 통과, 재이온화 2종은 은하→가스·파동으로 이동(IGM 상태 변화이지 은하 객체 아님) 반영.
+  - **가드**: 고아 0 불변식 + 큐레이션 ID 해석 가능성 테스트. **205/205 전수 커버**. 718 통과, tsc, build.
 - 표준모형 완성(타우·Z·힉스) + glyph 회귀 수정 (2026-06-11, 사용자 — "타우랑 힉스 z도 넣어줘, 이후 안중요한것 가져와서"):
   - **빈자리 채움 4종**(후반 저중요 엔티티 재활용, 멀티에이전트 워크플로로 후보 검증 후 적용): Relic Electron(s16_01)→**Tau**, Relic Neutrino(s16_04)→**Tau Neutrino**, GUT Monopole Decay(s14_09)→**Z Boson**, Quantum Tunneling(s14_07)→**Higgs Boson**. → 표준모형 **경입자 6(3세대 전부)** · **보손 7**(gluon/W/Z/photon/Higgs + 중간자 pion/kaon) 완성. (워크플로가 Tau를 Muon으로 잘못 라우팅 → 기존 로스터 파괴 위험, 사용자 의도대로 후반 relic로 오버라이드.)
   - **glyph 회귀 수정**(직전 주기율표 커밋의 잠재 버그): 리네임은 이름기반 glyph 추론을 잃어 Hydrogen→particle·Helium→nucleus·Carbon→star로 **무음 변경**됐었음(카드 비주얼+세트보너스 키 영향). `ENTITY_GLYPH_OVERRIDES`에 H/He/C/Fe→atom 고정 + stale 'Carbon First' 키 제거. 신규 4종도 lepton/boson 고정.

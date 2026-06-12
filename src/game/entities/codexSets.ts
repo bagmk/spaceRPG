@@ -90,8 +90,11 @@ export const CODEX_SETS: CodexSet[] = [
       { id: 'leptons', label: { en: 'Leptons', ko: '경입자' }, match: { entityIds: ['s2_03', 's2_04', 's3_04', 's4_11', 's16_01', 's16_04'] }, reward: { stat: 'critChance', value: 4 } },
       // Bosons (7, integer spin): gluon · W · Z · photon · Higgs + residual-force mesons pion & kaon.
       { id: 'bosons', label: { en: 'Bosons', ko: '보손' }, match: { entityIds: ['s2_05', 's2_07', 's14_09', 's4_04', 's14_07', 's3_03', 's3_07'] }, reward: { stat: 'autoPower', value: 10 } },
-      // Fields & symmetry: CP violation, QCD phase boundary, confinement.
-      { id: 'fields', label: { en: 'Fields', ko: '장(場)' }, match: { entityIds: ['s2_08', 's3_11', 's3_12'] }, reward: { stat: 'entropyGain', value: 8 } },
+      // Fields, QCD & confinement: CP violation, QCD phase boundary, confinement,
+      // plus the deconfined quark and the color-flux string of the plasma era.
+      { id: 'fields', label: { en: 'Fields & QCD', ko: '장·QCD' }, match: { entityIds: ['s2_08', 's3_11', 's3_12', 's3_01', 's3_09'] }, reward: { stat: 'entropyGain', value: 8 } },
+      // Antimatter: the mirror particles — positrons and positronium (e⁺e⁻).
+      { id: 'antimatter', label: { en: 'Antimatter', ko: '반물질' }, match: { entityIds: ['s14_01', 's14_10', 's16_03'] }, reward: { stat: 'critMult', value: 6 } },
     ],
   },
   {
@@ -106,8 +109,9 @@ export const CODEX_SETS: CodexSet[] = [
       // at recombination; the heavier elements are forged in stars.
       { id: 'period1', label: { en: 'Period 1', ko: '1주기' }, match: { entityIds: ['s5_01', 's5_03'] }, reward: { stat: 'dropRate', value: 6 } },
       { id: 'stellar_elements', label: { en: 'Stellar Elements', ko: '항성 원소' }, match: { entityIds: ['s7_08', 's7_05', 's7_10'] }, reward: { stat: 'autoPower', value: 8 } },
-      // The light nuclei (isotopes) forged in Big Bang nucleosynthesis.
-      { id: 'primordial_nuclei', label: { en: 'Primordial Nuclei', ko: '원시 원자핵' }, match: { entityIds: ['s4_01', 's4_02', 's4_03', 's4_05', 's4_06', 's4_07', 's4_08', 's4_10'] }, reward: { stat: 'autoPower', value: 6 } },
+      // Big Bang nucleosynthesis: the light nuclei + the n/p ratio and the
+      // synthesis milestone that fix the primordial element yields.
+      { id: 'primordial_nuclei', label: { en: 'Big Bang Nucleosynthesis', ko: '빅뱅 핵합성' }, match: { entityIds: ['s4_01', 's4_02', 's4_03', 's4_05', 's4_06', 's4_07', 's4_08', 's4_10', 's4_12', 's4_13'] }, reward: { stat: 'autoPower', value: 6 } },
     ],
   },
   {
@@ -120,7 +124,7 @@ export const CODEX_SETS: CodexSet[] = [
     subsets: [
       { id: 'stars', label: { en: 'Living Stars', ko: '항성' }, match: { glyphs: ['star', 'plasma', 'radiation', 'accretion'] }, reward: { stat: 'autoPower', value: 10 } },
       { id: 'stellar_death', label: { en: 'Stellar Death', ko: '별의 죽음' }, match: { glyphs: ['supernova', 'envelope', 'nebula'] }, reward: { stat: 'critMult', value: 6 } },
-      { id: 'remnants', label: { en: 'Remnants', ko: '잔해' }, match: { glyphs: ['remnant', 'crystal'] }, reward: { stat: 'autoPower', value: 8 } },
+      { id: 'remnants', label: { en: 'Remnants', ko: '잔해' }, match: { glyphs: ['remnant', 'crystal'], entityIds: ['s12_07'] }, reward: { stat: 'autoPower', value: 8 } },
     ],
   },
   {
@@ -131,9 +135,13 @@ export const CODEX_SETS: CodexSet[] = [
     accent: '#6d8fff',
     reward: { stat: 'entropyGain', value: 12 },
     subsets: [
-      { id: 'gas', label: { en: 'Gas & Waves', ko: '가스·파동' }, match: { glyphs: ['cloud', 'wave'] }, reward: { stat: 'dropRate', value: 6 } },
+      // Gas & waves — includes the reionization milestones (IGM state changes, not galaxy objects).
+      { id: 'gas', label: { en: 'Gas & Waves', ko: '가스·파동' }, match: { glyphs: ['cloud', 'wave'], entityIds: ['s6_01', 's5_05', 's6_05', 's5_02', 's8_13', 's8_14'] }, reward: { stat: 'dropRate', value: 6 } },
       { id: 'dark_matter', label: { en: 'Dark Matter', ko: '암흑물질' }, match: { glyphs: ['halo'] }, reward: { stat: 'offline', value: 12 } },
-      { id: 'galaxies', label: { en: 'Galaxies', ko: '은하' }, match: { glyphs: ['galaxy'] }, reward: { stat: 'entropyGain', value: 8 } },
+      { id: 'galaxies', label: { en: 'Galaxies', ko: '은하' }, match: { glyphs: ['galaxy'], entityIds: ['s9_10'] }, reward: { stat: 'entropyGain', value: 8 } },
+      // Structure formation: the last-scattering surface and the seeds + collapse
+      // that grow the primordial web.
+      { id: 'structure', label: { en: 'Structure Seeds', ko: '구조의 씨앗' }, match: { entityIds: ['s5_11', 's5_14', 's6_08', 's6_13'] }, reward: { stat: 'entropyGain', value: 6 } },
     ],
   },
   {
@@ -144,7 +152,7 @@ export const CODEX_SETS: CodexSet[] = [
     accent: '#68d8a4',
     reward: { stat: 'critChance', value: 4 },
     subsets: [
-      { id: 'worlds', label: { en: 'Worlds', ko: '세계' }, match: { glyphs: ['planet', 'water'] }, reward: { stat: 'autoPower', value: 8 } },
+      { id: 'worlds', label: { en: 'Worlds', ko: '세계' }, match: { glyphs: ['planet', 'water'], entityIds: ['s10_02', 's10_14'] }, reward: { stat: 'autoPower', value: 8 } },
       { id: 'life', label: { en: 'Life', ko: '생명' }, match: { glyphs: ['life', 'cell', 'dna', 'neuron'] }, reward: { stat: 'critChance', value: 5 } },
     ],
   },
@@ -157,7 +165,10 @@ export const CODEX_SETS: CodexSet[] = [
     reward: { stat: 'entropyGain', value: 15 },
     subsets: [
       { id: 'gravity', label: { en: 'Gravity Wells', ko: '중력 우물' }, match: { glyphs: ['black_hole', 'singularity'] }, reward: { stat: 'clickPower', value: 10 } },
-      { id: 'the_void', label: { en: 'The Void', ko: '공허' }, match: { glyphs: ['void', 'entropy', 'bounce'] }, reward: { stat: 'entropyGain', value: 10 } },
+      // The void + the relic neutrinos still drifting through it.
+      { id: 'the_void', label: { en: 'The Void', ko: '공허' }, match: { glyphs: ['void', 'entropy', 'bounce'], entityIds: ['s14_03', 's14_08'] }, reward: { stat: 'entropyGain', value: 10 } },
+      // Quantum fate: the last baryon and the vacuum's final fluctuations.
+      { id: 'quantum_fate', label: { en: 'Quantum Fate', ko: '양자의 운명' }, match: { entityIds: ['s14_13', 's15_02', 's16_09', 's16_13'] }, reward: { stat: 'entropyGain', value: 8 } },
     ],
   },
 ];
