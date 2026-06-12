@@ -77,6 +77,8 @@ interface RiftMote {
   born: number;
   lifeMs: number;
   seekCore: boolean;
+  /** Visual size scale — driven by Auto Power (particle intensity). */
+  scale: number;
 }
 
 interface RiftState {
@@ -92,6 +94,7 @@ function updateAndDrawRift(
   rift: RiftState,
   equipped: StageEntity[],
   autoRate: number,
+  power: number,
   now: number,
   dtMs: number,
   height: number,
@@ -99,6 +102,8 @@ function updateAndDrawRift(
   cy: number,
   accent: string,
 ): void {
+  // Auto Power (intensity) scales mote size/glow; Auto Speed (auto rate) sets cadence.
+  const moteScale = Math.min(2.4, 0.9 + Math.log1p(Math.max(0, power - 1)) * 0.9);
   const rx = 46;
   const ry = height - 84;
 
@@ -121,6 +126,7 @@ function updateAndDrawRift(
           born: now,
           lifeMs: 6500,
           seekCore: true,
+          scale: moteScale,
         });
       }
     }
@@ -213,9 +219,9 @@ function updateAndDrawRift(
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, fade));
     ctx.shadowColor = m.color;
-    ctx.shadowBlur = 9;
+    ctx.shadowBlur = 9 * m.scale;
     ctx.fillStyle = m.color;
-    ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+    ctx.font = `${(10 * m.scale).toFixed(1)}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(m.symbol, m.x, m.y);
@@ -254,6 +260,8 @@ interface ParticleFieldProps {
   riftSlots: string[];
   /** Click gear ids — shapes the click emission motes (스펙 §8). */
   clickSlots: string[];
+  /** Auto Power (autoFlatMult) — scales rift particle intensity/size. */
+  riftPower: number;
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   /** Tapping the bottom-left spatial rift opens the rift gear page. */
   onRiftClick?: () => void;
@@ -832,6 +840,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   inventory,
   riftSlots,
   clickSlots,
+  riftPower,
   onGatherClick,
   onRiftClick,
   onCollision,
@@ -1109,6 +1118,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           born: puffNow,
           lifeMs: lastClickEvent.isCrit ? 1400 : 950,
           seekCore: false,
+          scale: lastClickEvent.isCrit ? 1.3 : 1,
         });
       }
     }
@@ -1499,7 +1509,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     ctx.restore();
 
     // Spatial rift + equipped-shape motes (screen space, above the world layer).
-    updateAndDrawRift(ctx, riftRef.current, equippedRef.current, autoRate, now, dt, height, cx, cy, stage.accent);
+    updateAndDrawRift(ctx, riftRef.current, equippedRef.current, autoRate, riftPower, now, dt, height, cx, cy, stage.accent);
 
     if (transitionActive && transitionElapsed !== null) {
       const washOpacity = Math.max(

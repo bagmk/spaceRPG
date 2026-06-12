@@ -27,19 +27,19 @@ const DEFAULT_FAMILY: FamilyIdentity = {
 
 export const ENTITY_FAMILIES: Partial<Record<EntityGlyph, FamilyIdentity>> = {
   // ── Engines: steady auto income ──
-  star:      { label: { en: 'Star', ko: '항성' }, role: { en: 'Steady auto engine', ko: '꾸준한 오토 엔진' } },
-  nebula:    { label: { en: 'Nebula', ko: '성운' }, role: { en: 'Diffuse auto bloom', ko: '확산형 오토' } },
-  envelope:  { label: { en: 'Stellar Envelope', ko: '항성 외피' }, role: { en: 'Swelling auto output', ko: '팽창하는 오토' } },
+  star:      { label: { en: 'Star', ko: '항성' }, role: { en: 'Steady auto speed', ko: '꾸준한 오토 속도' } },
+  nebula:    { label: { en: 'Nebula', ko: '성운' }, role: { en: 'Diffuse auto speed', ko: '확산형 오토 속도' } },
+  envelope:  { label: { en: 'Stellar Envelope', ko: '항성 외피' }, role: { en: 'Swelling auto power', ko: '팽창하는 오토 파워' } },
   accretion: { label: { en: 'Accretion', ko: '강착' }, role: { en: 'Inflowing auto + click', ko: '유입 오토·클릭' } },
-  molecule:  { label: { en: 'Molecular Cloud', ko: '분자운' }, role: { en: 'Cold auto fuel', ko: '냉각 오토 연료' } },
-  atom:      { label: { en: 'Atom', ko: '원자' }, role: { en: 'Stable auto base', ko: '안정 오토 기반' } },
+  molecule:  { label: { en: 'Molecular Cloud', ko: '분자운' }, role: { en: 'Cold auto speed', ko: '냉각 오토 속도' } },
+  atom:      { label: { en: 'Atom', ko: '원자' }, role: { en: 'Stable auto speed', ko: '안정 오토 속도' } },
   cloud:     { label: { en: 'Gas Cloud', ko: '가스운' }, role: { en: 'Slow auto power', ko: '느린 오토 파워' } },
-  water:     { label: { en: 'Water World', ko: '물의 세계' }, role: { en: 'Life-bearing auto', ko: '생명의 오토' } },
+  water:     { label: { en: 'Water World', ko: '물의 세계' }, role: { en: 'Life-bearing auto speed', ko: '생명의 오토 속도' } },
   planet:    { label: { en: 'World', ko: '행성' }, role: { en: 'Orbital auto power', ko: '궤도 오토 파워' } },
 
   // ── Remnants: dim rhythmic auto (Pulsar identity) ──
-  remnant:   { label: { en: 'Remnant', ko: '잔해' }, role: { en: 'Pulsing auto burst', ko: '맥동 오토 버스트' } },
-  crystal:   { label: { en: 'Crystal Star', ko: '결정성' }, role: { en: 'Frozen auto lattice', ko: '결정화 오토' } },
+  remnant:   { label: { en: 'Remnant', ko: '잔해' }, role: { en: 'Pulsing auto power', ko: '맥동 오토 파워' } },
+  crystal:   { label: { en: 'Crystal Star', ko: '결정성' }, role: { en: 'Frozen auto power', ko: '결정화 오토 파워' } },
 
   // ── Particles: fast clicks / multi-hit (Quark identity) ──
   quark:     { label: { en: 'Quark', ko: '쿼크' }, role: { en: 'Rapid click hits', ko: '빠른 클릭 연타' } },

@@ -278,21 +278,13 @@ export function GameScreen({
         autoCloseMs: 7000,
       };
     }
-    if (hasAffordableEntity && !state.tutorialFlags['entity-lab-intro']) {
+    if (ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-intro']) {
       return {
         flagId: 'entity-lab-intro',
         anchor: 'entity',
         message: t(language, 'tutEntityLabIntro'),
         ctaLabel: t(language, 'tutEntityLabOpen'),
-        onCta: openEntityPanel,
-      };
-    }
-    if (ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-canvas']) {
-      return {
-        flagId: 'entity-lab-canvas',
-        anchor: 'entity',
-        message: t(language, 'tutEntityLabCanvas'),
-        autoCloseMs: 6000,
+        onCta: () => openEntityPanel('equip', 'click'),
       };
     }
     if (stage.id >= 3 && !state.tutorialFlags['focus-mode-intro']) {
@@ -653,6 +645,7 @@ export function GameScreen({
           inventory={state.inventory}
           riftSlots={state.riftSlots}
           clickSlots={state.equippedSlots}
+          riftPower={modifiers.autoFlatMult}
           onRiftClick={() => openEntityPanel('equip', 'rift')}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
@@ -718,6 +711,7 @@ export function GameScreen({
             unlockedRiftSlotCount={state.unlockedRiftSlotCount}
             fusionPity={state.fusionPity}
             lastFusionEvent={state.lastFusionEvent}
+            almanacCollected={state.almanacCollected}
             quanta={state.quanta}
             stats={{
               clickPower: getClickPower(modifiers),
@@ -879,13 +873,12 @@ export function GameScreen({
           <button
             ref={entityAnchorRef}
             type="button"
-            className={`entity-lab-button ${hasAffordableEntity ? 'affordable' : ''}`}
+            className="entity-lab-button"
             onClick={() => openEntityPanel('lab')}
-            aria-label="Open Entity Lab"
+            aria-label={t(language, 'collectionTitle')}
           >
-            <span className="hud-action-icon" aria-hidden="true">⚗</span>
-            <span className="hud-action-label">{t(language, 'entityLabTitle')}</span>
-            {hasAffordableEntity ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
+            <span className="hud-action-icon" aria-hidden="true">📖</span>
+            <span className="hud-action-label">{t(language, 'collectionTitle')}</span>
           </button>
           <button
             type="button"

@@ -117,6 +117,11 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- 균열 2축 + 도감 전환 (2026-06-11, 사용자 피드백):
+  - **균열(오토) 2축 자연화**: `auto`="Auto Speed"(쏘는 속도 — 방출 빈도), `auto_mult`="Auto Power"(파티클 강도). **시각 직접 반영**: 균열 모트 크기·광량 ∝ Auto Power(`riftPower=autoFlatMult`, 모트 scale = 0.9+log1p(power-1)×0.9, 최대 2.4×), 방출 간격 ∝ Auto Speed(autoRate). 라벨/패널/families 갱신.
+  - **엔티티랩 → 도감(Codex) 전환**: lab 페이지를 수집 격자로 교체 — 수집/잠김(???) 카드, 스테이지별 완성 N/M·%, 장착 ★ 표시, 탭하면 상세(장착/강화). **구매 전면 제거**: 상세 카드 구매 버튼 삭제, 하단바 ⚗연구소 → 📖도감. 아이템은 드랍+융합으로만 획득. PURCHASE_ENTITY 리듀서는 테스트용 유지(UI 미호출). 튜토리얼을 드랍/장착 루프로 갱신.
+  - i18n: collectionTitle/codexCollected/codexConsumed + Auto Speed/Power 라벨(EN/KO).
+  - 검증: 706 통과, build. 죽은 구매 코드(EntityCard 등) 정리는 spawn_task로 분리.
 - Time 효과 제거 → Auto Power 대체 (2026-06-11, 사용자 요청):
   - **근거**: cosmic-time 게이트가 엔트로피 게이트로 대체된 뒤 `time` 효과는 진행을 못 막는 **죽은 스탯**. 엔티티 44개의 `time` → 신규 **`auto_mult` ("Auto Power")**.
   - **격리 설계**: 신규 모디파이어 `autoFlatMult`(기본 1)가 **엔티티 flat-auto만 곱함**(`getAutoRate`에 항 추가). autoRateMult/substat/세트와 안 엮여 밸런스 무회귀. 항상 유용(오프라인 전용 X). 카테고리는 rift 유지(스테이지 카운트 불변).

@@ -220,6 +220,7 @@ interface Props {
   unlockedRiftSlotCount: number;
   fusionPity: number;
   lastFusionEvent: FusionEvent | null;
+  almanacCollected: Record<number, string[]>;
   quanta: number;
   stats: PanelStats;
   language: Lang;
@@ -234,7 +235,7 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, quanta, stats, language, onPurchase, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onPurchase, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const tab = page;
@@ -426,65 +427,60 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
 
 
         {tab === 'lab' ? (<>
-        {/* Cleared stage banner + back button */}
-        {selectedStage && selectedStage.id < currentStageId && (
-          <div className="entity-panel__cleared-banner" style={{ '--stage-accent': selectedStage.accent } as CSSProperties}>
-            <span className="entity-panel__cleared-paw">✓</span>
-            <span>{`${t(language, 'entityLabStageLabel')} ${selectedStage.id} ${t(language, 'entityLabStageCleared')}`}</span>
-            <button
-              type="button"
-              className="entity-panel__back-btn"
-              onClick={() => { setSelectedStageId(currentStageId); onStageSelect?.(currentStageId); }}
-            >
-              {language === 'ko' ? `단계 ${currentStageId}로 ▶` : `Stage ${currentStageId} ▶`}
-            </button>
-          </div>
-        )}
-
-        {/* Hint: past stages are upgradeable */}
-        {currentStageId >= 3 && selectedStageId === currentStageId && (
-          <div className="entity-panel__hint">
-            {language === 'ko'
-              ? '💡 이전 스테이지의 엔티티도 업그레이드할 수 있습니다!'
-              : '💡 You can still upgrade entities from previous stages!'}
-          </div>
-        )}
-
-        {/* Entity list — key changes on stage switch to replay entry animations */}
-        <div className="entity-panel__list" key={selectedStageId}>
-          {entities.length === 0 && (
-            <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
-          )}
-          {entities.map((entity, idx) => {
-            const prereq = getEntityLockPrerequisite(entity, inventory);
-            const anchorLocked = prereq !== undefined;
-            const anchorName = prereq ? entityName(prereq, language) : undefined;
-            const rarityLocked =
-              (RARITY_STAGE_GATES[entity.rarity] ?? 1) > currentStageId && countOf(entity) === 0;
-            return (
-              <EntityCard
-                key={entity.id}
-                entity={entity}
-                count={countOf(entity)}
-                quanta={quanta}
-                language={language}
-                rarityColor={RARITY_COLORS[entity.rarity]}
-                onPurchase={onPurchase}
-                onInspect={() => {
-                  if (rarityLocked) return;
-                  setInspectedEntityId(entity.id); onUITap?.();
-                }}
-                animDelay={idx * 45}
-                canPurchase={selectedStageId <= currentStageId && !anchorLocked && !rarityLocked}
-                anchorLockedBy={anchorLocked ? anchorName : undefined}
-                displayStageId={selectedStageId}
-                isEquipped={equippedSlotOf(entity) >= 0}
-                rarityLocked={rarityLocked}
-                ownedLevel={ownedEntryOf(entity)?.level ?? 1}
-              />
-            );
-          })}
-        </div>
+        {(() => {
+          const discovered = new Set(almanacCollected[selectedStageId] ?? []);
+          const isCollected = (e: StageEntity) => discovered.has(e.id) || countOf(e) > 0;
+          const total = entities.length;
+          const got = entities.filter(isCollected).length;
+          const pct = total > 0 ? Math.round((got / total) * 100) : 0;
+          return (
+            <>
+              <div className="almanac-progress">
+                <div className="almanac-progress__row">
+                  <span>{t(language, 'codexCollected')}</span>
+                  <span>{`${got} / ${total} · ${pct}%`}</span>
+                </div>
+                <div className="almanac-progress__bar">
+                  <div className="almanac-progress__fill" style={{ width: `${pct}%`, background: selectedStage?.accent }} />
+                </div>
+              </div>
+              <div className="almanac-grid" key={selectedStageId}>
+                {entities.length === 0 && (
+                  <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
+                )}
+                {entities.map((entity, idx) => {
+                  const collected = isCollected(entity);
+                  const entry = ownedEntryOf(entity);
+                  const rarityColor = RARITY_COLORS[entity.rarity];
+                  return (
+                    <button
+                      key={entity.id}
+                      type="button"
+                      className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
+                      style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${idx * 35}ms` } as CSSProperties}
+                      onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
+                    >
+                      <div className="almanac-card__glyph">
+                        {collected
+                          ? <EntityGlyph entity={entity} color={rarityColor} />
+                          : <span className="almanac-card__mystery">?</span>}
+                        {equippedSlotOf(entity) >= 0 ? <span className="almanac-card__equipped">★</span> : null}
+                      </div>
+                      <div className="almanac-card__name">
+                        {collected ? entityName(entity, language) : '???'}
+                      </div>
+                      {collected && entry ? (
+                        <div className="almanac-card__meta" style={{ color: rarityColor }}>
+                          {`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
         </>) : null}
 
         {/* ── Equip page ── */}
@@ -1074,15 +1070,6 @@ function EntityDetailCard({
           </div>
         ) : null}
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
-        <button
-          type="button"
-          className="entity-detail-card__buy"
-          style={canAfford ? { background: rarityColor } : { borderColor: rarityColor, color: rarityColor }}
-          disabled={!canAfford}
-          onClick={() => onPurchase(entity.id)}
-        >
-          {maxed ? t(language, 'entityLabMaxed') : canPurchase ? `${t(language, 'entityLabGet')} · ${formatEntityCost(cost)}` : t(language, 'entityLabLocked')}
-        </button>
         {count > 0 ? (
           <button
             type="button"
@@ -1092,7 +1079,9 @@ function EntityDetailCard({
           >
             {isEquipped ? t(language, 'entityUnequip') : t(language, 'entityEquip')}
           </button>
-        ) : null}
+        ) : (
+          <div className="entity-detail-card__undiscovered">{t(language, 'codexConsumed')}</div>
+        )}
         {count > 0 ? (() => {
           const cap = getEnhanceLevelCap(entity);
           const atCap = ownedLevel >= cap;
