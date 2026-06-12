@@ -12673,3 +12673,54 @@ button.stat-header-item {
   0% { transform: scale(0.7); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ── Codex thematic set selector (도감 재미 패스) ─────────────────────────── */
+.codex-sets {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.codex-sets::-webkit-scrollbar { display: none; }
+.codex-set-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 64px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--set-accent) 35%, transparent);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.codex-set-chip--active {
+  border-color: var(--set-accent);
+  background: color-mix(in srgb, var(--set-accent) 16%, transparent);
+}
+.codex-set-chip--full {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--set-accent) 55%, transparent);
+}
+.codex-set-chip__icon { font-size: 15px; }
+.codex-set-chip__label {
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.codex-set-chip__count {
+  font-family: var(--mono);
+  font-size: 8px;
+  opacity: 0.7;
+}
+.almanac-progress--complete .almanac-progress__row {
+  color: #ffd76a;
+  font-weight: 600;
+}
+.almanac-card__meta--stage {
+  opacity: 0.4;
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from '../entities/stageItems';
 import { getEquipCategory } from '../entities/types';
 import { getFamily } from '../entities/families';
+import { CODEX_SETS, getCodexSetForGlyph } from '../entities/codexSets';
 import type { EntityEffectType } from '../entities/types';
 
 /**
@@ -98,6 +99,23 @@ describe('identity pass: name↔effect coherence', () => {
       expect(fam.label.en.length).toBeGreaterThan(0);
       expect(fam.label.ko.length).toBeGreaterThan(0);
       expect(fam.role.en.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('codex thematic sets', () => {
+  it('assigns every entity to exactly one set, covering all 205', () => {
+    const counts: Record<string, number> = {};
+    for (const e of STAGE_ENTITIES) {
+      const set = getCodexSetForGlyph(e.visual.glyph);
+      expect(set).toBeDefined();
+      counts[set.id] = (counts[set.id] ?? 0) + 1;
+    }
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    expect(total).toBe(STAGE_ENTITIES.length);
+    // Every set has a meaningful number of collectibles.
+    for (const set of CODEX_SETS) {
+      expect(counts[set.id] ?? 0).toBeGreaterThanOrEqual(10);
     }
   });
 });

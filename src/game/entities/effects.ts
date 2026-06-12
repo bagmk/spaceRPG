@@ -57,7 +57,9 @@ export function applyEntityModifiers(
     if (!entity) continue;
 
     const { type, value, isFlat } = entity.effect;
-    const count = entity.maxCount > 0 ? Math.min(entry.count, entity.maxCount) : entry.count;
+    // Collection count is uncapped (no max item number — 모으는 맛). The effect
+    // scales with the full owned count; maxCount only gates the fusion dup-sink.
+    const count = entry.count;
     // Levels come from enhancement + the fusion duplicate sink and scale everything.
     const levelMult = 1 + Math.max(0, (entry.level ?? 1) - 1) * ENTITY_LEVEL_EFFECT_BONUS;
     // Percentage effects ride the stage power curve so later gear outgrows earlier

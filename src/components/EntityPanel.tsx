@@ -3,7 +3,7 @@ import type { CSSProperties, MouseEvent } from 'react';
 import type { EntityInstance, FusionEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { getEntityCost } from '../game/entities/types';
-import { entityMatchesId, findEntityById, getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { STAGE_ENTITIES, entityMatchesId, findEntityById, getEntitiesForStage, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   ENTROPY_FUSION_COST_FRAC,
   EQUIP_SLOT_UNLOCKS,
@@ -22,6 +22,7 @@ import { getExpectedFusionRefund, getMaxFusionRarityIdx } from '../game/entities
 import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getSecondaryStats, getStagePowerMult, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
+import { CODEX_SETS, codexSetBlurb, codexSetLabel, getCodexSetForGlyph } from '../game/entities/codexSets';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -167,7 +168,8 @@ function formatEntityEffectTotal(
 ): string {
   if (count === 0) return '';
   const { type, value, isFlat } = entity.effect;
-  const cappedCount = entity.maxCount > 0 ? Math.min(count, entity.maxCount) : count;
+  // Collection count is uncapped (matches applyEntityModifiers).
+  const cappedCount = count;
   const lvl = getLevelMult(level);
   const curvedTotal = value * cappedCount * lvl * getStagePowerMult(entity.stageId);
   if (type === 'click') {
@@ -237,6 +239,7 @@ interface Props {
 
 export function EntityPanel({ page, equipCategory, currentStageId, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onPurchase, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
+  const [selectedSetId, setSelectedSetId] = useState(CODEX_SETS[0].id);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   const tab = page;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
@@ -381,7 +384,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
           <button className="entity-panel__close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Stage Timeline — shared by all pages (filters equip picker + fusion grid too) */}
+        {/* Stage Timeline — equip/fuse pages filter owned items by stage. The
+            Codex uses thematic sets instead, so the timeline is hidden there. */}
+        {tab !== 'lab' ? (
         <div className="entity-timeline" ref={timelineRef}>
           <div className="entity-timeline__track">
             {accessibleStages.map((s, i) => {
@@ -424,31 +429,60 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
             })}
           </div>
         </div>
+        ) : null}
 
 
-        {tab === 'lab' ? (<>
-        {(() => {
-          const discovered = new Set(almanacCollected[selectedStageId] ?? []);
-          const isCollected = (e: StageEntity) => discovered.has(e.id) || countOf(e) > 0;
-          const total = entities.length;
-          const got = entities.filter(isCollected).length;
+        {tab === 'lab' ? (() => {
+          // Codex: thematic science sets that span all stages (no per-stage tabs).
+          const discoveredAll = new Set<string>();
+          for (const ids of Object.values(almanacCollected)) for (const id of ids) discoveredAll.add(id);
+          const isCollected = (e: StageEntity) => discoveredAll.has(e.id) || countOf(e) > 0;
+
+          const activeSet = CODEX_SETS.find((cs) => cs.id === selectedSetId) ?? CODEX_SETS[0];
+          const setEntities = STAGE_ENTITIES
+            .filter((e) => getCodexSetForGlyph(e.visual.glyph).id === activeSet.id)
+            .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
+          const got = setEntities.filter(isCollected).length;
+          const total = setEntities.length;
           const pct = total > 0 ? Math.round((got / total) * 100) : 0;
+          const complete = got === total && total > 0;
+
           return (
             <>
-              <div className="almanac-progress">
+              {/* Set selector chips */}
+              <div className="codex-sets">
+                {CODEX_SETS.map((cs) => {
+                  const members = STAGE_ENTITIES.filter((e) => getCodexSetForGlyph(e.visual.glyph).id === cs.id);
+                  const done = members.filter(isCollected).length;
+                  const full = done === members.length && members.length > 0;
+                  return (
+                    <button
+                      key={cs.id}
+                      type="button"
+                      className={`codex-set-chip ${cs.id === selectedSetId ? 'codex-set-chip--active' : ''} ${full ? 'codex-set-chip--full' : ''}`}
+                      style={{ '--set-accent': cs.accent } as CSSProperties}
+                      onClick={() => { setSelectedSetId(cs.id); onUITap?.(); }}
+                    >
+                      <span className="codex-set-chip__icon">{cs.icon}</span>
+                      <span className="codex-set-chip__label">{codexSetLabel(cs, language)}</span>
+                      <span className="codex-set-chip__count">{`${done}/${members.length}`}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className={`almanac-progress ${complete ? 'almanac-progress--complete' : ''}`}>
                 <div className="almanac-progress__row">
-                  <span>{t(language, 'codexCollected')}</span>
+                  <span>{codexSetBlurb(activeSet, language)}</span>
                   <span>{`${got} / ${total} · ${pct}%`}</span>
                 </div>
                 <div className="almanac-progress__bar">
-                  <div className="almanac-progress__fill" style={{ width: `${pct}%`, background: selectedStage?.accent }} />
+                  <div className="almanac-progress__fill" style={{ width: `${pct}%`, background: activeSet.accent }} />
                 </div>
               </div>
-              <div className="almanac-grid" key={selectedStageId}>
-                {entities.length === 0 && (
-                  <div className="entity-panel__empty">{t(language, 'entityLabNoEntities')}</div>
-                )}
-                {entities.map((entity, idx) => {
+
+              <div className="almanac-grid" key={activeSet.id}>
+                {setEntities.map((entity, idx) => {
                   const collected = isCollected(entity);
                   const entry = ownedEntryOf(entity);
                   const rarityColor = RARITY_COLORS[entity.rarity];
@@ -457,7 +491,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                       key={entity.id}
                       type="button"
                       className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
-                      style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${idx * 35}ms` } as CSSProperties}
+                      style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
                       onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
                     >
                       <div className="almanac-card__glyph">
@@ -473,15 +507,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                         <div className="almanac-card__meta" style={{ color: rarityColor }}>
                           {`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="almanac-card__meta almanac-card__meta--stage">{`S${entity.stageId}`}</div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </>
           );
-        })()}
-        </>) : null}
+        })() : null}
 
         {/* ── Equip page ── */}
         {tab === 'equip' ? (
