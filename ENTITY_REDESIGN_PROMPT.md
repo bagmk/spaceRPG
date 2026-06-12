@@ -117,6 +117,11 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- 아이템 ID ↔ 이름 분리 (2026-06-11, 사용자 결정 — "ID를 이름에서 분리"):
+  - **정식 ID = 위치 기반**(`s{stage}_{pos}`, 이름 슬러그 제거). 이제 아이템 이름을 바꿔도 ID가 절대 안 바뀜 → 리네임 자유(주기율표 실원소화·표준모형 보강의 선결 조건). **유일 제약**: 스테이지 내 spec 배열 순서를 바꾸면 position이 바뀌니 재정렬 금지(append만).
+  - **하위호환**: 기존 이름 기반 ID(`s10_01_sun` 등)를 alias로 자동 보존(`stage()`가 legacyNameId 주입). 로드 시 `normalizeSavedEntityIds`가 inventory/almanac/equipped/rift의 모든 저장 ID를 `findEntityById(id)?.id`로 정식 ID에 정규화(멱등; 한 번 로드되면 영구 위치 ID화). 중복 inventory 엔트리는 count 합·level max로 병합.
+  - **세이브 v14→v15**: `SAVE_SCHEMA_VERSION` 15, `createSaveSnapshot`은 상수 사용, 14/15 공용 분기 + 외곽 정규화. `anchors.ts`(STAGE_ANCHOR_ENTITY·STAGE_11_PREREQUISITE)는 정확매칭 키라 위치 ID로 재작성.
+  - 검증: 711 통과(신규: 위치 ID 불변식 가드·v15 ID 정규화), tsc, build.
 - 도감 중첩 세트 + 완성 보너스 (2026-06-11, 사용자 피드백 — 도감을 더 잘게):
   - **2단 분류**(`codexSets.ts` 재작성): 세트(7) → 서브셋. **태초(Genesis)** 튜토리얼 세트(스테이지1 = 최초의 빛), **표준 모형**(쿼크/경입자/보손/장), **주기율표**(원자핵/원자/분자), **항성의 용광로**(항성/별의 죽음/잔해), **우주 거대구조**(가스·파동/암흑물질/은하), **생명의 세계**(세계/생명), **종말**(중력 우물/공허). 멤버십은 glyph 또는 stageId로 결정적. Genesis는 의도적 오버랩(타 세트의 stage1 입자 공유).
   - **완성 보너스**(영구·결정적, `applyCollectionRewards` → `getActiveModifiers`): 서브셋 완성 → 보너스, 세트 전체(모든 서브셋) 완성 → 추가 세트 보너스. `CodexReward{stat,value}` 7종(clickPower/critChance/critMult/autoPower/dropRate/entropyGain/offline). `almanacCollected`를 모든 getActiveModifiers 호출처(gameplay·helpers·GameScreen·useGameState offline)에 스레드 → 도감이 프레스티지를 넘어 영구 메타 성장. Codex UI: 세트 칩 + 세트 진행바 + 세트 보너스 칩(★/☆) + 서브셋 섹션별 헤더(라벨·N/M·보너스 칩) + 격자.

@@ -14,10 +14,20 @@ import type { EntityEffectType } from '../entities/types';
 describe('identity pass: structure preserved', () => {
   it('keeps the full entity set (205) and stable IDs', () => {
     expect(STAGE_ENTITIES.length).toBe(205);
-    // Marquee IDs (id = stage + position + name slug) must be untouched.
+    // Legacy name-derived ids still resolve (kept as aliases after decoupling).
     expect(findEntityById('s13_07_pulsar')).toBeDefined();
     expect(findEntityById('s10_01_sun')).toBeDefined();
     expect(findEntityById('s11_01_earth_formation')).toBeDefined();
+  });
+
+  it('canonical ids are position-only (decoupled from name) so renames never change an id', () => {
+    for (const e of STAGE_ENTITIES) {
+      expect(e.id).toMatch(/^s\d+_\d+$/);
+    }
+    // The legacy name-derived id is preserved as an alias for save back-compat.
+    const pulsar = findEntityById('s13_07_pulsar');
+    expect(pulsar?.id).toBe('s13_07');
+    expect(pulsar?.aliases).toContain('s13_07_pulsar');
   });
 
   it('preserves the per-stage category balance (rift vs click counts)', () => {

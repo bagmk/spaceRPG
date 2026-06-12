@@ -2,7 +2,8 @@
 
 import { STORAGE_KEYS, TUNING } from './constants';
 import { createDefaultPrestigeUpgrades } from './prestige';
-import type { GameState, PersistentGameState, SaveState } from './types';
+import { findEntityById } from './entities/stageItems';
+import type { EntityInstance, GameState, PersistentGameState, SaveState } from './types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
 import {
   migrateV1ToV2,
@@ -47,7 +48,43 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 14;
+export const SAVE_SCHEMA_VERSION = 15;
+
+/**
+ * Entity ids were decoupled from names in v15 (canonical id is now position-only,
+ * e.g. `s10_01`). Pre-v15 saves stored name-derived ids (`s10_01_sun`); those are
+ * kept as aliases, so we normalize every stored id to its canonical form once on
+ * load. Idempotent — a canonical id resolves to itself. Inventory entries that
+ * collapse onto the same canonical id are merged (count summed, level maxed).
+ */
+function canonicalEntityId(id: string): string {
+  return id ? findEntityById(id)?.id ?? id : id;
+}
+
+function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameState {
+  const invMap = new Map<string, EntityInstance>();
+  for (const e of state.inventory ?? []) {
+    const id = canonicalEntityId(e.entityId);
+    const existing = invMap.get(id);
+    if (existing) {
+      existing.count += e.count;
+      existing.level = Math.max(existing.level ?? 1, e.level ?? 1);
+    } else {
+      invMap.set(id, { ...e, entityId: id });
+    }
+  }
+  const almanacCollected: Record<number, string[]> = {};
+  for (const [stage, ids] of Object.entries(state.almanacCollected ?? {})) {
+    almanacCollected[Number(stage)] = Array.from(new Set(ids.map(canonicalEntityId)));
+  }
+  return {
+    ...state,
+    inventory: Array.from(invMap.values()),
+    equippedSlots: (state.equippedSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
+    riftSlots: (state.riftSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
+    almanacCollected,
+  };
+}
 
 const LEGACY_SAVE_KEY = 'cosmic_coalescence_save_v1';
 const SAVE_KEY_V2 = 'cosmic_coalescence_save_v2';
@@ -62,7 +99,7 @@ function isBrowser(): boolean {
 
 export function createSaveSnapshot(state: GameState): SaveState {
   return {
-    version: 14,
+    version: SAVE_SCHEMA_VERSION,
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
@@ -156,6 +193,11 @@ export function saveGame(state: GameState): void {
 }
 
 export function loadGame(): PersistentGameState | null {
+  const loaded = loadGameInner();
+  return loaded ? normalizeSavedEntityIds(loaded) : null;
+}
+
+function loadGameInner(): PersistentGameState | null {
   if (!isBrowser()) return null;
   try {
     const raw =
@@ -241,7 +283,9 @@ export function loadGame(): PersistentGameState | null {
         prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
       };
     }
-    if ((parsed as { version?: number }).version === 14) {
+    if ((parsed as { version?: number }).version === 14 || (parsed as { version?: number }).version === 15) {
+      // v14/v15 share a schema; v15 only decoupled entity ids from names.
+      // normalizeSavedEntityIds (applied by loadGame) handles the id rewrite.
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return {

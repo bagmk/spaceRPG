@@ -113,6 +113,37 @@ describe('save migration', () => {
     expect(migrated?.inventory).toEqual([]);
   });
 
+  it('v15 normalizes legacy name-derived entity ids to canonical position-only ids', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 14,
+        inventory: [
+          { entityId: 's13_07_pulsar', count: 3, level: 2 },
+          { entityId: 's10_01_sun', count: 1, level: 1 },
+        ],
+        almanacCollected: { 13: ['s13_07_pulsar'], 10: ['s10_01_sun'] },
+        equippedSlots: ['s10_01_sun'],
+        riftSlots: ['s13_07_pulsar'],
+      }),
+    );
+
+    const migrated = loadGame();
+    // Name-derived ids (aliases) collapse to their canonical position-only id.
+    expect(migrated?.inventory.find((e) => e.entityId === 's13_07')).toMatchObject({ count: 3, level: 2 });
+    expect(migrated?.inventory.some((e) => e.entityId === 's13_07_pulsar')).toBe(false);
+    expect(migrated?.almanacCollected[13]).toEqual(['s13_07']);
+    expect(migrated?.almanacCollected[10]).toEqual(['s10_01']);
+    expect(migrated?.equippedSlots).toContain('s10_01');
+    expect(migrated?.riftSlots).toContain('s13_07');
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

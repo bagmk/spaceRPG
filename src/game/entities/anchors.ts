@@ -8,8 +8,8 @@ import { entityMatchesId, findEntityById, getEntitiesForStage } from './stageIte
  * before unlocking the downstream upgrades.
  */
 export const STAGE_ANCHOR_ENTITY: Record<number, string> = {
-  10: 's10_01_sun',
-  11: 's11_01_earth_formation',
+  10: 's10_01',
+  11: 's11_01',
 };
 
 /**
@@ -58,23 +58,28 @@ function isRarityLocked(
  * Atmosphere, and the remaining tiers unlock once their previous tier is
  * fully maxed. Anything not listed falls back to the stage anchor rule.
  */
+// Keyed by canonical (position-only) entity id. Stage 11 layout:
+//   01 Earth Formation · 02 Moon Formation · 03 First Ocean · 04 Atmosphere
+//   05 Continents Rise · 06 Photosynthesis · 07 Prokaryote · 08 Cambrian
+//   09 Neuron · 10 Homo Sapiens · 11 City Lights · 12 Artificial Satellite
+//   13 Spacefaring Humanity · 14 Interstellar Ark
 const STAGE_11_PREREQUISITE: Record<string, string> = {
-  's11_02_moon_formation': 's11_01_earth_formation',
-  's11_03_first_ocean':    's11_02_moon_formation',
-  's11_04_atmosphere':     's11_02_moon_formation',
+  's11_02': 's11_01', // Moon Formation ← Earth Formation
+  's11_03': 's11_02', // First Ocean ← Moon Formation
+  's11_04': 's11_02', // Atmosphere ← Moon Formation
   // Rares unlock once Atmosphere (the last common) is fully built.
-  's11_05_continents_rise':    's11_04_atmosphere',
-  's11_06_photosynthesis':     's11_04_atmosphere',
-  's11_07_prokaryote':         's11_04_atmosphere',
-  's11_08_cambrian_explosion': 's11_04_atmosphere',
+  's11_05': 's11_04',
+  's11_06': 's11_04',
+  's11_07': 's11_04',
+  's11_08': 's11_04',
   // Epics unlock once Continents Rise (the first rare) is fully built.
-  's11_09_neuron':              's11_05_continents_rise',
-  's11_10_homo_sapiens':        's11_05_continents_rise',
-  's11_11_city_lights':         's11_05_continents_rise',
-  's11_12_artificial_satellite':'s11_05_continents_rise',
+  's11_09': 's11_05',
+  's11_10': 's11_05',
+  's11_11': 's11_05',
+  's11_12': 's11_05',
   // Legendaries unlock once Artificial Satellite (the last epic) is built.
-  's11_13_spacefaring_humanity':'s11_12_artificial_satellite',
-  's11_14_interstellar_ark':    's11_12_artificial_satellite',
+  's11_13': 's11_12',
+  's11_14': 's11_12',
 };
 
 export function getStageAnchorEntity(stageId: number): StageEntity | undefined {

@@ -713,8 +713,16 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     const descriptionKo = spec.descriptionKo ?? ko?.description;
     const maxCount = maxCountForSpec(spec);
     const scaledEffectValue = spec.effect.value * effectScale * stageEffectScale(stageId, spec);
+    // Canonical id is position-only (s{stage}_{pos}) so renaming an entity never
+    // changes its id — the id is decoupled from the (mutable) name. The old
+    // name-derived id is kept as an alias so pre-decoupling saves still resolve;
+    // loadGame normalizes any stored id to this canonical form on load.
+    const position = String(index + 1).padStart(2, '0');
+    const id = `s${stageId}_${position}`;
+    const legacyNameId = `s${stageId}_${position}_${slugify(spec.name)}`;
+    const aliases = Array.from(new Set([legacyNameId, ...(spec.aliases ?? [])]));
     return {
-      id: `s${stageId}_${String(index + 1).padStart(2, '0')}_${slugify(spec.name)}`,
+      id,
       stageId,
       name: spec.name,
       ...(nameKo ? { nameKo } : {}),
@@ -735,7 +743,7 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
         motion: motionFor(spec.rarity, index),
       },
       ...(spec.endingId ? { endingId: spec.endingId } : {}),
-      ...(spec.aliases ? { aliases: spec.aliases } : {}),
+      aliases,
     };
   });
 }
