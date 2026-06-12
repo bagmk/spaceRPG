@@ -117,6 +117,12 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 ## Status (빌드 세션이 누적 기록)
 
 - Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- 도감 실(實)로스터: 표준모형 + 주기율표 (2026-06-11, 사용자 결정 — 정격 로스터 / 1주기~경원소):
+  - **큐레이션 멤버십**: `CodexSubset.match`에 `entityIds?` 추가(명시 ID 로스터). 표준모형·주기율표 하위셋을 glyph 스윕에서 명시 ID로 전환 → 진짜 과학 로스터만 노출(Dust Grain·Habitable World 등 이질 멤버 제거).
+  - **표준 모형**: 쿼크(6 완성) up/down/strange/charm/bottom/top · 경입자(4) e/νₑ/μ/νμ · 보손(5) gluon/W/photon/pion/kaon · 장(3) CP위반/QCD상경계/갇힘. 빈자리 채움 리네임 4: Top Quark Decay→Top Quark, Neutrino→Electron Neutrino, Neutrino Freeze-out→Muon Neutrino, Gamma Ray→Photon. (타우 세대·Z·Higgs는 정합한 엔티티 자리 없음 — 엔티티 신규 추가는 밸런스 변경이라 보류.)
+  - **주기율표**: 1주기(2) 수소·헬륨 · 항성 원소(3) 탄소·산소·철 · 원시 원자핵(8 BBN). 원소 리네임 4: Hydrogen Atom→Hydrogen, Helium Atom→Helium, Carbon First→Carbon, First Heavy Elements→Iron(이미 기호 Fe).
+  - **리네임 안전**: 효과·비용·ID·밸런스 불변(이름/기호/설명 EN+KO만). 각 리네임은 옛 이름기반 ID를 alias로 유지(`withAliases`) → 로드 순서 무관하게 pre-v15 세이브 호환. [[entity-id-decoupling]] 덕에 ID 안 바뀜.
+  - 검증: 713→ (신규 표준모형·주기율표 로스터 가드), tsc, build.
 - 아이템 ID ↔ 이름 분리 (2026-06-11, 사용자 결정 — "ID를 이름에서 분리"):
   - **정식 ID = 위치 기반**(`s{stage}_{pos}`, 이름 슬러그 제거). 이제 아이템 이름을 바꿔도 ID가 절대 안 바뀜 → 리네임 자유(주기율표 실원소화·표준모형 보강의 선결 조건). **유일 제약**: 스테이지 내 spec 배열 순서를 바꾸면 position이 바뀌니 재정렬 금지(append만).
   - **하위호환**: 기존 이름 기반 ID(`s10_01_sun` 등)를 alias로 자동 보존(`stage()`가 legacyNameId 주입). 로드 시 `normalizeSavedEntityIds`가 inventory/almanac/equipped/rift의 모든 저장 ID를 `findEntityById(id)?.id`로 정식 ID에 정규화(멱등; 한 번 로드되면 영구 위치 ID화). 중복 inventory 엔트리는 count 합·level max로 병합.

@@ -102,9 +102,12 @@ export const CODEX_SETS: CodexSet[] = [
     accent: '#ffb45a',
     reward: { stat: 'autoPower', value: 12 },
     subsets: [
-      { id: 'nuclei', label: { en: 'Nuclei', ko: '원자핵' }, match: { glyphs: ['nucleus'] }, reward: { stat: 'autoPower', value: 8 } },
-      { id: 'atoms', label: { en: 'Atoms', ko: '원자' }, match: { glyphs: ['atom'] }, reward: { stat: 'dropRate', value: 6 } },
-      { id: 'molecules', label: { en: 'Molecules', ko: '분자' }, match: { glyphs: ['molecule'] }, reward: { stat: 'autoPower', value: 5 } },
+      // Real elements, assembled across cosmic time. Period 1 (H, He) condenses
+      // at recombination; the heavier elements are forged in stars.
+      { id: 'period1', label: { en: 'Period 1', ko: '1주기' }, match: { entityIds: ['s5_01', 's5_03'] }, reward: { stat: 'dropRate', value: 6 } },
+      { id: 'stellar_elements', label: { en: 'Stellar Elements', ko: '항성 원소' }, match: { entityIds: ['s7_08', 's7_05', 's7_10'] }, reward: { stat: 'autoPower', value: 8 } },
+      // The light nuclei (isotopes) forged in Big Bang nucleosynthesis.
+      { id: 'primordial_nuclei', label: { en: 'Primordial Nuclei', ko: '원시 원자핵' }, match: { entityIds: ['s4_01', 's4_02', 's4_03', 's4_05', 's4_06', 's4_07', 's4_08', 's4_10'] }, reward: { stat: 'autoPower', value: 6 } },
     ],
   },
   {

@@ -165,6 +165,21 @@ describe('codex thematic sets', () => {
     expect(findEntityById('s4_11')?.name).toBe('Muon Neutrino');
   });
 
+  it('Periodic Table is a real element roster (curated ids, element renames landed)', () => {
+    const pt = CODEX_SETS.find((s) => s.id === 'periodic_table')!;
+    for (const sub of pt.subsets) {
+      expect(sub.match.entityIds && sub.match.entityIds.length).toBeTruthy();
+      for (const id of sub.match.entityIds!) expect(findEntityById(id)).toBeDefined();
+    }
+    expect(findEntityById('s5_01')?.name).toBe('Hydrogen');
+    expect(findEntityById('s5_03')?.name).toBe('Helium');
+    expect(findEntityById('s7_08')?.name).toBe('Carbon');
+    expect(findEntityById('s7_10')?.name).toBe('Iron');
+    // Old name-derived ids preserved as aliases for pre-rename saves.
+    expect(findEntityById('s5_01_hydrogen_atom')?.id).toBe('s5_01');
+    expect(findEntityById('s7_10_first_heavy_elements')?.id).toBe('s7_10');
+  });
+
   it('completing the Genesis set applies its dropRate reward through getActiveModifiers', () => {
     const stage1Ids = STAGE_ENTITIES.filter((e) => e.stageId === 1).map((e) => e.id);
     const ctx = { stagesCleared: 0, currentQuanta: 0, secondsInStage: 0, stageId: 1, progress01: 0, clickLevel: 0 };

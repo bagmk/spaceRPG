@@ -800,9 +800,9 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Fusion Window':          { name: '융합의 창',        description: '원자 역사 전체를 결정짓는 3분의 창.' },
 
   // Stage 5
-  'Hydrogen Atom':          { name: '수소 원자',        description: '양성자가 전자를 붙잡아 중성이 된다.' },
+  'Hydrogen':               { name: '수소',             description: '1번 원소 — 양성자가 전자를 붙잡아 최초의 중성 원자가 탄생한다.' },
   'Free Electron':          { name: '자유 전자',        description: '중성 기체 시대 직전의 마지막 떠도는 전하.' },
-  'Helium Atom':            { name: '헬륨 원자',        description: '헬륨 핵이 전자 두 개를 모두 끌어들인다.' },
+  'Helium':                 { name: '헬륨',             description: '2번 원소 — 헬륨 핵이 전자 두 개를 모두 끌어들여 중성이 된다.' },
   'CMB Photon':             { name: 'CMB 광자',         description: '플라스마 안개가 걷히며 풀려난 빛.' },
   'Hydrogen Cloud':         { name: '수소 구름',        description: '최초의 구름으로 모이는 중성 수소.' },
   'Photon Decoupling':      { name: '광자 분리',        description: '빛이 물질에서 떨어져 자유롭게 흐른다.' },
@@ -839,9 +839,9 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Oxygen':                 { name: '산소',             description: '탄소 위에 헬륨이 포획되어 산소가 만들어진다.' },
   'Stellar Wind':           { name: '항성풍',           description: '뜨거운 항성 표면에서 불어 나오는 입자류.' },
   'HII Region':             { name: 'HII 영역',         description: '뜨거운 별 주위에 빛나는 이온화 수소 구름.' },
-  'Carbon First':           { name: '최초의 탄소',      description: '삼중알파 반응이 탄소 화학의 새벽을 연다.' },
+  'Carbon':                 { name: '탄소',             description: '6번 원소 — 삼중알파 반응이 탄소를 단조하며 화학의 새벽을 연다.' },
   'Pop III Cluster':        { name: '종족 III 성단',    description: '1세대로 함께 태어난 금속이 없는 별 무리.' },
-  'First Heavy Elements':   { name: '최초의 중원소',    description: '항성 핵이 헬륨 너머 철까지 원소를 단조한다.' },
+  'Iron':                   { name: '철',               description: '26번 원소 — 항성 핵이 헬륨 너머 가장 안정한 핵인 철까지 원소를 단조한다.' },
   'Stellar Feedback':       { name: '항성 피드백',      description: '주위 가스 구름을 다시 빚는 별의 에너지.' },
   'Supernova Precursor':    { name: '초신성 전조',      description: '폭발적 중력 붕괴를 앞둔 거대 별.' },
   'Pop III Supernova':      { name: '종족 III 초신성',  description: '최초의 별이 폭발하며 우주에 중원소를 뿌린다.' },
@@ -1063,9 +1063,15 @@ export const STAGE_ENTITIES: StageEntity[] = [
 
   // ── Stage 5: Recombination (4C + 4R + 4E + 2L) ─────────────────────────────
   ...stage(5, [
-    item('Hydrogen Atom',             'H',    'Proton captures electron and becomes neutral.',         'common', 'auto',  1.5),
+    withAliases(
+      item('Hydrogen',                  'H',    'Element 1 — a proton captures an electron and the first neutral atom is born.', 'common', 'auto',  1.5),
+      ['s5_01_hydrogen_atom'],
+    ),
     item('Free Electron',             'e⁻',   'Last stray charge before the neutral gas era.',        'common', 'click', 15.0),
-    item('Helium Atom',               'He',   'Helium nucleus pulls in both electrons.',              'common', 'auto_mult', 2.0),
+    withAliases(
+      item('Helium',                    'He',   'Element 2 — a helium nucleus pulls in both its electrons to go neutral.', 'common', 'auto_mult', 2.0),
+      ['s5_03_helium_atom'],
+    ),
     item('CMB Photon',                'γ_r',  'Light set free as the fog of plasma clears.',          'common', 'crit', 0.4, true),
     item('Hydrogen Cloud',            'H₂',   'Neutral hydrogen gathering into the first clouds.',    'rare',   'auto',  3.0),
     item('Photon Decoupling',         'γ↗',   'Light separates from matter and streams freely.',      'rare',   'click', 22.0),
@@ -1106,9 +1112,15 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Oxygen',              'O',    'Helium capture on carbon produces oxygen.',               'rare',   'auto',  4.0),
     item('Stellar Wind',        '~~→',  'Particle stream blown outward from a hot stellar surface.','rare',  'click', 22.0),
     item('HII Region',          'HII',  'Cloud of ionized hydrogen glowing around hot stars.',    'rare',   'crit',  0.8, true),
-    item('Carbon First',        'C',    'Triple-alpha marks the dawn of carbon chemistry.',        'rare',   'auto_mult',  3.0),
+    withAliases(
+      item('Carbon',              'C',    'Element 6 — triple-alpha fusion forges carbon, the dawn of chemistry.', 'rare',   'auto_mult',  3.0),
+      ['s7_08_carbon_first'],
+    ),
     item('Pop III Cluster',     '✦✦✦',  'Metal-free stars born together in the first generation.','epic',   'auto',  6.0),
-    item('First Heavy Elements','Fe',   'Stellar cores forge elements beyond helium up to iron.', 'epic',   'click', 35.0),
+    withAliases(
+      item('Iron',                'Fe',   'Element 26 — stellar cores forge elements up to iron, the most stable nucleus.', 'epic',   'click', 35.0),
+      ['s7_10_first_heavy_elements'],
+    ),
     item('Stellar Feedback',    '⟲',   'Energy from stars reshaping the surrounding gas cloud.',  'epic', 'auto_mult', 4.0),
     item('Supernova Precursor', '⚠★',  'Massive star nearing explosive gravitational collapse.',  'epic', 'crit', 2.0, true),
     item('Pop III Supernova',   '☆→',  'First stars explode, seeding space with heavy elements.','legendary','multiplier',50.0),
