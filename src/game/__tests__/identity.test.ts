@@ -146,6 +146,25 @@ describe('codex thematic sets', () => {
     expect(isSubsetComplete(firstLight, full, STAGE_ENTITIES)).toBe(true);
   });
 
+  it('Standard Model subsets are curated to a real roster (all ids resolve, fills renamed)', () => {
+    const sm = CODEX_SETS.find((s) => s.id === 'standard_model')!;
+    for (const sub of sm.subsets) {
+      // Curated subsets are explicit-id rosters; every id must resolve.
+      expect(sub.match.entityIds && sub.match.entityIds.length).toBeTruthy();
+      for (const id of sub.match.entityIds!) expect(findEntityById(id)).toBeDefined();
+    }
+    const quarks = sm.subsets.find((s) => s.id === 'quarks')!;
+    expect(getSubsetMembers(quarks, STAGE_ENTITIES).map((e) => e.name)).toEqual([
+      'Up Quark', 'Down Quark', 'Strange Quark', 'Charm Quark', 'Bottom Quark', 'Top Quark',
+    ]);
+    // The four gap-fill renames landed and kept their old ids as aliases.
+    expect(findEntityById('s3_10')?.name).toBe('Top Quark');
+    expect(findEntityById('s3_10_top_quark_decay')?.id).toBe('s3_10');
+    expect(findEntityById('s2_04')?.name).toBe('Electron Neutrino');
+    expect(findEntityById('s4_04')?.name).toBe('Photon');
+    expect(findEntityById('s4_11')?.name).toBe('Muon Neutrino');
+  });
+
   it('completing the Genesis set applies its dropRate reward through getActiveModifiers', () => {
     const stage1Ids = STAGE_ENTITIES.filter((e) => e.stageId === 1).map((e) => e.id);
     const ctx = { stagesCleared: 0, currentQuanta: 0, secondsInStage: 0, stageId: 1, progress01: 0, clickLevel: 0 };

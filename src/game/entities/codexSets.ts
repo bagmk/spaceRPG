@@ -36,7 +36,13 @@ export interface CodexReward {
 export interface CodexSubset {
   id: string;
   label: { en: string; ko: string };
-  match: { glyphs?: EntityGlyph[]; stageIds?: number[] };
+  /**
+   * Membership rule. `entityIds` is an explicit curated roster (used for the
+   * Standard Model / Periodic Table, where we want the exact real-science set
+   * rather than whatever a glyph happens to sweep in). `glyphs` / `stageIds`
+   * are the loose thematic matchers for the broader sets.
+   */
+  match: { entityIds?: string[]; glyphs?: EntityGlyph[]; stageIds?: number[] };
   reward: CodexReward;
 }
 
@@ -76,10 +82,16 @@ export const CODEX_SETS: CodexSet[] = [
     accent: '#7c8cff',
     reward: { stat: 'clickPower', value: 15 },
     subsets: [
-      { id: 'quarks', label: { en: 'Quarks', ko: '쿼크' }, match: { glyphs: ['quark'] }, reward: { stat: 'clickPower', value: 8 } },
-      { id: 'leptons', label: { en: 'Leptons', ko: '경입자' }, match: { glyphs: ['lepton'] }, reward: { stat: 'critChance', value: 3 } },
-      { id: 'bosons', label: { en: 'Bosons', ko: '보손' }, match: { glyphs: ['boson', 'meson'] }, reward: { stat: 'autoPower', value: 8 } },
-      { id: 'fields', label: { en: 'Fields', ko: '장(場)' }, match: { glyphs: ['field', 'quantum', 'particle'] }, reward: { stat: 'entropyGain', value: 8 } },
+      // Curated to the real Standard Model roster (explicit ids), so the codex
+      // shows the genuine particle set instead of whatever a glyph sweeps in.
+      // Quarks: up · down · strange · charm · bottom · top.
+      { id: 'quarks', label: { en: 'Quarks', ko: '쿼크' }, match: { entityIds: ['s2_01', 's2_02', 's2_06', 's3_06', 's3_08', 's3_10'] }, reward: { stat: 'clickPower', value: 8 } },
+      // Leptons present in the lepton epoch: electron, electron neutrino, muon, muon neutrino.
+      { id: 'leptons', label: { en: 'Leptons', ko: '경입자' }, match: { entityIds: ['s2_03', 's2_04', 's3_04', 's4_11'] }, reward: { stat: 'critChance', value: 3 } },
+      // Bosons (integer spin): gluon, W, photon + the residual-force mesons pion & kaon.
+      { id: 'bosons', label: { en: 'Bosons', ko: '보손' }, match: { entityIds: ['s2_05', 's2_07', 's4_04', 's3_03', 's3_07'] }, reward: { stat: 'autoPower', value: 8 } },
+      // Fields & symmetry: CP violation, QCD phase boundary, confinement.
+      { id: 'fields', label: { en: 'Fields', ko: '장(場)' }, match: { entityIds: ['s2_08', 's3_11', 's3_12'] }, reward: { stat: 'entropyGain', value: 8 } },
     ],
   },
   {
@@ -150,7 +162,8 @@ export const CODEX_SETS: CodexSet[] = [
 // ── Membership + completion ─────────────────────────────────────────────────
 
 export function subsetMatches(subset: CodexSubset, entity: StageEntity): boolean {
-  const { glyphs, stageIds } = subset.match;
+  const { entityIds, glyphs, stageIds } = subset.match;
+  if (entityIds && entityIds.includes(entity.id)) return true;
   if (glyphs && glyphs.includes(entity.visual.glyph)) return true;
   if (stageIds && stageIds.includes(entity.stageId)) return true;
   return false;
