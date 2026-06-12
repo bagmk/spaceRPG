@@ -14,7 +14,14 @@ export interface ModifierContext {
   currentQuanta?: number;
   stagesCleared?: number;
   secondsInStage?: number;
-  stageId?: number;
+  /** Player's current stage id — REQUIRED: anchors the shared gear power curve. */
+  stageId: number;
+  /**
+   * Entropy-gate progress within the current stage (0..1) — REQUIRED: the
+   * fractional part of the gear power exponent (in-stage acceleration).
+   * Compute via getEntropyGateProgress(entropy, stageIdx).
+   */
+  gateProgress01: number;
   progress01?: number;
   clickLevel?: number;
 }
@@ -156,7 +163,7 @@ export function getActiveModifiers(
   }
 
   if (inventory && inventory.length > 0) {
-    applyEntityModifiers(mods, inventory, ctx.stageId);
+    applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });
     applySetBonuses(mods, inventory);
   }
 

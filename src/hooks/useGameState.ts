@@ -7,6 +7,7 @@ import {
   getCosmicTimeFillRate,
   getEffectiveThreshold,
   getEntropyFromMatterGain,
+  getEntropyGateProgress,
   getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
@@ -93,6 +94,7 @@ export function useGameState(): UseGameStateResult {
           stagesCleared: payload.stageIdx,
           secondsInStage: Math.max(0, (now - payload.stageStartedAt) / 1000),
           stageId: stage.id,
+          gateProgress01: getEntropyGateProgress(payload.entropy ?? 0, payload.stageIdx),
           clickLevel: payload.skills.click.level,
         },
         getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? [])]),

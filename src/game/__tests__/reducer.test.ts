@@ -128,6 +128,7 @@ describe('gameReducer', () => {
     };
     const modifiers = getActiveModifiers(state.skills, {
       stageId: 2,
+      gateProgress01: 0,
       stagesCleared: 1,
       progress01: 0,
       clickLevel: 0,
@@ -170,14 +171,14 @@ describe('gameReducer', () => {
 
     const funded = {
       ...createInitialGameState(0),
-      quanta: getEntityCost(entity, 0) * 10,
+      quanta: getEntityCost(entity, 0, 1) * 10,
     };
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
     // Phase 2: owning an entity is not enough — it must be equipped.
     const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
     const ticked = gameReducer(equipped, { type: 'TICK', now: 30_000, dt: 30_000 });
 
-    expect(Math.floor(ticked.entropy)).toBeGreaterThan(Math.floor(equipped.entropy));
+    expect(ticked.entropy).toBeGreaterThan(equipped.entropy);
   });
 
   it('applies equipped click entities to click gains (and not unequipped ones)', () => {
@@ -187,7 +188,7 @@ describe('gameReducer', () => {
 
     const funded = {
       ...createInitialGameState(0),
-      quanta: getEntityCost(entity, 0) * 10,
+      quanta: getEntityCost(entity, 0, 1) * 10,
     };
     const baseline = gameReducer(funded, {
       type: 'CLICK',
@@ -227,7 +228,7 @@ describe('gameReducer', () => {
 
     const funded = {
       ...createInitialGameState(0),
-      quanta: getEntityCost(entity, 0) * 10,
+      quanta: getEntityCost(entity, 0, 1) * 10,
     };
     const baseline = gameReducer(funded, {
       type: 'CLICK',

@@ -116,7 +116,15 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- Current Phase: **Phase 4 진행 중 — 4-1(스테이지 독립) 완료(2026-06-12). 다음: 4-2 스킬 트리 흡수**
+- Phase 4-1: 스테이지 독립 기어 파워 (2026-06-12, 사용자 요청 "fusion/gear/auto should not depend on the stage" — 멀티에이전트 적대 리뷰 3렌즈 통과 후 구현):
+  - **공유 기어 파워 지수**: `E = max(playerStage-1+gateProgress01, itemStage-1)` — % 효과 `2.0^E`(STAGE_POWER_BASE 1.3→2.0), 오토 앵커 `8^E`, scales 보조스탯 동일. 아이템 출신 스테이지는 무관(클램프로 마이그레이션 순수 버프 보장). 소수부 gateProgress01 = 스테이지 내 가속(게이트 창에서 수입 ×8 상승, condense 연속). `getGearPowerExponent/Mult` (substats.ts), `GearPower {stageId, gateProgress01}` 필수 파라미터(컴파일러가 호출처 전수 강제).
+  - **소프트캡 count**: `getEffectiveCount = min(count,cap)+√초과` (time은 하드캡) — 커먼 무한스택 지배 차단, 수집은 무제한 유지. 라벨=적용값: EntityPanel 전 수식이 동일 헬퍼/power 컨텍스트 사용(selectedStageId는 브라우징 전용).
+  - **드랍/융합 풀 통합**: `pickDropStage` 60% 현 스테이지 / 40% 과거(미수집 도감 +1 가중 백필), time 엔티티 과거 풀 제외. CLICK/REPORT_COLLISION `dropStageRoll`, FUSE `stageRoll` 액션 필드. 융합 출력도 동일 롤(입력 최고 스테이지 폐지), rollFusionRarity stageId 필수화(=16 기본값 제거).
+  - **경제 재앵커**: 구매/강화/캡환급 = `max(player,item)` 앵커(`getPlayerAnchoredBaseCost`) — 15자릿수 차익거래 봉쇄. 융합 버스트 ×min(1, 실지불/기준가)(`FUSION_BURST_REF_COST_FRAC` 0.1) — 뱅킹 폭파 차단. 빈 스택 융합 시 레벨 1 리셋(영구 레벨 인플레 루프 차단). stage-1 spec 면제 제거(×0.25/×0.1 전 스테이지 균일) + 스테이지2 auto_mult 이상치 2건 정규화(νₑ 5→2, CP Pocket 8→2). 밴드 가드 테스트(등급×타입별 ≤4×).
+  - **세이브 v16**: `migrateToCurrent` 공유(로컬+클라우드 — 클라우드 alias 정규화 갭도 폐쇄), v15→16 오프라인 윈도 1회 리셋(리버프 소급 윈드폴 차단), 인벤토리 클램프(count 유한·maxCount×1000 천장, 레벨 등급 캡).
+  - **엔트로피 임계값 재캘리브레이션**: entropy-gate-sim 재작성 — 스킬+기어(2^E/8^E) 모델, 새 버스트 규칙, 스테이지별 span 이분탐색으로 reference 프로필을 realPlayTargetSec에 정확 고정(고정점 1.00×). 불변식: active 점유율 ≥50%(실측 98%), idle 도달 ≥12(현행 14 대비 -2, 4-4 floor 항목), 스프레드 120×(4-4 압축 레버). 신규 임계값 16개 balance.ts 반영.
+  - 검증: 734 통과(신규 13: 풀/재앵커/소프트캡/버스트/마이그레이션/커브 불변식), tsc, build, sim ALL PASS.
 - 도감 전수 커버 — 고아 27종 전부 편입 (2026-06-12, 사용자 — "코히런한것만 새 서브셋, 스테이지에 묶일 필요 없음(힉스도 인류가 늦게 발견)"):
   - **설계 원칙 확정**: 도감 멤버십은 주제 기반이지 스테이지 기반이 아님 — 후반 드랍 엔티티도 초기 테마 컬렉션에 들어감.
   - **신규 서브셋 3**: 표준모형 **반물질**(Decay Positron·Positronium·Relic Positron, critMult+6) · 우주거대구조 **구조의 씨앗**(최후산란면·Structure Seed·중력퍼텐셜·중력붕괴, entropyGain+6) · 종말 **양자의 운명**(Last Baryon·Virtual Particle Pair·Quantum Fluctuation Final·True Vacuum Bubble, entropyGain+8).

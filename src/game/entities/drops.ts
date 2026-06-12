@@ -13,6 +13,7 @@ import {
   DROP_CHANCE_CRIT_MULT,
   DROP_COMBO_BIAS_THRESHOLD,
   DROP_CRIT_RARITY_BIAS,
+  DROP_CURRENT_STAGE_WEIGHT,
   DROP_RARITY_WEIGHTS,
   RARITY_GATE_RAMP_STAGES,
   RARITY_STAGE_GATES,
@@ -27,6 +28,11 @@ export interface DropRoll {
   roll: number;
   /** 0..1 — decides rarity and which entity within the rarity pool. */
   pickRoll: number;
+  /**
+   * 0..1 — decides which stage's pool the drop comes from (Phase 4-1 stage
+   * independence). Absent → current stage only (legacy callers/tests).
+   */
+  stageRoll?: number;
 }
 
 interface DropContext {
@@ -73,11 +79,51 @@ function pickRarity(pick01: number, weights: Record<EntityRarity, number>): Enti
 }
 
 /**
+ * Pick which stage's pool a drop (or fusion output) comes from (Phase 4-1
+ * stage independence): DROP_CURRENT_STAGE_WEIGHT of rolls stay on the current
+ * stage; the rest backfill past stages weighted by (uncollected codex entries
+ * + 1), so collection holes pull drops toward themselves.
+ */
+export function pickDropStage(
+  playerStageId: number,
+  stageRoll: number,
+  almanacCollected: Record<number, string[]>,
+): number {
+  if (playerStageId <= 1 || stageRoll < DROP_CURRENT_STAGE_WEIGHT) return playerStageId;
+  // Spread the remaining roll over past stages 1..playerStage-1.
+  const weights: number[] = [];
+  let total = 0;
+  for (let s = 1; s < playerStageId; s++) {
+    const collected = almanacCollected[s]?.length ?? 0;
+    const uncollected = Math.max(0, getEntitiesForStage(s).length - collected);
+    const w = uncollected + 1;
+    weights.push(w);
+    total += w;
+  }
+  if (total <= 0) return playerStageId;
+  const within = (stageRoll - DROP_CURRENT_STAGE_WEIGHT) / (1 - DROP_CURRENT_STAGE_WEIGHT);
+  let cursor = Math.min(0.999999, Math.max(0, within)) * total;
+  for (let s = 1; s < playerStageId; s++) {
+    cursor -= weights[s - 1];
+    if (cursor < 0) return s;
+  }
+  return playerStageId;
+}
+
+/**
  * Pick an entity of the target rarity from a stage pool, falling back down the
  * rarity ladder when the pool lacks that rarity. Shared by drops and fusion.
+ * `excludeTime` removes time-type entities (past-stage pools — the cosmic
+ * clock is stage-relative, so old time gear must not backfill).
  */
-export function pickEntityByRarity(stageId: number, rarity: EntityRarity, pick01: number): StageEntity | null {
-  const pool = getEntitiesForStage(stageId);
+export function pickEntityByRarity(
+  stageId: number,
+  rarity: EntityRarity,
+  pick01: number,
+  excludeTime = false,
+): StageEntity | null {
+  let pool = getEntitiesForStage(stageId);
+  if (excludeTime) pool = pool.filter((e) => e.effect.type !== 'time');
   if (pool.length === 0) return null;
   const rarityIdx = RARITY_ORDER.indexOf(rarity);
   let candidates: StageEntity[] = [];
@@ -92,18 +138,25 @@ export function pickEntityByRarity(stageId: number, rarity: EntityRarity, pick01
 }
 
 /**
- * Roll an entity drop from the stage pool. Returns null when nothing drops.
- * `chance` is the pre-computed drop probability (click vs collision differ).
+ * Roll an entity drop. Returns null when nothing drops. `chance` is the
+ * pre-computed drop probability (click vs collision differ). Rarity gates and
+ * weights always follow the PLAYER's stage; the pool stage comes from
+ * rolls.stageRoll (current stage when absent).
  */
 export function rollEntityDrop(
-  stageId: number,
+  playerStageId: number,
   chance: number,
   rolls: DropRoll,
   context: DropContext = {},
+  almanacCollected: Record<number, string[]> = {},
 ): StageEntity | null {
   if (rolls.roll >= chance) return null;
-  const rarity = pickRarity(rolls.pickRoll, getRarityWeights(stageId, context));
-  return pickEntityByRarity(stageId, rarity, rolls.pickRoll);
+  const rarity = pickRarity(rolls.pickRoll, getRarityWeights(playerStageId, context));
+  const poolStageId =
+    rolls.stageRoll !== undefined
+      ? pickDropStage(playerStageId, rolls.stageRoll, almanacCollected)
+      : playerStageId;
+  return pickEntityByRarity(poolStageId, rarity, rolls.pickRoll, poolStageId !== playerStageId);
 }
 
 /** Collision drops use a flat, higher chance. */

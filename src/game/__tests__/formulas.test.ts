@@ -187,6 +187,7 @@ describe('scaling formulas', () => {
     };
     const modifiers = getActiveModifiers(skills, {
       stageId: 5,
+      gateProgress01: 0,
       stagesCleared: 4,
       progress01: 0,
       clickLevel: 5,

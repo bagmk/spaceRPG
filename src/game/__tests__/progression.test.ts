@@ -24,36 +24,69 @@ import {
 } from '../entities/fusion';
 import type { GameState } from '../types';
 
-describe('stage power curve', () => {
-  it('makes later-stage click items stronger per effect point (curve applies)', () => {
+describe('gear power curve (player-stage anchored — Phase 4-1)', () => {
+  const P = (stageId: number, gateProgress01 = 0) => ({ stageId, gateProgress01 });
+
+  it('same item gains ×STAGE_POWER_BASE per player stage (stage independence)', () => {
+    const item = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'click')!;
+    const at5 = defaultModifiers();
+    const at6 = defaultModifiers();
+    applyEntityModifiers(at5, [{ entityId: item.id, count: 1, level: 1 }], P(5));
+    applyEntityModifiers(at6, [{ entityId: item.id, count: 1, level: 1 }], P(6));
+    expect((at6.clickPowerMult - 1) / (at5.clickPowerMult - 1)).toBeCloseTo(STAGE_POWER_BASE, 5);
+  });
+
+  it('origin stage no longer matters: per-point power is equal at one player context', () => {
     const early = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'click')!;
     const late = STAGE_ENTITIES.find((e) => e.stageId >= 13 && e.effect.type === 'click')!;
-
     const modsEarly = defaultModifiers();
     const modsLate = defaultModifiers();
-    applyEntityModifiers(modsEarly, [{ entityId: early.id, count: 1, level: 1 }]);
-    applyEntityModifiers(modsLate, [{ entityId: late.id, count: 1, level: 1 }]);
-    // Normalize by the raw % value — the remaining ratio is the stage curve.
+    applyEntityModifiers(modsEarly, [{ entityId: early.id, count: 1, level: 1 }], P(16));
+    applyEntityModifiers(modsLate, [{ entityId: late.id, count: 1, level: 1 }], P(16));
     const perPointEarly = (modsEarly.clickPowerMult - 1) / early.effect.value;
     const perPointLate = (modsLate.clickPowerMult - 1) / late.effect.value;
-    const expected = Math.pow(STAGE_POWER_BASE, late.stageId - early.stageId);
-    expect(perPointLate / perPointEarly).toBeCloseTo(expected, 5);
+    expect(perPointLate / perPointEarly).toBeCloseTo(1, 5);
+  });
+
+  it('gateProgress01 is the fractional exponent (in-stage acceleration)', () => {
+    const item = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'click')!;
+    const atStart = defaultModifiers();
+    const atGate = defaultModifiers();
+    applyEntityModifiers(atStart, [{ entityId: item.id, count: 1, level: 1 }], P(5, 0));
+    applyEntityModifiers(atGate, [{ entityId: item.id, count: 1, level: 1 }], P(5, 1));
+    expect((atGate.clickPowerMult - 1) / (atStart.clickPowerMult - 1)).toBeCloseTo(STAGE_POWER_BASE, 5);
+  });
+
+  it('items never fall below their origin-stage power (migration is a strict buff)', () => {
+    const late = STAGE_ENTITIES.find((e) => e.stageId >= 13 && e.effect.type === 'click')!;
+    const atP1 = defaultModifiers();
+    const atOrigin = defaultModifiers();
+    applyEntityModifiers(atP1, [{ entityId: late.id, count: 1, level: 1 }], P(1));
+    applyEntityModifiers(atOrigin, [{ entityId: late.id, count: 1, level: 1 }], P(late.stageId));
+    // At player stage 1 the item clamps to its origin exponent — same output.
+    expect(atP1.clickPowerMult).toBeCloseTo(atOrigin.clickPowerMult, 10);
   });
 
   it('keeps crit chance (capped resource) off the curve', () => {
-    const early = STAGE_ENTITIES.find(
-      (e) => e.stageId === 1 && e.effect.type === 'crit' && e.effect.isFlat,
-    );
-    const late = STAGE_ENTITIES.find(
-      (e) => e.stageId >= 13 && e.effect.type === 'crit' && e.effect.isFlat
-        && e.effect.value === early?.effect.value,
-    );
-    if (!early || !late) return; // data may not pair up — covered by curve test above
-    const modsEarly = defaultModifiers();
-    const modsLate = defaultModifiers();
-    applyEntityModifiers(modsEarly, [{ entityId: early.id, count: 1, level: 1 }]);
-    applyEntityModifiers(modsLate, [{ entityId: late.id, count: 1, level: 1 }]);
-    expect(modsLate.critChanceAdd).toBeCloseTo(modsEarly.critChanceAdd, 10);
+    const flat = STAGE_ENTITIES.find((e) => e.effect.type === 'crit' && e.effect.isFlat)!;
+    const at1 = defaultModifiers();
+    const at16 = defaultModifiers();
+    applyEntityModifiers(at1, [{ entityId: flat.id, count: 1, level: 1 }], P(flat.stageId));
+    applyEntityModifiers(at16, [{ entityId: flat.id, count: 1, level: 1 }], P(16));
+    expect(at16.critChanceAdd).toBeCloseTo(at1.critChanceAdd, 10);
+  });
+
+  it('soft-caps the power contribution of hoarded counts (sqrt tail past maxCount)', () => {
+    const item = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'click' && e.maxCount > 1)!;
+    const atCap = defaultModifiers();
+    const hoarded = defaultModifiers();
+    applyEntityModifiers(atCap, [{ entityId: item.id, count: item.maxCount, level: 1 }], P(1));
+    applyEntityModifiers(hoarded, [{ entityId: item.id, count: item.maxCount + 100, level: 1 }], P(1));
+    const capPower = atCap.clickPowerMult - 1;
+    const hoardPower = hoarded.clickPowerMult - 1;
+    // More than the cap, but far less than linear: cap + sqrt(100) = cap + 10.
+    expect(hoardPower).toBeGreaterThan(capPower);
+    expect(hoardPower / capPower).toBeCloseTo((item.maxCount + 10) / item.maxCount, 5);
   });
 });
 
@@ -115,7 +148,7 @@ describe('enhancement (강화소)', () => {
   const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
 
   it('spends quanta and raises the stack level', () => {
-    const cost = getEnhanceCost(entity, 1);
+    const cost = getEnhanceCost(entity, 1, 1);
     const state: GameState = {
       ...createInitialGameState(0),
       quanta: cost + 10,
@@ -152,8 +185,8 @@ describe('enhancement (강화소)', () => {
     const clickEntity = getEntitiesForStage(1).find((e) => e.effect.type === 'click')!;
     const lv1 = defaultModifiers();
     const lv5 = defaultModifiers();
-    applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }]);
-    applyEntityModifiers(lv5, [{ entityId: clickEntity.id, count: 1, level: 5 }]);
+    applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
+    applyEntityModifiers(lv5, [{ entityId: clickEntity.id, count: 1, level: 5 }], { stageId: 1, gateProgress01: 0 });
     expect(lv5.clickPowerMult).toBeGreaterThan(lv1.clickPowerMult);
   });
 });
@@ -171,7 +204,7 @@ describe('gear system (category purity + refunds)', () => {
   it("multiplier (click gear) no longer leaks into the auto calculation", () => {
     const multiplierEntity = STAGE_ENTITIES.find((e) => e.effect.type === 'multiplier')!;
     const mods = defaultModifiers();
-    applyEntityModifiers(mods, [{ entityId: multiplierEntity.id, count: 1, level: 1 }]);
+    applyEntityModifiers(mods, [{ entityId: multiplierEntity.id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
     expect(mods.clickPowerMult).toBeGreaterThan(1);
     // autoRateMult may only move via an autoPct substat — impossible for click gear now.
     expect(mods.autoRateMult).toBe(1);
@@ -179,8 +212,8 @@ describe('gear system (category purity + refunds)', () => {
 
   it('ENHANCE_ENTITY accumulates invested quanta on the stack', () => {
     const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
-    const cost1 = getEnhanceCost(entity, 1);
-    const cost2 = getEnhanceCost(entity, 2);
+    const cost1 = getEnhanceCost(entity, 1, 1);
+    const cost2 = getEnhanceCost(entity, 2, 1);
     let state: GameState = {
       ...createInitialGameState(0),
       quanta: cost1 + cost2 + 10,
@@ -221,6 +254,7 @@ describe('gear system (category purity + refunds)', () => {
     const result = applyFusionOutput(
       [{ entityId: target.id, count: Math.max(1, target.maxCount), level: ENHANCE_LEVEL_CAPS.common }],
       target,
+      1,
     );
     expect(result.leveledUp).toBe(false);
     expect(result.capRefund).toBeGreaterThan(0);
@@ -247,7 +281,7 @@ describe('gear system (category purity + refunds)', () => {
     expect(carrier).toBeDefined();
     if (!carrier) return;
     const mods = defaultModifiers();
-    applyEntityModifiers(mods, [{ entityId: carrier.id, count: 1, level: 1 }]);
+    applyEntityModifiers(mods, [{ entityId: carrier.id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
     expect(mods.offlineGainMult).toBeGreaterThan(1);
   });
 });
@@ -271,7 +305,7 @@ describe('secondary stats (A안)', () => {
     );
     expect(carriers.length).toBeGreaterThan(0);
     const mods = defaultModifiers();
-    applyEntityModifiers(mods, [{ entityId: carriers[0].id, count: 1, level: 1 }]);
+    applyEntityModifiers(mods, [{ entityId: carriers[0].id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
     const moved =
       mods.dropChanceMult !== 1 || mods.entropyGainMult !== 1 || mods.fusionBurstMult !== 1;
     expect(moved).toBe(true);

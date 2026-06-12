@@ -6,7 +6,7 @@
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 import { getEquippedInstances } from '../entities/effects';
-import { getClickPower, getProgress, getEffectiveThreshold } from '../formulas';
+import { getClickPower, getEntropyGateProgress, getProgress, getEffectiveThreshold } from '../formulas';
 import type { GameState } from '../types';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from '../types/events';
 import type { RogueTypeKey } from '../types/canvas';
@@ -54,6 +54,7 @@ export function getCurrentModifiers(state: GameState) {
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (state.totalTimePlayed - Math.max(0, state.stageStartedAt - state.runStartTime)) / 1000),
     stageId: stage.id,
+    gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);

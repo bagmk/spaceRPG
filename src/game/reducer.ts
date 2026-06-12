@@ -86,6 +86,8 @@ export type GameAction =
       /** 0..1 rolls for the entity drop system — omit to disable drops (tests). */
       dropRoll?: number;
       dropPickRoll?: number;
+      /** 0..1 — which stage's pool the drop comes from (absent → current stage). */
+      dropStageRoll?: number;
     }
   | { type: 'BUY_CLICK' }
   | { type: 'BUY_AUTO' }
@@ -112,6 +114,8 @@ export type GameAction =
       /** 0..1 rolls for the entity drop system — omit to disable drops (tests). */
       dropRoll?: number;
       dropPickRoll?: number;
+      /** 0..1 — which stage's pool the drop comes from (absent → current stage). */
+      dropStageRoll?: number;
     }
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
@@ -131,7 +135,7 @@ export type GameAction =
   | { type: 'PURCHASE_ENTITY'; entityId: string }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
-  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number }
+  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number }
   | { type: 'ENHANCE_ENTITY'; entityId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }

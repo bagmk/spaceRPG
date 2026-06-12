@@ -117,7 +117,14 @@ export const SKILL_AUTO_RATE_BASE = 2;
 export const SKILL_TIME_RATE_BASE = 1.8;
 /** Hard lower bound for any stage's time-gauge duration after all boosts. */
 export const TIME_MIN_STAGE_SECONDS = 12;
-/** Previous-stage time entities keep a weaker legacy effect in later stages. */
+/**
+ * Previous-stage time entities keep a weaker legacy effect in later stages.
+ * NOTE (Phase 4-1 carve-out): time entities are deliberately the ONE
+ * stage-coupled effect type — the cosmic-clock normalization machinery is
+ * inherently stage-relative. They are excluded from past-stage drop/fusion
+ * pools and their count contribution hard-caps at ENTITY_TIME_MAX_COUNT
+ * (no soft-cap tail; getCosmicTimeFillRate ceilings the fill rate anyway).
+ */
 export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
 /**
  * Global output multipliers. The entropy-gate thresholds (Phase 0 sim) were
@@ -153,27 +160,30 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 
 // ── Entropy gate (entity redesign D1) ────────────────────────────────────────
 // Stage advancement gate: cumulative entropy >= ENTROPY_THRESHOLDS[stageId].
-// Calibrated by scripts/entropy-gate-sim.mjs so the reference profile
-// (cps 3, activeFraction 0.5, fusion every 90s) lands on each stage's
-// realPlayTargetSec. Re-run the sim after touching entropy weights below.
+// Recalibrated for Phase 4-1 (player-stage gear power curve: skills + gear
+// 2.0^E click / 8^E auto with the fractional gate exponent + the cost-scaled
+// fusion burst) by scripts/entropy-gate-sim.mjs — per-stage span binary
+// search pins the reference profile (cps 3, activeFraction 0.5, fusion every
+// 90s) to each stage's realPlayTargetSec under real gate dynamics. Re-run the
+// sim after touching the gear curve or entropy weights.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  1: 1.058e2,
-  2: 1.142e6,
-  3: 4.662e7,
-  4: 1.408e9,
-  5: 1.411e10,
-  6: 3.922e11,
-  7: 3.704e12,
-  8: 1.443e14,
-  9: 8.936e14,
-  10: 8.543e15,
-  11: 1.243e17,
-  12: 4.774e17,
-  13: 8.702e17,
-  14: 2.283e18,
-  15: 5.58e18,
-  16: 4.5e19,
+  1: 1.995e3,
+  2: 9.64e6,
+  3: 4.236e8,
+  4: 3.505e11,
+  5: 1.321e13,
+  6: 1.579e15,
+  7: 5.615e16,
+  8: 1.974e21,
+  9: 5.511e23,
+  10: 4.559e25,
+  11: 5.5e27,
+  12: 1.392e29,
+  13: 1.333e30,
+  14: 5.698e31,
+  15: 1.097e33,
+  16: 1.005e35,
 };
 
 /** Entropy gained per quanta earned by clicking (active play drives progress). */
@@ -204,6 +214,14 @@ export const DROP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
 export const DROP_CRIT_RARITY_BIAS = 2;
 /** Combo at/above this threshold also applies the rarity bias. */
 export const DROP_COMBO_BIAS_THRESHOLD = 100;
+/**
+ * Drop/fusion-output stage pool (Phase 4-1 stage independence): this fraction
+ * of rolls stays on the current stage; the rest backfills past stages
+ * weighted by (uncollected codex entries + 1) so collection holes fill
+ * naturally. Time-type entities never appear in past-stage pools — the
+ * cosmic-clock machinery is stage-relative (see LEGACY_TIME_ENTITY_EFFECT_FACTOR).
+ */
+export const DROP_CURRENT_STAGE_WEIGHT = 0.6;
 
 // ── Fusion / gacha (entity redesign Phase 3) ─────────────────────────────────
 
@@ -221,24 +239,39 @@ export const FUSION_PITY_THRESHOLD = 5;
  * Phase 0 sim (29–43% for active players).
  */
 export const FUSION_REF_CPS = 3;
+/**
+ * Fusion entropy burst scales by min(1, costPaid / (current stage cost anchor
+ * × this fraction)) — a flat player-stage reference price. Closes the
+ * bank-then-burst-dump exploit: fusion cost is 10% of the bank, so spending
+ * the bank first used to make chained late bursts nearly free.
+ */
+export const FUSION_BURST_REF_COST_FRAC = 0.1;
 
 /** Each entity level above 1 adds this fraction to the entity's effect. */
 export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
 
-// ── Item progression (stage power curve + rarity gates) ─────────────────────
+// ── Item progression (gear power curve + rarity gates) ──────────────────────
 
 /**
- * Percentage effects (click / crit-mult / multiplier / entropy) scale by
- * base^(stageId-1) so later-stage gear genuinely outgrows earlier gear.
- * A same-stage legendary ≈ 13× a common, so with 1.3 a legendary stays ahead
- * of newer commons for ~9 stages before being overtaken. Flat chance-type
- * stats (crit chance, combo cap) do NOT scale — they are capped resources.
+ * Gear power curve (Phase 4-1 stage independence): % effects (click /
+ * crit-mult / multiplier / entropy) and `scales` substats ride base^E with a
+ * SHARED exponent E = max(playerStage - 1 + gateProgress01, itemStage - 1).
+ * The exponent follows the PLAYER's progression, not the item's origin
+ * stage — any stage's gear stays viable forever; differentiation comes from
+ * rarity, effect type, family sets, levels and substats. The fractional
+ * gateProgress01 term gives in-stage acceleration (power rises ×base across
+ * each stage's entropy-gate window, continuous across condense since
+ * (s-1)+1 = ((s+1)-1)+0). The max(…, itemStage-1) clamp makes migration a
+ * strict buff and future-proofs prestige-persistent inventories. 2.0 makes
+ * three multiplicative click slots grow ≈2³ = 8×/stage — parity with auto's
+ * 8×/stage. Flat chance-type stats (crit chance, combo cap) do NOT scale.
  */
-export const STAGE_POWER_BASE = 1.3;
+export const STAGE_POWER_BASE = 2.0;
 /**
- * Rift/auto output anchor growth per stage. Replaces the old baseCost
- * coupling (~×15/stage) that obsoleted rift gear at every stage transition.
- * Output per copy = (baseCost / stage cost anchor) × anchor(stage1) × base^(stageId-1) × value%.
+ * Rift/auto output anchor growth — rides the SAME shared exponent E as
+ * STAGE_POWER_BASE (player-stage anchored since Phase 4-1; an item's origin
+ * stage no longer matters for rift output, only its rarity weight).
+ * Output per copy = (baseCost / origin cost anchor) × anchor(stage1) × base^E × value%.
  */
 export const AUTO_STAGE_POWER_BASE = 8;
 
@@ -432,6 +465,7 @@ export const BALANCE = {
     rarityWeights: DROP_RARITY_WEIGHTS,
     critRarityBias: DROP_CRIT_RARITY_BIAS,
     comboBiasThreshold: DROP_COMBO_BIAS_THRESHOLD,
+    currentStageWeight: DROP_CURRENT_STAGE_WEIGHT,
   },
   fusion: {
     inputCount: FUSION_INPUT_COUNT,
@@ -441,6 +475,7 @@ export const BALANCE = {
     refCps: FUSION_REF_CPS,
     valueSec: ENTROPY_FUSION_VALUE_SEC,
     costFrac: ENTROPY_FUSION_COST_FRAC,
+    burstRefCostFrac: FUSION_BURST_REF_COST_FRAC,
     levelEffectBonus: ENTITY_LEVEL_EFFECT_BONUS,
   },
   equip: {

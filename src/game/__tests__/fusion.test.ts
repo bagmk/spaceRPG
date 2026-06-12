@@ -85,7 +85,7 @@ describe('fusion (Phase 3)', () => {
   });
 
   it('rollFusionRarity caps at legendary and skips pity there', () => {
-    const result = rollFusionRarity('legendary', 0.0, 99);
+    const result = rollFusionRarity('legendary', 0.0, 99, 16);
     expect(result.rarity).toBe('legendary');
     expect(result.rarityUp).toBe(false);
     expect(result.pityApplicable).toBe(false);
@@ -173,8 +173,8 @@ describe('set bonuses + slot unlocks (Phase 3)', () => {
 
     const lv1 = defaultModifiers();
     const lv3 = defaultModifiers();
-    applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }]);
-    applyEntityModifiers(lv3, [{ entityId: clickEntity.id, count: 1, level: 3 }]);
+    applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
+    applyEntityModifiers(lv3, [{ entityId: clickEntity.id, count: 1, level: 3 }], { stageId: 1, gateProgress01: 0 });
     expect(lv3.clickPowerMult).toBeGreaterThan(lv1.clickPowerMult);
   });
 });

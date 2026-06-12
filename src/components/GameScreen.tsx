@@ -185,6 +185,7 @@ export function GameScreen({
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (wallNow - state.stageStartedAt) / 1000),
     stageId: stage.id,
+    gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01,
     clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
@@ -245,7 +246,7 @@ export function GameScreen({
   const hasAffordableEntity = currentStageEntities.some((entity) => {
     const count = getPurchasedEntityCount(state.inventory, entity);
     const maxed = entity.maxCount > 0 && count >= entity.maxCount;
-    return !maxed && state.quanta >= getEntityCost(entity, count);
+    return !maxed && state.quanta >= getEntityCost(entity, count, stage.id);
   });
   const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
     return sum + getPurchasedEntityCount(state.inventory, entity);
@@ -670,6 +671,7 @@ export function GameScreen({
               randomValue: Math.random(),
               dropRoll: Math.random(),
               dropPickRoll: Math.random(),
+              dropStageRoll: Math.random(),
               x: ox,
               y: oy,
               forceCrit: forceCrit || mechanicResult?.forceCrit,
@@ -693,6 +695,7 @@ export function GameScreen({
               name: payload.name,
               dropRoll: Math.random(),
               dropPickRoll: Math.random(),
+              dropStageRoll: Math.random(),
             })
           }
         />
@@ -704,6 +707,7 @@ export function GameScreen({
             page={panelView.page}
             equipCategory={panelView.category}
             currentStageId={stage.id}
+            gateProgress01={entropyGateProgress01}
             inventory={state.inventory}
             equippedSlots={state.equippedSlots}
             unlockedSlotCount={state.unlockedSlotCount}
@@ -736,7 +740,7 @@ export function GameScreen({
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
             onEnhance={(entityId) => { dispatch({ type: 'ENHANCE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onFuse={(inputEntityIds) => {
-              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random() });
+              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random() });
               soundManager?.playEntityLevelUp();
             }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}

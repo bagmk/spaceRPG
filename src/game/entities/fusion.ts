@@ -28,14 +28,18 @@ import { getSetKey } from './effects';
 import { getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
 import { getEnhanceLevelCap } from './enhance';
-import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
+import { getEquipCategory, getPlayerAnchoredBaseCost, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
 
 export interface FusionValidation {
   ok: boolean;
   rarity?: EntityRarity;
-  /** Highest stage among the inputs — the output rolls from this stage's pool. */
+  /**
+   * Highest stage among the inputs. Since Phase 4-1 the OUTPUT pool stage is
+   * rolled via pickDropStage (player-stage weighted) instead — this field
+   * survives for validation/UI only.
+   */
   stageId?: number;
   /** Set when ALL inputs share a gear category — the output stays in it. */
   category?: EquipCategory;
@@ -107,13 +111,14 @@ export function getMaxFusionRarityIdx(stageId: number): number {
 
 /**
  * Resolve the output rarity from the input rarity, a 0..1 roll, the pity
- * counter, and the stage's fusion rarity cap (gate + 1).
+ * counter, and the PLAYER stage's fusion rarity cap (gate + 1). stageId is
+ * required — a silent =16 default would skip the cap for any missed caller.
  */
 export function rollFusionRarity(
   inputRarity: EntityRarity,
   roll: number,
   pity: number,
-  stageId = 16,
+  stageId: number,
 ): FusionRarityRoll {
   const idx = RARITY_ORDER.indexOf(inputRarity);
   const maxIdx = getMaxFusionRarityIdx(stageId);
@@ -140,18 +145,21 @@ export interface FusionOutputBias {
  * Pick the output entity for a resolved rarity. Category is a hard filter
  * (falls back to the unfiltered pool only when the stage has no candidate);
  * family is a probabilistic bias derived from the same pick roll.
+ * `excludeTime` removes time-type entities (past-stage output pools).
  */
 export function pickFusionOutput(
   stageId: number,
   rarity: EntityRarity,
   pick01: number,
   bias: FusionOutputBias = {},
+  excludeTime = false,
 ): StageEntity | null {
-  const pool = getEntitiesForStage(stageId);
+  let pool = getEntitiesForStage(stageId);
+  if (excludeTime) pool = pool.filter((e) => e.effect.type !== 'time');
   if (pool.length === 0) return null;
 
   let candidates = pool.filter((e) => e.rarity === rarity);
-  if (candidates.length === 0) return pickEntityByRarity(stageId, rarity, pick01);
+  if (candidates.length === 0) return pickEntityByRarity(stageId, rarity, pick01, excludeTime);
 
   if (bias.category) {
     const sameCategory = candidates.filter((e) => getEquipCategory(e) === bias.category);
@@ -224,9 +232,14 @@ export function consumeFusionInputs(
     const consumed = needed.get(e.entityId);
     if (consumed === undefined) return e;
     const share = e.count > 0 ? Math.min(1, consumed / e.count) : 0;
+    const remaining = e.count - consumed;
     return {
       ...e,
-      count: e.count - consumed,
+      count: remaining,
+      // Levels do NOT survive an emptied stack — otherwise max-level → fuse
+      // away → refund 60% leaves every future drop of this id pre-leveled
+      // for a net 40% of an already-paid cost (permanent level inflation).
+      level: remaining <= 0 ? 1 : e.level,
       invested: Math.max(0, (e.invested ?? 0) * (1 - share)),
     };
   });
@@ -245,13 +258,20 @@ export interface FusionOutputResult {
 export function applyFusionOutput(
   inventory: EntityInstance[],
   output: StageEntity,
+  playerStageId: number,
 ): FusionOutputResult {
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
     // Duplicate sink levels up — but never past the rarity's enhance cap.
     // Fully capped duplicates pay out quanta instead of vanishing (스펙 §10).
+    // Refund anchors to the player's stage (matching re-anchored enhance
+    // costs) so past-stage outputs can't pay out more than they ever cost.
     if (existing.level >= getEnhanceLevelCap(output)) {
-      return { inventory, leveledUp: false, capRefund: output.baseCost * FUSION_CAP_DUP_REFUND_FRAC };
+      return {
+        inventory,
+        leveledUp: false,
+        capRefund: getPlayerAnchoredBaseCost(output, playerStageId) * FUSION_CAP_DUP_REFUND_FRAC,
+      };
     }
     return {
       inventory: inventory.map((e) =>

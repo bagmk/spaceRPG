@@ -11,6 +11,7 @@ import {
   getCritMultiplier,
   getEffectiveThreshold,
   getEntropyFromMatterGain,
+  getEntropyGateProgress,
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
@@ -70,6 +71,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
+    gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
@@ -151,6 +153,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
+    gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
@@ -185,8 +188,9 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
       ? rollEntityDrop(
           stage.id,
           getClickDropChance(isCrit) * modifiers.dropChanceMult,
-          { roll: action.dropRoll, pickRoll: action.dropPickRoll },
+          { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit, combo },
+          state.almanacCollected,
         )
       : null;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
@@ -270,8 +274,9 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
       ? rollEntityDrop(
           stage.id,
           getCollisionDropChance() * modifiers.dropChanceMult,
-          { roll: action.dropRoll, pickRoll: action.dropPickRoll },
+          { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit: true },
+          state.almanacCollected,
         )
       : null;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({

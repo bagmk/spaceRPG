@@ -14,7 +14,7 @@ import {
 import { db } from './firebase';
 import { getDeviceId } from './deviceId';
 import { SAVE_SCHEMA_VERSION } from '../game/storage';
-import { validateV5 } from '../game/storage/migrate';
+import { migrateToCurrent } from '../game/storage';
 import type { PersistentGameState, SaveState } from '../game/types';
 
 // ---------------------------------------------------------------------------
@@ -61,9 +61,9 @@ export async function pullRemoteSave(uid: string): Promise<PersistentGameState |
     }
     remoteAheadOfClient = false;
     if (!remote.data) return null;
-    // Normalize older cloud saves through the same validation/migration as
-    // local storage (e.g. purchasedEntities → inventory in v14).
-    return validateV5(remote.data as Partial<SaveState>);
+    // Normalize older cloud saves through the SAME migration pipeline as
+    // local storage (version steps, entity-id normalization, clamps).
+    return migrateToCurrent(remote.data);
   } catch (e) {
     console.error('[sync] pullRemoteSave failed:', e);
     return null;

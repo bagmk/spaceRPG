@@ -1,5 +1,6 @@
 /** Stage Entity system — replaces the skill tree. */
 
+import { ENTITY_BASE_COST_FACTOR, ENTITY_COST_ANCHORS } from '../balance';
 import type { EndingId } from '../types';
 
 export type EntityRarity = 'common' | 'rare' | 'epic' | 'legendary';
@@ -115,7 +116,20 @@ export function getEquipCategory(entity: StageEntity): EquipCategory {
   return t === 'auto' || t === 'auto_mult' || t === 'time' ? 'rift' : 'click';
 }
 
-/** Cost of the next purchase given current count. */
-export function getEntityCost(entity: StageEntity, count: number): number {
-  return Math.ceil(entity.baseCost * Math.pow(entity.costScaling, count));
+/**
+ * Player-anchored base cost (Phase 4-1): while the player is on (or before)
+ * the item's origin stage the price is the authored baseCost; past-stage
+ * items are re-priced at the player's current cost anchor. Under the
+ * player-stage power curve a stage-1 legendary performs like a stage-16 one,
+ * so origin pricing would be a 15-orders-of-magnitude arbitrage.
+ */
+export function getPlayerAnchoredBaseCost(entity: StageEntity, playerStageId: number): number {
+  const playerAnchor = ENTITY_COST_ANCHORS[playerStageId as keyof typeof ENTITY_COST_ANCHORS];
+  if (playerAnchor === undefined || entity.stageId >= playerStageId) return entity.baseCost;
+  return Math.max(entity.baseCost, Math.ceil(playerAnchor * ENTITY_BASE_COST_FACTOR[entity.rarity]));
+}
+
+/** Cost of the next purchase given current count, at the player's anchor. */
+export function getEntityCost(entity: StageEntity, count: number, playerStageId: number): number {
+  return Math.ceil(getPlayerAnchoredBaseCost(entity, playerStageId) * Math.pow(entity.costScaling, count));
 }

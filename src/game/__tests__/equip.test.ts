@@ -91,7 +91,7 @@ describe('equip system (Phase 2)', () => {
     expect(clickEntity).toBeDefined();
     if (!clickEntity) return;
 
-    const funded = { ...createInitialGameState(0), quanta: getEntityCost(clickEntity, 0) * 10 };
+    const funded = { ...createInitialGameState(0), quanta: getEntityCost(clickEntity, 0, 1) * 10 };
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: clickEntity.id });
     const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: clickEntity.id });
 

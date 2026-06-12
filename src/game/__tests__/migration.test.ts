@@ -144,6 +144,35 @@ describe('save migration', () => {
     expect(migrated?.riftSlots).toContain('s13_07');
   });
 
+  it('v16 resets the offline window once and clamps corrupt inventory entries', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    const staleSaveAt = Date.now() - 86_400_000; // 1 day ago
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 15,
+        lastSaveAt: staleSaveAt,
+        inventory: [
+          { entityId: 's1_01', count: 1e9, level: 99 }, // runaway count, over-cap level
+          { entityId: 's1_02', count: 3, level: 1 },
+        ],
+      }),
+    );
+
+    const migrated = loadGame();
+    // Offline window reset: the gear power rebuff must not pay a retroactive windfall.
+    expect(migrated!.lastSaveAt).toBeGreaterThan(staleSaveAt + 86_000_000);
+    const corrupt = migrated!.inventory.find((e) => e.entityId === 's1_01')!;
+    expect(corrupt.count).toBeLessThanOrEqual(20 * 1000); // maxCount × 1000 ceiling
+    expect(corrupt.level).toBeLessThanOrEqual(25); // rarity level cap
+    expect(migrated!.inventory.find((e) => e.entityId === 's1_02')?.count).toBe(3);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

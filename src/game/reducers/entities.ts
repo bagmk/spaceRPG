@@ -2,7 +2,7 @@ import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
-import { addToAlmanac } from '../entities/drops';
+import { addToAlmanac, pickDropStage } from '../entities/drops';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
 import {
   applyFusionOutput,
@@ -14,7 +14,7 @@ import {
   validateFusionInputs,
 } from '../entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
-import { RARITY_STAGE_GATES } from '../balance';
+import { ENTITY_COST_ANCHORS, FUSION_BURST_REF_COST_FRAC, RARITY_STAGE_GATES } from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
@@ -114,7 +114,7 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   // on stage 11) is fully maxed.
   if (isEntityLockedByAnchor(entity, state.inventory)) return state;
 
-  const cost = getEntityCost(entity, currentCount);
+  const cost = getEntityCost(entity, currentCount, currentStage.id);
   if (state.quanta < cost) return state;
 
   const updatedInventory = existing
@@ -149,23 +149,37 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   const rarityResult = rollFusionRarity(
     validation.rarity, action.rarityRoll, state.fusionPity, currentStageIdForFusion,
   );
-  const output = pickFusionOutput(validation.stageId, rarityResult.rarity, action.pickRoll, {
+  // Output pool stage follows the same player-stage weighting as drops
+  // (Phase 4-1) — input origin stages no longer determine the output pool.
+  const outputStageId =
+    action.stageRoll !== undefined
+      ? pickDropStage(currentStageIdForFusion, action.stageRoll, state.almanacCollected)
+      : currentStageIdForFusion;
+  const output = pickFusionOutput(outputStageId, rarityResult.rarity, action.pickRoll, {
     category: validation.category,
     familyKey: validation.familyKey,
-  });
+  }, outputStageId !== currentStageIdForFusion);
   if (!output) return state;
 
   const cost = getFusionQuantaCost(state.quanta);
   const { inventory: consumed, refund: enhanceRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
-  const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output);
+  const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
+  // Burst scales by what the fusion actually cost against a flat player-stage
+  // reference price — closes the bank-then-burst-dump exploit (cost is a
+  // fraction of the bank, so an emptied bank used to buy full bursts for free).
+  const burstRefCost =
+    (ENTITY_COST_ANCHORS[currentStageIdForFusion as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16]) *
+    FUSION_BURST_REF_COST_FRAC;
+  const burstCostScale = burstRefCost > 0 ? Math.min(1, cost / burstRefCost) : 1;
   const burst =
     getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
     fusionModifiers.fusionBurstMult *
-    entropyEchoMult;
+    entropyEchoMult *
+    burstCostScale;
   const nextEntropy = safeAdd(state.entropy, burst);
   const eventId = nextEventId(state);
   const nextPity = rarityResult.pityApplicable
@@ -207,7 +221,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   if (!owned || owned.count <= 0) return state;
   if (owned.level >= getEnhanceLevelCap(entity)) return state;
 
-  const cost = getEnhanceCost(entity, owned.level);
+  const cost = getEnhanceCost(entity, owned.level, STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id);
   if (state.quanta < cost) return state;
 
   return withCurrentUniverseEndingProgress({

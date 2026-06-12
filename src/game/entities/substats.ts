@@ -21,8 +21,15 @@ import { getEquipCategory, type StageEntity } from './types';
 
 export interface SecondaryStat {
   type: SecondaryStatType;
-  /** Magnitude at level 1 (percent for *Pct/Gain/Rate/Burst/Mult stats, flat otherwise). */
+  /**
+   * BASE magnitude at level 1 before the gear power curve (percent for
+   * *Pct/Gain/Rate/Burst/Mult stats, flat otherwise). `scales` stats are
+   * multiplied by getGearPowerMult at USE time (effects.ts / EntityPanel) —
+   * never cached, since the curve follows the player's live progression.
+   */
   value: number;
+  /** Whether this stat rides the gear power curve (mirrors SECONDARY_STAT_DEFS). */
+  scales: boolean;
 }
 
 
@@ -38,11 +45,39 @@ function hashString(input: string): number {
 
 const cache = new Map<string, SecondaryStat[]>();
 
-/** The stage power multiplier shared with primary effects. */
-export function getStagePowerMult(stageId: number): number {
-  return Math.pow(STAGE_POWER_BASE, Math.max(0, stageId - 1));
+/**
+ * Gear power context (Phase 4-1 stage independence): the power curve follows
+ * the PLAYER's progression, not an item's origin stage.
+ */
+export interface GearPower {
+  /** The player's current stage id (1-based). */
+  stageId: number;
+  /** Entropy-gate progress within the current stage, 0..1 (fractional exponent). */
+  gateProgress01: number;
 }
 
+/**
+ * Shared gear-power exponent: E = max(playerStage - 1 + gateProgress01,
+ * itemStage - 1). The clamp guarantees an item is never weaker than its
+ * origin-stage value (migration is a strict buff; prestige-persistent
+ * inventories stay safe).
+ */
+export function getGearPowerExponent(power: GearPower, itemStageId: number): number {
+  const player = Math.max(0, power.stageId - 1) + Math.min(1, Math.max(0, power.gateProgress01));
+  return Math.max(player, Math.max(0, itemStageId - 1));
+}
+
+/** The gear power multiplier shared by % effects and scaling substats. */
+export function getGearPowerMult(power: GearPower, itemStageId: number): number {
+  return Math.pow(STAGE_POWER_BASE, getGearPowerExponent(power, itemStageId));
+}
+
+/**
+ * Deterministic substats at their BASE magnitude (no power curve). The gear
+ * power curve is applied at use time by the caller (applyEntityModifiers /
+ * EntityPanel) for `scales` stats — caching curved values would freeze the
+ * player-stage curve at first read.
+ */
 export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
   const cached = cache.get(entity.id);
   if (cached) return cached;
@@ -61,8 +96,7 @@ export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
       const type = pool[idx];
       taken.add(type);
       const def = SECONDARY_STAT_DEFS[type];
-      const stageMult = def.scales ? getStagePowerMult(entity.stageId) : 1;
-      stats.push({ type, value: def.base * rarityScale * stageMult });
+      stats.push({ type, value: def.base * rarityScale, scales: def.scales });
     }
   }
   cache.set(entity.id, stats);

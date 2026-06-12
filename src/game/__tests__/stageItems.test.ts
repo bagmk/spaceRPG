@@ -85,16 +85,40 @@ describe('stage entity definitions', () => {
     expect(getPurchasedEntityCount([{ entityId: legendaryEntities[0].id, count: 2 }], legendaryEntities[0])).toBe(1);
   });
 
-  it('rebalance-scales stage two and later entity effects', () => {
-    // Identity pass: effects are assigned by theme, not position. The value
-    // tier per (rarity, effect type) is preserved, so find by effect type.
+  it('rebalance-scales ALL stages uniformly (stage 1 included — Phase 4-1)', () => {
+    // Under the player-stage gear power curve every same-rarity item shares
+    // one global scalar, so per-copy spec values must be uniform: the old
+    // stage-1 exemption would have made stage-1 gear permanently 4×/10×
+    // stronger than everything else.
     const byTypeRarity = (stageId: number, type: string, rarity: string) =>
       getEntitiesForStage(stageId).find((e) => e.effect.type === type && e.rarity === rarity);
 
-    expect(byTypeRarity(1, 'click', 'common')?.effect.value).toBeCloseTo(15);
+    expect(byTypeRarity(1, 'click', 'common')?.effect.value).toBeCloseTo(15 / 4);
     expect(byTypeRarity(2, 'click', 'common')?.effect.value).toBeCloseTo(15 / 4);
     expect(byTypeRarity(2, 'auto', 'common')?.effect.value).toBeCloseTo(0.8 / 10);
     expect(byTypeRarity(2, 'crit', 'common')?.effect.value).toBeCloseTo(0.3 / 4);
+  });
+
+  it('per-copy values stay in a tight band across all 16 stages (no stage dominates)', () => {
+    // Invariant from the stage-independence design review: for each
+    // (rarity × effect type), authored per-copy values must stay within a
+    // small band across stages — otherwise one stage's drops strictly
+    // dominate under the shared player-stage power curve.
+    const bands = new Map<string, { min: number; max: number }>();
+    for (const e of STAGE_ENTITIES) {
+      if (e.effect.type === 'time' || e.effect.type === 'multiplier') continue;
+      const key = `${e.rarity}:${e.effect.type}:${e.effect.isFlat ? 'flat' : 'pct'}`;
+      const band = bands.get(key) ?? { min: Infinity, max: -Infinity };
+      band.min = Math.min(band.min, e.effect.value);
+      band.max = Math.max(band.max, e.effect.value);
+      bands.set(key, band);
+    }
+    for (const [key, band] of bands) {
+      // Worst current spread is common:auto at 3.75× (authored 0.8..3.0) —
+      // well under one stage's power step (8×), so it can't invert rarity or
+      // make one stage's drops dominate. The bound guards against runaways.
+      expect(band.max / band.min, `${key} spread ${band.min}..${band.max}`).toBeLessThanOrEqual(4);
+    }
   });
 
   it('uses one-tenth auto scaling from stage six onward', () => {
@@ -176,7 +200,7 @@ describe('stage entity definitions', () => {
       { entityId: autoEntity?.id ?? '', count: 1, level: 1 },
       { entityId: clickEntity?.id ?? '', count: 1, level: 1 },
       { entityId: autoPowerEntity?.id ?? '', count: 1, level: 1 },
-    ]);
+    ], { stageId: 1, gateProgress01: 0 });
 
     expect(mods.autoRateFlatAdd).toBeGreaterThan(0);
     expect(mods.clickPowerMult).toBeGreaterThan(1);
@@ -190,10 +214,11 @@ describe('stage entity definitions', () => {
 
     const baseline = { ...defaultModifiers(), autoRateAdd: 1e9, autoRateMult: 48 };
     const withSun = { ...baseline };
-    applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }]);
+    // Player on the Sun's own stage (10): E = max(9, 9) = 9 — origin parity.
+    applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }], { stageId: 10, gateProgress01: 0 });
 
-    // Auto output anchor (item progression): rarity weight within the stage
-    // times the gentle per-stage growth curve — NOT multiplied by autoRateMult.
+    // Auto output anchor: rarity weight within the origin stage times the
+    // shared player-anchored growth curve — NOT multiplied by autoRateMult.
     const expectedFlat =
       (sun.baseCost / ENTITY_COST_ANCHORS[10]) *
       ENTITY_COST_ANCHORS[1] *

@@ -679,8 +679,13 @@ function glyphFor(stageId: StageId, spec: EntitySpec): EntityGlyph {
   return glyphForRefined(stageId, spec);
 }
 
-function stageEffectScale(stageId: StageId, spec: EntitySpec): number {
-  if (stageId < 2 || !REBALANCED_EFFECT_RARITIES.has(spec.rarity)) return 1;
+function stageEffectScale(_stageId: StageId, spec: EntitySpec): number {
+  // Applies to ALL stages including stage 1 (Phase 4-1): under the
+  // player-stage gear power curve every same-rarity item shares one global
+  // scalar, so a stage-1 exemption would make stage-1 gear permanently 4×/10×
+  // stronger per copy than everything else. Per-rarity values must stay in
+  // one flat band across stages (guarded by a test).
+  if (!REBALANCED_EFFECT_RARITIES.has(spec.rarity)) return 1;
   if (spec.effect.type === 'auto') return 0.1;
   return 0.25;
 }
@@ -1023,13 +1028,13 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Down Quark',          'd',   'Light quark shared by protons and neutrons.',             'common', 'click', 15.0),
     item('Electron',            'e⁻',  'Stable lepton that will orbit every future atom.',        'common', 'crit',  0.3, true),
     withAliases(
-      item('Electron Neutrino',   'νₑ',  'Electron-flavor neutrino, nearly massless, slipping through matter untouched.', 'common', 'auto_mult',  5.0),
+      item('Electron Neutrino',   'νₑ',  'Electron-flavor neutrino, nearly massless, slipping through matter untouched.', 'common', 'auto_mult',  2.0),
       ['s2_04_neutrino'],
     ),
     item('Gluon',               'g',   'Color-force carrier binding quarks inside hadrons.',      'rare',   'auto',  2.0),
     item('Strange Quark',       's',   'Second-generation quark carrying strangeness.',           'rare',   'click', 22.0),
     item('W Boson',             'W±',  'Weak-force carrier enabling quark flavor changes.',       'rare',   'crit',  0.5, true),
-    item('CP Violation Pocket', 'CP̸', 'Tiny asymmetry that lets matter outlast antimatter.',    'rare',   'auto_mult',  8.0),
+    item('CP Violation Pocket', 'CP̸', 'Tiny asymmetry that lets matter outlast antimatter.',    'rare',   'auto_mult',  2.0),
   ]),
 
   // ── Stage 3: Quark-Gluon Plasma (4C + 4R + 4E) ─────────────────────────────
@@ -1415,6 +1420,22 @@ export function getPurchasedEntityCount(
     0,
   );
   return entity.maxCount > 0 ? Math.min(count, entity.maxCount) : count;
+}
+
+/**
+ * Uncapped owned count — the display/collection counterpart of the
+ * maxCount-capped getPurchasedEntityCount (which survives only for purchase
+ * gating and the fusion dup-sink). Power applies its own soft cap via
+ * getEffectiveCount (effects.ts).
+ */
+export function getOwnedEntityCount(
+  inventory: PurchasedEntityEntry[],
+  entity: StageEntity,
+): number {
+  return inventory.reduce(
+    (sum, entry) => (entityMatchesId(entity, entry.entityId) ? sum + entry.count : sum),
+    0,
+  );
 }
 
 export function getMaxTimeEntityMultiplierThroughStage(stageId: number): number {

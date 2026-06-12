@@ -1,6 +1,7 @@
 /** Public save/load API. Migration and validation logic lives in storage/. */
 
 import { STORAGE_KEYS, TUNING } from './constants';
+import { ENHANCE_LEVEL_CAPS } from './balance';
 import { createDefaultPrestigeUpgrades } from './prestige';
 import { findEntityById } from './entities/stageItems';
 import type { EntityInstance, GameState, PersistentGameState, SaveState } from './types';
@@ -48,7 +49,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 15;
+export const SAVE_SCHEMA_VERSION = 16;
 
 /**
  * Entity ids were decoupled from names in v15 (canonical id is now position-only,
@@ -61,9 +62,22 @@ function canonicalEntityId(id: string): string {
   return id ? findEntityById(id)?.id ?? id : id;
 }
 
+/** Sanity-clamp one inventory entry (corrupt counts/levels from past bugs). */
+function clampInstance(e: EntityInstance): EntityInstance {
+  const entity = findEntityById(e.entityId);
+  const rawCount = Number.isFinite(e.count) ? Math.max(0, Math.floor(e.count)) : 0;
+  // Collection is uncapped by design, but a runaway count (NaN math, dupe
+  // bugs) gets a generous ceiling so power/UI never see absurd values.
+  const countCeil = entity && entity.maxCount > 0 ? entity.maxCount * 1000 : Number.MAX_SAFE_INTEGER;
+  const levelCap = entity ? ENHANCE_LEVEL_CAPS[entity.rarity] ?? 25 : 25;
+  const rawLevel = Number.isFinite(e.level) ? Math.max(1, Math.floor(e.level)) : 1;
+  return { ...e, count: Math.min(rawCount, countCeil), level: Math.min(rawLevel, levelCap) };
+}
+
 function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameState {
   const invMap = new Map<string, EntityInstance>();
-  for (const e of state.inventory ?? []) {
+  for (const raw of state.inventory ?? []) {
+    const e = clampInstance(raw);
     const id = canonicalEntityId(e.entityId);
     const existing = invMap.get(id);
     if (existing) {
@@ -193,11 +207,6 @@ export function saveGame(state: GameState): void {
 }
 
 export function loadGame(): PersistentGameState | null {
-  const loaded = loadGameInner();
-  return loaded ? normalizeSavedEntityIds(loaded) : null;
-}
-
-function loadGameInner(): PersistentGameState | null {
   if (!isBrowser()) return null;
   try {
     const raw =
@@ -209,16 +218,43 @@ function loadGameInner(): PersistentGameState | null {
       localStorage.getItem(SAVE_KEY_V2) ??
       localStorage.getItem(LEGACY_SAVE_KEY);
     if (!raw) return null;
+    return migrateToCurrent(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
 
-    const parsed = JSON.parse(raw) as
-      | Partial<SaveState>
-      | SaveStateV1
-      | SaveStateV2
-      | SaveStateV3
-      | SaveStateV4
-      | SaveStateV5Legacy
-      | SaveStateV6Legacy;
+/**
+ * Migrate any historical save shape to the current schema. Shared by local
+ * loads AND cloud pulls (sync.ts) so both paths get identical id
+ * normalization, clamps and version steps.
+ */
+export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | null {
+  if (!parsedUnknown || typeof parsedUnknown !== 'object') return null;
+  const sourceVersion = (parsedUnknown as { version?: number }).version ?? 0;
+  const migrated = migrateByVersion(parsedUnknown as Partial<SaveState>);
+  if (!migrated) return null;
+  const normalized = normalizeSavedEntityIds(migrated);
+  // v15 → v16 (Phase 4-1 gear power rebuff): reset the offline window once so
+  // the new player-stage power curve doesn't retroactively pay out a giant
+  // offline windfall on the first post-update load.
+  if (sourceVersion < 16) {
+    return { ...normalized, lastSaveAt: Date.now() };
+  }
+  return normalized;
+}
 
+function migrateByVersion(
+  parsed:
+    | Partial<SaveState>
+    | SaveStateV1
+    | SaveStateV2
+    | SaveStateV3
+    | SaveStateV4
+    | SaveStateV5Legacy
+    | SaveStateV6Legacy,
+): PersistentGameState | null {
+  try {
     if ((parsed as SaveStateV1).version === 1) {
       return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed as SaveStateV1))));
     }
@@ -283,9 +319,11 @@ function loadGameInner(): PersistentGameState | null {
         prestigeUpgrades: (migrated as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
       };
     }
-    if ((parsed as { version?: number }).version === 14 || (parsed as { version?: number }).version === 15) {
-      // v14/v15 share a schema; v15 only decoupled entity ids from names.
-      // normalizeSavedEntityIds (applied by loadGame) handles the id rewrite.
+    const v = (parsed as { version?: number }).version;
+    if (v === 14 || v === 15 || v === 16) {
+      // v14..v16 share a schema. v15 decoupled entity ids from names
+      // (normalizeSavedEntityIds rewrites ids); v16 re-anchored gear power to
+      // the player stage (migrateToCurrent resets the offline window once).
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return {

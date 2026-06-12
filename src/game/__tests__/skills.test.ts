@@ -129,13 +129,13 @@ describe('skills reducer basics', () => {
       click: { level: 5 },
       ownedCrossNodes: [],
     };
-    const withoutNode = getActiveModifiers(skills, { clickLevel: 5 });
+    const withoutNode = getActiveModifiers(skills, { clickLevel: 5, stageId: 1, gateProgress01: 0 });
     expect(withoutNode.clickEmissionCount).toBe(1);
     expect(getClickPower(withoutNode)).toBeCloseTo(32, 5); // 2^5, output multiplier 1
 
     const withNode = getActiveModifiers(
       { ...skills, ownedCrossNodes: ['click_lv5'] },
-      { clickLevel: 5 },
+      { clickLevel: 5, stageId: 1, gateProgress01: 0 },
     );
     expect(getClickPower(withNode)).toBeCloseTo(44.8, 5); // 2^5 x 1.4 node, output multiplier 1
   });
@@ -162,7 +162,7 @@ describe('skills reducer basics', () => {
       unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
       ownedCrossNodes: CROSS_NODES.map((node) => node.id),
     };
-    const modifiers = getActiveModifiers(skills, { clickLevel: 30 });
+    const modifiers = getActiveModifiers(skills, { clickLevel: 30, stageId: 1, gateProgress01: 0 });
     expect(modifiers.apexMult).toBe(2);
     expect(modifiers.bigBangUnlocked).toBe(true);
   });

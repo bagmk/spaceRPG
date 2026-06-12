@@ -12,7 +12,7 @@ import {
   SET_BONUS,
 } from '../balance';
 import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
-import { getSecondaryStats, getStagePowerMult } from './substats';
+import { getGearPowerExponent, getGearPowerMult, getSecondaryStats, type GearPower } from './substats';
 import {
   CODEX_SETS,
   collectedIdSet,
@@ -43,20 +43,35 @@ export function getEquippedInstances(
 }
 
 /**
- * Rift/auto output anchor: the entity's rarity weight within its stage
- * (baseCost ÷ stage cost anchor) times a gentle per-stage growth curve.
- * Decoupled from raw baseCost so rift gear isn't obsoleted ×15 per stage.
+ * Effective count for power purposes (Phase 4-1): collection stays uncapped
+ * (모으는 맛) but the power contribution soft-caps at maxCount with a sqrt
+ * tail — otherwise hoarded common stacks outscale every rarity under the
+ * player-stage power curve. Time entities hard-cap (no tail): the cosmic
+ * clock's fill rate is ceilinged anyway, so the tail would be a no-op lie.
  */
-export function getAutoOutputAnchor(entity: StageEntity): number {
+export function getEffectiveCount(count: number, maxCount: number, isTime: boolean): number {
+  const n = Math.max(0, count);
+  if (maxCount <= 0) return n;
+  if (isTime) return Math.min(n, maxCount);
+  return Math.min(n, maxCount) + Math.sqrt(Math.max(0, n - maxCount));
+}
+
+/**
+ * Rift/auto output anchor: the entity's rarity weight within its origin stage
+ * (baseCost ÷ origin cost anchor) times the SHARED gear power curve — the
+ * exponent follows the player's progression (Phase 4-1 stage independence),
+ * so rift gear from any stage stays viable.
+ */
+export function getAutoOutputAnchor(entity: StageEntity, power: GearPower): number {
   const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
   const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
-  return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, entity.stageId - 1);
+  return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId));
 }
 
 export function applyEntityModifiers(
   mods: Modifiers,
   inventory: EntityInstance[],
-  currentStageId?: number,
+  power: GearPower,
 ): void {
   for (const entry of inventory) {
     if (entry.count <= 0) continue;
@@ -64,19 +79,19 @@ export function applyEntityModifiers(
     if (!entity) continue;
 
     const { type, value, isFlat } = entity.effect;
-    // Collection count is uncapped (no max item number — 모으는 맛). The effect
-    // scales with the full owned count; maxCount only gates the fusion dup-sink.
-    const count = entry.count;
+    // Power contribution soft-caps at maxCount (collection itself is uncapped).
+    const count = getEffectiveCount(entry.count, entity.maxCount, type === 'time');
     // Levels come from enhancement + the fusion duplicate sink and scale everything.
     const levelMult = 1 + Math.max(0, (entry.level ?? 1) - 1) * ENTITY_LEVEL_EFFECT_BONUS;
-    // Percentage effects ride the stage power curve so later gear outgrows earlier
-    // gear; capped/flat resources (crit chance, combo cap) and auto (own anchor) don't.
-    const stagePower = getStagePowerMult(entity.stageId);
+    // % effects ride the shared gear power curve anchored to the PLAYER's
+    // progression (stage independence); capped/flat resources (crit chance,
+    // combo cap) and auto (own anchor, same exponent) don't.
+    const gearPower = getGearPowerMult(power, entity.stageId);
     const total = value * count * levelMult;
 
     switch (type) {
       case 'auto':
-        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity) * (total / 100));
+        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power) * (total / 100));
         break;
       case 'auto_mult':
         // Auto Power — % multiplier on entity flat-auto. Isolated modifier so
@@ -84,27 +99,26 @@ export function applyEntityModifiers(
         mods.autoFlatMult *= 1 + total / 100;
         break;
       case 'click':
-        mods.clickPowerMult *= 1 + (total * stagePower) / 100;
+        mods.clickPowerMult *= 1 + (total * gearPower) / 100;
         break;
       case 'crit':
         if (isFlat) {
           mods.critChanceAdd += total / 100;
         } else {
-          mods.critMultMult *= 1 + (total * stagePower) / 100;
+          mods.critMultMult *= 1 + (total * gearPower) / 100;
         }
         break;
       case 'time':
         {
+          // Time is the one stage-coupled effect (cosmic clock is stage-relative).
           const stageFactor =
-            currentStageId !== undefined && entity.stageId < currentStageId
-              ? LEGACY_TIME_ENTITY_EFFECT_FACTOR
-              : 1;
+            entity.stageId < power.stageId ? LEGACY_TIME_ENTITY_EFFECT_FACTOR : 1;
           mods.timeMultMult *= 1 + (total * stageFactor) / 100;
         }
         break;
       case 'entropy':
         // entropy entities boost encounter rewards
-        mods.encounterBonusMult *= 1 + (total * stagePower) / 100;
+        mods.encounterBonusMult *= 1 + (total * gearPower) / 100;
         break;
       case 'combo_cap':
         mods.comboCapAdd += total;
@@ -112,14 +126,15 @@ export function applyEntityModifiers(
       case 'multiplier':
         // Click-gear "all sources": click + crit only. Auto belongs to rift
         // gear — click gear must never leak into the auto calculation (스펙 §10).
-        mods.clickPowerMult *= 1 + (total * stagePower) / 100;
-        mods.critMultMult *= 1 + (total * stagePower) / 200;
+        mods.clickPowerMult *= 1 + (total * gearPower) / 100;
+        mods.critMultMult *= 1 + (total * gearPower) / 200;
         break;
     }
 
     // Secondary stats (A안): rare+ entities mix extra stats into the build.
+    // `scales` substats ride the same gear power curve, applied at use time.
     for (const sub of getSecondaryStats(entity)) {
-      const subTotal = sub.value * levelMult;
+      const subTotal = sub.value * levelMult * (sub.scales ? gearPower : 1);
       switch (sub.type) {
         case 'critChance':
           mods.critChanceAdd += subTotal / 100;
