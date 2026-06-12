@@ -22,7 +22,7 @@ import { getExpectedFusionRefund, getMaxFusionRarityIdx } from '../game/entities
 import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getSecondaryStats, getStagePowerMult, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexSetBlurb, codexSetLabel, getCodexSetForGlyph } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetBlurb, codexSetLabel, codexSubsetLabel, collectedIdSet, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
 import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
@@ -433,28 +433,30 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
 
 
         {tab === 'lab' ? (() => {
-          // Codex: thematic science sets that span all stages (no per-stage tabs).
-          const discoveredAll = new Set<string>();
-          for (const ids of Object.values(almanacCollected)) for (const id of ids) discoveredAll.add(id);
-          const isCollected = (e: StageEntity) => discoveredAll.has(e.id) || countOf(e) > 0;
+          // Codex: nested thematic sets (set → subsets) that span all stages.
+          const collectedSet = collectedIdSet(almanacCollected);
+          const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
 
           const activeSet = CODEX_SETS.find((cs) => cs.id === selectedSetId) ?? CODEX_SETS[0];
-          const setEntities = STAGE_ENTITIES
-            .filter((e) => getCodexSetForGlyph(e.visual.glyph).id === activeSet.id)
-            .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
-          const got = setEntities.filter(isCollected).length;
-          const total = setEntities.length;
+          // Set-level progress = union of all subset members (deduped).
+          const setMemberIds = new Set<string>();
+          for (const sub of activeSet.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) setMemberIds.add(m.id);
+          const setMembers = STAGE_ENTITIES.filter((e) => setMemberIds.has(e.id));
+          const got = setMembers.filter(isCollected).length;
+          const total = setMembers.length;
           const pct = total > 0 ? Math.round((got / total) * 100) : 0;
-          const complete = got === total && total > 0;
+          const setDone = isSetComplete(activeSet, collectedSet, STAGE_ENTITIES);
 
           return (
             <>
               {/* Set selector chips */}
               <div className="codex-sets">
                 {CODEX_SETS.map((cs) => {
-                  const members = STAGE_ENTITIES.filter((e) => getCodexSetForGlyph(e.visual.glyph).id === cs.id);
+                  const ids = new Set<string>();
+                  for (const sub of cs.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) ids.add(m.id);
+                  const members = STAGE_ENTITIES.filter((e) => ids.has(e.id));
                   const done = members.filter(isCollected).length;
-                  const full = done === members.length && members.length > 0;
+                  const full = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
                   return (
                     <button
                       key={cs.id}
@@ -471,7 +473,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                 })}
               </div>
 
-              <div className={`almanac-progress ${complete ? 'almanac-progress--complete' : ''}`}>
+              <div className={`almanac-progress ${setDone ? 'almanac-progress--complete' : ''}`}>
                 <div className="almanac-progress__row">
                   <span>{codexSetBlurb(activeSet, language)}</span>
                   <span>{`${got} / ${total} · ${pct}%`}</span>
@@ -479,41 +481,65 @@ export function EntityPanel({ page, equipCategory, currentStageId, inventory, eq
                 <div className="almanac-progress__bar">
                   <div className="almanac-progress__fill" style={{ width: `${pct}%`, background: activeSet.accent }} />
                 </div>
+                {/* Set completion reward — grants when every subset is full. */}
+                <div className={`codex-reward codex-reward--set ${setDone ? 'codex-reward--earned' : ''}`}>
+                  <span className="codex-reward__star">{setDone ? '★' : '☆'}</span>
+                  <span className="codex-reward__text">{codexRewardLabel(activeSet.reward, language)}</span>
+                </div>
               </div>
 
-              <div className="almanac-grid" key={activeSet.id}>
-                {setEntities.map((entity, idx) => {
-                  const collected = isCollected(entity);
-                  const entry = ownedEntryOf(entity);
-                  const rarityColor = RARITY_COLORS[entity.rarity];
-                  return (
-                    <button
-                      key={entity.id}
-                      type="button"
-                      className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
-                      style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
-                      onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
-                    >
-                      <div className="almanac-card__glyph">
-                        {collected
-                          ? <EntityGlyph entity={entity} color={rarityColor} />
-                          : <span className="almanac-card__mystery">?</span>}
-                        {equippedSlotOf(entity) >= 0 ? <span className="almanac-card__equipped">★</span> : null}
-                      </div>
-                      <div className="almanac-card__name">
-                        {collected ? entityName(entity, language) : '???'}
-                      </div>
-                      {collected && entry ? (
-                        <div className="almanac-card__meta" style={{ color: rarityColor }}>
-                          {`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}
-                        </div>
-                      ) : (
-                        <div className="almanac-card__meta almanac-card__meta--stage">{`S${entity.stageId}`}</div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Subset sections */}
+              {activeSet.subsets.map((sub) => {
+                const members = getSubsetMembers(sub, STAGE_ENTITIES)
+                  .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
+                const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
+                const subGot = members.filter(isCollected).length;
+                return (
+                  <div className="codex-subset" key={sub.id}>
+                    <div className="codex-subset__head">
+                      <span className="codex-subset__label">{codexSubsetLabel(sub, language)}</span>
+                      <span className="codex-subset__count">{`${subGot}/${members.length}`}</span>
+                      <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`}>
+                        <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
+                        <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>
+                      </span>
+                    </div>
+                    <div className="almanac-grid">
+                      {members.map((entity, idx) => {
+                        const collected = isCollected(entity);
+                        const entry = ownedEntryOf(entity);
+                        const rarityColor = RARITY_COLORS[entity.rarity];
+                        return (
+                          <button
+                            key={entity.id}
+                            type="button"
+                            className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
+                            style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
+                            onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
+                          >
+                            <div className="almanac-card__glyph">
+                              {collected
+                                ? <EntityGlyph entity={entity} color={rarityColor} />
+                                : <span className="almanac-card__mystery">?</span>}
+                              {equippedSlotOf(entity) >= 0 ? <span className="almanac-card__equipped">★</span> : null}
+                            </div>
+                            <div className="almanac-card__name">
+                              {collected ? entityName(entity, language) : '???'}
+                            </div>
+                            {collected && entry ? (
+                              <div className="almanac-card__meta" style={{ color: rarityColor }}>
+                                {`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}
+                              </div>
+                            ) : (
+                              <div className="almanac-card__meta almanac-card__meta--stage">{`S${entity.stageId}`}</div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           );
         })() : null}

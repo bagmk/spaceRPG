@@ -187,7 +187,7 @@ export function GameScreen({
     stageId: stage.id,
     progress01,
     clickLevel: state.skills.click.level,
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
     stage.mechanic === 'reionization'

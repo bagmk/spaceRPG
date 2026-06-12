@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from '../entities/stageItems';
 import { getEquipCategory } from '../entities/types';
 import { getFamily } from '../entities/families';
-import { CODEX_SETS, getCodexSetForGlyph } from '../entities/codexSets';
+import { CODEX_SETS, getSubsetMembers, collectedIdSet, isSubsetComplete } from '../entities/codexSets';
+import { getActiveModifiers } from '../skills/effects';
 import type { EntityEffectType } from '../entities/types';
 
 /**
@@ -104,18 +105,46 @@ describe('identity pass: name↔effect coherence', () => {
 });
 
 describe('codex thematic sets', () => {
-  it('assigns every entity to exactly one set, covering all 205', () => {
-    const counts: Record<string, number> = {};
-    for (const e of STAGE_ENTITIES) {
-      const set = getCodexSetForGlyph(e.visual.glyph);
-      expect(set).toBeDefined();
-      counts[set.id] = (counts[set.id] ?? 0) + 1;
-    }
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
-    expect(total).toBe(STAGE_ENTITIES.length);
-    // Every set has a meaningful number of collectibles.
+  it('every set has subsets and every subset has at least one member', () => {
     for (const set of CODEX_SETS) {
-      expect(counts[set.id] ?? 0).toBeGreaterThanOrEqual(10);
+      expect(set.subsets.length).toBeGreaterThan(0);
+      for (const sub of set.subsets) {
+        const members = getSubsetMembers(sub, STAGE_ENTITIES);
+        expect(members.length).toBeGreaterThan(0);
+      }
     }
+  });
+
+  it('Genesis "first_light" subset is exactly the stage-1 entities', () => {
+    const genesis = CODEX_SETS.find((s) => s.id === 'genesis')!;
+    const firstLight = genesis.subsets.find((s) => s.id === 'first_light')!;
+    const members = getSubsetMembers(firstLight, STAGE_ENTITIES);
+    const stage1 = STAGE_ENTITIES.filter((e) => e.stageId === 1);
+    expect(new Set(members.map((m) => m.id))).toEqual(new Set(stage1.map((e) => e.id)));
+    expect(members.length).toBeGreaterThan(0);
+  });
+
+  it('subset completion is deterministic: collecting every member completes it', () => {
+    const genesis = CODEX_SETS.find((s) => s.id === 'genesis')!;
+    const firstLight = genesis.subsets.find((s) => s.id === 'first_light')!;
+    const members = getSubsetMembers(firstLight, STAGE_ENTITIES);
+
+    const partial = collectedIdSet({ 1: members.slice(0, -1).map((m) => m.id) });
+    expect(isSubsetComplete(firstLight, partial, STAGE_ENTITIES)).toBe(false);
+
+    const full = collectedIdSet({ 1: members.map((m) => m.id) });
+    expect(isSubsetComplete(firstLight, full, STAGE_ENTITIES)).toBe(true);
+  });
+
+  it('completing the Genesis set applies its dropRate reward through getActiveModifiers', () => {
+    const stage1Ids = STAGE_ENTITIES.filter((e) => e.stageId === 1).map((e) => e.id);
+    const ctx = { stagesCleared: 0, currentQuanta: 0, secondsInStage: 0, stageId: 1, progress01: 0, clickLevel: 0 };
+
+    const base = getActiveModifiers(undefined, ctx, [], undefined, {});
+    const earned = getActiveModifiers(undefined, ctx, [], undefined, { 1: stage1Ids });
+
+    // Genesis "first_light" subset (+6% drop) and the set reward (+8% drop) both fire.
+    expect(earned.dropChanceMult).toBeGreaterThan(base.dropChanceMult);
+    expect(earned.dropChanceMult).toBeCloseTo(base.dropChanceMult * 1.06 * 1.08, 6);
   });
 });

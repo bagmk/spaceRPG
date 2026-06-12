@@ -11,8 +11,15 @@ import {
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
 } from '../balance';
-import { entityMatchesId, findEntityById } from './stageItems';
+import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
 import { getSecondaryStats, getStagePowerMult } from './substats';
+import {
+  CODEX_SETS,
+  collectedIdSet,
+  isSetComplete,
+  isSubsetComplete,
+  type CodexReward,
+} from './codexSets';
 
 /**
  * Resolve equipped slot ids to their inventory stacks (entity redesign Phase 2).
@@ -173,6 +180,38 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
     mods.autoRateMult *= bonus.clickAutoMult;
     mods.critChanceAdd += bonus.critChanceAdd;
     return;
+  }
+}
+
+/** Apply one codex completion reward to the modifiers. */
+function applyCodexReward(mods: Modifiers, reward: CodexReward): void {
+  const v = reward.value;
+  switch (reward.stat) {
+    case 'clickPower': mods.clickPowerMult *= 1 + v / 100; break;
+    case 'critChance': mods.critChanceAdd += v / 100; break;
+    case 'critMult': mods.critMultMult *= 1 + v / 100; break;
+    case 'autoPower': mods.autoFlatMult *= 1 + v / 100; break;
+    case 'dropRate': mods.dropChanceMult *= 1 + v / 100; break;
+    case 'entropyGain': mods.entropyGainMult *= 1 + v / 100; break;
+    case 'offline': mods.offlineGainMult *= 1 + v / 100; break;
+  }
+}
+
+/**
+ * Codex collection rewards (도감 완성 보너스): every completed sub-collection
+ * grants its bonus; completing all sub-collections of a set grants the set
+ * bonus on top. Permanent (almanac survives prestige), deterministic.
+ */
+export function applyCollectionRewards(
+  mods: Modifiers,
+  almanacCollected: Record<number, string[]>,
+): void {
+  const collected = collectedIdSet(almanacCollected);
+  for (const set of CODEX_SETS) {
+    for (const sub of set.subsets) {
+      if (isSubsetComplete(sub, collected, STAGE_ENTITIES)) applyCodexReward(mods, sub.reward);
+    }
+    if (isSetComplete(set, collected, STAGE_ENTITIES)) applyCodexReward(mods, set.reward);
   }
 }
 

@@ -116,7 +116,12 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 3 — 완료. UI 패스 2회(2026-06-11) 완료. 다음: Phase 4**
+- Current Phase: **Phase 3 — 완료. UI 패스 3회(2026-06-11) 완료. 다음: Phase 4**
+- 도감 중첩 세트 + 완성 보너스 (2026-06-11, 사용자 피드백 — 도감을 더 잘게):
+  - **2단 분류**(`codexSets.ts` 재작성): 세트(7) → 서브셋. **태초(Genesis)** 튜토리얼 세트(스테이지1 = 최초의 빛), **표준 모형**(쿼크/경입자/보손/장), **주기율표**(원자핵/원자/분자), **항성의 용광로**(항성/별의 죽음/잔해), **우주 거대구조**(가스·파동/암흑물질/은하), **생명의 세계**(세계/생명), **종말**(중력 우물/공허). 멤버십은 glyph 또는 stageId로 결정적. Genesis는 의도적 오버랩(타 세트의 stage1 입자 공유).
+  - **완성 보너스**(영구·결정적, `applyCollectionRewards` → `getActiveModifiers`): 서브셋 완성 → 보너스, 세트 전체(모든 서브셋) 완성 → 추가 세트 보너스. `CodexReward{stat,value}` 7종(clickPower/critChance/critMult/autoPower/dropRate/entropyGain/offline). `almanacCollected`를 모든 getActiveModifiers 호출처(gameplay·helpers·GameScreen·useGameState offline)에 스레드 → 도감이 프레스티지를 넘어 영구 메타 성장. Codex UI: 세트 칩 + 세트 진행바 + 세트 보너스 칩(★/☆) + 서브셋 섹션별 헤더(라벨·N/M·보너스 칩) + 격자.
+  - 검증: 710 통과(신규: 서브셋 멤버십·Genesis=stage1·완성 결정성·보너스 적용 경로), tsc, build.
+  - **보류(사용자 확인 필요)**: ④ 주기율표 실제 원소화(아이템 리네임 — name 기반 ID라 세이브 호환 위해 `aliases` 필요 + 설명 동반 변경) / ⑤ 융합·기어·오토의 스테이지 독립(스테이지 파워 커브 + 엔트로피 게이트 페이싱과 얽힘 = Phase 4).
 - 도감 테마 세트 + 캡 해제 (2026-06-11, 사용자 피드백 — 모으는 맛):
   - **도감 테마 세트**(스테이지 구분 폐지): `codexSets.ts` 6개 — 표준 모형(43)·주기율표(20)·항성의 용광로(50)·우주 거대구조(42)·생명의 세계(23)·종말(27). glyph로 결정적 분류, 205종 전수 커버. Codex 탭: 세트 칩(완성 done/total, 완성 시 글로우) + 세트별 블러브·완성% + 스테이지 횡단 격자(미수집 카드는 ??? + S{stage} 힌트). 타임라인은 장착/융합에만.
   - **최대 아이템 수 캡 해제**: 효과가 `entry.count` 그대로 스케일(min(count,maxCount) 제거). 라벨 합계도 캡 해제(라벨=적용값 유지). maxCount 필드는 융합 중복 sink 레벨 임계로만 잔존. → 무한 수집의 "모으는 맛", 효과도 무한 성장(드랍이 율속, Phase 4 재캘리브레이션 대상).

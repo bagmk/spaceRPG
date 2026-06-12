@@ -56,7 +56,7 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     clickLevel: state.skills.click.level,
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
 }
 
 export function getAdjustedClickPower(state: GameState): number {

@@ -97,6 +97,7 @@ export function useGameState(): UseGameStateResult {
         },
         getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? [])]),
         payload.prestigeUpgrades,
+        payload.almanacCollected,
       );
       const autoRate = getAutoRate(modifiers);
       const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')

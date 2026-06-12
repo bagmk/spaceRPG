@@ -12724,3 +12724,46 @@ button.stat-header-item {
 .almanac-card__meta--stage {
   opacity: 0.4;
 }
+
+/* ── Codex reward chips + nested subset sections ───────────────────────── */
+.codex-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.01em;
+  opacity: 0.55;
+}
+.codex-reward--earned {
+  opacity: 1;
+  color: #ffd76a;
+}
+.codex-reward__star {
+  font-size: 10px;
+}
+.codex-reward--set {
+  margin-top: 6px;
+  font-size: 10.5px;
+}
+.codex-subset {
+  margin-top: 10px;
+}
+.codex-subset__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 4px;
+}
+.codex-subset__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.codex-subset__count {
+  font-family: var(--mono);
+  font-size: 9px;
+  opacity: 0.6;
+}
+.codex-subset__head .codex-reward {
+  margin-left: auto;
+}
