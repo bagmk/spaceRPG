@@ -183,6 +183,17 @@ describe('codex thematic sets', () => {
     }
   });
 
+  it('no two entities share a display name (codex/almanac must be unambiguous)', () => {
+    const seen = new Map<string, string>();
+    const collisions: string[] = [];
+    for (const e of STAGE_ENTITIES) {
+      const prev = seen.get(e.name);
+      if (prev) collisions.push(`"${e.name}" (${prev} + ${e.id})`);
+      else seen.set(e.name, e.id);
+    }
+    expect(collisions).toEqual([]);
+  });
+
   it('renamed elements/particles keep their intended glyph (rename must not shift the visual)', () => {
     // Renaming drops the name-inferred glyph keyword, so these are pinned in
     // ENTITY_GLYPH_OVERRIDES. Guard against a future rename silently shifting them.
