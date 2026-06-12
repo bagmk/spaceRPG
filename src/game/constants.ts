@@ -132,7 +132,6 @@ export const TUNING = {
   CRIT_COST_BASE_FRAC: 0.22,
   CLICK_GAIN_PER_LEVEL: 0.5,
   AUTO_GAIN_PER_LEVEL_FRAC: 0.01,
-  COST_GROWTH: 1.15,
 
   CONDENSE_IMPLOSION_MS: 900,
   STAGE_TRANSITION_FADE_MS: 1000,
@@ -224,7 +223,7 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     id: 'quark_foam',
     label: 'Quark Foam',
     cost: 10,
-    effect: '+1 click power per level forever',
+    effect: '+10% click power forever',
     description: 'Vacuum texture leaves a permanent residue in every new universe.',
   },
   {

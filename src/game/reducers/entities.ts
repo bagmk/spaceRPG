@@ -14,6 +14,7 @@ import {
   validateFusionInputs,
 } from '../entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
+import { getSecondaryStats } from '../entities/substats';
 import { ENTITY_COST_ANCHORS, FUSION_BURST_REF_COST_FRAC, RARITY_STAGE_GATES } from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
@@ -74,9 +75,17 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   for (let i = 0; i < slotCount; i++) next[i] = slots[i] ?? '';
   next[slot] = action.entityId;
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
+  // Vacuum decay in gear terms (Phase 4-2): equipping Critical-flavored gear
+  // marks the universe as crit-upgraded — the ending requires never doing so.
+  const isCritGear =
+    entity.effect.type === 'crit' ||
+    getSecondaryStats(entity).some((sub) => sub.type === 'critChance' || sub.type === 'critMult');
+  const endingProgressFlags = isCritGear && !state.endingProgressFlags.criticalUpgradedThisUniverse
+    ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
+    : state.endingProgressFlags;
   return category === 'rift'
-    ? { ...state, riftSlots: next }
-    : { ...state, equippedSlots: next };
+    ? { ...state, riftSlots: next, endingProgressFlags }
+    : { ...state, equippedSlots: next, endingProgressFlags };
 }
 
 export function handleUnequipEntity(state: GameState, action: UnequipAction): GameState {

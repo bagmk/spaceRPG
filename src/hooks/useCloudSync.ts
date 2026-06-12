@@ -86,7 +86,6 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
     state.universeCount,
     state.condensedMass,
     state.echoes,
-    state.skillPoints,
     state.singularityUnlocks,
     state.endingsCompleted,
     state.inventory,

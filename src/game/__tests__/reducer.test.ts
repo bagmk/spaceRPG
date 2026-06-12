@@ -15,19 +15,11 @@ describe('gameReducer', () => {
       quanta: STAGES[0].threshold * 1.2,
       timeGauge: 100,
       cosmicClockSec: STAGES[0].cosmicTimeSec,
-      clickLevel: 12,
-      autoLevel: 14,
-      critLevel: 19,
-      skillPoints: 4,
     };
     const next = gameReducer(state, { type: 'ADVANCE_STAGE', now: 1000 });
     expect(next.stageIdx).toBe(1);
     expect(next.quanta).toBeCloseTo(STAGES[0].threshold * 1.2, 5);
     expect(next.timeGauge).toBe(getTimeGaugeForCosmicClock(1, STAGES[0].cosmicTimeSec));
-    expect(next.clickLevel).toBe(12);
-    expect(next.autoLevel).toBe(14);
-    expect(next.critLevel).toBe(19);
-    expect(next.skillPoints).toBe(5);
   });
 
   it('drops excess cosmic time when advancing so the next stage does not start pre-filled', () => {
@@ -68,10 +60,9 @@ describe('gameReducer', () => {
     // Floor invariant: result >= clickScaledBonus (= clickPower 1 * majorMult 40 = 40).
     // 80 > 40, so floor still holds.
     expect(next.quanta).toBe(80);
-    expect(next.skillPoints).toBe(0);
-    // entropy = boostedBonus*0.5 + max(action.entropyBonus, tierFloor=50) * mult
-    //         = 80*0.5 + 50*1 = 90
-    expect(next.entropy).toBe(90);
+    // entropy = boostedBonus*W_CLICK + max(action.entropyBonus, tierFloor=50) * mult
+    //         = 80*0.6 + 50*1 = 98
+    expect(next.entropy).toBe(98);
   });
 
   it('gates condensing on the cumulative entropy threshold (D1)', () => {
@@ -107,33 +98,17 @@ describe('gameReducer', () => {
     expect(next.cosmicClockSec).toBeGreaterThan(1e-34);
     expect(next.cosmicClockSec).toBeLessThan(2e-34);
 
-    const aeonState = {
-      ...state,
-      skills: {
-        ...state.skills,
-        time: { level: 5 },
-      },
-    };
-    const aeonNext = gameReducer(aeonState, { type: 'TICK', now: 1000, dt: 1000 });
-    expect(aeonNext.timeGauge).toBeGreaterThan(next.timeGauge);
   });
 
-  it('uses the softer V5 crit multiplier at low Quantum Lens level', () => {
-    const state = {
-      ...createInitialGameState(0),
-      skills: {
-        ...createInitialGameState(0).skills,
-        crit: { level: 1 },
-      },
-    };
-    const modifiers = getActiveModifiers(state.skills, {
+  it('crit multiplier is gear-driven (base 1.5 × gear critMultMult)', () => {
+    const modifiers = getActiveModifiers({
       stageId: 2,
       gateProgress01: 0,
       stagesCleared: 1,
       progress01: 0,
-      clickLevel: 0,
     });
-    expect(getCritMultiplier(1, modifiers)).toBeCloseTo(2, 5);
+    expect(getCritMultiplier(modifiers)).toBeCloseTo(1.5, 5);
+    expect(getCritMultiplier({ ...modifiers, critMultMult: 2 })).toBeCloseTo(3, 5);
   });
 
   it('rapid reducer clicks all register', () => {
@@ -297,7 +272,8 @@ describe('gameReducer', () => {
       name: 'test',
     });
     expect(massive.quanta).toBe(100);
-    expect(massive.entropy).toBe(250);
+    // 100 × W_CLICK(0.6) + tier floor 200 = 260
+    expect(massive.entropy).toBe(260);
   });
 
   it('condense never decreases entropy', () => {
@@ -346,13 +322,16 @@ describe('gameReducer', () => {
     expect(marked.endingProgressFlags.bigCrunchEligible).toBe(false);
   });
 
-  it('tracks Critical purchases for the current universe and resets that flag on prestige', () => {
+  it('tracks Critical gear equips for the current universe and resets that flag on prestige', () => {
+    // Equipping crit-flavored gear marks the universe (vacuum decay in gear terms).
+    const critEntity = getEntitiesForStage(1).find((e) => e.effect.type === 'crit')!;
     const purchased = gameReducer(
       {
         ...createInitialGameState(0),
         quanta: 1e9,
+        inventory: [{ entityId: critEntity.id, count: 1, level: 1 }],
       },
-      { type: 'BUY_CRIT' },
+      { type: 'EQUIP_ENTITY', entityId: critEntity.id },
     );
     expect(purchased.endingProgressFlags.criticalUpgradedThisUniverse).toBe(true);
 
@@ -379,9 +358,6 @@ describe('gameReducer', () => {
     const next = gameReducer(completed, { type: 'PRESTIGE', now: 1000 });
     expect(next.stageIdx).toBe(0);
     expect(next.quanta).toBe(0);
-    expect(next.skillPoints).toBe(0);
-    expect(next.skills.click.level).toBe(0);
-    expect(next.skills.ownedCrossNodes).toEqual([]);
     expect(next.cumulativeBoost).toBe(0);
     expect(next.condensedMass).toBeGreaterThan(0);
     expect(next.echoes).toBe(1);

@@ -1,7 +1,7 @@
 /** Public save/load API. Migration and validation logic lives in storage/. */
 
 import { STORAGE_KEYS, TUNING } from './constants';
-import { ENHANCE_LEVEL_CAPS } from './balance';
+import { ENHANCE_LEVEL_CAPS, ENTROPY_THRESHOLDS } from './balance';
 import { createDefaultPrestigeUpgrades } from './prestige';
 import { findEntityById } from './entities/stageItems';
 import type { EntityInstance, GameState, PersistentGameState, SaveState } from './types';
@@ -13,6 +13,7 @@ import {
   migrateV4ToV5,
   reconstructEndingProgressForCurrentRules,
   validateV5,
+  type LegacyMigratedState,
 } from './storage/migrate';
 import { getStageStartCosmicTime } from './timeFlow';
 import { STAGES } from './stages';
@@ -49,7 +50,9 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 16;
+export const SAVE_SCHEMA_VERSION = 17;
+/** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
+export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
 /**
  * Entity ids were decoupled from names in v15 (canonical id is now position-only,
@@ -117,9 +120,6 @@ export function createSaveSnapshot(state: GameState): SaveState {
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
-    clickLevel: state.clickLevel,
-    autoLevel: state.autoLevel,
-    critLevel: state.critLevel,
     entropy: state.entropy,
     totalClicks: state.totalClicks,
     collisions: state.collisions,
@@ -145,8 +145,6 @@ export function createSaveSnapshot(state: GameState): SaveState {
     tutorialDone: state.tutorialDone,
     cosmicHoursThisRun: state.cosmicHoursThisRun,
     dailyCheckIns: state.dailyCheckIns,
-    skillPoints: state.skillPoints,
-    skills: state.skills,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: state.endingProgressFlags,
     clickRateLog: state.clickRateLog.slice(-TUNING.HISTORY_CAPS.clickRateLog),
@@ -218,10 +216,127 @@ export function loadGame(): PersistentGameState | null {
       localStorage.getItem(SAVE_KEY_V2) ??
       localStorage.getItem(LEGACY_SAVE_KEY);
     if (!raw) return null;
-    return migrateToCurrent(JSON.parse(raw));
+    const parsed = JSON.parse(raw) as { version?: number };
+    // One-time raw backup before the first v17 migration — makes a bundle
+    // rollback or a botched rescale recoverable.
+    if ((parsed.version ?? 0) < 17 && !localStorage.getItem(SAVE_BACKUP_V16_KEY)) {
+      try { localStorage.setItem(SAVE_BACKUP_V16_KEY, raw); } catch { /* quota — skip */ }
+    }
+    return migrateToCurrent(parsed);
   } catch {
     return null;
   }
+}
+
+// ── v17 finalize (Phase 4-2: skill tree removed) ────────────────────────────
+
+/**
+ * FROZEN v16 entropy ladder (the Phase 4-1 calibration). Used ONLY to remap
+ * pre-v17 cumulative entropy onto the recalibrated runtime ladder. Never edit
+ * this copy — it must match what v16 clients shipped with.
+ */
+const V16_ENTROPY_THRESHOLDS = [
+  0, 1.995e3, 9.64e6, 4.236e8, 3.505e11, 1.321e13, 1.579e15, 5.615e16,
+  1.974e21, 5.511e23, 4.559e25, 5.5e27, 1.392e29, 1.333e30, 5.698e31,
+  1.097e33, 1.005e35,
+];
+/** Frozen pre-v17 ending-eligibility absolutes (multiverse.ts before v17). */
+const V16_BIG_CRUNCH_KB = 1024 * 1024;
+const V16_BIG_RIP_KB = Math.pow(1024, 8);
+
+/**
+ * Global piecewise-linear remap from the frozen v16 ladder onto the runtime
+ * ladder: locate the old window containing the value, affine-map into the
+ * corresponding new window; above the final gate the surplus scales
+ * proportionally (prestige banks and big-rip grinding survive). Preserves
+ * getEntropyGateProgress — and therefore the gear power exponent E — exactly.
+ */
+function remapV16Entropy(e: number): number {
+  if (!Number.isFinite(e) || e <= 0) return 0;
+  const OLD = V16_ENTROPY_THRESHOLDS;
+  const NEW = [0];
+  for (let i = 1; i <= 16; i++) NEW.push(ENTROPY_THRESHOLDS[i]);
+  if (e >= OLD[16]) return e * (NEW[16] / OLD[16]);
+  for (let i = 1; i <= 16; i++) {
+    if (e < OLD[i]) {
+      const frac = (e - OLD[i - 1]) / (OLD[i] - OLD[i - 1]);
+      return NEW[i - 1] + frac * (NEW[i] - NEW[i - 1]);
+    }
+  }
+  return e;
+}
+
+/**
+ * Last migration step (every load path passes through this): derive the
+ * crit-upgrade flag and pre-rescale ending eligibility from the legacy skill
+ * fields, remap entropy onto the recalibrated ladder, pay the one-time skill
+ * compensation, then strip the legacy fields.
+ */
+function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): PersistentGameState {
+  const { clickLevel, autoLevel, critLevel, skillPoints, skills, ...rest } = legacy;
+  void autoLevel; void clickLevel; void skillPoints;
+  const state = rest as PersistentGameState;
+
+  // 1. Crit flag — vacuum decay's "no critical upgrades" must survive the
+  // strip (mirrors the legacy normalize.ts derivation incl. top-level critLevel).
+  const criticalUpgradedThisUniverse =
+    state.endingProgressFlags.criticalUpgradedThisUniverse ||
+    (critLevel ?? 0) > 0 ||
+    (skills?.crit.level ?? 0) > 0 ||
+    (skills?.ownedCrossNodes ?? []).some((id) => id.startsWith('crit_'));
+
+  // 2. Ending eligibility earned under the OLD scale, evaluated BEFORE the
+  // rescale with the frozen v16 absolutes — persisted as flags.
+  const bigCrunchEligible =
+    state.endingProgressFlags.bigCrunchEligible ||
+    (state.stageIdx <= 2 && state.entropy >= V16_BIG_CRUNCH_KB);
+  const bigRipEverEligible =
+    state.endingProgressFlags.bigRipEverEligible || state.entropy >= V16_BIG_RIP_KB;
+
+  // 3. Entropy rescale — only versions that lived on the v16 ladder (14-16);
+  // ≤13 already landed in runtime-scale windows via the v14 entropy clamp.
+  let entropy = state.entropy;
+  let pendingCondenseEntropy = state.pendingCondenseEntropy;
+  if (sourceVersion >= 14 && sourceVersion <= 16) {
+    entropy = remapV16Entropy(state.entropy);
+    // pendingCondenseEntropy is a DELTA (one condense's earnings), never
+    // affine-remapped — scale by its stage window's span ratio.
+    if (state.pendingCondenseStageIdx !== null) {
+      const s = Math.min(16, Math.max(1, state.pendingCondenseStageIdx + 1));
+      const oldSpan = V16_ENTROPY_THRESHOLDS[s] - V16_ENTROPY_THRESHOLDS[s - 1];
+      const newSpan = ENTROPY_THRESHOLDS[s] - (s === 1 ? 0 : ENTROPY_THRESHOLDS[s - 1]);
+      pendingCondenseEntropy = oldSpan > 0 ? state.pendingCondenseEntropy * (newSpan / oldSpan) : 0;
+    } else {
+      pendingCondenseEntropy = 0;
+    }
+  }
+  // peakEntropy deliberately NOT rescaled: lifetime cross-prestige maximum and
+  // leaderboard metric — nothing compares it to thresholds.
+
+  // 4. One-time compensation for removed skill investment, paid in
+  // condensedMass (visible + spendable in the Singularity tree). Mirror
+  // fields (clickLevel etc.) excluded — they duplicated track levels.
+  let condensedMass = state.condensedMass;
+  if (sourceVersion <= 16 && skills) {
+    const totalLevels =
+      skills.click.level + skills.auto.level + skills.crit.level + skills.time.level +
+      2 * skills.ownedCrossNodes.length;
+    condensedMass += Math.min(10, Math.floor(totalLevels / 10));
+  }
+
+  return {
+    ...state,
+    entropy,
+    pendingCondenseEntropy,
+    condensedMass,
+    endingProgressFlags: {
+      ...state.endingProgressFlags,
+      criticalUpgradedThisUniverse,
+      bigCrunchEligible,
+      bigRipEverEligible,
+      vacuumDecayEligible: state.endingProgressFlags.vacuumDecayEligible && !criticalUpgradedThisUniverse,
+    },
+  };
 }
 
 /**
@@ -234,14 +349,14 @@ export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | 
   const sourceVersion = (parsedUnknown as { version?: number }).version ?? 0;
   const migrated = migrateByVersion(parsedUnknown as Partial<SaveState>);
   if (!migrated) return null;
-  const normalized = normalizeSavedEntityIds(migrated);
-  // v15 → v16 (Phase 4-1 gear power rebuff): reset the offline window once so
-  // the new player-stage power curve doesn't retroactively pay out a giant
-  // offline windfall on the first post-update load.
-  if (sourceVersion < 16) {
-    return { ...normalized, lastSaveAt: Date.now() };
+  const finalized = finalizeV17(normalizeSavedEntityIds(migrated) as LegacyMigratedState, sourceVersion);
+  // Pre-v17 loads reset the offline window once: both the v16 gear rebuff and
+  // the v17 recalibrated (lower) gates would otherwise pay a first-load
+  // windfall / instant multi-condense.
+  if (sourceVersion < 17) {
+    return { ...finalized, lastSaveAt: Date.now() };
   }
-  return normalized;
+  return finalized;
 }
 
 function migrateByVersion(
@@ -253,7 +368,7 @@ function migrateByVersion(
     | SaveStateV4
     | SaveStateV5Legacy
     | SaveStateV6Legacy,
-): PersistentGameState | null {
+): LegacyMigratedState | null {
   try {
     if ((parsed as SaveStateV1).version === 1) {
       return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed as SaveStateV1))));
@@ -274,7 +389,7 @@ function migrateByVersion(
     if ((parsed as { version?: number }).version === 6) {
       const migrated = validateV5(parsed as Partial<SaveState>);
       return migrated
-        ? { ...migrated, skills: { ...migrated.skills, ownedCrossNodes: [] } }
+        ? { ...migrated, skills: migrated.skills ? { ...migrated.skills, ownedCrossNodes: [] } : undefined }
         : null;
     }
     if ((parsed as { version?: number }).version === 7) {
@@ -320,10 +435,11 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16) {
-      // v14..v16 share a schema. v15 decoupled entity ids from names
-      // (normalizeSavedEntityIds rewrites ids); v16 re-anchored gear power to
-      // the player stage (migrateToCurrent resets the offline window once).
+    if (v === 14 || v === 15 || v === 16 || v === 17) {
+      // v14..v17 share a field schema (v17 simply lacks the legacy skill
+      // fields — validateV5 treats them as optional). v15 decoupled entity
+      // ids; v16 re-anchored gear power; v17 removed the skill tree
+      // (finalizeV17 derives flags, remaps entropy and strips the fields).
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return {

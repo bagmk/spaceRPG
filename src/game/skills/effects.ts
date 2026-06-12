@@ -1,14 +1,7 @@
-import type { SkillState } from './types';
 import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses } from '../entities/effects';
-import {
-  SKILL_CLICK_POWER_BASE,
-  SKILL_AUTO_RATE_BASE,
-  SKILL_CROSS_NODE_MULTS,
-  SKILL_TOTAL_CROSS_NODE_COUNT,
-} from '../balance';
 
 export interface ModifierContext {
   currentQuanta?: number;
@@ -23,7 +16,6 @@ export interface ModifierContext {
    */
   gateProgress01: number;
   progress01?: number;
-  clickLevel?: number;
 }
 
 export interface Modifiers {
@@ -107,60 +99,18 @@ export function defaultModifiers(): Modifiers {
   };
 }
 
+/**
+ * Gear-only modifiers (Phase 4-2 — the skill tree is removed; it had been
+ * unreachable UI since the Entity Lab). Power comes from equipped gear, set
+ * bonuses, codex completion rewards and prestige upgrades.
+ */
 export function getActiveModifiers(
-  skills: SkillState | undefined,
   ctx: ModifierContext,
   inventory?: EntityInstance[],
   prestigeUpgrades?: PrestigeUpgradeLevels,
   almanacCollected?: Record<number, string[]>,
 ): Modifiers {
   const mods = defaultModifiers();
-
-  const clickLevel = skills?.click.level ?? 0;
-  const autoLevel = skills?.auto.level ?? 0;
-
-  mods.clickPowerMult = Math.pow(SKILL_CLICK_POWER_BASE, clickLevel);
-
-  mods.autoRateAdd = autoLevel <= 0 ? 0 : Math.pow(SKILL_AUTO_RATE_BASE, autoLevel);
-
-  for (const nodeId of skills?.ownedCrossNodes ?? []) {
-    const mult = SKILL_CROSS_NODE_MULTS[nodeId];
-    if (!mult) {
-      continue;
-    }
-    if (nodeId.startsWith('click_')) {
-      mods.clickPowerMult *= mult;
-    } else if (nodeId.startsWith('auto_')) {
-      mods.autoRateMult *= mult;
-    } else if (nodeId.startsWith('crit_')) {
-      mods.critMultMult *= mult;
-    } else if (nodeId.startsWith('time_')) {
-      mods.timeMultMult *= mult;
-    }
-  }
-
-  if (mods.filamentExp > 0) {
-    mods.autoRateMult *= Math.pow(1 + Math.max(0, ctx.stagesCleared ?? 0), mods.filamentExp);
-  }
-  if (mods.webOfAll) {
-    const effectiveClickLevel = ctx.clickLevel ?? clickLevel;
-    mods.autoRateMult *= Math.max(1, effectiveClickLevel * effectiveClickLevel);
-  }
-  if (mods.inflatonEchoSec > 0 && (ctx.secondsInStage ?? Number.POSITIVE_INFINITY) <= mods.inflatonEchoSec) {
-    mods.timeMultMult *= 3;
-  }
-  if (mods.dilation && (ctx.progress01 ?? 0) >= 0.8) {
-    mods.timeMultMult *= 0.5;
-    mods.clickPowerMult *= 4;
-    mods.autoRateMult *= 4;
-  }
-  if ((skills?.ownedCrossNodes.length ?? 0) >= SKILL_TOTAL_CROSS_NODE_COUNT) {
-    mods.clickPowerMult *= 2;
-    mods.autoRateMult *= 2;
-    mods.apexMult = 2;
-    mods.bigBangUnlocked = true;
-    mods.eternalReturnUnlocked = true;
-  }
 
   if (inventory && inventory.length > 0) {
     applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });

@@ -116,7 +116,16 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 4 진행 중 — 4-1(스테이지 독립) 완료(2026-06-12). 다음: 4-2 스킬 트리 흡수**
+- Current Phase: **Phase 4 진행 중 — 4-1, 4-2 완료(2026-06-12). 다음: 4-3 프레스티지 carry**
+- Phase 4-2: 스킬 트리 제거 — 기어 단독 경제 (2026-06-12, D3 완성; 멀티에이전트 적대 리뷰 3렌즈 후 구현):
+  - **발견**: 스킬 트리 UI는 Entity Lab 커밋부터 **도달 불가**(BUY_TRACK_LEVEL 디스패치 불가) — 실경제는 이미 기어 단독, 4-1 캘리브레이션은 못 사는 스킬을 가정한 과대치였음. 4-2 = 죽은 시스템 제거 + 정직한 재캘리브레이션.
+  - **제거**: getActiveModifiers에서 skills 파라미터/2^level 베이스/크로스노드/apex 제거(기어+세트+도감+프레스티지만). 액션 7종(BUY_TRACK_LEVEL/BUY_CROSS_NODE/BUY_CLICK/AUTO/CRIT/AWARD_SKILL_POINTS/UNLOCK_TRACK)·reducers/skills.ts·skills/definitions.ts·components/skills/* 삭제. getCritChance(combo,mods)/getCritMultiplier(mods)/getTimeMultiplier(mods)/getCosmicTimeFillRate(mods,…) 시그니처 축소. quark_foam = ×1.1(라벨 동기화). GameState/SaveState에서 skills/skillPoints/clickLevel/autoLevel/critLevel 필드 제거.
+  - **재앵커**(시뮬 게이트 통과값): CLICK_OUTPUT_MULTIPLIER 1→15, ENTROPY_W_CLICK/W_AUTO 0.5/0.25→0.6/0.04, CRIT_MULT_GEAR_CAP=5(critMult 보조스탯 scales=false). 메타 상수 임계값 상대화: BIG_CRUNCH=0.5×T[3], BIG_RIP=2.2×T[9], PRESTIGE 비용=0.5×T[8]×5^lv (balance.ts로 이동 — 절대값 시대 종료).
+  - **vacuum decay 기어 재정의**: 크리 효과/크리 보조스탯 장비 장착 시 criticalUpgradedThisUniverse 설정(handleEquipEntity); 판정은 플래그 단독; 조건 문구 EN/KO 갱신("크리티컬 장비를 한 번도 장착하지 않고...").
+  - **세이브 v17** (`finalizeV17` — 전 로드 경로 통과): ① 크리 플래그를 레거시 스킬에서 1회 유도 ② 엔딩 자격(빅크런치/빅립)을 재스케일 前 동결 v16 절대값으로 평가·플래그化 ③ 엔트로피를 동결 v16 사다리→신규 사다리 전역 구간별 재매핑(게이트 진행률 보존; 최종 게이트 초과분은 비례 스케일 — 클램프 없음) ④ pendingCondenseEntropy는 델타라 구간 폭 비율 스케일 ⑤ peakEntropy 비재매핑(평생 지표/리더보드) ⑥ 보상 = min(10, ⌊(트랙 레벨 합+2×크로스노드)/10⌋) condensedMass ⑦ 필드 제거.
+  - **클라우드 동기화 결함 수정**(기존 버그): 푸시 페이로드에 version 없음 → 풀이 항상 null → 클라우드 세이브 무시·덮어쓰기. 수정: 래퍼 schemaVersion을 마이그레이션에 주입 + 푸시 전 getDoc 가드(신버전 문서 클로버 방지). 로드 실패 시 clearSave→`cc_save_backup_v16` 백업으로 전환(세이브 삭제 사고 방지) + v17 첫 마이그레이션 전 원본 1회 백업.
+  - **재캘리브레이션**: 시뮬 기어 단독 모델(스킬 엔진 제거, 정직한 강화 레벨=수입의 50% 예산, 콜드스타트 성숙도, 기어 크리), 임계값 16개 재생성(reference 1.00× 고정). 불변식: active ≥50%(70%), idle 도달 17/4×는 의도(게임 백로그가 idle floor를 원함 — 리뷰의 "idle 정체" 요구는 과잉으로 판정, 문서화), 스프레드 58×(4-4), 크리 빌드 격차 1.23×≤3.
+  - 검증: 733 통과(스킬 테스트→modifiers 테스트 대체, v17 마이그레이션 6종), tsc, build, sim ALL PASS.
 - Phase 4-1: 스테이지 독립 기어 파워 (2026-06-12, 사용자 요청 "fusion/gear/auto should not depend on the stage" — 멀티에이전트 적대 리뷰 3렌즈 통과 후 구현):
   - **공유 기어 파워 지수**: `E = max(playerStage-1+gateProgress01, itemStage-1)` — % 효과 `2.0^E`(STAGE_POWER_BASE 1.3→2.0), 오토 앵커 `8^E`, scales 보조스탯 동일. 아이템 출신 스테이지는 무관(클램프로 마이그레이션 순수 버프 보장). 소수부 gateProgress01 = 스테이지 내 가속(게이트 창에서 수입 ×8 상승, condense 연속). `getGearPowerExponent/Mult` (substats.ts), `GearPower {stageId, gateProgress01}` 필수 파라미터(컴파일러가 호출처 전수 강제).
   - **소프트캡 count**: `getEffectiveCount = min(count,cap)+√초과` (time은 하드캡) — 커먼 무한스택 지배 차단, 수집은 무제한 유지. 라벨=적용값: EntityPanel 전 수식이 동일 헬퍼/power 컨텍스트 사용(selectedStageId는 브라우징 전용).

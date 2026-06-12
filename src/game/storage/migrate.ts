@@ -12,7 +12,23 @@ import {
   createDefaultCondenseProgressHistory,
 } from '../defaults';
 import type { EntityInstance, PersistentGameState, SaveState, SingularityUnlockId, EndingId } from '../types';
+import type { SkillState } from '../skills/types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4 } from './legacyTypes';
+
+/**
+ * Legacy skill-era fields (pre-v17) flow through the migration chain so the
+ * v17 finalize step (storage.ts) can derive the crit flag and the one-time
+ * compensation before stripping them. They no longer exist on SaveState.
+ */
+export interface LegacyFields {
+  clickLevel?: number;
+  autoLevel?: number;
+  critLevel?: number;
+  skillPoints?: number;
+  skills?: SkillState;
+}
+export type LegacyMigratedState = PersistentGameState & LegacyFields;
+export type LegacySaveShape = Partial<SaveState> & LegacyFields;
 import {
   isFiniteNumber,
   isNullableNumber,
@@ -187,15 +203,15 @@ export function migrateV3ToV4(v3: SaveStateV3): SaveStateV4 {
   };
 }
 
-export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentGameState {
-  const record = v4 as Partial<SaveState>;
+export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigratedState {
+  const record = v4 as LegacySaveShape;
   return {
     stageIdx: v4.stageIdx ?? 0,
     quanta: v4.quanta ?? 0,
     timeGauge: 0,
-    clickLevel: v4.clickLevel ?? 0,
-    autoLevel: v4.autoLevel ?? 0,
-    critLevel: v4.critLevel ?? 0,
+    clickLevel: record.clickLevel ?? 0,
+    autoLevel: record.autoLevel ?? 0,
+    critLevel: record.critLevel ?? 0,
     // entropy/peakEntropy come from convertEntityModelV14 below.
     totalClicks: v4.totalClicks ?? 0,
     collisions: v4.collisions ?? 0,
@@ -222,15 +238,15 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
     cosmicHoursThisRun: v4.cosmicHoursThisRun ?? 0,
     dailyCheckIns: v4.dailyCheckIns ?? createDefaultDailyCheckIns(),
     skillPoints: 0,
-    skills: normalizeSkillState(v4.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
+    skills: normalizeSkillState(record.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
     endingsUnlocked: ((record.endingsUnlocked ?? v4.endingsCompleted ?? []) as unknown[]).filter(isEndingId),
     endingProgressFlags: normalizeEndingProgressFlags(
       isEndingProgressFlags(record.endingProgressFlags)
         ? record.endingProgressFlags
         : createDefaultEndingProgressFlags(),
       {
-        critLevel: v4.critLevel ?? 0,
-        skills: normalizeSkillState(v4.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
+        critLevel: record.critLevel ?? 0,
+        skills: normalizeSkillState(record.skills, v4.stageIdx ?? 0, v4.universeCount ?? 1),
       },
     ),
     clickRateLog: Array.isArray(record.clickRateLog) ? record.clickRateLog.filter(isFiniteNumber) : [],
@@ -255,9 +271,9 @@ export function migrateV4ToV5(v4: SaveStateV4 | Partial<SaveState>): PersistentG
 }
 
 export function validateV5(
-  parsed: Partial<SaveState>,
+  parsed: LegacySaveShape,
   forceReconstructedUnlocks = false,
-): PersistentGameState | null {
+): LegacyMigratedState | null {
   // Sanitize numeric fields that could carry Infinity/NaN from earlier bugs.
   const NUMERIC_FIELDS: (keyof Pick<SaveState,
     'quanta' | 'entropy' | 'peakEntropy' | 'condensedMass' | 'echoes'>)[] =
@@ -274,9 +290,9 @@ export function validateV5(
     !isFiniteNumber(parsed.stageIdx) ||
     !isFiniteNumber(parsed.quanta) ||
     !isFiniteNumber(parsed.timeGauge) ||
-    !isFiniteNumber(parsed.clickLevel) ||
-    !isFiniteNumber(parsed.autoLevel) ||
-    !isFiniteNumber(parsed.critLevel) ||
+    (parsed.clickLevel !== undefined && !isFiniteNumber(parsed.clickLevel)) ||
+    (parsed.autoLevel !== undefined && !isFiniteNumber(parsed.autoLevel)) ||
+    (parsed.critLevel !== undefined && !isFiniteNumber(parsed.critLevel)) ||
     !isFiniteNumber(parsed.entropy) ||
     !isFiniteNumber(parsed.totalClicks) ||
     !isFiniteNumber(parsed.collisions) ||
@@ -302,8 +318,8 @@ export function validateV5(
     typeof parsed.tutorialDone !== 'boolean' ||
     !isFiniteNumber(parsed.cosmicHoursThisRun) ||
     !isDailyCheckInState(parsed.dailyCheckIns) ||
-    !isFiniteNumber(parsed.skillPoints) ||
-    !isSkillState(parsed.skills) ||
+    (parsed.skillPoints !== undefined && !isFiniteNumber(parsed.skillPoints)) ||
+    (parsed.skills !== undefined && !isSkillState(parsed.skills)) ||
     !isStringArray(parsed.endingsUnlocked) ||
     !isEndingProgressFlags(parsed.endingProgressFlags) ||
     !(Array.isArray(parsed.clickRateLog) && parsed.clickRateLog.every(isFiniteNumber)) ||
@@ -327,6 +343,10 @@ export function validateV5(
     clickLevel: parsed.clickLevel,
     autoLevel: parsed.autoLevel,
     critLevel: parsed.critLevel,
+    skillPoints: parsed.skillPoints,
+    skills: parsed.skills !== undefined
+      ? normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks)
+      : undefined,
     // entropy/peakEntropy come from convertEntityModelV14 below.
     totalClicks: parsed.totalClicks,
     collisions: parsed.collisions,
@@ -352,12 +372,12 @@ export function validateV5(
     tutorialDone: parsed.tutorialDone,
     cosmicHoursThisRun: parsed.cosmicHoursThisRun,
     dailyCheckIns: parsed.dailyCheckIns,
-    skillPoints: parsed.skillPoints,
-    skills: normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks),
     endingsUnlocked: parsed.endingsUnlocked.filter(isEndingId) as EndingId[],
     endingProgressFlags: normalizeEndingProgressFlags(parsed.endingProgressFlags, {
       critLevel: parsed.critLevel,
-      skills: normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks),
+      skills: parsed.skills !== undefined
+        ? normalizeSkillState(parsed.skills, parsed.stageIdx, parsed.universeCount, forceReconstructedUnlocks)
+        : undefined,
     }),
     clickRateLog: parsed.clickRateLog,
     condenseProgressHistory: parsed.condenseProgressHistory,
@@ -375,8 +395,8 @@ export function validateV5(
 }
 
 export function reconstructEndingProgressForCurrentRules(
-  state: PersistentGameState,
-): PersistentGameState {
+  state: LegacyMigratedState,
+): LegacyMigratedState {
   const baselineFlags = createDefaultEndingProgressFlags();
   const normalizedState = {
     ...state,

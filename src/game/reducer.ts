@@ -22,9 +22,6 @@ export { createInitialGameState, createDefaultSkills } from './defaults';
 import {
   handleTick,
   handleClick,
-  handleBuyClick,
-  handleBuyAuto,
-  handleBuyCrit,
   handleReportCollision,
   handleReportEncounter,
 } from './reducers/gameplay';
@@ -35,7 +32,6 @@ import {
   handleCompleteEnding,
   handlePrestige,
 } from './reducers/stage';
-import { handleBuyTrackLevel, handleBuyCrossNode } from './reducers/skills';
 import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
@@ -51,8 +47,6 @@ import {
   handleHydrate,
   handleDismissOfflineModal,
   handleSetTutorialDone,
-  handleAwardSkillPoints,
-  handleUnlockTrack,
   handleMarkTutorialFlag,
   handleMarkCashShopTutorialSeen,
   handleMarkTutorialStageSeen,
@@ -89,9 +83,6 @@ export type GameAction =
       /** 0..1 — which stage's pool the drop comes from (absent → current stage). */
       dropStageRoll?: number;
     }
-  | { type: 'BUY_CLICK' }
-  | { type: 'BUY_AUTO' }
-  | { type: 'BUY_CRIT' }
   | { type: 'START_CONDENSE'; now: number }
   | { type: 'ADVANCE_STAGE'; now: number }
   | { type: 'ADMIN_NEXT_STAGE'; now: number }
@@ -122,13 +113,9 @@ export type GameAction =
   | { type: 'CLEAR_ENCOUNTER_EVENT'; id: number }
   | { type: 'SET_TUTORIAL_DONE' }
   | { type: 'PRESTIGE'; now: number }
-  | { type: 'AWARD_SKILL_POINTS'; amount: number }
-  | { type: 'BUY_TRACK_LEVEL'; trackId: 'click' | 'auto' | 'crit' | 'time' }
-  | { type: 'BUY_CROSS_NODE'; nodeId: string }
   | { type: 'COMPLETE_SHOP_PURCHASE'; itemId: string; now: number }
   | { type: 'CLAIM_AD_REWARD'; rewardId: string; now: number }
   | { type: 'RESUME_BOOSTS'; hiddenMs: number }
-  | { type: 'UNLOCK_TRACK'; trackId: 'click' | 'auto' | 'crit' | 'time' }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
@@ -150,9 +137,6 @@ export function toPersistentState(state: GameState): PersistentGameState {
     stageIdx: state.stageIdx,
     quanta: state.quanta,
     timeGauge: state.timeGauge,
-    clickLevel: state.clickLevel,
-    autoLevel: state.autoLevel,
-    critLevel: state.critLevel,
     entropy: state.entropy,
     totalClicks: state.totalClicks,
     collisions: state.collisions,
@@ -178,8 +162,6 @@ export function toPersistentState(state: GameState): PersistentGameState {
     tutorialDone: state.tutorialDone,
     cosmicHoursThisRun: state.cosmicHoursThisRun,
     dailyCheckIns: state.dailyCheckIns,
-    skillPoints: state.skillPoints,
-    skills: state.skills,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: state.endingProgressFlags,
     clickRateLog: state.clickRateLog.slice(-TUNING.HISTORY_CAPS.clickRateLog),
@@ -213,16 +195,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'HYDRATE':               return handleHydrate(state, action);
     case 'TICK':                  return handleTick(state, action);
     case 'CLICK':                 return handleClick(state, action);
-    case 'BUY_CLICK':             return handleBuyClick(state, action);
-    case 'BUY_AUTO':              return handleBuyAuto(state, action);
-    case 'BUY_CRIT':              return handleBuyCrit(state, action);
     case 'START_CONDENSE':        return handleStartCondense(state, action);
     case 'ADVANCE_STAGE':         return handleAdvanceStage(state, action);
     case 'SELECT_ENDING':         return handleSelectEnding(state, action);
     case 'COMPLETE_ENDING':       return handleCompleteEnding(state, action);
     case 'PRESTIGE':              return handlePrestige(state, action);
-    case 'BUY_TRACK_LEVEL':       return handleBuyTrackLevel(state, action);
-    case 'BUY_CROSS_NODE':        return handleBuyCrossNode(state, action);
     case 'COMPLETE_SHOP_PURCHASE': return handleCompleteShopPurchase(state, action);
     case 'CLAIM_AD_REWARD':       return handleClaimAdReward(state, action);
     case 'RESUME_BOOSTS':         return handleResumeBoosts(state, action);
@@ -239,8 +216,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CLEAR_COLLISION_EVENT': return handleClearCollisionEvent(state, action);
     case 'CLEAR_ENCOUNTER_EVENT': return handleClearEncounterEvent(state, action);
     case 'SET_TUTORIAL_DONE':     return handleSetTutorialDone(state);
-    case 'AWARD_SKILL_POINTS':    return handleAwardSkillPoints(state, action);
-    case 'UNLOCK_TRACK':          return handleUnlockTrack(state, action);
     case 'MARK_TUTORIAL_STAGE_SEEN': return handleMarkTutorialStageSeen(state, action);
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
     case 'MARK_CASH_SHOP_TUTORIAL_SEEN': return handleMarkCashShopTutorialSeen(state);

@@ -24,7 +24,7 @@ import {
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, BIG_RIP_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
-import { SKILL_TIME_RATE_BASE, TIME_MAXED_STAGE_SECONDS } from '../balance';
+import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS } from '../balance';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
@@ -185,17 +185,19 @@ describe('scaling formulas', () => {
       unlockedTracks: ['click', 'crit', 'auto', 'time'] as Array<'click' | 'crit' | 'auto' | 'time'>,
       ownedCrossNodes: [],
     };
-    const modifiers = getActiveModifiers(skills, {
+    void skills; // legacy shape — the tree is gone (Phase 4-2)
+    const modifiers = getActiveModifiers({
       stageId: 5,
       gateProgress01: 0,
       stagesCleared: 4,
       progress01: 0,
-      clickLevel: 5,
     });
-    // Output multipliers now sit at 1 (aligned with the entropy-gate sim).
-    expect(getClickPower(modifiers)).toBeCloseTo(32, 10); // 2^5, output multiplier 1
-    expect(getAutoRate(modifiers)).toBe(32);               // 2^5, output multiplier 1
-    expect(getTimeMultiplier(skills.time.level, modifiers)).toBeCloseTo(Math.pow(SKILL_TIME_RATE_BASE, 5), 10);
+    // Gear-only baseline: no gear equipped → unit power, zero auto.
+    expect(getClickPower(modifiers)).toBe(1);
+    expect(getAutoRate(modifiers)).toBe(0);
+    expect(getTimeMultiplier(modifiers)).toBe(1);
+    // Click re-anchor: a 2× gear mult is amplified by the output multiplier.
+    expect(getClickPower({ ...modifiers, clickPowerMult: 2 })).toBe(1 + CLICK_OUTPUT_MULTIPLIER);
   });
 
   it('sets dramatic Stage 4+ unupgraded time budgets', () => {
@@ -210,12 +212,12 @@ describe('scaling formulas', () => {
     const maxedTimeModifiers = { ...defaultModifiers(), timeMultMult: 1e12 };
 
     [4, 5, 6, 10, 16].forEach((stageId) => {
-      expect(100 / getCosmicTimeFillRate(40, maxedTimeModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
+      expect(100 / getCosmicTimeFillRate(maxedTimeModifiers, 1, stageId)).toBeCloseTo(TIME_MAXED_STAGE_SECONDS, 8);
     });
   });
 
   it('caps expected crit chance at 50 percent', () => {
-    expect(getCritChance(50, 200, defaultModifiers())).toBe(0.5);
+    expect(getCritChance(200, { ...defaultModifiers(), critChanceAdd: 0.5 })).toBe(0.5);
   });
 
   it('scales prestige rewards without a hard cap', () => {
@@ -273,7 +275,7 @@ describe('scaling formulas', () => {
     const finalWithCrit = getEndingOptions({
       ...baseState,
       stageIdx: STAGES.length - 1,
-      skills: { ...baseState.skills, crit: { level: 1 } },
+      endingProgressFlags: { ...baseState.endingProgressFlags, criticalUpgradedThisUniverse: true },
     }, 0);
     expect(finalWithCrit.find((ending) => ending.id === 'vacuum_decay')?.unlocked).toBe(false);
 

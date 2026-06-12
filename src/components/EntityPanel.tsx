@@ -108,7 +108,7 @@ function getEntityTimeFillRate(entity: StageEntity, count: number, level: number
   if (cappedCount > 0) {
     mods.timeMultMult *= 1 + (entity.effect.value * cappedCount * getLevelMult(level) * legacyFactor) / 100;
   }
-  return getCosmicTimeFillRate(0, mods, 1, playerStageId);
+  return getCosmicTimeFillRate(mods, 1, playerStageId);
 }
 
 function getEffectiveTimeRatePct(

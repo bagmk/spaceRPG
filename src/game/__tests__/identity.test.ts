@@ -248,8 +248,8 @@ describe('codex thematic sets', () => {
     const stage1Ids = STAGE_ENTITIES.filter((e) => e.stageId === 1).map((e) => e.id);
     const ctx = { stagesCleared: 0, currentQuanta: 0, secondsInStage: 0, stageId: 1, gateProgress01: 0, progress01: 0, clickLevel: 0 };
 
-    const base = getActiveModifiers(undefined, ctx, [], undefined, {});
-    const earned = getActiveModifiers(undefined, ctx, [], undefined, { 1: stage1Ids });
+    const base = getActiveModifiers(ctx, [], undefined, {});
+    const earned = getActiveModifiers(ctx, [], undefined, { 1: stage1Ids });
 
     // Genesis "first_light" subset (+6% drop) and the set reward (+8% drop) both fire.
     expect(earned.dropChanceMult).toBeGreaterThan(base.dropChanceMult);

@@ -180,14 +180,13 @@ export function GameScreen({
     ? getEffectiveThreshold(displayStage, state.cumulativeBoost)
     : effectiveThreshold;
   const displayQuanta = state.quanta;
-  const modifiers = getActiveModifiers(state.skills, {
+  const modifiers = getActiveModifiers({
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (wallNow - state.stageStartedAt) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01,
-    clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
@@ -199,7 +198,7 @@ export function GameScreen({
   const shopTimeBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'time', wallNow);
   const shopMatterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', wallNow);
   const displayedAutoRate = (autoRate + stageAutoBonus) * shopTimeBoost * shopMatterBoost;
-  const timeMult = getTimeMultiplier(state.skills.time.level, modifiers) * shopTimeBoost;
+  const timeMult = getTimeMultiplier(modifiers) * shopTimeBoost;
   const entropyGateProgress01 = getEntropyGateProgress(state.entropy, state.stageIdx);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
@@ -720,8 +719,8 @@ export function GameScreen({
             stats={{
               clickPower: getClickPower(modifiers),
               autoRate: displayedAutoRate,
-              critChance: getCritChance(state.skills.crit.level, 0, modifiers),
-              critMult: getCritMultiplier(state.skills.crit.level, modifiers),
+              critChance: getCritChance(0, modifiers),
+              critMult: getCritMultiplier(modifiers),
               comboCapMult:
                 TUNING.COMBO_MULT_MAX +
                 (state.singularityUnlocks.includes('free_combo') ? 2 : 0) +

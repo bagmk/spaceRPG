@@ -5,6 +5,7 @@
  */
 
 import type { Lang } from '../i18n';
+import { PRESTIGE_COST_BASE_KB, PRESTIGE_COST_GROWTH } from './balance';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,14 +41,15 @@ export const PRESTIGE_MAX_LEVEL = 5;
  * Costs in KB (the game's internal entropy unit).
  * 1 YB = 1024^7 KB ≈ 1.8014e21 KB
  */
-const KB_PER_YB = Math.pow(1024, 7);
-
+// Threshold-relative since v17 (Phase 4-2): Lv1 first affordable around the
+// stage-8 gate, ×PRESTIGE_COST_GROWTH per level. Recalibrations move these
+// automatically with the pacing ladder.
 export const PRESTIGE_COSTS_KB: [number, number, number, number, number] = [
-  1 * KB_PER_YB,    // Lv1: 1 YB
-  5 * KB_PER_YB,    // Lv2: 5 YB
-  10 * KB_PER_YB,   // Lv3: 10 YB
-  50 * KB_PER_YB,   // Lv4: 50 YB
-  100 * KB_PER_YB,  // Lv5: 100 YB
+  PRESTIGE_COST_BASE_KB,
+  PRESTIGE_COST_BASE_KB * PRESTIGE_COST_GROWTH,
+  PRESTIGE_COST_BASE_KB * Math.pow(PRESTIGE_COST_GROWTH, 2),
+  PRESTIGE_COST_BASE_KB * Math.pow(PRESTIGE_COST_GROWTH, 3),
+  PRESTIGE_COST_BASE_KB * Math.pow(PRESTIGE_COST_GROWTH, 4),
 ];
 
 export function getPrestigeCost(currentLevel: number): number | null {

@@ -10,13 +10,10 @@ import {
   createDefaultUniverseAtlas,
   createDefaultCondenseProgressHistory,
   createDefaultUniverseSeed,
-  createDefaultSkills,
 } from '../defaults';
 import { createDefaultPrestigeUpgrades } from '../prestige';
 
 type HydrateAction = Extract<GameAction, { type: 'HYDRATE' }>;
-type AwardSkillPointsAction = Extract<GameAction, { type: 'AWARD_SKILL_POINTS' }>;
-type UnlockTrackAction = Extract<GameAction, { type: 'UNLOCK_TRACK' }>;
 type MarkTutorialFlagAction = Extract<GameAction, { type: 'MARK_TUTORIAL_FLAG' }>;
 type MarkTutorialStageSeenAction = Extract<GameAction, { type: 'MARK_TUTORIAL_STAGE_SEEN' }>;
 type ClearClickEventAction = Extract<GameAction, { type: 'CLEAR_CLICK_EVENT' }>;
@@ -44,8 +41,6 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     tutorialDone: payload.tutorialDone ?? false,
     cosmicHoursThisRun: payload.cosmicHoursThisRun ?? 0,
     dailyCheckIns: payload.dailyCheckIns ?? createDefaultDailyCheckIns(),
-    skillPoints: payload.skillPoints ?? 0,
-    skills: payload.skills ?? createDefaultSkills(),
     endingsUnlocked: payload.endingsUnlocked ?? [],
     endingProgressFlags: payload.endingProgressFlags ?? createDefaultEndingProgressFlags(),
     clickRateLog: payload.clickRateLog ?? [],
@@ -83,21 +78,6 @@ export function handleDismissOfflineModal(state: GameState): GameState {
 
 export function handleSetTutorialDone(state: GameState): GameState {
   return { ...state, tutorialDone: true };
-}
-
-export function handleAwardSkillPoints(state: GameState, action: AwardSkillPointsAction): GameState {
-  return { ...state, skillPoints: Math.max(0, state.skillPoints + action.amount) };
-}
-
-export function handleUnlockTrack(state: GameState, action: UnlockTrackAction): GameState {
-  if (state.skills.unlockedTracks.includes(action.trackId)) return state;
-  return {
-    ...state,
-    skills: {
-      ...state.skills,
-      unlockedTracks: [...state.skills.unlockedTracks, action.trackId],
-    },
-  };
 }
 
 export function handleMarkTutorialFlag(state: GameState, action: MarkTutorialFlagAction): GameState {

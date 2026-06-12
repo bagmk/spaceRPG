@@ -62,8 +62,9 @@ export async function pullRemoteSave(uid: string): Promise<PersistentGameState |
     remoteAheadOfClient = false;
     if (!remote.data) return null;
     // Normalize older cloud saves through the SAME migration pipeline as
-    // local storage (version steps, entity-id normalization, clamps).
-    return migrateToCurrent(remote.data);
+    // local storage. The pushed payload is PersistentGameState (no version
+    // field) — the Firestore wrapper's schemaVersion drives the pipeline.
+    return migrateToCurrent({ ...remote.data, version: remote.schemaVersion ?? 0 });
   } catch (e) {
     console.error('[sync] pullRemoteSave failed:', e);
     return null;
@@ -86,6 +87,15 @@ export async function pushRemoteSave(
   try {
     writeSeq += 1;
     const ref = doc(db, 'users', uid, 'saves', 'main');
+    // Read-before-write guard: a long-lived session from an OLD bundle must
+    // not clobber a doc a newer client already migrated (pull-time detection
+    // only protects sessions that pulled after the new doc landed).
+    const existing = await getDoc(ref);
+    if (existing.exists() && ((existing.data() as RemoteSaveDoc).schemaVersion ?? 0) > SAVE_SCHEMA_VERSION) {
+      remoteAheadOfClient = true;
+      console.warn('[sync] Remote save is from a newer client — blocking push.');
+      return;
+    }
     const payload: RemoteSaveDoc = {
       schemaVersion,
       data: save,

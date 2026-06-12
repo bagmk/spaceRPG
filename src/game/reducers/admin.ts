@@ -8,7 +8,7 @@ import { createInitialGameState, createDefaultEndingProgressFlags } from '../def
 import { PRESTIGE_MAX_LEVEL, getPrestigeCost } from '../prestige';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
-import { unlockTrackForStage, resetMechanicState, hasUnlock } from './helpers';
+import { resetMechanicState, hasUnlock } from './helpers';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { entityMatchesId } from '../entities/stageItems';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -42,9 +42,6 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     entropy: getEntropyGateFloor(nextStageIdx),
     peakEntropy: Math.max(state.peakEntropy, getEntropyGateFloor(nextStageIdx)),
     timeGauge: 0,
-    clickLevel: 0,
-    autoLevel: 0,
-    critLevel: 0,
     combo: 0,
     lastClick: 0,
     pendingCondenseStageIdx: null,
@@ -57,7 +54,6 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     stageStartedAt: action.now,
     cosmicClockSec: getStageStartCosmicTime(nextStageIdx),
     tutorialDone: true,
-    skills: unlockTrackForStage(state.skills, nextStageIdx + 1),
     stageClicksAtStageStart: state.totalClicks,
   };
   return { ...nextState, ...resetMechanicState(nextState) };
@@ -83,7 +79,6 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
     completedRun: false,
     stageStartedAt: action.now,
     cosmicClockSec: getStageStartCosmicTime(prevStageIdx),
-    skills: unlockTrackForStage(state.skills, prevStageIdx + 1),
     stageClicksAtStageStart: state.totalClicks,
   };
   return { ...prevState, ...resetMechanicState(prevState) };
@@ -98,7 +93,7 @@ export function handleAdminSetProgress(state: GameState, action: AdminSetProgres
     getStageStartCosmicTime(state.stageIdx) +
     (stage.cosmicTimeSec - getStageStartCosmicTime(state.stageIdx)) * action.fraction;
   const reset = action.fraction === 0
-    ? { inventory: [], equippedSlots: [], riftSlots: [], clickLevel: 0, autoLevel: 0, critLevel: 0 }
+    ? { inventory: [], equippedSlots: [], riftSlots: [] }
     : {};
   return {
     ...state,
@@ -127,7 +122,6 @@ export function handleAdminRestartRun(state: GameState, action: AdminRestartRunA
     tutorialDone: state.tutorialDone,
     cosmicHoursThisRun: state.cosmicHoursThisRun,
     dailyCheckIns: state.dailyCheckIns,
-    skillPoints: state.skillPoints,
     endingsUnlocked: state.endingsUnlocked,
     endingProgressFlags: createDefaultEndingProgressFlags(),
     clickRateLog: [],
@@ -140,10 +134,6 @@ export function handleAdminRestartRun(state: GameState, action: AdminRestartRunA
     shopBoosts: state.shopBoosts,
     hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,
     totalShopSpentUSD: state.totalShopSpentUSD,
-    skills:
-      state.universeCount > 1
-        ? { ...state.skills, unlockedTracks: ['click', 'crit', 'auto', 'time'] }
-        : state.skills,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
   };

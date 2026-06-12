@@ -15,9 +15,6 @@ import {
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
-  getClickCost,
-  getAutoCost,
-  getCritCost,
 } from '../formulas';
 import { getActiveShopBoostMultiplier, pruneExpiredShopBoosts } from '../shop/boosts';
 import { getStageStartCosmicTime } from '../timeFlow';
@@ -66,14 +63,13 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     state.imploding &&
     state.condenseStartedAt !== null &&
     action.now - state.condenseStartedAt >= TUNING.CONDENSE_IMPLOSION_MS;
-  const modifiers = getActiveModifiers(state.skills, {
+  const modifiers = getActiveModifiers({
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-    clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
@@ -97,7 +93,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const gained = canAccrue ? (baseAuto + stageAutoBonus) * simulatedDtSec * matterBoost : 0;
   // Fill time gauge at gaugeRate%/s regardless of the absolute cosmic-time span.
   // This prevents mid-game stages (6+) from becoming impossible to complete.
-  const gaugeRate = getCosmicTimeFillRate(state.skills.time.level, modifiers, 1, state.stageIdx + 1);
+  const gaugeRate = getCosmicTimeFillRate(modifiers, 1, state.stageIdx + 1);
   const stageStartCosmic = getStageStartCosmicTime(state.stageIdx);
   const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
   const safeCosmic = Math.max(state.cosmicClockSec, stageStartCosmic);
@@ -148,25 +144,24 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   if (state.selectedEndingId !== null) { debugDroppedClick('ending selected'); return state; }
 
   const stage = getCurrentStage(state);
-  const modifiers = getActiveModifiers(state.skills, {
+  const modifiers = getActiveModifiers({
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-    clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
   const comboMult = getComboMult(combo, getComboCapBonus(state) + modifiers.comboCapAdd);
-  const critEnabled = stage.id > 2 || state.skills.crit.level > 0 || modifiers.critChanceAdd > 0;
+  const critEnabled = stage.id > 2 || modifiers.critChanceAdd > 0;
   const isCrit =
     critEnabled &&
     (action.forceCrit === true ||
-      action.randomValue < getCritChance(state.skills.crit.level, combo, modifiers));
-  const critMult = isCrit ? getCritMultiplier(state.skills.crit.level, modifiers) : 1;
+      action.randomValue < getCritChance(combo, modifiers));
+  const critMult = isCrit ? getCritMultiplier(modifiers) : 1;
   const gainMultiplier = action.gainMultiplier ?? 1;
   const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', action.now);
   const baseGained = Math.max(
@@ -222,30 +217,6 @@ function isInteractionBlocked(state: GameState): boolean {
     state.imploding ||
     state.selectedEndingId !== null
   );
-}
-
-export function handleBuyClick(state: GameState, _action: BuyClickAction): GameState {
-  if (isInteractionBlocked(state)) return state;
-  const stage = getCurrentStage(state);
-  const cost = getClickCost(stage, state.clickLevel);
-  if (state.quanta < cost) return state;
-  return { ...state, quanta: state.quanta - cost, clickLevel: state.clickLevel + 1 };
-}
-
-export function handleBuyAuto(state: GameState, _action: BuyAutoAction): GameState {
-  if (isInteractionBlocked(state)) return state;
-  const stage = getCurrentStage(state);
-  const cost = getAutoCost(stage, state.autoLevel);
-  if (state.quanta < cost) return state;
-  return { ...state, quanta: state.quanta - cost, autoLevel: state.autoLevel + 1 };
-}
-
-export function handleBuyCrit(state: GameState, _action: BuyCritAction): GameState {
-  if (isInteractionBlocked(state)) return state;
-  const stage = getCurrentStage(state);
-  const cost = getCritCost(stage, state.critLevel);
-  if (state.quanta < cost) return state;
-  return withCurrentUniverseEndingProgress({ ...state, quanta: state.quanta - cost, critLevel: state.critLevel + 1 });
 }
 
 export function handleReportCollision(state: GameState, action: ReportCollisionAction): GameState {

@@ -59,7 +59,8 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated?.stageIdx).toBe(2);
-    expect(migrated?.condensedMass).toBe(0);
+    // v17 compensation: 10 legacy skill levels (4+5+1) → +1 condensed mass.
+    expect(migrated?.condensedMass).toBe(1);
     expect(migrated?.echoes).toBe(0);
     expect(migrated?.endingsCompleted).toEqual([]);
     expect(migrated?.timeGauge).toBe(0);
@@ -81,15 +82,17 @@ describe('save migration', () => {
         ...createInitialGameState(100),
         stageIdx: 6,
         skills: {
-          ...createInitialGameState(100).skills,
+          click: { level: 0 }, auto: { level: 0 }, crit: { level: 0 }, time: { level: 0 },
           unlockedTracks: ['click'],
+          ownedCrossNodes: [],
         },
       }),
     );
 
     const migrated = loadGame();
     expect(migrated?.stageIdx).toBe(6);
-    expect(migrated?.skills.unlockedTracks).toEqual(['click', 'crit', 'auto', 'time']);
+    // v17: skills are stripped after migration (skill tree removed).
+    expect((migrated as Record<string, unknown>).skills).toBeUndefined();
   });
 
   it('resets purchasedEntities when migrating a v8 save to v9 (entity IDs changed)', () => {
@@ -173,6 +176,52 @@ describe('save migration', () => {
     expect(migrated!.inventory.find((e) => e.entityId === 's1_02')?.count).toBe(3);
   });
 
+  it('v17 derives the crit flag and pays compensation from legacy skills, then strips them', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 16,
+        skillPoints: 3,
+        skills: {
+          click: { level: 20 }, auto: { level: 15 }, crit: { level: 5 }, time: { level: 0 },
+          unlockedTracks: ['click', 'crit', 'auto', 'time'],
+          ownedCrossNodes: ['click_lv5', 'crit_lv5'],
+        },
+      }),
+    );
+
+    const migrated = loadGame()!;
+    // Crit upgrades existed → vacuum decay's flag must survive the strip.
+    expect(migrated.endingProgressFlags.criticalUpgradedThisUniverse).toBe(true);
+    // Compensation: (20+15+5+0 + 2×2) / 10 = 4.4 → +4 condensed mass.
+    expect(migrated.condensedMass).toBe(4);
+    expect((migrated as Record<string, unknown>).skills).toBeUndefined();
+    expect((migrated as Record<string, unknown>).skillPoints).toBeUndefined();
+  });
+
+  it('v17 scales above-final-gate entropy surplus proportionally (no clamp)', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    const V16_FINAL = 1.005e35;
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({ ...base, version: 16, stageIdx: 15, entropy: V16_FINAL * 2 }),
+    );
+    const migrated = loadGame()!;
+    // Surplus above the final gate scales by NEW_T[16]/V16_T[16] — banked
+    // prestige entropy and big-rip grinding survive proportionally.
+    expect(migrated.entropy).toBeCloseTo(STAGES[15].entropyThreshold * 2, 4);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};
@@ -184,14 +233,17 @@ describe('save migration', () => {
         version: 6,
         ...createInitialGameState(100),
         skills: {
-          ...createInitialGameState(100).skills,
+          click: { level: 0 }, auto: { level: 0 }, crit: { level: 0 }, time: { level: 0 },
+          unlockedTracks: ['click'],
           ownedCrossNodes: ['echoing_click', 'inflaton_echo'],
         },
       }),
     );
 
     const migrated = loadGame();
-    expect(migrated?.skills.ownedCrossNodes).toEqual([]);
+    expect(migrated).not.toBeNull();
+    // v17: skills are stripped after migration (cross nodes are gone with them).
+    expect((migrated as Record<string, unknown>).skills).toBeUndefined();
   });
 
   it('reconstructs legacy ending flags with the simplified ending rules', () => {
@@ -301,7 +353,8 @@ describe('save migration', () => {
       ...createInitialGameState(100),
       version: 14,
       stageIdx: 0,
-      entropy: STAGES[0].entropyThreshold * 2,
+      // v16-ladder value: exactly the v16 stage-1 gate (frozen at 1.995e3).
+      entropy: 1.995e3,
       inventory: [{ entityId: entity.id, count: 2, level: 4 }],
       almanacCollected: { 1: [entity.id] },
       equippedSlots: [entity.id],
@@ -311,7 +364,9 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated?.inventory).toEqual([{ entityId: entity.id, count: 2, level: 4 }]);
-    expect(migrated?.entropy).toBe(STAGES[0].entropyThreshold * 2);
+    // v17 remap: the v16 stage-1 gate maps EXACTLY onto the new stage-1 gate
+    // (piecewise remap preserves gate progress).
+    expect(migrated?.entropy).toBeCloseTo(STAGES[0].entropyThreshold, 6);
     expect(migrated?.equippedSlots).toEqual([entity.id]);
     expect(migrated?.unlockedSlotCount).toBe(2);
     expect(migrated?.almanacCollected[1]).toContain(entity.id);

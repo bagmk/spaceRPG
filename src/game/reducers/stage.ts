@@ -16,13 +16,11 @@ import {
   getEndingOptions,
   withCurrentUniverseEndingProgress,
 } from '../multiverse';
-import { getSkillPointsForStageAdvance } from '../skills/definitions';
 import { createInitialGameState } from '../defaults';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
   getCurrentStage,
-  unlockTrackForStage,
   resetMechanicState,
   recordLateStageClickRate,
   buildAtlasEntry,
@@ -106,8 +104,6 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     imploding: false,
     condenseStartedAt: null,
     stageStartedAt: action.now,
-    skills: unlockTrackForStage(progressedState.skills, nextStageId),
-    skillPoints: progressedState.skillPoints + getSkillPointsForStageAdvance(stage.id),
     clickRateLog: nextClickRateLog,
     stageClicksAtStageStart: progressedState.totalClicks,
   };

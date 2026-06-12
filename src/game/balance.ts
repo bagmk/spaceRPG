@@ -107,14 +107,8 @@ export const ENTITY_RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
   legendary: 3.0,
 };
 
-// ── Skill tree tuning ────────────────────────────────────────────────────────
+// ── Output anchors (Phase 4-2: gear-only economy) ───────────────────────────
 
-/** clickPowerMult = 2^level — change exponent base here. */
-export const SKILL_CLICK_POWER_BASE = 2;
-/** autoRateAdd = base^level — change exponent base here. */
-export const SKILL_AUTO_RATE_BASE = 2;
-/** Cosmic-time gauge speed multiplier per Aeon Drive level. */
-export const SKILL_TIME_RATE_BASE = 1.8;
 /** Hard lower bound for any stage's time-gauge duration after all boosts. */
 export const TIME_MIN_STAGE_SECONDS = 12;
 /**
@@ -127,11 +121,13 @@ export const TIME_MIN_STAGE_SECONDS = 12;
  */
 export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
 /**
- * Global output multipliers. The entropy-gate thresholds (Phase 0 sim) were
- * calibrated WITHOUT the old 1/3 click / 0.5 auto debuffs, so these now sit at
- * 1 — clicks/auto land at the strength the pacing model expects.
+ * Global output multipliers. CLICK re-anchored ×15 in Phase 4-2: the skill
+ * tree's 2^level click base is gone (tree removed — it had been unreachable
+ * UI since the Entity Lab), so raw clicks need a flat anchor to stay relevant
+ * against rift auto. Thresholds are calibrated WITH these values
+ * (scripts/entropy-gate-sim.mjs) — change them together.
  */
-export const CLICK_OUTPUT_MULTIPLIER = 1;
+export const CLICK_OUTPUT_MULTIPLIER = 15;
 export const AUTO_OUTPUT_MULTIPLIER = 1;
 /** Fully upgraded Stage 4+ time gauges should settle around 3-4 minutes. */
 export const TIME_MAXED_STAGE_SECONDS = 210;
@@ -160,36 +156,57 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 
 // ── Entropy gate (entity redesign D1) ────────────────────────────────────────
 // Stage advancement gate: cumulative entropy >= ENTROPY_THRESHOLDS[stageId].
-// Recalibrated for Phase 4-1 (player-stage gear power curve: skills + gear
-// 2.0^E click / 8^E auto with the fractional gate exponent + the cost-scaled
-// fusion burst) by scripts/entropy-gate-sim.mjs — per-stage span binary
-// search pins the reference profile (cps 3, activeFraction 0.5, fusion every
-// 90s) to each stage's realPlayTargetSec under real gate dynamics. Re-run the
-// sim after touching the gear curve or entropy weights.
+// Recalibrated for Phase 4-2 (GEAR-ONLY economy — skill tree removed): gear
+// 2.0^E click ×CLICK_OUTPUT_MULTIPLIER / 8^E auto, gear-substat crit (capped),
+// cost-scaled fusion burst, honest enhance levels. scripts/entropy-gate-sim.mjs
+// pins the reference profile (cps 3, af 0.5, fusion 90s) to realPlayTargetSec
+// via per-stage span binary search. Re-run the sim after touching the gear
+// curve, output multipliers, or entropy weights — the v16 ladder is FROZEN in
+// storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  1: 1.995e3,
-  2: 9.64e6,
-  3: 4.236e8,
-  4: 3.505e11,
-  5: 1.321e13,
-  6: 1.579e15,
-  7: 5.615e16,
-  8: 1.974e21,
-  9: 5.511e23,
-  10: 4.559e25,
-  11: 5.5e27,
-  12: 1.392e29,
-  13: 1.333e30,
-  14: 5.698e31,
-  15: 1.097e33,
-  16: 1.005e35,
+  1: 3.985e3,
+  2: 3.227e4,
+  3: 2.255e5,
+  4: 8.317e6,
+  5: 2.716e7,
+  6: 9.041e9,
+  7: 1.509e11,
+  8: 2.436e12,
+  9: 2.929e13,
+  10: 5.974e14,
+  11: 8.389e15,
+  12: 1.019e17,
+  13: 1.011e18,
+  14: 9.778e18,
+  15: 2.973e20,
+  16: 1.384e21,
 };
 
+// ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
+// Expressed relative to ENTROPY_THRESHOLDS so future recalibrations cannot
+// desync them from the pacing ladder (they were absolute before v17).
+
+/** Big Crunch eligibility: reach this entropy before leaving stage 3 (≈ mid-gate). */
+export const BIG_CRUNCH_ENTROPY_KB = 0.5 * ENTROPY_THRESHOLDS[3];
+/** Big Rip eligibility: grind to this entropy (between the stage 9 and 10 gates). */
+export const BIG_RIP_ENTROPY_KB = 2.2 * ENTROPY_THRESHOLDS[9];
+/** Prestige upgrade costs: level i costs base × growth^i (Lv1 affordable ≈ stage 8). */
+export const PRESTIGE_COST_BASE_KB = 0.5 * ENTROPY_THRESHOLDS[8];
+export const PRESTIGE_COST_GROWTH = 5;
+/** Gear-driven crit multiplier is bounded (substats stack across slots). */
+export const CRIT_MULT_GEAR_CAP = 5;
+
 /** Entropy gained per quanta earned by clicking (active play drives progress). */
-export const ENTROPY_W_CLICK = 0.5;
-/** Entropy gained per quanta earned by auto income (half the click weight). */
-export const ENTROPY_W_AUTO = 0.25;
+export const ENTROPY_W_CLICK = 0.6;
+/**
+ * Entropy gained per quanta earned by auto income. Re-anchored 0.25 → 0.04 in
+ * Phase 4-2: without the skill click base, rift auto (8^E) would dominate the
+ * gate — auto still earns full QUANTA (the economy engine), it just pushes
+ * the progression gate ~15× slower than clicking. Sim invariants: active
+ * share ≥ 50% every stage; idle ≥ 4× slower than reference but never walled.
+ */
+export const ENTROPY_W_AUTO = 0.04;
 /** One fusion burst is worth this many seconds of current entropy income (Phase 3). */
 export const ENTROPY_FUSION_VALUE_SEC = 30;
 /** Each fusion consumes this fraction of the quanta bank (Phase 3 sink). */
@@ -324,7 +341,7 @@ export type SecondaryStatType =
  */
 export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scales: boolean }> = {
   critChance: { base: 0.4, scales: false }, // +% crit chance (capped resource)
-  critMult: { base: 4, scales: true },      // +% crit multiplier
+  critMult: { base: 4, scales: false },     // +% crit multiplier (bounded — see CRIT_MULT_GEAR_CAP)
   comboCap: { base: 0.5, scales: false },   // flat combo cap add
   entropyGain: { base: 3, scales: false },  // +% entropy from all play income
   dropRate: { base: 5, scales: false },     // +% drop chance
@@ -380,35 +397,6 @@ export const SET_BONUS: Record<number, { clickAutoMult: number; critChanceAdd: n
   3: { clickAutoMult: 1.6, critChanceAdd: 0.05 },
 };
 
-export const SKILL_CROSS_NODE_MULTS: Record<string, number> = {
-  click_lv5: 1.4,
-  click_lv10: 1.8,
-  click_lv15: 2.4,
-  click_lv20: 3.2,
-  click_lv25: 4.4,
-  click_lv30: 6,
-  auto_lv5: 1.4,
-  auto_lv10: 1.8,
-  auto_lv15: 2.4,
-  auto_lv20: 3.2,
-  auto_lv25: 4.4,
-  auto_lv30: 6,
-  crit_lv5: 1.15,
-  crit_lv10: 1.3,
-  crit_lv15: 1.5,
-  crit_lv20: 1.75,
-  crit_lv25: 2.05,
-  crit_lv30: 2.5,
-  time_lv5: 1.25,
-  time_lv10: 1.6,
-  time_lv15: 2.1,
-  time_lv20: 2.8,
-  time_lv25: 3.6,
-  time_lv30: 5,
-};
-
-export const SKILL_TOTAL_CROSS_NODE_COUNT = 24;
-
 // ── Intro / Big Bang timing ──────────────────────────────────────────────────
 
 /** Time the "Let there be light" line is held before the big bang flash (ms). */
@@ -430,10 +418,7 @@ export const BALANCE = {
     rarityTint: ENTITY_RARITY_TINT,
     rarityEffectScale: ENTITY_RARITY_EFFECT_SCALE,
   },
-  skill: {
-    clickPowerBase: SKILL_CLICK_POWER_BASE,
-    autoRateBase: SKILL_AUTO_RATE_BASE,
-    timeRateBase: SKILL_TIME_RATE_BASE,
+  output: {
     timeMinStageSeconds: TIME_MIN_STAGE_SECONDS,
     legacyTimeEntityEffectFactor: LEGACY_TIME_ENTITY_EFFECT_FACTOR,
     clickOutputMultiplier: CLICK_OUTPUT_MULTIPLIER,
@@ -443,8 +428,13 @@ export const BALANCE = {
     timeStageEntryMinGrowth: TIME_STAGE_ENTRY_MIN_GROWTH,
     timeStageBaseSeconds: TIME_STAGE_BASE_SECONDS,
     timeStageGrowthAfterStage6: TIME_STAGE_GROWTH_AFTER_STAGE_6,
-    crossNodeMults: SKILL_CROSS_NODE_MULTS,
-    totalCrossNodeCount: SKILL_TOTAL_CROSS_NODE_COUNT,
+  },
+  meta: {
+    bigCrunchEntropyKb: BIG_CRUNCH_ENTROPY_KB,
+    bigRipEntropyKb: BIG_RIP_ENTROPY_KB,
+    prestigeCostBaseKb: PRESTIGE_COST_BASE_KB,
+    prestigeCostGrowth: PRESTIGE_COST_GROWTH,
+    critMultGearCap: CRIT_MULT_GEAR_CAP,
   },
   intro: {
     genesisMs: INTRO_GENESIS_MS,

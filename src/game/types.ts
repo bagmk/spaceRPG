@@ -12,7 +12,6 @@ export type * from './types/events';
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent } from './types/events';
-import type { SkillState, SkillTreeId } from './skills/types';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
@@ -227,13 +226,10 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 16;
+  version: 17;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
-  clickLevel: number;
-  autoLevel: number;
-  critLevel: number;
   entropy: number;
   totalClicks: number;
   collisions: number;
@@ -259,8 +255,6 @@ export interface SaveState {
   tutorialDone: boolean;
   cosmicHoursThisRun: number;
   dailyCheckIns: DailyCheckInState;
-  skillPoints: number;
-  skills: SkillState;
   endingsUnlocked: EndingId[];
   endingProgressFlags: EndingProgressFlags;
   clickRateLog: number[];
@@ -350,6 +344,4 @@ export interface TutorialStepState {
   step: 1 | 2 | 3;
 }
 
-export type SkillPurchaseTarget =
-  | { kind: 'track'; treeId: SkillTreeId }
-  | { kind: 'cross'; nodeId: string };
+

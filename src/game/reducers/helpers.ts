@@ -49,38 +49,22 @@ export function getEncounterClickMultiplier(tier: RogueTypeKey): number {
 
 export function getCurrentModifiers(state: GameState) {
   const stage = getCurrentStage(state);
-  return getActiveModifiers(state.skills, {
+  return getActiveModifiers({
     currentQuanta: state.quanta,
     stagesCleared: state.stageIdx,
     secondsInStage: Math.max(0, (state.totalTimePlayed - Math.max(0, state.stageStartedAt - state.runStartTime)) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-    clickLevel: state.skills.click.level,
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
 }
 
 export function getAdjustedClickPower(state: GameState): number {
   const mods = getCurrentModifiers(state);
   const base = getClickPower(mods);
-  return hasUnlock(state, 'quark_foam') ? base + state.skills.click.level + 1 : base;
-}
-
-export function getTrackUnlocksForStage(stageId: number): GameState['skills']['unlockedTracks'] {
-  const unlocked: GameState['skills']['unlockedTracks'] = ['click'];
-  if (stageId >= 3) unlocked.push('auto');
-  if (stageId >= 4) unlocked.push('crit');
-  if (stageId >= 5) unlocked.push('time');
-  return unlocked;
-}
-
-export function unlockTrackForStage(
-  skills: GameState['skills'],
-  stageId: number,
-): GameState['skills'] {
-  const unlocked = new Set(skills.unlockedTracks);
-  getTrackUnlocksForStage(stageId).forEach((trackId) => unlocked.add(trackId));
-  return { ...skills, unlockedTracks: Array.from(unlocked) as GameState['skills']['unlockedTracks'] };
+  // quark_foam re-anchored (Phase 4-2): the old +clickLevel bonus is gone with
+  // the skill tree — a flat +10% keeps the unlock meaningful at any scale.
+  return hasUnlock(state, 'quark_foam') ? base * 1.1 : base;
 }
 
 export function resetMechanicState(

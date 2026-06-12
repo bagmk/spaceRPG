@@ -1,12 +1,14 @@
 import type { EndingId, EndingOption, EndingProgressFlags, GameState, Stage, UniverseSeed, AnomalyType } from './types';
 import type { Lang } from '../i18n';
+import { BIG_CRUNCH_ENTROPY_KB, BIG_RIP_ENTROPY_KB } from './balance';
 import { STAGES } from './stages';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
 export const ALL_ENDINGS: EndingId[] = [...BASE_ENDINGS, 'bounce'];
-export const BIG_CRUNCH_ENTROPY_THRESHOLD_KB = 1024 * 1024;
-/** 1 RB = 1024 YB = 1024^8 KB */
-export const BIG_RIP_ENTROPY_THRESHOLD_KB = Math.pow(1024, 8);
+// Threshold-relative since v17 (Phase 4-2) — values live in balance.ts so
+// pacing recalibrations move them automatically.
+export const BIG_CRUNCH_ENTROPY_THRESHOLD_KB = BIG_CRUNCH_ENTROPY_KB;
+export const BIG_RIP_ENTROPY_THRESHOLD_KB = BIG_RIP_ENTROPY_KB;
 
 interface BilingualHint { en: string; ko: string; }
 interface EndingDefinition {
@@ -56,8 +58,8 @@ export const ENDING_DEFINITIONS: Record<EndingId, EndingDefinition> = {
       ko: '새로운 진공이 모든 것을 덮어갑니다.',
     },
     condition: {
-      en: 'Reach the end without upgrading Critical.',
-      ko: '크리티컬을 하나도 업그레이드하지 않고 스테이지를 클리어하세요.',
+      en: 'Reach the end without ever equipping Critical gear.',
+      ko: '크리티컬 장비를 한 번도 장착하지 않고 마지막 스테이지에 도달하세요.',
     },
   },
   bounce: {
@@ -245,14 +247,12 @@ function currentStageId(state: Pick<GameState, 'stageIdx'>): number {
 }
 
 export function hasCriticalUpgradeInCurrentUniverse(
-  state: Pick<GameState, 'critLevel' | 'skills' | 'endingProgressFlags'>,
+  state: Pick<GameState, 'endingProgressFlags'>,
 ): boolean {
-  return (
-    state.endingProgressFlags.criticalUpgradedThisUniverse ||
-    state.critLevel > 0 ||
-    state.skills.crit.level > 0 ||
-    state.skills.ownedCrossNodes.some((nodeId) => nodeId.startsWith('crit_'))
-  );
+  // Phase 4-2: the flag is the single source of truth. Legacy skill levels are
+  // folded into it once at v17 migration; in gear terms, equipping crit gear
+  // sets it (handleEquipEntity) — vacuum decay = "no critical gear equipped".
+  return state.endingProgressFlags.criticalUpgradedThisUniverse;
 }
 
 export function isBigCrunchEligible(
@@ -271,7 +271,7 @@ export function isBigRipEligible(
 }
 
 export function isVacuumDecayEligible(
-  state: Pick<GameState, 'stageIdx' | 'critLevel' | 'skills' | 'endingProgressFlags'>,
+  state: Pick<GameState, 'stageIdx' | 'endingProgressFlags'>,
 ): boolean {
   return currentStageId(state) >= STAGES.length && !hasCriticalUpgradeInCurrentUniverse(state);
 }
@@ -289,7 +289,7 @@ export function isBounceEligible(
 }
 
 export function getCurrentUniverseEndingProgressFlags(
-  state: Pick<GameState, 'stageIdx' | 'entropy' | 'critLevel' | 'skills' | 'endingProgressFlags'>,
+  state: Pick<GameState, 'stageIdx' | 'entropy' | 'endingProgressFlags'>,
 ): EndingProgressFlags {
   const criticalUpgradedThisUniverse = hasCriticalUpgradeInCurrentUniverse(state);
   const bigCrunchEligible = isBigCrunchEligible(state);

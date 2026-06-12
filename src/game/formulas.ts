@@ -5,7 +5,6 @@ import {
   CLICK_OUTPUT_MULTIPLIER,
   ENTROPY_W_AUTO,
   ENTROPY_W_CLICK,
-  SKILL_TIME_RATE_BASE,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
   TIME_STAGE_ENTRY_MIN_GROWTH,
@@ -298,21 +297,8 @@ export function getAutoRate(mods: Modifiers): number {
   return Math.max(0, (mods.autoRateAdd * mods.autoRateMult + mods.autoRateFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
 }
 
-export function getCritMultiplier(critLevel: number, mods: Modifiers): number {
-  const base = Math.max(1.5, 1.5 + critLevel * 0.5);
-  return base * mods.critMultMult * mods.apexMult;
-}
-
-export function getClickCost(stage: Stage, level: number): number {
-  return Math.ceil(stage.threshold * 0.005 * Math.pow(TUNING.COST_GROWTH, level));
-}
-
-export function getAutoCost(stage: Stage, level: number): number {
-  return Math.ceil(stage.threshold * 0.012 * Math.pow(TUNING.COST_GROWTH, level));
-}
-
-export function getCritCost(stage: Stage, level: number): number {
-  return Math.ceil(stage.threshold * 0.025 * Math.pow(TUNING.COST_GROWTH, level));
+export function getCritMultiplier(mods: Modifiers): number {
+  return 1.5 * mods.critMultMult * mods.apexMult;
 }
 
 export function getEffectiveThreshold(stage: Stage, _prestigeBoost: number): number {
@@ -329,15 +315,15 @@ export function getComboMult(combo: number, comboCapBonus = 0): number {
   );
 }
 
-export function getCritChance(critLevel: number, combo: number, mods: Modifiers): number {
-  const base = critLevel * 0.015 + mods.critChanceAdd;
+export function getCritChance(combo: number, mods: Modifiers): number {
+  const base = mods.critChanceAdd;
   const comboBonus = combo * 0.003;
   const cap = TUNING.CRIT_MAX + mods.critChanceCapAdd;
   return Math.min(cap, base + comboBonus);
 }
 
-export function getTimeMultiplier(timeLevel: number, mods: Modifiers): number {
-  return Math.pow(SKILL_TIME_RATE_BASE, timeLevel) * mods.apexMult * mods.timeMultMult;
+export function getTimeMultiplier(mods: Modifiers): number {
+  return mods.apexMult * mods.timeMultMult;
 }
 
 export function getTimeBudget(_stage: Stage): number {
@@ -345,16 +331,14 @@ export function getTimeBudget(_stage: Stage): number {
 }
 
 export function getCosmicTimeFillRate(
-  aeonLevel: number,
   mods: Modifiers,
   boostMultiplier = 1,
   stageNumber = 1,
 ): number {
-  // Stage sets the unupgraded duration; Aeon Drive and time bonuses scale that
-  // baseline so late-stage level-ups still shorten the clock.
+  // Stage sets the unupgraded duration; time bonuses scale that baseline.
   const baseSeconds = getUnupgradedTimeGaugeSeconds(stageNumber);
   const baseRate = 100 / baseSeconds;
-  const levelBoost = Math.pow(SKILL_TIME_RATE_BASE, Math.max(0, aeonLevel)) * mods.apexMult;
+  const levelBoost = mods.apexMult;
   const rawTimeBoost = Math.max(0, mods.timeMultMult);
   const maxEntityTimeBoost = getMaxTimeEntityMultiplierThroughStage(stageNumber);
   const timeEntityProgress = stageNumber >= 4 && maxEntityTimeBoost > 1
@@ -373,24 +357,22 @@ export function getCosmicTimeFillRate(
 
 export function getTimeFillRateGauge(
   stage: Stage,
-  aeonLevel: number,
   mods: Modifiers,
   boostMultiplier = 1,
 ): number {
-  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier, stage.id);
+  return getCosmicTimeFillRate(mods, boostMultiplier, stage.id);
 }
 
 export function getTimeFillRate(
   stage: Stage,
-  aeonLevel: number,
   mods: Modifiers,
   boostMultiplier = 1,
 ): number {
-  return getCosmicTimeFillRate(aeonLevel, mods, boostMultiplier, stage.id);
+  return getCosmicTimeFillRate(mods, boostMultiplier, stage.id);
 }
 
-export function getTimeFillSeconds(stage: Stage, aeonLevel: number, mods: Modifiers): number {
-  const rate = getCosmicTimeFillRate(aeonLevel, mods, 1, stage.id);
+export function getTimeFillSeconds(stage: Stage, mods: Modifiers): number {
+  const rate = getCosmicTimeFillRate(mods, 1, stage.id);
   return rate <= 0 ? Number.POSITIVE_INFINITY : 100 / rate;
 }
 

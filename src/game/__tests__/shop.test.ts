@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getActiveShopBoostMultiplier, getOfflineRewardCapSec, shiftBoostExpiry } from '../shop/boosts';
 import { createInitialGameState, gameReducer } from '../reducer';
+import { getEntitiesForStage } from '../entities/stageItems';
 
 describe('cash shop boosts', () => {
   it('extends the same paid time boost instead of stacking its multiplier', () => {
@@ -58,13 +59,13 @@ describe('cash shop boosts', () => {
   });
 
   it('applies time boosts to actual passive simulation progress', () => {
+    // Auto income comes from equipped rift gear now (skill tree removed).
+    const autoEntity = getEntitiesForStage(3).find((e) => e.effect.type === 'auto')!;
     const base = {
       ...createInitialGameState(0),
       stageIdx: 2,
-      skills: {
-        ...createInitialGameState(0).skills,
-        auto: { level: 1 },
-      },
+      inventory: [{ entityId: autoEntity.id, count: 1, level: 1 }],
+      riftSlots: [autoEntity.id],
     };
     const boosted = gameReducer(base, {
       type: 'COMPLETE_SHOP_PURCHASE',

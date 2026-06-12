@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// Entropy-gate pacing simulator — Phase 4-1 (stage-independent gear power).
+// Entropy-gate pacing simulator — Phase 4-2 (gear-only economy, no skill tree).
 //
-// Models the post-redesign economy: skill tracks (still present until Phase
-// 4-2) PLUS equipped gear whose power rides the SHARED player-stage exponent
-//   E = (stage - 1) + gateProgress01
+// The skill tree is removed (it has been unreachable UI since the Entity Lab
+// landed); gear is the only growth besides prestige. Power model:
+//   E = (stage - 1) + gateProgress01 (shared exponent, Phase 4-1)
 //   click % effects × STAGE_POWER_BASE^E (2.0), rift auto × AUTO_BASE^E (8)
-// and the new fusion burst rule (burst × min(1, costPaid / (anchor × 0.1))).
+//   clicks × CLICK_OUTPUT_MULTIPLIER (re-anchored: no more 2^level skill base)
+//   crit from gear substats (critMult gear capped) + combo
+//   fusion burst × min(1, costPaid / (anchor × 0.1))
+//   enhance levels DERIVED from spending ≤50% of stage income (honest sink)
 //
 // Calibration: per stage, binary-search the entropy span so the reference
-// profile crosses it in exactly realPlayTargetSec under REAL gate dynamics
-// (income rises ×8 across the gate window — the search absorbs the
-// exponential feedback exactly). Then re-run all profiles against the
-// thresholds and assert the design invariants.
+// profile crosses it in exactly realPlayTargetSec under real gate dynamics.
+// Then verify the design invariants across profiles.
 //
 // Run: node scripts/entropy-gate-sim.mjs
 
@@ -37,6 +38,7 @@ const STAGES = [
   { id: 16, name: 'The End', realPlayTargetSec: 117450, mechanic: 'ending_choice' },
 ];
 
+// Effective click multipliers of the stage mechanics (aligned to real onClick behavior).
 const MECHANIC_CLICK_BOOST = {
   matter_asymmetry: 1.2, fusion_window: 1.3, recombination: 1.2, reionization: 1.4,
   galaxy_weaving: 1.3, planet_formation: 1.2, life_evolution: 1.5, red_giant: 1.5,
@@ -45,171 +47,156 @@ const MECHANIC_CLICK_BOOST = {
 };
 
 // ---------------------------------------------------------------------------
-// Balance constants (mirror src/game/balance.ts — keep in sync)
+// Balance knobs (Phase 4-2 — these are the values to write into balance.ts)
 // ---------------------------------------------------------------------------
 const STAGE_POWER_BASE = 2.0;
 const AUTO_STAGE_POWER_BASE = 8;
 const ANCHOR1 = 1725;
 const ENTITY_COST_ANCHORS = [0, 1725, 3800, 52000, 750000, 1.1e7, 1.6e8, 2.4e9, 3.7e10, 6e11, 1e13, 1.8e14, 3.5e15, 6.5e16, 1.3e18, 2.7e19, 5.6e20];
-const ENTROPY_CFG = { wClick: 0.5, wAuto: 0.25, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
+// Re-anchored entropy weights: without the 2^level skill click base, raw click
+// income shrinks vs auto — keep active play dominant via the gate weights.
+const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.04, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
+// Click output re-anchor (skill 2^N base removed).
+const CLICK_OUTPUT_MULTIPLIER = 15;
+// Crit (gear-only): chance from substats + combo; mult bounded.
+const CRIT_MULT_GEAR_CAP = 5;
+const CRIT_MAX = 0.5;
 const RARITY_GATES = { common: 1, rare: 3, epic: 7, legendary: 12 };
-const GATE_RAMP = 3; // stages from gate to full drop weight
+const GATE_RAMP = 3;
+// Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × 1.9^(L-1)
+const ENHANCE_COST_FACTOR = 1.5;
+const ENHANCE_COST_GROWTH = 1.9;
+const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
+const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
+const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
+
+const comboMult = (combo) => 1 + Math.min(7, Math.floor(combo / 10) * 0.4);
 
 // ---------------------------------------------------------------------------
-// Skill engine (unchanged from Phase 0 — skills survive until Phase 4-2)
-// ---------------------------------------------------------------------------
-const CROSS_MULTS = {
-  5: { click: 1.4, auto: 1.4, crit: 1.15, time: 1.25 }, 10: { click: 1.8, auto: 1.8, crit: 1.3, time: 1.6 },
-  15: { click: 2.4, auto: 2.4, crit: 1.5, time: 2.1 }, 20: { click: 3.2, auto: 3.2, crit: 1.75, time: 2.8 },
-  25: { click: 4.4, auto: 4.4, crit: 2.05, time: 3.6 }, 30: { click: 6, auto: 6, crit: 2.5, time: 5 },
-};
-const CROSS_SP = { 5: 1, 10: 1, 15: 2, 20: 2, 25: 3, 30: 3 };
-const STAGE_LEVEL_TARGETS = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 29, 29, 29, 29, 29, 30];
-const SP_ON_ADVANCE = [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6];
-const BASE_CFG = {
-  skillCostBase: { click: 3, auto: 3, crit: 3 },
-  clickPowerPerLevel: 2, autoRatePerLevel: 2,
-  critChancePerLevel: 0.015, critMultBase: 1.5, critMultPerLevel: 0.5, critChanceCap: 0.5,
-  comboMultMax: 8.0, comboMultPer10: 0.4,
-  maxSkillLevel: 50, maxHoursPerStage: 1000,
-};
-const POWER_LEVEL_COSTS_AFTER_30 = [
-  1e15, 5e15, 2e16, 8e16, 3e17, 1e18, 4e18, 1.6e19, 6e19, 2e20,
-  8e20, 3e21, 1e22, 3e22, 1e23, 3e23, 1e24, 3e24, 1e25, 3e25,
-];
-
-function createSkills() { return { click: 0, auto: 0, crit: 0, crossNodes: new Set(), sp: 0 }; }
-
-function computeSkillMods(sk) {
-  let clickMult = Math.pow(BASE_CFG.clickPowerPerLevel, sk.click);
-  let autoAdd = sk.auto > 0 ? Math.pow(BASE_CFG.autoRatePerLevel, sk.auto) : 0;
-  let autoMult = 1, critMultMult = 1;
-  for (const node of sk.crossNodes) {
-    const tier = parseInt(node.split('lv')[1]);
-    const track = node.split('_')[0];
-    const m = CROSS_MULTS[tier]?.[track];
-    if (!m) continue;
-    if (track === 'click') clickMult *= m;
-    else if (track === 'auto') autoMult *= m;
-    else if (track === 'crit') critMultMult *= m;
-  }
-  return { clickMult, autoAdd, autoMult, critMultMult };
-}
-const critChance = (L, combo) => Math.min(BASE_CFG.critChanceCap, L * BASE_CFG.critChancePerLevel + combo * 0.003);
-const critMultiplier = (L, m) => (BASE_CFG.critMultBase + L * BASE_CFG.critMultPerLevel) * m.critMultMult;
-const comboMult = (combo) => 1 + Math.min(BASE_CFG.comboMultMax - 1, Math.floor(combo / 10) * BASE_CFG.comboMultPer10);
-
-function trackCost(t, L) {
-  if (L > 30) return POWER_LEVEL_COSTS_AFTER_30[Math.max(0, L - 31)] ?? POWER_LEVEL_COSTS_AFTER_30.at(-1);
-  return Math.floor(Math.pow(BASE_CFG.skillCostBase[t], Math.max(0, L - 1)));
-}
-function trackUnlocked(track, stageIdx) {
-  const stageId = stageIdx + 1;
-  if (track === 'click') return true;
-  if (track === 'auto') return stageId >= 3;
-  if (track === 'crit') return stageId >= 4;
-  return false;
-}
-function tryOnePurchase(sk, quanta, stageIdx) {
-  const tracks = ['click', 'auto', 'crit'];
-  for (const tier of [5, 10, 15, 20, 25, 30]) {
-    for (const track of tracks) {
-      const id = `${track}_lv${tier}`;
-      if (sk.crossNodes.has(id)) continue;
-      if (sk[track] < tier || !trackUnlocked(track, stageIdx)) continue;
-      if (sk.sp < CROSS_SP[tier]) continue;
-      sk.sp -= CROSS_SP[tier]; sk.crossNodes.add(id);
-      return { bought: true, quanta };
-    }
-  }
-  const target = Math.min(BASE_CFG.maxSkillLevel, STAGE_LEVEL_TARGETS[stageIdx] ?? BASE_CFG.maxSkillLevel);
-  const order = tracks.filter((t) => trackUnlocked(t, stageIdx))
-    .sort((a, b) => (sk[a] >= target) - (sk[b] >= target) || sk[a] - sk[b] || trackCost(a, sk[a] + 1) - trackCost(b, sk[b] + 1));
-  for (const track of order) {
-    if (sk[track] >= target) continue;
-    const cost = trackCost(track, sk[track] + 1);
-    if (cost > quanta) continue;
-    sk[track] += 1;
-    return { bought: true, quanta: quanta - cost };
-  }
-  return { bought: false, quanta };
-}
-
-// ---------------------------------------------------------------------------
-// Gear model (Phase 4-1) — deterministic steady-state stacks per stage.
-// Drops accrue from play; the player equips the best available rarity. Stack
-// quality = per-copy% × soft-capped effective count × level multiplier.
-// effCount steady state ≈ maxCount + sqrt(maxCount) (stacks roughly double
-// the cap over a stage); levels from the fusion dup-sink + enhancement.
+// Gear model — deterministic stacks per stage (gear-only economy).
 // ---------------------------------------------------------------------------
 const GEAR = {
-  // value%/copy (post-rebalance authored medians) and stack parameters.
   click: {
-    common:    { pct: 3.75, eff: 24.5, lvl: 2.0 },
-    rare:      { pct: 5.5,  eff: 13.2, lvl: 2.5 },
-    epic:      { pct: 15.75, eff: 7.2, lvl: 3.0 },
-    legendary: { pct: 50,   eff: 2.0,  lvl: 4.0 }, // 'multiplier' type — click + crit/2
+    common:    { pct: 3.75, eff: 24.5 },
+    rare:      { pct: 5.5,  eff: 13.2 },
+    epic:      { pct: 15.75, eff: 7.2 },
+    legendary: { pct: 50,   eff: 2.0 }, // 'multiplier' type — click + crit/2
   },
-  auto: { // rarityWeight = ENTITY_BASE_COST_FACTOR
-    common:    { pct: 0.15, eff: 24.5, lvl: 2.0, weight: 0.07 },
-    rare:      { pct: 0.35, eff: 13.2, lvl: 2.5, weight: 0.32 },
-    epic:      { pct: 1.0,  eff: 7.2,  lvl: 3.0, weight: 1.5 },
-    legendary: { pct: 1.0,  eff: 7.2,  lvl: 3.0, weight: 1.5 }, // legendaries are multiplier-type; rift keeps epics
+  auto: {
+    common:    { pct: 0.15, eff: 24.5, weight: 0.07 },
+    rare:      { pct: 0.35, eff: 13.2, weight: 0.32 },
+    epic:      { pct: 1.0,  eff: 7.2,  weight: 1.5 },
+    legendary: { pct: 1.0,  eff: 7.2,  weight: 1.5 },
   },
 };
 
-// Best fully-ramped rarity available at a stage (gate + ramp).
 function bestRarity(stageId) {
   if (stageId >= RARITY_GATES.legendary + GATE_RAMP - 1) return 'legendary';
   if (stageId >= RARITY_GATES.epic + GATE_RAMP - 1) return 'epic';
   if (stageId >= RARITY_GATES.rare + GATE_RAMP - 1) return 'rare';
   return 'common';
 }
-const clickSlots = (s) => 1 + (s >= 4 ? 1 : 0) + (s >= 8 ? 1 : 0);
+// Slot 2 at stage 4 (EQUIP_SLOT_UNLOCKS); slot 3 at 30 almanac entries ≈ stage 6.
+const clickSlots = (s) => 1 + (s >= 4 ? 1 : 0) + (s >= 6 ? 1 : 0);
 const riftSlots = (s) => 1 + (s >= 6 ? 1 : 0) + (s >= 11 ? 1 : 0);
 
-// Gear maturity within a stage: stacks for the CURRENT stage's tier fill over
-// ~half the stage; carried gear from earlier stages keeps the floor at ~60%.
-const maturity = (p) => 0.6 + 0.4 * Math.min(1, p * 2);
+/**
+ * Stage-aware gear maturity (cold-start honest):
+ * - Stages 1-2: a fresh run has NO inventory — stacks ramp from 0 over the
+ *   stage (drops fill them; drop pacing is fast at 14-item pools).
+ * - Tier-boundary stages (first stage where a new rarity is the best pick:
+ *   5/9/14): carried gear keeps a 0.6 floor while the new tier fills.
+ * - Interior stages: full carry from the previous stage (≈1.0 maturity).
+ */
+function maturity(stageId, p) {
+  if (stageId <= 2) return Math.min(1, 0.15 + 0.85 * Math.min(1, p * 1.5));
+  const tierBoundary =
+    stageId === RARITY_GATES.rare + GATE_RAMP - 1 ||
+    stageId === RARITY_GATES.epic + GATE_RAMP - 1 ||
+    stageId === RARITY_GATES.legendary + GATE_RAMP - 1;
+  if (tierBoundary) return 0.6 + 0.4 * Math.min(1, p * 2);
+  return 1;
+}
+
+/**
+ * Honest enhance levels: highest level whose CUMULATIVE cost fits within
+ * ENHANCE_BUDGET_FRAC of the stage's expected income (≈ stage cost anchor
+ * scale — quanta income tracks the anchor by construction of the curve).
+ */
+function derivedLevel(stageId, rarity) {
+  const budget = ENTITY_COST_ANCHORS[stageId] * ENHANCE_BUDGET_FRAC;
+  const base = ENTITY_COST_ANCHORS[stageId] * RARITY_FACTOR[rarity] * ENHANCE_COST_FACTOR;
+  let total = 0;
+  let level = 1;
+  while (level < LEVEL_CAPS[rarity]) {
+    const next = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
+    if (total + next > budget) break;
+    total += next;
+    level += 1;
+  }
+  return level;
+}
+const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.25;
 
 function gearClickMult(stageId, p) {
   const E = (stageId - 1) + p;
   const g = Math.pow(STAGE_POWER_BASE, E);
-  const q = GEAR.click[bestRarity(stageId)];
-  const stack = (q.pct * q.eff * q.lvl * maturity(p) * g) / 100;
+  const r = bestRarity(stageId);
+  const q = GEAR.click[r];
+  const lvl = levelMult(derivedLevel(stageId, r));
+  const stack = (q.pct * q.eff * lvl * maturity(stageId, p) * g) / 100;
   return Math.pow(1 + stack, clickSlots(stageId));
 }
 function gearAutoFlat(stageId, p) {
   const E = (stageId - 1) + p;
   const g = Math.pow(AUTO_STAGE_POWER_BASE, E);
-  const q = GEAR.auto[bestRarity(stageId)];
-  const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * q.lvl * maturity(p)) / 100;
-  // One rift slot tends to hold an Auto Power (auto_mult) stack late: ~×1.5.
-  const autoPowerMult = stageId >= 6 ? 1.5 : 1;
+  const r = bestRarity(stageId);
+  const q = GEAR.auto[r];
+  const lvl = levelMult(derivedLevel(stageId, r));
+  const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * lvl * maturity(stageId, p)) / 100;
+  const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power late
   return perSlot * riftSlots(stageId) * autoPowerMult;
 }
 
+/**
+ * Gear-only crit: substat crit chance (rare+ click gear) + combo; crit mult
+ * bounded by CRIT_MULT_GEAR_CAP. `critGear` 0..1 scales how crit-focused the
+ * loadout is (median 0.5 for calibration; 0 / 1 for the spread invariant).
+ */
+function critFactor(stageId, combo, critGear = 0.5) {
+  const r = bestRarity(stageId);
+  const statCount = { common: 0, rare: 1, epic: 2, legendary: 3 }[r];
+  const rarityScale = { common: 0, rare: 1, epic: 1.5, legendary: 2.2 }[r];
+  const lvl = levelMult(derivedLevel(stageId, r));
+  // critChance substat: base 0.4% × rarityScale × lvl per stat; assume critGear
+  // share of (slots × statCount) stats are crit-flavored.
+  const chanceAdd = 0.004 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
+  const chance = Math.min(CRIT_MAX, chanceAdd + combo * 0.003);
+  // critMult substat: base 4% × rarityScale × lvl per stat (scales=false now).
+  const multAdd = 0.04 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
+  const critMult = 1.5 * Math.min(CRIT_MULT_GEAR_CAP, 1 + multAdd);
+  return 1 + chance * (critMult - 1);
+}
+
 // ---------------------------------------------------------------------------
-// Entropy simulation
+// Entropy simulation (gear-only)
 // ---------------------------------------------------------------------------
-function simulateStageEntropy(stageIdx, sk, state, profile, thresholds, calibrateTo) {
+function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo) {
   const stage = STAGES[stageIdx];
   let { quanta, entropy } = state;
   const floor = stageIdx === 0 ? 0 : thresholds[stageIdx - 1];
   let elapsed = 0, safety = 0, activeClock = 0, nextFusionAt = profile.fusionIntervalSec || Infinity;
   const src = { click: 0, auto: 0, fusion: 0 };
   const combo = profile.combo ?? 0;
-  const stageMaxSec = calibrateTo ?? BASE_CFG.maxHoursPerStage * 3600;
+  const stageMaxSec = calibrateTo ?? 1000 * 3600;
   while (safety++ < 400000) {
     if (entropy >= thresholds[stageIdx]) break;
     if (elapsed >= stageMaxSec) break;
-    // Gate progress: real entropy progress against the stage threshold.
     const p = Math.min(1, Math.max(0, (entropy - floor) / Math.max(1e-9, thresholds[stageIdx] - floor)));
-    const mods = computeSkillMods(sk);
-    const cp = Math.max(1, mods.clickMult) * gearClickMult(stage.id, p) * (MECHANIC_CLICK_BOOST[stage.mechanic] ?? 1);
-    const eCrit = 1 + critChance(sk.crit, combo) * (critMultiplier(sk.crit, mods) - 1);
+    const cp = Math.max(1, gearClickMult(stage.id, p)) * CLICK_OUTPUT_MULTIPLIER * (MECHANIC_CLICK_BOOST[stage.mechanic] ?? 1);
+    const eCrit = critFactor(stage.id, combo, profile.critGear ?? 0.5);
     const clickG = profile.cps * cp * eCrit * comboMult(combo) * profile.activeFraction;
-    const autoG = Math.max(0, mods.autoAdd * mods.autoMult) + gearAutoFlat(stage.id, p);
+    const autoG = gearAutoFlat(stage.id, p);
     const eRate = clickG * ENTROPY_CFG.wClick + autoG * ENTROPY_CFG.wAuto;
     let dt = 30;
     if (eRate > 0) dt = Math.min(dt, Math.max(0.5, (thresholds[stageIdx] - entropy) / eRate / 8));
@@ -225,7 +212,6 @@ function simulateStageEntropy(stageIdx, sk, state, profile, thresholds, calibrat
     elapsed += dt;
     activeClock += profile.activeFraction * dt;
     if (profile.fusionIntervalSec && activeClock >= nextFusionAt) {
-      // Phase 4-1 burst rule: scaled by cost paid vs the player-stage reference.
       const costPaid = quanta * ENTROPY_CFG.fusionCostFrac;
       const refCost = ENTITY_COST_ANCHORS[stage.id] * ENTROPY_CFG.burstRefCostFrac;
       const scale = refCost > 0 ? Math.min(1, costPaid / refCost) : 1;
@@ -234,21 +220,20 @@ function simulateStageEntropy(stageIdx, sk, state, profile, thresholds, calibrat
       quanta -= costPaid;
       nextFusionAt += profile.fusionIntervalSec;
     }
-    let bought = true;
-    while (bought) ({ bought, quanta } = tryOnePurchase(sk, quanta, stageIdx));
+    // Enhance sink: levels are derived (paid implicitly); also drain a share of
+    // income so the bank doesn't balloon (purchases/enhance spending).
+    quanta = Math.max(0, quanta - (clickG + autoG) * dt * 0.3);
   }
-  if (stageIdx < STAGES.length - 1) sk.sp += SP_ON_ADVANCE[stageIdx] ?? 1;
   const infeasible = entropy < thresholds[stageIdx];
   return { elapsed, state: { quanta, entropy }, src, infeasible };
 }
 
 function runEntropy(profile, thresholds) {
-  const sk = createSkills();
   let state = { quanta: 0, entropy: 0 };
   const perStage = [], srcTotal = { click: 0, auto: 0, fusion: 0 };
   const perStageSrc = [];
   for (let i = 0; i < STAGES.length; i++) {
-    const r = simulateStageEntropy(i, sk, state, profile, thresholds);
+    const r = simulateStageEntropy(i, state, profile, thresholds);
     state = r.state;
     perStage.push(r.elapsed);
     perStageSrc.push(r.src);
@@ -258,35 +243,26 @@ function runEntropy(profile, thresholds) {
   return { total: perStage.reduce((a, b) => a + b, 0), perStage, perStageSrc, srcTotal };
 }
 
-// Per-stage span binary search: find thresholds so the reference profile
-// crosses each stage in exactly realPlayTargetSec under real gate dynamics.
-// State (skills/quanta/entropy) carries across stages from the accepted run.
 function calibrateThresholds(profile) {
   const thresholds = new Array(STAGES.length).fill(Infinity);
-  const sk = createSkills();
   let state = { quanta: 0, entropy: 0 };
   for (let i = 0; i < STAGES.length; i++) {
     const target = STAGES[i].realPlayTargetSec;
     const floor = i === 0 ? 0 : thresholds[i - 1];
-    let lo = 1e-6, hi = 1; // span bounds, grown geometrically until too slow
+    let hi = 1;
     const trySpan = (span) => {
       thresholds[i] = floor + span;
-      const skCopy = { ...sk, crossNodes: new Set(sk.crossNodes) };
-      const r = simulateStageEntropy(i, skCopy, { ...state }, profile, thresholds, target * 50);
-      return { r, skCopy };
+      return simulateStageEntropy(i, { ...state }, profile, thresholds, target * 50);
     };
-    while (trySpan(hi).r.elapsed < target && hi < 1e60) hi *= 4;
-    lo = hi / 4;
+    while (trySpan(hi).elapsed < target && hi < 1e60) hi *= 4;
+    let lo = hi / 4;
     for (let iter = 0; iter < 40; iter++) {
-      const mid = Math.sqrt(lo * hi); // geometric midpoint (spans are exponential)
-      if (trySpan(mid).r.elapsed < target) lo = mid; else hi = mid;
+      const mid = Math.sqrt(lo * hi);
+      if (trySpan(mid).elapsed < target) lo = mid; else hi = mid;
     }
     const span = Math.sqrt(lo * hi);
     thresholds[i] = floor + span;
-    const accepted = trySpan(span);
-    state = accepted.r.state;
-    sk.click = accepted.skCopy.click; sk.auto = accepted.skCopy.auto; sk.crit = accepted.skCopy.crit;
-    sk.sp = accepted.skCopy.sp; sk.crossNodes = accepted.skCopy.crossNodes;
+    state = trySpan(span).state;
   }
   return thresholds;
 }
@@ -304,47 +280,61 @@ const PROFILES = {
 };
 
 const thresholds = calibrateThresholds(PROFILES.reference);
-console.log('=== Calibrated ENTROPY_THRESHOLDS (reference pinned to realPlayTargetSec) ===');
+console.log('=== Calibrated ENTROPY_THRESHOLDS (gear-only, reference pinned to realPlayTargetSec) ===');
 STAGES.forEach((s, i) => console.log(`  ${String(s.id).padStart(2)}: ${thresholds[i].toExponential(3)},  // ${s.name} — target ${fmt(s.realPlayTargetSec)}`));
 
-console.log('\n=== Profiles vs calibrated thresholds (REAL gate progress) ===');
-console.log('profile    | total | entropy src click/auto/fusion');
+console.log('\n=== Profiles vs calibrated thresholds ===');
 const results = {};
 for (const [name, p] of Object.entries(PROFILES)) {
   const r = runEntropy(p, thresholds);
   results[name] = r;
   const tot = r.srcTotal.click + r.srcTotal.auto + r.srcTotal.fusion;
   const share = tot > 0 ? ['click', 'auto', 'fusion'].map((k) => `${((r.srcTotal[k] / tot) * 100).toFixed(0)}%`).join('/') : '-';
-  console.log(`${name.padEnd(10)} | ${fmt(r.total).padStart(7)}${r.infeasibleAt ? ` (stuck@${r.infeasibleAt})` : ''} | ${share}`);
+  console.log(`${name.padEnd(10)} | ${fmt(r.total).padStart(7)}${r.infeasibleAt ? ` (stuck@${r.infeasibleAt})` : ''} | click/auto/fusion ${share}`);
 }
 
-// Assertions (design invariants from the Phase 4-1 review)
+// Crit spread: best-crit vs no-crit loadout (reference otherwise).
+const noCrit = runEntropy({ ...PROFILES.reference, critGear: 0 }, thresholds);
+const maxCrit = runEntropy({ ...PROFILES.reference, critGear: 1 }, thresholds);
+
+// Threshold-relative meta constants (write into balance.ts).
+const BIG_CRUNCH_KB = 0.5 * thresholds[2];   // reachable mid-stage-3 (as v16)
+const BIG_RIP_KB = 2.2 * thresholds[8];      // same relative slot between st9/st10 gates
+console.log('\n=== Threshold-relative meta constants ===');
+console.log(`BIG_CRUNCH_ENTROPY_KB = ${BIG_CRUNCH_KB.toExponential(3)} (0.5 × T[3])`);
+console.log(`BIG_RIP_ENTROPY_KB    = ${BIG_RIP_KB.toExponential(3)} (2.2 × T[9])`);
+// Prestige costs: anchored so Lv1 ≈ first affordable at stage 8 (as v16), ×~5/level.
+const PRESTIGE_BASE = thresholds[7] * 0.5;
+console.log(`PRESTIGE_COSTS_KB     = [${[0, 1, 2, 3, 4].map((i) => (PRESTIGE_BASE * Math.pow(5, i)).toExponential(2)).join(', ')}] (0.5 × T[8] × 5^level)`);
+console.log(`endgame eyeball: entropy@16 = ${thresholds[15].toExponential(2)}, mass reward ≈ entropy^0.4 = ${Math.pow(thresholds[15], 0.4).toExponential(2)}`);
+
+// Invariants
 let failures = 0;
 const assertish = (ok, msg) => { if (!ok) { failures++; console.log(`  ✗ ${msg}`); } else console.log(`  ✓ ${msg}`); };
 console.log('\n=== Invariants ===');
-// 1. Reference profile lands near target at every stage (self-consistency of
-//    the calibration fixed point — real gate progress vs time-proportional).
 const ref = results.reference;
 let worst = 0;
 ref.perStage.forEach((t, i) => { worst = Math.max(worst, t / STAGES[i].realPlayTargetSec, STAGES[i].realPlayTargetSec / t); });
 assertish(worst <= 1.5, `reference within 1.5× of target at every stage (worst ${worst.toFixed(2)}×)`);
-// 2. Active play dominates: click+fusion share ≥ 50% for the reference at
-//    every stage (the entropy gate must reward active play).
 let minActiveShare = 1;
 ref.perStageSrc.forEach((s) => {
   const tot = s.click + s.auto + s.fusion;
   if (tot > 0) minActiveShare = Math.min(minActiveShare, (s.click + s.fusion) / tot);
 });
 assertish(minActiveShare >= 0.5, `active (click+fusion) entropy share ≥ 50% every stage (min ${(minActiveShare * 100).toFixed(0)}%)`);
-// 3. Idle floor parity: the pre-redesign economy stalled idle at stage 14;
-//    Phase 4-1 must not regress below stage 12 (the proper idle floor is a
-//    Phase 4-4 work item — offline entropy floor).
+// Idle viability + active-play premium: the game's own backlog wants idle
+// progression HELPED (offline entropy floor, 4-4), not hard-walled — walling
+// idle would require crushing wAuto until rift gear stops mattering at all.
+// So: idle must reach stage 12+, and active play must pay ≥4× time savings.
 const idleReach = results.idle.infeasibleAt ?? STAGES.length + 1;
-assertish(idleReach >= 12, `idle reaches stage ≥ 12 before stalling (reaches ${idleReach})`);
-// 4. Casual/hardcore spread bounded near current (~123×); compression is a
-//    Phase 4-4 lever (wClick:wAuto, fusionValueSec, late cost wall).
+assertish(idleReach >= 12, `idle reaches stage ≥ 12 (reaches ${idleReach})`);
+const idlePremium = results.idle.total / results.reference.total;
+assertish(!Number.isFinite(results.idle.total) || idlePremium >= 4,
+  `active play pays: idle ≥ 4× slower than reference (${Number.isFinite(idlePremium) ? idlePremium.toFixed(1) : 'INF'}×)`);
 const spread = results.casual.total / results.hardcore.total;
 assertish(spread >= 2 && spread <= 150, `casual/hardcore spread in [2, 150]× (${spread.toFixed(1)}×) — 4-4 compresses`);
+const critSpread = noCrit.total / maxCrit.total;
+assertish(Number.isFinite(critSpread) && critSpread <= 3, `best-crit vs no-crit total time ≤ 3× (${critSpread.toFixed(2)}×)`);
 
 console.log(failures === 0 ? '\nALL INVARIANTS PASS' : `\n${failures} INVARIANT(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);

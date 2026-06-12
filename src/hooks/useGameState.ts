@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from 'react';
 import { gameReducer, createInitialGameState } from '../game/reducer';
-import { clearSave, loadGame, saveGame } from '../game/storage';
+import { clearSave, loadGame, SAVE_BACKUP_V16_KEY, saveGame } from '../game/storage';
 import { TUNING } from '../game/constants';
 import {
   getAutoRate,
@@ -36,8 +36,15 @@ function safeParseSave(): ReturnType<typeof loadGame> {
   try {
     return loadGame();
   } catch (e) {
-    console.error('[useGameState] Failed to load save, resetting:', e);
-    clearSave();
+    // Back up the raw save instead of deleting it — a load crash here would
+    // otherwise destroy the player's progress (autosave overwrites next tick).
+    console.error('[useGameState] Failed to load save, backing up and resetting:', e);
+    try {
+      const raw = localStorage.getItem('cosmic_coalescence_save_v7');
+      if (raw && !localStorage.getItem(SAVE_BACKUP_V16_KEY)) {
+        localStorage.setItem(SAVE_BACKUP_V16_KEY, raw);
+      }
+    } catch { /* quota — nothing else we can do */ }
     return null;
   }
 }
@@ -88,14 +95,12 @@ export function useGameState(): UseGameStateResult {
       const offlineEndMs = payload.lastSaveAt + awaySec * 1000;
       const stage = STAGES[Math.min(payload.stageIdx, STAGES.length - 1)];
       const modifiers = getActiveModifiers(
-        payload.skills,
         {
           currentQuanta: payload.quanta,
           stagesCleared: payload.stageIdx,
           secondsInStage: Math.max(0, (now - payload.stageStartedAt) / 1000),
           stageId: stage.id,
           gateProgress01: getEntropyGateProgress(payload.entropy ?? 0, payload.stageIdx),
-          clickLevel: payload.skills.click.level,
         },
         getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? [])]),
         payload.prestigeUpgrades,
@@ -126,7 +131,6 @@ export function useGameState(): UseGameStateResult {
       const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
       const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);
       const gaugeRate = getCosmicTimeFillRate(
-        payload.skills.time.level,
         modifiers,
         1,
         payload.stageIdx + 1,
@@ -159,8 +163,15 @@ export function useGameState(): UseGameStateResult {
           : payload.dailyCheckIns,
       };
       } catch (e) {
-        console.error('[useGameState] Corrupted save data, resetting:', e);
-        clearSave();
+        // Back up the raw save before resetting — a hydrate crash must never
+        // silently destroy progress (the next autosave would overwrite it).
+        console.error('[useGameState] Corrupted save data, backing up and resetting:', e);
+        try {
+          const raw = localStorage.getItem('cosmic_coalescence_save_v7');
+          if (raw && !localStorage.getItem(SAVE_BACKUP_V16_KEY)) {
+            localStorage.setItem(SAVE_BACKUP_V16_KEY, raw);
+          }
+        } catch { /* quota */ }
         return createInitialGameState(now);
       }
     },
@@ -219,7 +230,6 @@ export function useGameState(): UseGameStateResult {
     state.cumulativeBoost,
     state.condensedMass,
     state.echoes,
-    state.skillPoints,
     state.shopBoosts,
     state.hasOfflineStorageUpgrade,
     state.hasSeenCashShopTutorial,
