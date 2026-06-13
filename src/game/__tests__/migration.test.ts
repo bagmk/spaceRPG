@@ -222,6 +222,49 @@ describe('save migration', () => {
     expect(migrated.entropy).toBeCloseTo(STAGES[15].entropyThreshold * 2, 4);
   });
 
+  it('v18 seeds codex/hint fields for existing saves (no NEW flood, no intro replay)', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 17,
+        almanacCollected: { 1: ['s1_01', 's1_02'], 2: ['s2_01'] },
+      }),
+    );
+    const migrated = loadGame()!;
+    // Veteran: everything already collected is marked seen, intro hints skipped.
+    expect([...migrated.codexSeenIds].sort()).toEqual(['s1_01', 's1_02', 's2_01']);
+    expect([...migrated.seenPanelHints].sort()).toEqual(['codex', 'equip', 'fuse']);
+  });
+
+  it('v18 preserves explicit codex/hint fields (no re-seed on every load)', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 18,
+        almanacCollected: { 1: ['s1_01', 's1_02'] },
+        codexSeenIds: ['s1_01'],
+        seenPanelHints: ['codex'],
+      }),
+    );
+    const migrated = loadGame()!;
+    // A genuine v18 save keeps its own progress (s1_02 stays NEW; equip/fuse
+    // hints still pending) instead of being re-seeded as a veteran.
+    expect(migrated.codexSeenIds).toEqual(['s1_01']);
+    expect(migrated.seenPanelHints).toEqual(['codex']);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

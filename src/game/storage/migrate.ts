@@ -266,6 +266,8 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     hasOfflineStorageUpgrade: Boolean(record.hasOfflineStorageUpgrade),
     totalShopSpentUSD: 0,
     prestigeUpgrades: (record as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    codexSeenIds: [],
+    seenPanelHints: [],
     ...convertEntityModelV14(record),
   };
 }
@@ -390,6 +392,10 @@ export function validateV5(
     hasOfflineStorageUpgrade: parsed.hasOfflineStorageUpgrade ?? false,
     totalShopSpentUSD: parsed.totalShopSpentUSD,
     prestigeUpgrades: (parsed as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    // v18 codex/hint fields — preserved if present; finalizeV17 seeds veteran
+    // defaults for pre-v18 saves (where these are absent → []).
+    codexSeenIds: isStringArray((parsed as any).codexSeenIds) ? (parsed as any).codexSeenIds : [],
+    seenPanelHints: isStringArray((parsed as any).seenPanelHints) ? (parsed as any).seenPanelHints : [],
     ...convertEntityModelV14(parsed),
   };
 }

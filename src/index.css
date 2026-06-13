@@ -1229,6 +1229,33 @@ button.hud-stage-title--clickable:hover {
 }
 .almanac-card--locked .almanac-card__era { color: rgba(255, 255, 255, 0.18); }
 
+/* v18: NEW-discovery badge + set-chip dot + first-visit hint */
+.almanac-card__new {
+  position: absolute;
+  top: -5px;
+  left: -3px;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: #ff5d73;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.codex-set-chip { position: relative; }
+.codex-set-chip__dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4a8fff;
+  box-shadow: 0 0 6px #4a8fff;
+}
+.fuse-loop-hint { font-size: 10.5px; color: rgba(255, 255, 255, 0.45); text-align: center; }
+
 /* ════ Equip curation: hero number + slim slots + pick deltas ════ */
 .equip-purpose { font-size: 10.5px; color: rgba(255, 255, 255, 0.4); }
 

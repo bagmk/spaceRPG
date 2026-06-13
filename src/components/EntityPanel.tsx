@@ -234,6 +234,10 @@ interface Props {
   fusionPity: number;
   lastFusionEvent: FusionEvent | null;
   almanacCollected: Record<number, string[]>;
+  /** Entity ids already seen in the codex — drives the NEW-discovery badge (v18). */
+  codexSeenIds?: string[];
+  /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
+  seenPanelHints?: string[];
   quanta: number;
   stats: PanelStats;
   language: Lang;
@@ -245,9 +249,13 @@ interface Props {
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
   onUITap?: () => void;
+  /** Snapshot all collected ids as seen (clears NEW badges). */
+  onMarkCodexSeen?: () => void;
+  /** Record a first-visit hint as shown. */
+  onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab, setTab] = useState<PanelPage>(page);
@@ -260,6 +268,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const power: GearPower = { stageId: currentStageId, gateProgress01 };
   const [selectedSetId, setSelectedSetId] = useState<string>('all');
   const [showMissing, setShowMissing] = useState(false);
+  // v18: NEW-discovery badge snapshot + first-visit hint visibility (per session).
+  const [codexNew, setCodexNew] = useState<Set<string>>(new Set());
+  const [hintShow, setHintShow] = useState<Record<string, boolean>>({});
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   // Equip: hero-stat breakdown expand, slot-detail inspector, on-demand filter.
   const [statsExpanded, setStatsExpanded] = useState(false);
@@ -406,6 +417,34 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [inspectedEntityId]);
 
+  // Every discovered id (almanac record ∪ owned stacks) — drives the NEW badge.
+  const collectedAllIds = useMemo(() => {
+    const s = new Set<string>(collectedIdSet(almanacCollected));
+    for (const e of inventory) if (e.count > 0) s.add(e.entityId);
+    return s;
+  }, [almanacCollected, inventory]);
+
+  // On entering the Codex, snapshot what's NEW since last visit; on leaving,
+  // persist all-collected as seen (badges stay for the whole session view).
+  useEffect(() => {
+    if (tab !== 'lab') return undefined;
+    const seen = new Set(codexSeenIds ?? []);
+    const fresh = new Set<string>();
+    for (const id of collectedAllIds) if (!seen.has(id)) fresh.add(id);
+    setCodexNew(fresh);
+    return () => { onMarkCodexSeen?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  // First-visit hint per tab: snapshot "show" before marking it seen.
+  useEffect(() => {
+    const key = tab === 'lab' ? 'codex' : tab;
+    if ((seenPanelHints ?? []).includes(key) || hintShow[key]) return;
+    setHintShow((m) => ({ ...m, [key]: true }));
+    onMarkPanelHint?.(key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
   const TABS: { id: PanelPage; key: Parameters<typeof t>[1] }[] = [
     { id: 'lab', key: 'tabCodex' },
     { id: 'equip', key: 'tabEquip' },
@@ -507,7 +546,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 <div className="codex-hero__bar">
                   <div className="codex-hero__fill" style={{ width: `${codexPct}%` }} />
                 </div>
-                <div className="codex-hero__caption">{t(language, 'codexPurpose')}</div>
+                {hintShow['codex'] ? <div className="codex-hero__caption">{t(language, 'codexPurpose')}</div> : null}
                 {closest ? (
                   <div className="codex-hero__nudge">
                     {`▸ ${t(language, 'codexClosest').replace('{name}', closest.label).replace('{n}', String(closest.remaining))}`}
@@ -532,6 +571,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   const done = members.filter(isCollected).length;
                   const full = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
                   const near = !full && members.length - done > 0 && members.length - done <= 2;
+                  const hasNew = members.some((m) => codexNew.has(m.id));
                   return (
                     <button
                       key={cs.id}
@@ -540,6 +580,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       style={{ '--set-accent': cs.accent } as CSSProperties}
                       onClick={() => { setSelectedSetId(cs.id); onUITap?.(); }}
                     >
+                      {hasNew ? <span className="codex-set-chip__dot" aria-hidden="true" /> : null}
                       <span className="codex-set-chip__icon">{cs.icon}</span>
                       <span className="codex-set-chip__label">{codexSetLabel(cs, language)}</span>
                       <span className="codex-set-chip__count">{`${done}/${members.length}`}</span>
@@ -600,6 +641,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                   style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
                                   onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
                                 >
+                                  {collected && codexNew.has(entity.id) ? (
+                                    <span className="almanac-card__new">NEW</span>
+                                  ) : null}
                                   <div className="almanac-card__glyph">
                                     {collected
                                       ? <EntityGlyph entity={entity} color={rarityColor} />
@@ -653,7 +697,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const dominantKey = setInfo?.key;
           return (
             <div className="equip-page">
-              <div className="equip-purpose">{t(language, 'equipPurpose')}</div>
+              {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
               {/* Click vs Rift(auto) gear toggle — plain-outcome labels */}
               <div className="equip-cat-toggle">
                 {(['click', 'rift'] as EquipCategory[]).map((cat) => (
@@ -863,6 +907,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
           return (
             <div className="fuse-page">
+              {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
               {/* The altar — the whole bet (stake / cost / odds / pity) on one lever */}
               <div className={`gacha-altar ${ready ? 'gacha-altar--ready' : ''}`}>
                 <div className="gacha-altar__slots">

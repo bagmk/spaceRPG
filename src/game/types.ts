@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 17;
+  version: 18;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -283,6 +283,10 @@ export interface SaveState {
   fusionPity: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
   peakEntropy: number;
+  /** Codex entity ids already seen — drives the "NEW discovery" badge (v18). */
+  codexSeenIds: string[];
+  /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
+  seenPanelHints: string[];
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

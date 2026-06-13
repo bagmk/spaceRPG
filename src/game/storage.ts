@@ -50,7 +50,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 17;
+export const SAVE_SCHEMA_VERSION = 18;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -166,6 +166,8 @@ export function createSaveSnapshot(state: GameState): SaveState {
     fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
+    codexSeenIds: state.codexSeenIds,
+    seenPanelHints: state.seenPanelHints,
   };
 }
 
@@ -324,11 +326,23 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
     condensedMass += Math.min(10, Math.floor(totalLevels / 10));
   }
 
+  // 5. v18 codex/hint fields. Existing players (sourceVersion < 18) are seeded
+  // as "already seen" so the update doesn't flash their whole collection as NEW
+  // or replay the first-visit intro lines; new saves start empty.
+  const codexSeenIds = sourceVersion < 18
+    ? [...new Set(Object.values(state.almanacCollected ?? {}).flat())]
+    : (state.codexSeenIds ?? []);
+  const seenPanelHints = sourceVersion < 18
+    ? ['codex', 'equip', 'fuse']
+    : (state.seenPanelHints ?? []);
+
   return {
     ...state,
     entropy,
     pendingCondenseEntropy,
     condensedMass,
+    codexSeenIds,
+    seenPanelHints,
     endingProgressFlags: {
       ...state.endingProgressFlags,
       criticalUpgradedThisUniverse,
@@ -435,11 +449,12 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17) {
-      // v14..v17 share a field schema (v17 simply lacks the legacy skill
-      // fields — validateV5 treats them as optional). v15 decoupled entity
-      // ids; v16 re-anchored gear power; v17 removed the skill tree
-      // (finalizeV17 derives flags, remaps entropy and strips the fields).
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18) {
+      // v14..v18 share a field schema (v17 dropped the legacy skill fields;
+      // v18 added codexSeenIds/seenPanelHints — both optional in validateV5).
+      // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
+      // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
+      // and seeds the v18 codex/hint fields for pre-v18 saves).
       const migrated = validateV5(repairSave(parsed as Partial<SaveState>));
       if (!migrated) return null;
       return {

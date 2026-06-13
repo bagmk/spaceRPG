@@ -128,5 +128,7 @@ export function createInitialGameState(now: number): GameState {
     fusionPity: 0,
     prestigeUpgrades: createDefaultPrestigeUpgrades(),
     peakEntropy: 0,
+    codexSeenIds: [],
+    seenPanelHints: [],
   };
 }

@@ -101,6 +101,7 @@ export const STRINGS = {
   fuseFuel:         { en: 'Fuel', ko: '연료' },
   fuseTrios:        { en: '{n} fusable', ko: '{n}회 가능' },
   fuseAgainAuto:    { en: 'Auto-fill & fuse again', ko: '자동 채우고 다시 융합' },
+  fuseLoopHint:     { en: 'Feed 3 of the same rarity to forge a stronger one — get lucky and the rarity climbs', ko: '같은 등급 3개를 넣으면 더 강한 하나로 — 운이 좋으면 등급 상승' },
   hudViewInfo:   { en: 'View Info / Tutorial', ko: '정보 / 튜토리얼 보기' },
   hudSettings:   { en: 'Settings', ko: '설정' },
   scaleTitle:    { en: 'Scale',    ko: '축척' },

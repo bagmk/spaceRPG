@@ -61,6 +61,8 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     fusionPity: payload.fusionPity ?? 0,
     riftSlots: payload.riftSlots ?? [],
     unlockedRiftSlotCount: payload.unlockedRiftSlotCount ?? 1,
+    codexSeenIds: payload.codexSeenIds ?? [],
+    seenPanelHints: payload.seenPanelHints ?? [],
   };
 }
 
@@ -93,6 +95,24 @@ export function handleMarkTutorialFlag(state: GameState, action: MarkTutorialFla
 export function handleMarkCashShopTutorialSeen(state: GameState): GameState {
   if (state.hasSeenCashShopTutorial) return state;
   return { ...state, hasSeenCashShopTutorial: true };
+}
+
+type MarkPanelHintAction = Extract<GameAction, { type: 'MARK_PANEL_HINT' }>;
+
+/** Snapshot every collected entity id as "seen" (clears the codex NEW badge). */
+export function handleMarkCodexSeen(state: GameState): GameState {
+  const seen = new Set<string>(state.codexSeenIds);
+  for (const ids of Object.values(state.almanacCollected)) {
+    for (const id of ids) seen.add(id);
+  }
+  if (seen.size === state.codexSeenIds.length) return state;
+  return { ...state, codexSeenIds: [...seen] };
+}
+
+/** Record a first-visit panel hint as shown (idempotent). */
+export function handleMarkPanelHint(state: GameState, action: MarkPanelHintAction): GameState {
+  if (state.seenPanelHints.includes(action.hintId)) return state;
+  return { ...state, seenPanelHints: [...state.seenPanelHints, action.hintId] };
 }
 
 export function handleMarkTutorialStageSeen(

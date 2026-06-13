@@ -251,6 +251,8 @@ export function useGameState(): UseGameStateResult {
     state.selectedEndingId,
     state.singularityUnlocks,
     state.prestigeUpgrades,
+    state.codexSeenIds,
+    state.seenPanelHints,
   ]);
 
   return {

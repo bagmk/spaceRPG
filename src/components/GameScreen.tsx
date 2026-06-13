@@ -759,6 +759,8 @@ export function GameScreen({
             fusionPity={state.fusionPity}
             lastFusionEvent={state.lastFusionEvent}
             almanacCollected={state.almanacCollected}
+            codexSeenIds={state.codexSeenIds}
+            seenPanelHints={state.seenPanelHints}
             quanta={state.quanta}
             stats={{
               clickPower: getClickPower(modifiers),
@@ -783,6 +785,8 @@ export function GameScreen({
               soundManager?.playEntityLevelUp();
             }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
+            onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
+            onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
             onClose={() => { setPanelView(null); soundManager?.playUIClose(); }}
             onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
             onUITap={() => soundManager?.playUITap()}

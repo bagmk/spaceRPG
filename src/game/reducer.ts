@@ -49,6 +49,8 @@ import {
   handleSetTutorialDone,
   handleMarkTutorialFlag,
   handleMarkCashShopTutorialSeen,
+  handleMarkCodexSeen,
+  handleMarkPanelHint,
   handleMarkTutorialStageSeen,
   handleClearClickEvent,
   handleClearFusionEvent,
@@ -119,6 +121,8 @@ export type GameAction =
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
+  | { type: 'MARK_CODEX_SEEN' }
+  | { type: 'MARK_PANEL_HINT'; hintId: string }
   | { type: 'PURCHASE_ENTITY'; entityId: string }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
@@ -183,6 +187,8 @@ export function toPersistentState(state: GameState): PersistentGameState {
     fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
+    codexSeenIds: state.codexSeenIds,
+    seenPanelHints: state.seenPanelHints,
   };
 }
 
@@ -219,6 +225,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'MARK_TUTORIAL_STAGE_SEEN': return handleMarkTutorialStageSeen(state, action);
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
     case 'MARK_CASH_SHOP_TUTORIAL_SEEN': return handleMarkCashShopTutorialSeen(state);
+    case 'MARK_CODEX_SEEN':       return handleMarkCodexSeen(state);
+    case 'MARK_PANEL_HINT':       return handleMarkPanelHint(state, action);
     case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
     case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);
     case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
