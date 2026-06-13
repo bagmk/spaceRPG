@@ -56,6 +56,35 @@ export function getRarityGateRamp(rarity: EntityRarity, stageId: number): number
   return Math.min(1, (stageId - gate + 1) / RARITY_GATE_RAMP_STAGES);
 }
 
+/**
+ * Stage-independent rarity drop SHARE (normalized base weights) — the headline
+ * "how rare is each tier" number shown in the codex (R6). Crit/gate bias and
+ * stage pooling are excluded so the figure is stable and easy to read. Mythic
+ * is 0 here (fusion-only) and dropped from the normalization.
+ */
+export function getBaseRarityDropShare(): Record<EntityRarity, number> {
+  const total = RARITY_ORDER.reduce((sum, r) => sum + DROP_RARITY_WEIGHTS[r], 0);
+  const out = {} as Record<EntityRarity, number>;
+  for (const r of RARITY_ORDER) out[r] = total > 0 ? DROP_RARITY_WEIGHTS[r] / total : 0;
+  return out;
+}
+
+/**
+ * Per-entity drop share among its own stage's pool: the rarity share divided by
+ * how many entities of that rarity live on the same stage. Answers "if a drop
+ * lands in this stage's pool, how likely is it THIS entity?" (R6 per-card).
+ * Mythic returns 0 (never drops). Time entities don't backfill but still drop
+ * on their home stage, so they're counted normally here.
+ */
+export function getEntityDropShare(entity: StageEntity): number {
+  if (entity.rarity === 'mythic') return 0;
+  const share = getBaseRarityDropShare()[entity.rarity] ?? 0;
+  const sameRarityCount = getEntitiesForStage(entity.stageId).filter(
+    (e) => e.rarity === entity.rarity,
+  ).length;
+  return sameRarityCount > 0 ? share / sameRarityCount : 0;
+}
+
 function getRarityWeights(stageId: number, context: DropContext): Record<EntityRarity, number> {
   const biased =
     context.isCrit === true || (context.combo ?? 0) >= DROP_COMBO_BIAS_THRESHOLD;

@@ -21,6 +21,7 @@ import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getSetKey, ty
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
+import { getBaseRarityDropShare, getEntityDropShare } from '../game/entities/drops';
 import { familyLabel, familyRole } from '../game/entities/families';
 import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
@@ -527,6 +528,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // span all eras; chips are an opt-in filter (default = all).
           const collectedSet = collectedIdSet(almanacCollected);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
+          const dropShare = getBaseRarityDropShare();
 
           // HERO meter — global completion + the prestige-mass factor it grants.
           const totalAll = STAGE_ENTITIES.length;
@@ -572,6 +574,23 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     {`▸ ${t(language, 'codexClosest').replace('{name}', closest.label).replace('{n}', String(closest.remaining))}`}
                   </div>
                 ) : null}
+              </div>
+
+              {/* Per-rarity drop rates (R6) — the headline "how rare is each tier". */}
+              <div className="codex-droprates">
+                <span className="codex-droprates__label">{t(language, 'codexDropRates')}</span>
+                {RARITY_ORDER.map((r) => {
+                  const share = dropShare[r];
+                  const text = r === 'mythic'
+                    ? t(language, 'codexDropFusionOnly')
+                    : `${share * 100 >= 10 ? Math.round(share * 100) : (share * 100).toFixed(1)}%`;
+                  return (
+                    <span key={r} className="codex-droprate-chip" style={{ '--rarity-color': RARITY_COLORS[r] } as CSSProperties}>
+                      <span className="codex-droprate-chip__name">{t(language, RARITY_LABEL_KEY[r])}</span>
+                      <span className="codex-droprate-chip__pct">{text}</span>
+                    </span>
+                  );
+                })}
               </div>
 
               {/* Set filter chips (default 전체) + missing-only toggle. No mini-bar. */}
@@ -653,6 +672,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             {visible.map((entity, idx) => {
                               const collected = isCollected(entity);
                               const rarityColor = RARITY_COLORS[entity.rarity];
+                              const dropPct = getEntityDropShare(entity) * 100;
+                              const dropText = entity.rarity === 'mythic'
+                                ? t(language, 'codexDropFusionOnly')
+                                : `${dropPct >= 1 ? dropPct.toFixed(1) : dropPct.toFixed(2)}%`;
                               return (
                                 <button
                                   key={entity.id}
@@ -672,7 +695,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                   {collected ? (
                                     <div className="almanac-card__name">{entityName(entity, language)}</div>
                                   ) : null}
-                                  <span className="almanac-card__era">{`S${entity.stageId}`}</span>
+                                  {entity.stageId <= 16 ? (
+                                    <span className="almanac-card__era">{`S${entity.stageId}`}</span>
+                                  ) : null}
+                                  <span className="almanac-card__drop" title={t(language, 'codexCardDropTitle')}>{dropText}</span>
                                 </button>
                               );
                             })}

@@ -80,6 +80,16 @@ const STAGE_11_PREREQUISITE: Record<string, string> = {
   // Legendaries unlock once Artificial Satellite (the last epic) is built.
   's11_13': 's11_12',
   's11_14': 's11_12',
+  // P3 pyramid padding (appended after the legendaries): new commons unlock
+  // once Atmosphere (the last base common) is built; the new rare follows
+  // Continents Rise (the first rare), matching the existing rare tier.
+  's11_15': 's11_04',
+  's11_16': 's11_04',
+  's11_17': 's11_04',
+  's11_18': 's11_04',
+  's11_19': 's11_04',
+  's11_20': 's11_04',
+  's11_21': 's11_05',
 };
 
 export function getStageAnchorEntity(stageId: number): StageEntity | undefined {

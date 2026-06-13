@@ -4,6 +4,8 @@ import {
   addToInventory,
   getClickDropChance,
   getCollisionDropChance,
+  getBaseRarityDropShare,
+  getEntityDropShare,
   rollEntityDrop,
 } from '../entities/drops';
 import {
@@ -106,5 +108,34 @@ describe('entity drops', () => {
     expect(next.almanacCollected[1]).toContain(entity.id);
     expect(next.inventory.some((e) => e.carried === true)).toBe(true);
     expect(next.equippedSlots).toEqual([]);
+  });
+});
+
+describe('codex drop-rate display (R6)', () => {
+  it('base rarity share is normalized, descending, and zero for mythic', () => {
+    const share = getBaseRarityDropShare();
+    const sum = share.common + share.rare + share.epic + share.legendary + share.mythic;
+    expect(sum).toBeCloseTo(1, 6);
+    expect(share.common).toBeGreaterThan(share.rare);
+    expect(share.rare).toBeGreaterThan(share.epic);
+    expect(share.epic).toBeGreaterThan(share.legendary);
+    expect(share.mythic).toBe(0);
+  });
+
+  it('per-entity share = rarity share ÷ same-rarity count on its stage', () => {
+    const stage = 4; // 10C:5R:4E:2L after P3 padding
+    const share = getBaseRarityDropShare();
+    const common = getEntitiesForStage(stage).find((e) => e.rarity === 'common')!;
+    const legendary = getEntitiesForStage(stage).find((e) => e.rarity === 'legendary')!;
+    expect(getEntityDropShare(common)).toBeCloseTo(share.common / 10, 6);
+    expect(getEntityDropShare(legendary)).toBeCloseTo(share.legendary / 2, 6);
+    // Rarer tiers yield a strictly smaller per-card chance.
+    expect(getEntityDropShare(common)).toBeGreaterThan(getEntityDropShare(legendary));
+  });
+
+  it('mythic entities never drop (per-card share 0)', () => {
+    const mythic = getEntitiesForStage(17)[0];
+    expect(mythic.rarity).toBe('mythic');
+    expect(getEntityDropShare(mythic)).toBe(0);
   });
 });

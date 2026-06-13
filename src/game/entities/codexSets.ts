@@ -173,6 +173,26 @@ export const CODEX_SETS: CodexSet[] = [
     ],
   },
   {
+    // Cosmic Phenomena (P3 pyramid padding) — the processes and forces that
+    // drive each era, gathered by epoch. Placed AFTER the object-based sets so
+    // any padding entity that already matches a thematic set keeps that
+    // attribution (getCodexSubsetIdForEntity returns the first match); the rest
+    // land here, guaranteeing the codex has no orphans.
+    id: 'cosmic_phenomena',
+    label: { en: 'Cosmic Phenomena', ko: '우주 현상' },
+    blurb: { en: 'The forces and processes shaping every age', ko: '모든 시대를 빚는 힘과 과정' },
+    icon: '✺',
+    accent: '#9bd9ff',
+    reward: { stat: 'entropyGain', value: 14 },
+    subsets: [
+      { id: 'primordial_processes', label: { en: 'Primordial Forge', ko: '원시의 용광로' }, match: { entityIds: ['s4_15', 's4_16', 's4_17', 's4_18', 's4_19', 's4_20', 's4_21', 's5_15', 's5_16', 's5_17', 's5_18', 's5_19', 's5_20', 's5_21'] }, reward: { stat: 'clickPower', value: 6 } },
+      { id: 'emergence_processes', label: { en: 'Cosmic Emergence', ko: '우주의 여명' }, match: { entityIds: ['s6_15', 's6_16', 's6_17', 's6_18', 's6_19', 's6_20', 's6_21', 's7_15', 's7_16', 's7_17', 's7_18', 's7_19', 's7_20', 's7_21', 's8_15', 's8_16', 's8_17', 's8_18', 's8_19', 's8_20', 's8_21'] }, reward: { stat: 'autoPower', value: 8 } },
+      { id: 'assembly_processes', label: { en: 'Worlds Assemble', ko: '세계의 형성' }, match: { entityIds: ['s9_15', 's9_16', 's9_17', 's9_18', 's9_19', 's9_20', 's9_21', 's10_15', 's10_16', 's10_17', 's10_18', 's10_19', 's10_20', 's10_21', 's11_15', 's11_16', 's11_17', 's11_18', 's11_19', 's11_20', 's11_21'] }, reward: { stat: 'dropRate', value: 6 } },
+      { id: 'twilight_processes', label: { en: 'Stellar Twilight', ko: '항성의 황혼' }, match: { entityIds: ['s12_15', 's12_16', 's12_17', 's12_18', 's12_19', 's12_20', 's12_21', 's13_15', 's13_16', 's13_17', 's13_18', 's13_19', 's13_20', 's13_21'] }, reward: { stat: 'critMult', value: 6 } },
+      { id: 'longdark_processes', label: { en: 'The Long Dark', ko: '긴 어둠' }, match: { entityIds: ['s14_15', 's14_16', 's14_17', 's14_18', 's14_19', 's14_20', 's14_21', 's15_15', 's15_16', 's15_17', 's15_18', 's15_19', 's15_20', 's15_21'] }, reward: { stat: 'entropyGain', value: 8 } },
+    ],
+  },
+  {
     // The Mythic pool (fusion-only, stage-17 bucket). Browsable + counted here
     // so codex completion includes the ultimate craftable tier. Matched by the
     // bucket stage id so it auto-includes any future mythic appended to it.

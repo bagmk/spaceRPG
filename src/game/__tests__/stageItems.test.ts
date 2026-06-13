@@ -11,13 +11,14 @@ const ENDING_IDS: EndingId[] = ['heat_death', 'big_rip', 'big_crunch', 'vacuum_d
 
 describe('stage entity definitions', () => {
   it('defines the correct entity count per stage', () => {
-    // S1=3, S2=8, S3=12, S4-16=14
+    // S1=3, S2=8, S3=12, S4-15=21 (P3 pyramid 10:5:4:2), S16=14 (endings).
     expect(getEntitiesForStage(1).length).toBe(3);
     expect(getEntitiesForStage(2).length).toBe(8);
     expect(getEntitiesForStage(3).length).toBe(12);
-    for (const stageId of STAGE_IDS.filter((id) => id >= 4)) {
-      expect(getEntitiesForStage(stageId).length).toBe(14);
+    for (const stageId of STAGE_IDS.filter((id) => id >= 4 && id <= 15)) {
+      expect(getEntitiesForStage(stageId).length).toBe(21);
     }
+    expect(getEntitiesForStage(16).length).toBe(14);
   });
 
   it('uses unique ids across all entities', () => {

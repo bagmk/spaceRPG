@@ -1009,6 +1009,103 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Gravitational Singularity':{ name: '중력 특이점',    description: '모든 밀도가 단 하나의 점으로 되돌아간다.' },
   'True Vacuum Bubble':     { name: '진정한 진공 거품', description: '더 낮은 에너지의 진공이 팽창해 물리법칙을 다시 쓴다.' },
   'Quantum Bounce':         { name: '양자 반동',        description: '붕괴가 전혀 새로운 팽창으로 튕겨 오른다.' },
+  // ── P3 pyramid padding (S4–S15 commons + rares) ──
+  // Stage 4
+  'Positron':                { name: '양전자',           description: '뜨거운 플라스마 속에서 전자와 쌍소멸하는 반전자.' },
+  'Neutrino Decoupling':     { name: '중성미자 분리',    description: '중성미자가 상호작용을 멈추고 영원히 자유롭게 흐른다.' },
+  'Proton-Proton Chain':     { name: '양성자-양성자 연쇄', description: '수소를 헬륨으로 묶는 융합 과정.' },
+  'Deuterium Bottleneck':    { name: '중수소 병목',      description: '광자가 식을 때까지 핵합성을 붙드는 지연.' },
+  'e⁺e⁻ Annihilation':       { name: '전자-양전자 쌍소멸', description: '물질과 반물질 쌍이 광자의 홍수로 사라진다.' },
+  'Helium-4 Plateau':        { name: '헬륨-4 고원',      description: '온 우주가 물려받는 25% 헬륨 비율의 고정값.' },
+  'Beryllium-8':             { name: '베릴륨-8',         description: '헬륨에서 탄소로 이어주는 찰나의 핵.' },
+  // Stage 5
+  'Lyman-alpha Photon':      { name: '라이먼-알파 광자', description: '식어가는 기체에 갇힌 수소의 공명 광자.' },
+  'Saha Equilibrium':        { name: '사하 평형',        description: '중성으로 남는 원자의 수를 정하는 균형.' },
+  'Recombination Front':     { name: '재결합 전선',      description: '우주를 중성으로 쓸어가는 전자 포획의 물결.' },
+  'Photon Drag':             { name: '광자 끌림',        description: '가라앉는 바리온을 여전히 잡아당기는 복사압.' },
+  'Neutral Hydrogen':        { name: '중성 수소',        description: '온 공간을 채우는 최초의 안정된 중성 기체.' },
+  'Decoupling Redshift':     { name: '분리 적색편이',    description: '빛이 풀려난, 영원히 고정된 그 순간.' },
+  'Helium Recombination':    { name: '헬륨 재결합',      description: '수소보다 먼저 헬륨이 전자를 붙잡는다.' },
+  // Stage 6
+  'Spin Temperature':        { name: '스핀 온도',        description: '21cm 선이 빛날지 흡수할지를 정한다.' },
+  'Wouthuysen-Field':        { name: '보우테이슨-필드 결합', description: '21cm 신호를 깨우는 라이먼-알파 결합.' },
+  'Adiabatic Cooling':       { name: '단열 냉각',        description: '팽창하는 기체가 잔존 빛보다 빨리 식는다.' },
+  'First Overdensity':       { name: '최초의 과밀',      description: '안으로 끌려들 만큼 살짝 더 빽빽한 영역.' },
+  'Jeans Mass':              { name: '진스 질량',        description: '이를 넘으면 구름이 반드시 붕괴하는 질량 문턱.' },
+  'Dark Matter Microhalo':   { name: '암흑물질 미소 헤일로', description: '어둠 속에 뿌려진 가장 작은 중력 우물.' },
+  'Lyman-Werner Photon':     { name: '라이먼-베르너 광자', description: '냉각에 필요한 H₂를 부수는 별빛.' },
+  // Stage 7
+  'Accretion Disk':          { name: '강착 원반',        description: '자라나는 원시별로 나선을 그리며 떨어지는 기체.' },
+  'Deuterium Burning':       { name: '중수소 연소',      description: '수소가 점화되기 전 최초의 핵불꽃.' },
+  'Triple-Alpha Spark':      { name: '삼중알파 불꽃',    description: '헬륨 핵 셋이 충돌해 탄소를 일으킨다.' },
+  'Nitrogen':                { name: '질소',             description: '7번 원소, CNO 융합 촉매를 거쳐 순환한다.' },
+  'Convective Core':         { name: '대류핵',           description: '신선한 연료를 융합대로 끌어올리는 들끓는 핵.' },
+  'Neon':                    { name: '네온',             description: '10번 원소, 거대 별의 껍질에 층층이 쌓인다.' },
+  'Silicon':                 { name: '규소',             description: '14번 원소, 항성 연소에서 철 직전의 마지막 단계.' },
+  // Stage 8
+  'Escape Fraction':         { name: '탈출 비율',        description: '우주를 이온화하러 새어 나가는 별빛의 몫.' },
+  'Lyman Continuum':         { name: '라이먼 연속선',    description: '수소를 이온화할 수 있는 한계 너머의 광자.' },
+  'Patchy Reionization':     { name: '얼룩진 재이온화',  description: '아직 중성인 우주에 점점이 박힌 이온화 거품.' },
+  'Photoheating':            { name: '광가열',           description: '쓸고 지나는 기체를 데우는 이온화 빛.' },
+  'Helium Reionization':     { name: '헬륨 재이온화',    description: '퀘이사가 나중에 헬륨의 두 번째 전자를 벗긴다.' },
+  'Damping Wing':            { name: '감쇠 날개',        description: '먼 빛의 푸른 가장자리를 흡수하는 중성 기체.' },
+  'Lyman-alpha Emitter':     { name: '라이먼-알파 방출체', description: '수소 공명선으로 빛나는 어린 은하.' },
+  // Stage 9
+  'Cold Flow':               { name: '차가운 흐름',      description: '충격받지 않고 어린 은하 원반을 먹이는 차가운 기체.' },
+  'Galactic Disk':           { name: '은하 원반',        description: '별·기체·먼지가 자리 잡는 회전하는 판.' },
+  'Stellar Bulge':           { name: '항성 팽대부',      description: '은하에서 가장 오래된 별들의 빽빽한 중심 무리.' },
+  'Galactic Fountain':       { name: '은하 분수',        description: '초신성이 원반 밖으로 내보냈다 되돌리는 기체 순환.' },
+  'Satellite Galaxy':        { name: '위성 은하',        description: '더 큰 모은하를 돌며 먹이는 작은 동반 은하.' },
+  'Globular Cluster':        { name: '구상성단',         description: '수십만 별이 단단히 묶인 고대의 무리.' },
+  'Starburst Galaxy':        { name: '폭발적 항성생성 은하', description: '병합이 촉발한, 맹렬한 별 생성의 광란.' },
+  // Stage 10
+  'Solar Nebula':            { name: '태양 성운',        description: '태양과 행성을 빚어낸 붕괴하는 구름.' },
+  'Chondrule':               { name: '콘드룰',           description: '순간 녹았다 굳은 방울, 운석의 구성 단위.' },
+  'Frost Line':              { name: '서리선',           description: '이 너머에서 휘발성 물질이 얼음으로 어는 반경.' },
+  'Accretion Heat':          { name: '강착열',           description: '충돌 폭격이 초기 행성을 녹이는 열.' },
+  'Protoplanet':             { name: '원시행성',         description: '제 궤도를 쓸어 담는 달~화성 크기의 배아.' },
+  'Core Differentiation':    { name: '핵 분화',          description: '무거운 철이 가라앉아 행성의 금속 핵을 이룬다.' },
+  'Ice Giant':               { name: '얼음 거성',        description: '따뜻한 태양에서 멀리 떨어진 물·암모니아·메탄 세계.' },
+  // Stage 11
+  'Late Heavy Bombardment':  { name: '후기 대폭격',      description: '어린 지구를 다시 빚어낸 충돌의 폭풍.' },
+  'Magnetosphere':           { name: '자기권',           description: '태양풍을 막아내는 지구의 자기 방패.' },
+  'Primordial Soup':         { name: '원시 수프',        description: '생명의 첫 화학이 일어나는 유기물 가득한 바다.' },
+  'Plate Tectonics':         { name: '판 구조',          description: '암석을 재순환하고 기후를 조절하는 떠도는 지각.' },
+  'Snowball Earth':          { name: '눈덩이 지구',      description: '꽁꽁 언 행성이 녹으며 생명의 폭발로 이어진다.' },
+  'Ozone Layer':             { name: '오존층',           description: '생명이 육지로 기어 나오게 한 자외선 방패.' },
+  'Eukaryote':               { name: '진핵생물',         description: '한 세포가 다른 세포를 삼켜 복잡한 생명이 시작된다.' },
+  // Stage 12
+  'Subgiant Branch':         { name: '준거성 가지',      description: '핵이 수축하며 주계열을 떠나는 별.' },
+  'Dredge-Up':               { name: '준설',             description: '신선한 탄소를 별 표면으로 끌어올리는 대류.' },
+  'Thermal Pulse':           { name: '열 맥동',          description: '죽어가는 거성을 뒤흔드는 껍질 헬륨 섬광.' },
+  's-Process':               { name: 's-과정',           description: '철 너머 원소를 쌓는 느린 중성자 포획.' },
+  'Electron Degeneracy':     { name: '전자 축퇴',        description: '핵의 붕괴를 멈추는 양자 압력.' },
+  'Chandrasekhar Limit':     { name: '찬드라세카르 한계', description: '어떤 백색왜성도 살아남지 못하는 질량 한계.' },
+  'Carbon Detonation':       { name: '탄소 폭연',        description: '백색왜성을 산산이 날려버리는 폭주 융합.' },
+  // Stage 13
+  'Red Dwarf':               { name: '적색왜성',         description: '수조 년 동안 연료를 태우는 작고 차가운 별.' },
+  'Degenerate Remnant':      { name: '축퇴 잔해',        description: '한때 별이 빛나던 자리에 남은 식어가는 잉걸.' },
+  'Last Star Formation':     { name: '마지막 별 생성',   description: '은하의 마지막 분자운이 점화된다.' },
+  'Halo Star Stream':        { name: '헤일로 항성류',    description: '죽은 위성에서 뜯겨 나온 별들의 조석 리본.' },
+  'WD Crystallization':      { name: '백색왜성 결정화',  description: '식어가는 왜성의 탄소핵이 다이아몬드로 언다.' },
+  'Merger Remnant':          { name: '병합 잔해',        description: '두 은하가 하나로 융합된 스러져가는 타원은하.' },
+  'Millisecond Pulsar':      { name: '밀리초 펄서',      description: '동반성에 의해 다시 빨라진 늙은 중성자별.' },
+  // Stage 14
+  'Baryon Half-Life':        { name: '바리온 반감기',    description: '모든 양성자를 세는 거대한 시계.' },
+  'Decay Photon':            { name: '붕괴 광자',        description: '물질의 드문 해체에서 나오는 감마선.' },
+  'Grand Unification Relic': { name: '대통일 잔재',      description: '양성자를 허무는 힘의 화석 같은 흔적.' },
+  'Sphaleron':               { name: '스팔레론',         description: '바리온 수를 조용히 지우는 장의 얽힘.' },
+  'Cold Degenerate Gas':     { name: '차가운 축퇴 기체', description: '깊은 추위 속을 떠도는 전자 지지 물질.' },
+  'Hawking Preheat':         { name: '호킹 예열',        description: '다가오는 어둠을 데우는 희미한 지평선 빛.' },
+  'Muonium':                 { name: '뮤오늄',           description: '반뮤온과 전자로 이루어진 찰나의 원자.' },
+  // Stage 15
+  'Hawking Temperature':     { name: '호킹 온도',        description: '클수록 더 차가운, 블랙홀의 희미한 열.' },
+  'Unruh Radiation':         { name: '운루 복사',        description: '빈 공간에서 가속하는 관측자가 보는 빛.' },
+  'Page Time':               { name: '페이지 시간',      description: '블랙홀이 엔트로피의 절반을 복사해 낸 때.' },
+  'Frame Dragging':          { name: '좌표계 끌림',      description: '회전하는 질량이 주변 시공간을 비튼다.' },
+  'Greybody Factor':         { name: '회색체 인자',      description: '지평선이 제 복사를 걸러내는 방식.' },
+  'Curvature Singularity':   { name: '곡률 특이점',      description: '안에 숨겨진 무한 곡률의 점.' },
+  'Quasi-normal Ringdown':   { name: '준정규 진동',      description: '병합한 블랙홀이 매끄러운 침묵으로 잦아드는 떨림.' },
 };
 
 // Item counts per stage: S1=3C, S2=4C+4R, S3=4C+4R+4E, S4-15=4C+4R+4E+2L, S16=4C+3R+2E+5L(endings)
@@ -1078,6 +1175,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Neutron-Proton Ratio', 'n/p', 'The 1:7 ratio that fixes primordial element yields.',    'epic',   'auto_mult',  4.0),
     item('BBN Completion',       '★',   'Light-element synthesis locks in, never to repeat.',     'legendary', 'multiplier', 50.0),
     item('Fusion Window',        '⊕',   'Three-minute window that decides all atomic history.',   'legendary', 'multiplier', 50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Positron',                  'e⁺',   'Antielectron annihilating with electrons in the hot plasma.', 'common', 'auto', 2.0),
+    item('Neutrino Decoupling',       'ν↛',   'Neutrinos stop interacting and stream freely forever.',       'common', 'click', 15.0),
+    item('Proton-Proton Chain',       'pp',   'The fusion sequence that binds hydrogen into helium.',        'common', 'crit', 0.5, true),
+    item('Deuterium Bottleneck',      'D⊥',   'The delay holding back synthesis until photons cool.',        'common', 'auto_mult', 2.0),
+    item('e⁺e⁻ Annihilation',         'e⁺e⁻', 'Matter-antimatter pairs vanish into a flood of photons.',     'common', 'auto', 2.0),
+    item('Helium-4 Plateau',          'Yₚ',   'The frozen 25% helium fraction the whole cosmos inherits.',   'common', 'click', 15.0),
+    item('Beryllium-8',               '⁸Be',  'Fleeting nucleus that bridges helium toward carbon.',         'rare', 'click', 22.0),
   ]),
 
   // ── Stage 5: Recombination (4C + 4R + 4E + 2L) ─────────────────────────────
@@ -1102,6 +1207,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('CMB Anisotropy',            '≈',    'Minute temperature contrast imprinted in relic light.','epic', 'crit', 2.0, true),
     item('Cosmic Transparency',       'γ∞',   'The universe finally becomes transparent to light.',   'legendary', 'multiplier', 50.0),
     item('Structure Seed',            'δ₀',   'Primordial perturbation that grows into every galaxy.','legendary', 'multiplier', 50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Lyman-alpha Photon',        'Lyα',  'Hydrogen\'s resonance photon, trapped in the cooling gas.',  'common', 'auto', 2.0),
+    item('Saha Equilibrium',          'Saha', 'The balance fixing how many atoms stay neutral.',           'common', 'click', 15.0),
+    item('Recombination Front',       'rec→', 'The wave of electron capture sweeping the cosmos neutral.',  'common', 'crit', 0.5, true),
+    item('Photon Drag',               'γ·',   'Radiation pressure still tugging on the settling baryons.',  'common', 'auto_mult', 2.0),
+    item('Neutral Hydrogen',          'HI',   'The first stable neutral gas filling all of space.',         'common', 'auto', 2.0),
+    item('Decoupling Redshift',       'z₁₁₀₀','The moment, fixed forever, when light broke free.',          'common', 'click', 15.0),
+    item('Helium Recombination',      'He↘',  'Helium grabs its electrons before hydrogen does.',           'rare', 'click', 22.0),
   ]),
 
   // ── Stage 6: Cosmic Dark Age (4C + 4R + 4E + 2L) ───────────────────────────
@@ -1120,6 +1233,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Silk Damping',          'λ_d',  'Small-scale fluctuations erased by photon diffusion.',  'epic',   'auto_mult',  4.0),
     item('Gravitational Collapse','↓↓',   'Gravity finally overcomes pressure and ignites fate.',  'legendary', 'multiplier', 50.0),
     item('First Cosmic Dawn Seed','∘',    'The seed that will end darkness when it finally ignites.','legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Spin Temperature',      'Tₛ',   'Sets whether the 21cm line shines or absorbs.',         'common', 'auto', 2.0),
+    item('Wouthuysen-Field',      'WF',   'Lyman-alpha coupling that wakes the 21cm signal.',       'common', 'click', 15.0),
+    item('Adiabatic Cooling',     'T↓',   'Expanding gas cools faster than the relic light.',       'common', 'crit', 0.5, true),
+    item('First Overdensity',     'δ⁺',   'A region just dense enough to begin pulling inward.',     'common', 'auto_mult', 2.0),
+    item('Jeans Mass',            'M_J',  'The mass threshold above which a cloud must collapse.',   'common', 'auto', 2.0),
+    item('Dark Matter Microhalo', '○·',   'The smallest gravity wells seeded in the dark.',         'common', 'click', 15.0),
+    item('Lyman-Werner Photon',   'LW',   'Starlight that dissociates the H₂ needed to cool.',      'rare', 'click', 22.0),
   ]),
 
   // ── Stage 7: First Stars (4C + 4R + 4E + 2L) ───────────────────────────────
@@ -1144,6 +1265,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Supernova Precursor', '⚠★',  'Massive star nearing explosive gravitational collapse.',  'epic', 'crit', 2.0, true),
     item('Pop III Supernova',   '☆→',  'First stars explode, seeding space with heavy elements.','legendary','multiplier',50.0),
     item('Pair Instability SN', '✸',   'Giant star destroyed entirely by gamma-pair creation.',   'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Accretion Disk',      '◍',    'Infalling gas spiraling onto the growing protostar.',    'common', 'auto', 2.0),
+    item('Deuterium Burning',   'D→',   'The first nuclear fire before hydrogen ignites.',        'common', 'click', 15.0),
+    item('Triple-Alpha Spark',  '3α',   'Three helium nuclei collide to spark carbon.',           'common', 'crit', 0.5, true),
+    item('Nitrogen',            'N',    'Element 7, cycled through the CNO fusion catalyst.',      'common', 'auto_mult', 2.0),
+    item('Convective Core',     '↻',    'Churning core dredging fresh fuel to the fusion zone.',  'common', 'auto', 2.0),
+    item('Neon',                'Ne',   'Element 10, layered in the shells of a massive star.',   'common', 'click', 15.0),
+    item('Silicon',             'Si',   'Element 14, the last rung before iron in stellar burning.','rare', 'click', 22.0),
   ]),
 
   // ── Stage 8: Reionization (4C + 4R + 4E + 2L) ──────────────────────────────
@@ -1162,6 +1291,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Intergalactic Medium','IGM',  'Thin gas tracking the ionization state between galaxies.','epic',  'auto_mult',  4.0),
     item('Reionization Complete','✓',  'Most cosmic hydrogen is ionized — the universe clears.',  'legendary','multiplier',50.0),
     item('Epoch of Reionization','EoR','The great cosmic clearing that ended the dark ages.',     'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Escape Fraction',    'f_esc', 'The slice of starlight that leaks out to ionize space.', 'common', 'auto', 2.0),
+    item('Lyman Continuum',    'LyC',   'Photons past the limit that can ionize hydrogen.',       'common', 'click', 15.0),
+    item('Patchy Reionization','▦',     'Ionized bubbles dotting a still-neutral cosmos.',        'common', 'crit', 0.5, true),
+    item('Photoheating',       'T↑',    'Ionizing light warming the gas it sweeps through.',      'common', 'auto_mult', 2.0),
+    item('Helium Reionization','He²⁺',  'Quasars strip helium\'s second electron later on.',      'common', 'auto', 2.0),
+    item('Damping Wing',       'λ⊃',    'Neutral gas absorbing the blue edge of distant light.',  'common', 'click', 15.0),
+    item('Lyman-alpha Emitter','LAE',   'Young galaxy glowing in the hydrogen resonance line.',   'rare', 'click', 22.0),
   ]),
 
   // ── Stage 9: Galaxy Formation (4C + 4R + 4E + 2L) ──────────────────────────
@@ -1183,6 +1320,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Cosmic Web Node',       '✦',  'Filament junction at the heart of the large-scale web.',  'epic', 'click', 35.0),
     item('Cosmic Void',           '□',  'Vast underdense region spanning hundreds of megaparsecs.','legendary','multiplier',50.0),
     item('Large Scale Structure', 'LSS','The full web of filaments, nodes, and voids revealed.',   'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Cold Flow',          '↓gas', 'Unshocked cold gas feeding the young galactic disk.',     'common', 'auto', 2.0),
+    item('Galactic Disk',      '▭',    'Rotating sheet of stars, gas, and dust settling in.',     'common', 'click', 15.0),
+    item('Stellar Bulge',      '◐',    'Dense central swarm of the galaxy\'s oldest stars.',      'common', 'crit', 0.5, true),
+    item('Galactic Fountain',  '↑↓',   'Supernova-driven gas cycling out of and back to the disk.','common', 'auto_mult', 2.0),
+    item('Satellite Galaxy',   '∘∘',   'Small companion orbiting and feeding a larger host.',     'common', 'auto', 2.0),
+    item('Globular Cluster',   '⊛',    'Ancient tight-bound swarm of hundreds of thousands of stars.','common', 'click', 15.0),
+    item('Starburst Galaxy',   '✦↑',   'Merger-triggered frenzy forging stars at furious rates.', 'rare', 'click', 22.0),
   ]),
 
   // ── Stage 10: Solar System (4C + 4R + 4E + 2L) ─────────────────────────────
@@ -1207,6 +1352,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Goldilocks Zone',  '🌡',   'Orbital band where surface water stays liquid.',           'epic', 'crit', 2.0, true),
     item('Protoplanetary Disk','◎',   'The spinning cradle of dust and gas that sculpts every world to come.','legendary','multiplier',50.0),
     item('Habitable World',  '⊕',    'A world where all the conditions for life align.',         'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Solar Nebula',     '◌gas', 'The collapsing cloud from which the Sun and planets form.','common', 'auto', 2.0),
+    item('Chondrule',        '•',     'Flash-melted droplet, a building block of meteorites.',    'common', 'click', 15.0),
+    item('Frost Line',       '❄|',   'The radius beyond which volatiles freeze into ice.',       'common', 'crit', 0.5, true),
+    item('Accretion Heat',   '🔥·',  'Heat of bombardment melting the early planets.',           'common', 'auto_mult', 2.0),
+    item('Protoplanet',      '◓',     'Moon-to-Mars-sized embryo sweeping its orbital lane.',     'common', 'auto', 2.0),
+    item('Core Differentiation','Fe↓','Heavy iron sinking to form a planet\'s metal core.',       'common', 'click', 15.0),
+    item('Ice Giant',        '♆',    'Water-ammonia-methane world far from the warming Sun.',    'rare', 'click', 22.0),
   ]),
 
   // ── Stage 11: Life on Earth (4C + 4R + 4E + 2L) ────────────────────────────
@@ -1281,6 +1434,16 @@ export const STAGE_ENTITIES: StageEntity[] = [
       item('Interstellar Ark',   'ARK','A living archive carrying Earth beyond its home star.',      'legendary','multiplier',50.0),
       ['s11_14_homo_sapiens'],
     ),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    // New commons gate behind Atmosphere (s11_04), the new rare behind
+    // Continents Rise (s11_05) — see STAGE_11_PREREQUISITE in anchors.ts.
+    item('Late Heavy Bombardment','☄☄','A storm of impacts reshaping the infant Earth.',           'common', 'auto', 2.0),
+    item('Magnetosphere',    '⊕⇌',  'Earth\'s magnetic shield deflecting the solar wind.',      'common', 'click', 15.0),
+    item('Primordial Soup',  '🧪',   'Organic-rich seas where the first chemistry of life stirs.','common', 'crit', 0.5, true),
+    item('Plate Tectonics',  '▱▱',   'Drifting crust recycling rock and regulating the climate.','common', 'auto_mult', 2.0),
+    item('Snowball Earth',   '❄⊕',   'A frozen planet that thaws into an explosion of life.',    'common', 'auto', 2.0),
+    item('Ozone Layer',      'O₃',   'An ultraviolet shield letting life crawl onto land.',      'common', 'click', 15.0),
+    item('Eukaryote',        '◉',     'A cell swallows another and complex life begins.',         'rare', 'click', 22.0),
   ]),
 
   // ── Stage 12: Death of Star (4C + 4R + 4E + 2L) ────────────────────────────
@@ -1299,6 +1462,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Gravitational Wave', '◌~',   'Spacetime ripples from accelerating compact remnants.',   'epic', 'click', 35.0),
     item('Type Ia Supernova',  'SNIa', 'White dwarf detonation used as a cosmic distance candle.','legendary','multiplier',50.0),
     item('Core Collapse SN',   'SNII', 'Massive stellar core implodes and rebounds outward.',     'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Subgiant Branch',    '↗★',  'A star leaving the main sequence as its core contracts.', 'common', 'auto', 2.0),
+    item('Dredge-Up',          '↑C',   'Convection hauling fresh carbon to the stellar surface.', 'common', 'click', 15.0),
+    item('Thermal Pulse',      '⚡↻',  'Shell-helium flashes shaking a dying giant.',             'common', 'crit', 0.5, true),
+    item('s-Process',          'n→',   'Slow neutron capture building elements past iron.',       'common', 'auto_mult', 2.0),
+    item('Electron Degeneracy','e⊥',   'Quantum pressure that halts the core\'s collapse.',       'common', 'auto', 2.0),
+    item('Chandrasekhar Limit','1.4M☉','The mass above which no white dwarf can survive.',        'common', 'click', 15.0),
+    item('Carbon Detonation',  'C💥',  'Runaway fusion that blows a white dwarf apart.',          'rare', 'click', 22.0),
   ]),
 
   // ── Stage 13: Stelliferous End (4C + 4R + 4E + 2L) ─────────────────────────
@@ -1320,6 +1491,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Stellar Mass BH',      '⚫', 'Black hole left behind by a collapsed massive star.',     'epic',   'auto_mult',  5.0),
     item('Last Red Dwarf',       '🔴✦','The final small star exhausting its hydrogen supply.',    'legendary','multiplier',50.0),
     item('Total Darkness',       '░',  'Starlight ends; only remnants remain in the galaxy.',     'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Red Dwarf',            '🔴·','A tiny cool star burning its fuel for trillions of years.','common', 'auto', 2.0),
+    item('Degenerate Remnant',   '◇',  'Cooling cinder left where a star once shone.',            'common', 'click', 15.0),
+    item('Last Star Formation',  '★↓', 'The galaxy\'s final molecular cloud ignites.',           'common', 'crit', 0.5, true),
+    item('Halo Star Stream',     '∿∿', 'Tidal ribbon of stars torn from a dead satellite.',      'common', 'auto_mult', 2.0),
+    item('WD Crystallization',   '◆',  'A cooling dwarf\'s carbon core freezing into diamond.',   'common', 'auto', 2.0),
+    item('Merger Remnant',       '⊗°', 'Two galaxies fused into one fading elliptical.',          'common', 'click', 15.0),
+    item('Millisecond Pulsar',   '⊛⊛', 'An old neutron star spun back up by a companion.',        'rare', 'click', 22.0),
   ]),
 
   // ── Stage 14: Degenerate Era (4C + 4R + 4E + 2L) ───────────────────────────
@@ -1344,6 +1523,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('BH Domination',             '⚫>', 'Black holes now hold most remaining mass-energy.',       'epic', 'crit', 3.0, true),
     item('Last Baryon',               'p_∞', 'Final proton waiting out its immense decay clock.',     'legendary','multiplier',50.0),
     item('Baryon Washout',            'B=0', 'Baryon number dwindles to zero across the cosmos.',      'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Baryon Half-Life',          't½',  'The immense clock ticking down every proton.',          'common', 'auto', 2.0),
+    item('Decay Photon',              'γ_d', 'Gamma rays from the rare dissolution of matter.',       'common', 'click', 15.0),
+    item('Grand Unification Relic',   'X',   'A fossil hint of the force that unmakes protons.',      'common', 'crit', 0.5, true),
+    item('Sphaleron',                 '⊘',   'A field tangle that quietly erases baryon number.',     'common', 'auto_mult', 2.0),
+    item('Cold Degenerate Gas',       'e°°', 'Electron-supported matter drifting in the deep cold.',  'common', 'auto', 2.0),
+    item('Hawking Preheat',           '⚫·', 'Faint horizon glow warming the encroaching dark.',      'common', 'click', 15.0),
+    item('Muonium',                   'Mu',  'A fleeting atom of an antimuon and an electron.',       'rare', 'click', 22.0),
   ]),
 
   // ── Stage 15: Black Hole Era (4C + 4R + 4E + 2L) ───────────────────────────
@@ -1362,6 +1549,14 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Planck Remnant',         'ℓP',   'Possible Planck-scale residue after full evaporation.',  'epic', 'auto', 9.0),
     item('Final Evaporation Flash','☀→∅', 'Last burst of light as the final black hole ends.',      'legendary','multiplier',50.0),
     item('Last Black Hole',        '⚫_',  'The very last horizon preparing its ultimate emission.', 'legendary','multiplier',50.0),
+    // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
+    item('Hawking Temperature',    'T_H',  'The colder the bigger — a black hole\'s faint heat.',    'common', 'auto', 2.0),
+    item('Unruh Radiation',        'U',    'An accelerating observer\'s glow in empty space.',       'common', 'click', 15.0),
+    item('Page Time',              't_P',  'When a black hole has radiated away half its entropy.',  'common', 'crit', 0.5, true),
+    item('Frame Dragging',         '⟲sp',  'Spinning mass twisting spacetime around itself.',        'common', 'auto_mult', 2.0),
+    item('Greybody Factor',        'g_b',  'How the horizon filters its own escaping radiation.',    'common', 'auto', 2.0),
+    item('Curvature Singularity',  'R→∞',  'The point of infinite curvature hidden within.',         'common', 'click', 15.0),
+    item('Quasi-normal Ringdown',  '◌≈',   'A merged black hole vibrating back to smooth silence.',  'rare', 'click', 22.0),
   ]),
 
   // ── Stage 16: The End (4C + 3R + 2E + 5L endings) ──────────────────────────

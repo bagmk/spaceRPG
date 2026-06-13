@@ -12,8 +12,8 @@ import type { EntityEffectType } from '../entities/types';
  * only fixes name↔effect coherence. These tests lock that in.
  */
 describe('identity pass: structure preserved', () => {
-  it('keeps the full entity set (210: 205 + 5 mythic) and stable IDs', () => {
-    expect(STAGE_ENTITIES.length).toBe(210);
+  it('keeps the full entity set (294: 205 + 5 mythic + 84 P3 padding) and stable IDs', () => {
+    expect(STAGE_ENTITIES.length).toBe(294);
     // Legacy name-derived ids still resolve (kept as aliases after decoupling).
     expect(findEntityById('s13_07_pulsar')).toBeDefined();
     expect(findEntityById('s10_01_sun')).toBeDefined();
@@ -32,12 +32,13 @@ describe('identity pass: structure preserved', () => {
 
   it('preserves the per-stage category balance (rift vs click counts)', () => {
     // Snapshot captured before the identity pass — the permutation must not move it.
+    // S4–S15 padded to 10:5:4:2 in P3 (+4 click, +3 rift each); S16 unchanged.
     const expected: Record<number, { click: number; rift: number }> = {
       1: { click: 2, rift: 1 }, 2: { click: 4, rift: 4 }, 3: { click: 6, rift: 6 },
-      4: { click: 8, rift: 6 }, 5: { click: 8, rift: 6 }, 6: { click: 8, rift: 6 },
-      7: { click: 8, rift: 6 }, 8: { click: 8, rift: 6 }, 9: { click: 8, rift: 6 },
-      10: { click: 8, rift: 6 }, 11: { click: 8, rift: 6 }, 12: { click: 8, rift: 6 },
-      13: { click: 8, rift: 6 }, 14: { click: 8, rift: 6 }, 15: { click: 8, rift: 6 },
+      4: { click: 12, rift: 9 }, 5: { click: 12, rift: 9 }, 6: { click: 12, rift: 9 },
+      7: { click: 12, rift: 9 }, 8: { click: 12, rift: 9 }, 9: { click: 12, rift: 9 },
+      10: { click: 12, rift: 9 }, 11: { click: 12, rift: 9 }, 12: { click: 12, rift: 9 },
+      13: { click: 12, rift: 9 }, 14: { click: 12, rift: 9 }, 15: { click: 12, rift: 9 },
       16: { click: 8, rift: 6 },
     };
     for (let s = 1; s <= 16; s++) {
@@ -53,9 +54,10 @@ describe('identity pass: structure preserved', () => {
       const pool = getEntitiesForStage(s);
       const counts: Record<string, number> = {};
       for (const e of pool) counts[e.effect.type] = (counts[e.effect.type] ?? 0) + 1;
-      // Stages 4-15: 3 auto, 3 click, 3 crit, 3 auto_mult, 2 multiplier (time replaced by Auto Power).
+      // Stages 4-15 after P3 padding (10:5:4:2): 5 auto, 6 click, 4 crit,
+      // 4 auto_mult, 2 multiplier (legendary). Was 3/3/3/3/2 before padding.
       if (s >= 4 && s <= 15) {
-        expect(counts).toEqual({ auto: 3, click: 3, crit: 3, auto_mult: 3, multiplier: 2 });
+        expect(counts).toEqual({ auto: 5, click: 6, crit: 4, auto_mult: 4, multiplier: 2 });
       }
     }
   });
