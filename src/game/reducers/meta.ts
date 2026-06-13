@@ -59,7 +59,6 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     totalShopSpentUSD: payload.totalShopSpentUSD ?? 0,
     prestigeUpgrades: payload.prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
     peakEntropy: payload.peakEntropy ?? payload.entropy ?? 0,
-    fusionPity: payload.fusionPity ?? 0,
     riftSlots: payload.riftSlots ?? [],
     unlockedRiftSlotCount: payload.unlockedRiftSlotCount ?? 1,
     codexSeenIds: payload.codexSeenIds ?? [],

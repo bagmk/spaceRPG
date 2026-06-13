@@ -756,7 +756,6 @@ export function GameScreen({
             unlockedSlotCount={state.unlockedSlotCount}
             riftSlots={state.riftSlots}
             unlockedRiftSlotCount={state.unlockedRiftSlotCount}
-            fusionPity={state.fusionPity}
             lastFusionEvent={state.lastFusionEvent}
             almanacCollected={state.almanacCollected}
             codexSeenIds={state.codexSeenIds}

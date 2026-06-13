@@ -5,7 +5,6 @@ import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../
 import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
-  FUSION_PITY_THRESHOLD,
   FUSION_UP1_CHANCE,
   FUSION_UP2_CHANCE,
   SET_BONUS,
@@ -69,36 +68,37 @@ describe('fusion (Phase 3)', () => {
     // roll just inside the up1 window (after the up2 slice)
     const next = fuse(state, FUSION_UP2_CHANCE + FUSION_UP1_CHANCE / 2, 0.3);
     expect(next.lastFusionEvent!.rarityUp).toBe(true);
-    expect(next.fusionPity).toBe(0);
+    // A successful upgrade mints NO stones — stones are the failure consolation.
+    expect(next.lastFusionEvent!.stonesEarned).toBe(0);
   });
 
-  it('increments pity on a dry roll and guarantees +1 at the threshold', () => {
-    const dry = fuse(fusionReadyState(), 0.99);
-    expect(dry.lastFusionEvent!.rarityUp).toBe(false);
-    expect(dry.fusionPity).toBe(1);
-
-    // At the pity threshold even a dry roll upgrades.
-    const pityState = { ...fusionReadyState(), fusionPity: FUSION_PITY_THRESHOLD };
-    const forced = fuse(pityState, 0.99);
-    expect(forced.lastFusionEvent!.rarityUp).toBe(true);
-    expect(forced.fusionPity).toBe(0);
+  it('a dry roll fails (no pity/guarantee — pure odds)', () => {
+    // Even after many dry fuses there is no forced upgrade; each fuse is
+    // independent and a 0.99 roll never lands in any up window.
+    let current = fusionReadyState();
+    for (let i = 0; i < 10; i++) {
+      current = { ...current, quanta: 1000, inventory: [{ entityId: commons[0].id, count: 3, level: 1 }] };
+      const next = fuse(current, 0.99);
+      expect(next.lastFusionEvent!.rarityUp).toBe(false);
+      // Failure always mints 강화석 — the consolation that replaces pity.
+      expect(next.lastFusionEvent!.stonesEarned).toBeGreaterThan(0);
+      current = next;
+    }
   });
 
-  it('rollFusionRarity caps at mythic and skips pity there', () => {
-    // Mythic is the true ceiling — no upgrade possible, pity frozen.
-    const result = rollFusionRarity('mythic', 0.0, 99, 16);
+  it('rollFusionRarity caps at mythic (no upgrade possible)', () => {
+    const result = rollFusionRarity('mythic', 0.0, 16);
     expect(result.rarity).toBe('mythic');
     expect(result.rarityUp).toBe(false);
-    expect(result.pityApplicable).toBe(false);
   });
 
   it('P2c: legendary inputs can forge mythic in the late game (stage 12+)', () => {
     // At stage 16 the ladder reaches mythic: a legendary up1 roll (3% window)
-    // crafts the fusion-only tier; pity also forces it after a dry streak.
-    expect(rollFusionRarity('legendary', 0.0, 0, 16).rarity).toBe('mythic');
-    expect(rollFusionRarity('legendary', 0.99, 99, 16).rarity).toBe('mythic');
+    // crafts the fusion-only tier. A roll outside the window simply fails.
+    expect(rollFusionRarity('legendary', 0.0, 16).rarity).toBe('mythic');
+    expect(rollFusionRarity('legendary', 0.99, 16).rarityUp).toBe(false);
     // Before legendary is droppable (gate 12) there is no mythic ceiling yet.
-    expect(rollFusionRarity('legendary', 0.0, 0, 11).rarity).toBe('legendary');
+    expect(rollFusionRarity('legendary', 0.0, 11).rarity).toBe('legendary');
   });
 
   it('P2b: fusion cost scales by input rarity (common cheap, legendary steep)', () => {
@@ -117,14 +117,14 @@ describe('fusion (Phase 3)', () => {
 
   it('P2: up-odds decrease per input tier (common 40 → rare 20 → epic 10)', () => {
     // common: up1 window = 0.05 + 0.40 = 0.45.
-    expect(rollFusionRarity('common', 0.39, 0, 16).rarity).toBe('rare');
-    expect(rollFusionRarity('common', 0.50, 0, 16).rarityUp).toBe(false);
+    expect(rollFusionRarity('common', 0.39, 16).rarity).toBe('rare');
+    expect(rollFusionRarity('common', 0.50, 16).rarityUp).toBe(false);
     // rare: up1 window = 0.02 + 0.20 = 0.22.
-    expect(rollFusionRarity('rare', 0.10, 0, 16).rarity).toBe('epic');
-    expect(rollFusionRarity('rare', 0.30, 0, 16).rarityUp).toBe(false);
+    expect(rollFusionRarity('rare', 0.10, 16).rarity).toBe('epic');
+    expect(rollFusionRarity('rare', 0.30, 16).rarityUp).toBe(false);
     // epic: up1 window = 0.10.
-    expect(rollFusionRarity('epic', 0.05, 0, 16).rarity).toBe('legendary');
-    expect(rollFusionRarity('epic', 0.20, 0, 16).rarityUp).toBe(false);
+    expect(rollFusionRarity('epic', 0.05, 16).rarity).toBe('legendary');
+    expect(rollFusionRarity('epic', 0.20, 16).rarityUp).toBe(false);
   });
 
   it('feeds duplicate outputs at max count into level-ups (dup sink)', () => {
@@ -134,7 +134,6 @@ describe('fusion (Phase 3)', () => {
     const state: GameState = {
       ...createInitialGameState(0),
       quanta: 1000,
-      fusionPity: 0,
       inventory: [{ entityId: target.id, count: Math.max(target.maxCount, 3), level: 1 }],
     };
     // Fuse repeatedly until the output happens to be the saturated entity.

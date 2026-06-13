@@ -186,7 +186,6 @@ export function toPersistentState(state: GameState): PersistentGameState {
     riftSlots: state.riftSlots,
     unlockedRiftSlotCount: state.unlockedRiftSlotCount,
     almanacCollected: state.almanacCollected,
-    fusionPity: state.fusionPity,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,
     codexSeenIds: state.codexSeenIds,

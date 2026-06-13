@@ -3,8 +3,9 @@
  *
  * Feed FUSION_INPUT_COUNT copies of one rarity + a quanta cost into the forge;
  * out comes a weighted-random entity of the same stage with a chance to jump
- * one or two rarities (pity guarantees an upgrade after a dry streak — D4).
- * Every fusion fires an entropy burst, wiring active play into the
+ * one or two rarities. Rarity-up is pure odds — there is no pity/guarantee
+ * (removed: it only added complexity). Every fusion fires an entropy burst,
+ * wiring active play into the
  * progression gate. Duplicate outputs at max count become level-ups instead
  * of being wasted. Tunables live in balance.ts (FUSION_*).
  */
@@ -20,7 +21,6 @@ import {
   FUSION_FAMILY_BIAS,
   FUSION_COST_RARITY_MULT,
   FUSION_INPUT_COUNT,
-  FUSION_PITY_THRESHOLD_BY_TIER,
   FUSION_REF_CPS,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
@@ -111,8 +111,6 @@ export function validateFusionInputs(
 export interface FusionRarityRoll {
   rarity: EntityRarity;
   rarityUp: boolean;
-  /** False when the inputs were already legendary (no upgrade possible). */
-  pityApplicable: boolean;
 }
 
 /**
@@ -128,32 +126,29 @@ export function getMaxFusionRarityIdx(stageId: number): number {
 }
 
 /**
- * Resolve the output rarity from the input rarity, a 0..1 roll, the pity
- * counter, and the PLAYER stage's fusion rarity cap (gate + 1). stageId is
- * required — a silent =16 default would skip the cap for any missed caller.
+ * Resolve the output rarity from the input rarity, a 0..1 roll, and the PLAYER
+ * stage's fusion rarity cap (gate + 1). Pure odds — no pity/guarantee. stageId
+ * is required — a silent =16 default would skip the cap for any missed caller.
  */
 export function rollFusionRarity(
   inputRarity: EntityRarity,
   roll: number,
-  pity: number,
   stageId: number,
   sameEntityBonus = 0,
 ): FusionRarityRoll {
   const idx = RARITY_ORDER.indexOf(inputRarity);
   const maxIdx = getMaxFusionRarityIdx(stageId);
   if (idx >= RARITY_ORDER.length - 1 || idx >= maxIdx) {
-    // No upgrade possible (legendary inputs, or inputs already at the stage cap).
-    return { rarity: inputRarity, rarityUp: false, pityApplicable: false };
+    // No upgrade possible (mythic inputs, or inputs already at the stage cap).
+    return { rarity: inputRarity, rarityUp: false };
   }
   const up1c = FUSION_UP1_CHANCE_BY_TIER[inputRarity];
   const up2c = FUSION_UP2_CHANCE_BY_TIER[inputRarity];
-  const pityThr = FUSION_PITY_THRESHOLD_BY_TIER[inputRarity] || Infinity;
   const up2 = roll < up2c && idx + 2 <= maxIdx;
   const up1 = roll < Math.min(FUSION_UP_CHANCE_CAP, up2c + up1c + sameEntityBonus);
-  const pityForced = pity >= pityThr;
-  if (up2) return { rarity: RARITY_ORDER[idx + 2], rarityUp: true, pityApplicable: true };
-  if (up1 || pityForced) return { rarity: RARITY_ORDER[idx + 1], rarityUp: true, pityApplicable: true };
-  return { rarity: inputRarity, rarityUp: false, pityApplicable: true };
+  if (up2) return { rarity: RARITY_ORDER[idx + 2], rarityUp: true };
+  if (up1) return { rarity: RARITY_ORDER[idx + 1], rarityUp: true };
+  return { rarity: inputRarity, rarityUp: false };
 }
 
 export interface FusionOutputBias {

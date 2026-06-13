@@ -805,10 +805,6 @@ button.hud-stage-title--clickable:hover {
   opacity: 0.85;
 }
 
-.fusion-tray__pity {
-  color: #bb8cff;
-}
-
 .fusion-tray__fuse {
   min-height: 40px;
   padding: 0 16px;
@@ -853,10 +849,30 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 48px var(--rarity-color);
 }
 
+/* Failed rarity-up: dim the card and amber-tag it; 강화석 are the payout. */
+.fusion-result__card--fail {
+  border-color: rgba(255, 170, 60, 0.45);
+  box-shadow: 0 0 22px rgba(255, 170, 60, 0.18);
+  opacity: 0.96;
+}
+
 .fusion-result__tag {
   font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--rarity-color);
+}
+.fusion-result__tag--fail {
+  color: #ffae3b;
+  font-weight: 700;
+}
+.fusion-result__sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+}
+.fusion-result__stones--big {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c79bff;
 }
 
 .fusion-result__name {
@@ -1042,34 +1058,7 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
-/* ════ Gacha fusion — pity ladder, altar, dramatic reveal ════ */
-.gacha-meta { display: grid; gap: 10px; }
-.gacha-pity {
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 170, 60, 0.22);
-  border-radius: 11px;
-  background: rgba(255, 170, 60, 0.06);
-}
-.gacha-pity__row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
-}
-.gacha-pity__count { color: #ffd76a; }
-.gacha-pity__bar {
-  height: 6px;
-  margin-top: 7px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-.gacha-pity__fill {
-  height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #ffae3b, #ffd76a);
-  transition: width 0.3s ease;
-}
+/* ════ Gacha fusion — altar, dramatic reveal (no pity — pure odds) ════ */
 .gacha-odds { display: flex; gap: 16px; font-size: 12px; }
 .gacha-odds__up1 { color: #9fd0ff; }
 .gacha-odds__up2 { color: #d9a9ff; }
@@ -1405,18 +1394,9 @@ button.hud-stage-title--clickable:hover {
 @keyframes cc-pop-in { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes enhance-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 
-/* ════ Fusion lever curation: cost+pity on the lever, reveal fork ════ */
+/* ════ Fusion lever curation: cost on the lever, reveal fork ════ */
 .gacha-fuse-btn { position: relative; overflow: hidden; }
 .gacha-fuse-btn__label { position: relative; z-index: 1; }
-.gacha-fuse-btn__pity {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
-  z-index: 0;
-  background: linear-gradient(90deg, #ffae3b, #ffd76a);
-  transition: width 0.3s ease;
-}
 .gacha-fuse-btn--armed { animation: gacha-pulse 0.7s ease-in-out infinite alternate; }
 
 .gacha-bonus { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -1428,8 +1408,7 @@ button.hud-stage-title--clickable:hover {
   border-radius: 14px;
   padding: 2px 10px;
 }
-.gacha-altar .gacha-odds { width: min(420px, 100%); align-items: baseline; }
-.gacha-odds__pity { margin-left: auto; color: rgba(255, 255, 255, 0.5); }
+.gacha-altar .gacha-odds { width: min(420px, 100%); align-items: baseline; justify-content: center; }
 
 .gacha-again {
   justify-self: start;
@@ -1445,16 +1424,16 @@ button.hud-stage-title--clickable:hover {
 .gacha-again:hover { background: rgba(255, 170, 60, 0.2); }
 
 .fusion-result--boom { background: rgba(0, 0, 0, 0.72); }
-.fusion-result--quiet { background: transparent; pointer-events: none; }
-.fusion-result--quiet .fusion-result__card {
-  box-shadow: 0 0 18px color-mix(in srgb, var(--rarity-color) 40%, transparent);
-  animation: fusion-quiet 1s ease-out forwards;
+/* Failure: a dimmed, TAP-TO-DISMISS overlay that pops in and HOLDS so the
+   실패 verdict + 강화석 payout stay legible (the JS timer or a tap clears it). */
+.fusion-result--fail { background: rgba(0, 0, 0, 0.5); pointer-events: auto; cursor: pointer; }
+.fusion-result--fail .fusion-result__card {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--rarity-color) 40%, transparent);
+  animation: fusion-fail-pop 0.28s ease-out;
 }
-@keyframes fusion-quiet {
+@keyframes fusion-fail-pop {
   0% { transform: scale(0.85); opacity: 0; }
-  20% { transform: scale(1); opacity: 1; }
-  80% { opacity: 1; }
-  100% { opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @media (max-width: 640px) {

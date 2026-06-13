@@ -161,7 +161,7 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
 
 /**
  * FUSE_ENTITIES (Phase 3): consume FUSION_INPUT_COUNT same-rarity copies plus a
- * quanta fraction; roll a same-stage output with rarity-up odds (pity-backed),
+ * quanta fraction; roll a same-stage output with pure rarity-up odds (no pity),
  * fire an entropy burst, and feed duplicates at max count into level-ups.
  * Randomness arrives via action rolls so the reducer stays pure.
  */
@@ -178,7 +178,7 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   const sameEntity = validation.sameEntity === true;
   const sameSubset = validation.sameSubsetId != null;
   const rarityResult = rollFusionRarity(
-    validation.rarity, action.rarityRoll, state.fusionPity, currentStageIdForFusion,
+    validation.rarity, action.rarityRoll, currentStageIdForFusion,
     sameEntity ? FUSION_SAME_ENTITY_UP_BONUS : 0,
   );
   // Output pool stage follows the same player-stage weighting as drops
@@ -220,9 +220,6 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);
   const nextEntropy = safeAdd(state.entropy, burst);
   const eventId = nextEventId(state);
-  const nextPity = rarityResult.pityApplicable
-    ? (rarityResult.rarityUp ? 0 : state.fusionPity + 1)
-    : state.fusionPity;
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
@@ -232,7 +229,6 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
-    fusionPity: nextPity,
     eventCounter: eventId,
     lastFusionEvent: {
       id: eventId,

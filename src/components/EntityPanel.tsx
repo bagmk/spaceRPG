@@ -7,7 +7,6 @@ import {
   CODEX_MASS_BONUS,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
-  FUSION_PITY_THRESHOLD_BY_TIER,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
   ENTITY_LEVEL_EFFECT_BONUS,
@@ -233,7 +232,6 @@ interface Props {
   unlockedSlotCount: number;
   riftSlots: string[];
   unlockedRiftSlotCount: number;
-  fusionPity: number;
   lastFusionEvent: FusionEvent | null;
   almanacCollected: Record<number, string[]>;
   /** Entity ids already seen in the codex — drives the NEW-discovery badge (v18). */
@@ -261,7 +259,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab, setTab] = useState<PanelPage>(page);
@@ -405,11 +403,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onUITap?.();
   };
 
-  // Auto-dismiss the fusion reveal — a rarity-up detonation lingers; a plain
-  // level-up/refund is a quick flash so spam-fusing never waits on a cutscene.
+  // Auto-dismiss the fusion reveal — a rarity-up detonation lingers longest; a
+  // failure must stay long enough to read the 실패 verdict + 강화석 payout; both
+  // are also tap-to-dismiss so spam-fusing never waits on the full timer.
   useEffect(() => {
     if (!lastFusionEvent) return undefined;
-    const ms = lastFusionEvent.rarityUp ? 3200 : 1000;
+    const ms = lastFusionEvent.rarityUp ? 3200 : 2600;
     const timeoutId = window.setTimeout(() => onClearFusionEvent(lastFusionEvent.id), ms);
     return () => window.clearTimeout(timeoutId);
   }, [lastFusionEvent, onClearFusionEvent]);
@@ -922,13 +921,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
           const capped = trayRarity !== undefined && trayIdx >= maxIdx;
           const up2Possible = trayIdx + 2 <= maxIdx;
-          // Odds + pity are now per-input-tier (P2). Default to common when the tray is empty.
+          // Odds are per-input-tier (P2), pure chance — no pity. Default to common when empty.
           const oddsTier = trayRarity ?? 'common';
           const up1Pct = Math.round(FUSION_UP1_CHANCE_BY_TIER[oddsTier] * 100);
           const up2Pct = Math.round(FUSION_UP2_CHANCE_BY_TIER[oddsTier] * 100);
-          const pityThr = FUSION_PITY_THRESHOLD_BY_TIER[oddsTier] || 0;
-          const remaining = pityThr > 0 ? Math.max(0, pityThr - fusionPity) : 0;
-          const pityPct = pityThr > 0 ? Math.min(100, Math.round((fusionPity / pityThr) * 100)) : 0;
           const ready = fuseInputs.length === FUSION_INPUT_COUNT;
           const cost = getFusionQuantaCost(oddsTier, quanta);
           // P2b bonus indicators: 3-same-entity / 3-same-codex-category.
@@ -965,7 +961,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="fuse-page">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
-              {/* The altar — the whole bet (stake / cost / odds / pity) on one lever */}
+              {/* The altar — the whole bet (stake / cost / odds) on one lever */}
               <div className={`gacha-altar ${ready ? 'gacha-altar--ready' : ''}`}>
                 <div className="gacha-altar__slots">
                   {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {
@@ -1018,7 +1014,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         ? t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))
                         : t(language, 'fuseLeverNeed')}
                   </span>
-                  <span className="gacha-fuse-btn__pity" style={{ width: `${pityPct}%` }} aria-hidden="true" />
                 </button>
                 <div className="gacha-odds">
                   {capped ? (
@@ -1033,11 +1028,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       ) : null}
                     </>
                   )}
-                  <span className="gacha-odds__pity">
-                    {remaining === 0
-                      ? t(language, 'fusePityNow')
-                      : `${t(language, 'fusePityTitle')} ${t(language, 'fuseTimesUnit').replace('{n}', String(remaining))}`}
-                  </span>
                 </div>
               </div>
 
@@ -1103,37 +1093,43 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         if (!output) return null;
         return (
           <div
-            className={`fusion-result ${lastFusionEvent.rarityUp ? 'fusion-result--boom' : 'fusion-result--quiet'}`}
+            className={`fusion-result ${lastFusionEvent.rarityUp ? 'fusion-result--boom' : 'fusion-result--fail'}`}
             role="status"
             onClick={(e) => { e.stopPropagation(); onClearFusionEvent(lastFusionEvent.id); }}
           >
             <div
-              className={`fusion-result__card fusion-result__card--${output.rarity} ${lastFusionEvent.rarityUp ? 'fusion-result__card--up' : ''}`}
+              className={`fusion-result__card fusion-result__card--${output.rarity} ${lastFusionEvent.rarityUp ? 'fusion-result__card--up' : 'fusion-result__card--fail'}`}
               style={{ '--rarity-color': RARITY_COLORS[output.rarity] } as CSSProperties}
             >
               {lastFusionEvent.rarityUp ? <div className="fusion-result__rays" aria-hidden="true" /> : null}
-              <div className="fusion-result__tag">
-                {lastFusionEvent.atCap
-                  ? t(language, 'fuseResultRefund')
-                  : lastFusionEvent.rarityUp
-                    ? t(language, 'fuseResultUp')
-                    : lastFusionEvent.leveledUp
-                      ? t(language, 'fuseResultLevel')
-                      : t(language, 'fuseResultNew')}
+              {/* Primary verdict: rarity-up succeeded, or the upgrade failed. */}
+              <div className={`fusion-result__tag ${lastFusionEvent.rarityUp ? '' : 'fusion-result__tag--fail'}`}>
+                {lastFusionEvent.rarityUp
+                  ? t(language, 'fuseResultUp')
+                  : t(language, 'fuseResultFail')}
               </div>
               <EntityGlyph entity={output} color={RARITY_COLORS[output.rarity]} />
               <div className="fusion-result__name">{entityName(output, language)}</div>
+              {/* On a failed upgrade the 강화석 ARE the payout — show them prominently. */}
+              {!lastFusionEvent.rarityUp && lastFusionEvent.stonesEarned > 0 ? (
+                <div className="fusion-result__stones fusion-result__stones--big">
+                  {`💎 ${t(language, 'fuseStonesEarned').replace('{n}', String(lastFusionEvent.stonesEarned))}`}
+                </div>
+              ) : null}
+              {/* Secondary: what became of the output copy. */}
+              <div className="fusion-result__sub">
+                {lastFusionEvent.atCap
+                  ? t(language, 'fuseResultRefund')
+                  : lastFusionEvent.leveledUp
+                    ? t(language, 'fuseResultLevel')
+                    : t(language, 'fuseResultNew')}
+              </div>
               <div className="fusion-result__burst">
                 {`+${formatEntropyAmount(lastFusionEvent.entropyBurst)} ${t(language, 'hudEntropy')}`}
               </div>
               {lastFusionEvent.refund > 0 ? (
                 <div className="fusion-result__refund">
                   {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(lastFusionEvent.refund)}`}
-                </div>
-              ) : null}
-              {lastFusionEvent.stonesEarned > 0 ? (
-                <div className="fusion-result__stones">
-                  {t(language, 'fuseStonesEarned').replace('{n}', String(lastFusionEvent.stonesEarned))}
                 </div>
               ) : null}
             </div>

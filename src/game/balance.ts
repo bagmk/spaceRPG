@@ -299,10 +299,6 @@ export const FUSION_UP1_CHANCE_BY_TIER: Record<EntityRarity, number> = {
 export const FUSION_UP2_CHANCE_BY_TIER: Record<EntityRarity, number> = {
   common: 0.05, rare: 0.02, epic: 0, legendary: 0, mythic: 0,
 };
-/** Pity: consecutive non-upgrades before a forced +1, by input tier (rarer tiers wait longer). */
-export const FUSION_PITY_THRESHOLD_BY_TIER: Record<EntityRarity, number> = {
-  common: 4, rare: 6, epic: 10, legendary: 20, mythic: 0,
-};
 /** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
 export const FUSION_UP_CHANCE_CAP = 0.65;
 // P2b cost (R4): cheap for common, steep from rare up (× the 10%-of-bank base);
@@ -318,8 +314,6 @@ export const FUSION_SAME_SUBSET_BURST_MULT = 1.5;      // entropy burst ×1.5 wh
 export const FUSION_UP1_CHANCE = 0.4;
 /** @deprecated */
 export const FUSION_UP2_CHANCE = 0.05;
-/** @deprecated */
-export const FUSION_PITY_THRESHOLD = 5;
 /**
  * Entropy burst per fusion ≈ ENTROPY_FUSION_VALUE_SEC seconds of entropy income
  * at the reference click rate. Keeps fusion's progression share near the
@@ -569,7 +563,6 @@ export const BALANCE = {
     inputCount: FUSION_INPUT_COUNT,
     up1Chance: FUSION_UP1_CHANCE,
     up2Chance: FUSION_UP2_CHANCE,
-    pityThreshold: FUSION_PITY_THRESHOLD,
     refCps: FUSION_REF_CPS,
     valueSec: ENTROPY_FUSION_VALUE_SEC,
     costFrac: ENTROPY_FUSION_COST_FRAC,

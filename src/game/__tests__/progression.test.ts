@@ -133,12 +133,12 @@ describe('rarity gates', () => {
   it('caps fusion output one tier above the gate', () => {
     // Stage 1: only commons drop → fusion may craft rare but never epic.
     expect(getMaxFusionRarityIdx(1)).toBe(1);
-    const up2Roll = rollFusionRarity('common', 0.0, 0, 1); // roll inside the up2 window
+    const up2Roll = rollFusionRarity('common', 0.0, 1); // roll inside the up2 window
     expect(up2Roll.rarity).toBe('rare');
-    // Rare inputs at stage 1 are already at the cap — no upgrade, pity frozen.
-    const capped = rollFusionRarity('rare', 0.0, 99, 1);
+    // Rare inputs at stage 1 are already at the cap — no upgrade possible.
+    const capped = rollFusionRarity('rare', 0.0, 1);
     expect(capped.rarity).toBe('rare');
-    expect(capped.pityApplicable).toBe(false);
+    expect(capped.rarityUp).toBe(false);
     // Late game: full ladder reaches mythic (idx 4) — legendary is droppable
     // (gate 12), so fusion can craft one tier above it (the fusion-only tier).
     expect(getMaxFusionRarityIdx(16)).toBe(4);

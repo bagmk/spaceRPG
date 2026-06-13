@@ -279,8 +279,6 @@ export interface SaveState {
   unlockedRiftSlotCount: number;
   /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
   almanacCollected: Record<number, string[]>;
-  /** Consecutive fusions without a rarity upgrade — D4 pity counter. */
-  fusionPity: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
   peakEntropy: number;
   /** Codex entity ids already seen — drives the "NEW discovery" badge (v18). */
