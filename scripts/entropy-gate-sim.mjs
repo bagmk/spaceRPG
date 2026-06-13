@@ -75,6 +75,8 @@ const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.5;
 const SIM_FUSION_FAIL_RATE = 0.55; // ≈ 1 − (UP1+UP2) at the flat P1 odds
 const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
+// P2b: fusion matter cost scales by the (best) input rarity — cheap common, steep rare+.
+const FUSION_COST_RARITY_MULT = { common: 0.4, rare: 1.0, epic: 2.5, legendary: 6 };
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
@@ -238,7 +240,7 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
     elapsed += dt;
     activeClock += profile.activeFraction * dt;
     if (profile.fusionIntervalSec && activeClock >= nextFusionAt) {
-      const costPaid = quanta * ENTROPY_CFG.fusionCostFrac;
+      const costPaid = Math.min(quanta, quanta * ENTROPY_CFG.fusionCostFrac * (FUSION_COST_RARITY_MULT[bestRarity(stage.id)] ?? 1));
       const refCost = ENTITY_COST_ANCHORS[stage.id] * ENTROPY_CFG.burstRefCostFrac;
       const scale = refCost > 0 ? Math.min(1, costPaid / refCost) : 1;
       const burst = ENTROPY_CFG.fusionValueSec * Math.max(eRate, 1e-9) * scale;

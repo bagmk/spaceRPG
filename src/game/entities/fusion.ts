@@ -18,6 +18,7 @@ import {
   ENTROPY_W_CLICK,
   FUSION_CAP_DUP_REFUND_FRAC,
   FUSION_FAMILY_BIAS,
+  FUSION_COST_RARITY_MULT,
   FUSION_INPUT_COUNT,
   FUSION_PITY_THRESHOLD_BY_TIER,
   FUSION_REF_CPS,
@@ -27,6 +28,7 @@ import {
   RARITY_STAGE_GATES,
 } from '../balance';
 import { getSetKey } from './effects';
+import { getCodexSubsetIdForEntity } from './codexSets';
 import { getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
 import { getEnhanceLevelCap } from './enhance';
@@ -47,6 +49,10 @@ export interface FusionValidation {
   category?: EquipCategory;
   /** Set when ALL inputs share a glyph family — biases the output toward it. */
   familyKey?: string;
+  /** All three inputs are the SAME entity id (P2b same-entity bonus). */
+  sameEntity?: boolean;
+  /** Set when ALL inputs share one codex subset/category (P2b same-category bonus). */
+  sameSubsetId?: string | null;
 }
 
 /**
@@ -83,12 +89,22 @@ export function validateFusionInputs(
     if (familyKey === undefined) familyKey = family;
     else if (familyKey !== family) mixedFamily = true;
   }
+  // Same-entity (all 3 ids identical) + same-codex-subset bonuses (P2b).
+  const sameEntity = needed.size === 1;
+  const subs = [...needed.keys()].map((id) => {
+    const e = findEntityById(id);
+    return e ? getCodexSubsetIdForEntity(e) : null;
+  });
+  const firstSub = subs[0];
+  const sameSubsetId = firstSub !== null && subs.every((s) => s === firstSub) ? firstSub : null;
   return {
     ok: true,
     rarity,
     stageId,
     category: mixedCategory ? undefined : category,
     familyKey: mixedFamily ? undefined : familyKey,
+    sameEntity,
+    sameSubsetId,
   };
 }
 
@@ -121,6 +137,7 @@ export function rollFusionRarity(
   roll: number,
   pity: number,
   stageId: number,
+  sameEntityBonus = 0,
 ): FusionRarityRoll {
   const idx = RARITY_ORDER.indexOf(inputRarity);
   const maxIdx = getMaxFusionRarityIdx(stageId);
@@ -132,7 +149,7 @@ export function rollFusionRarity(
   const up2c = FUSION_UP2_CHANCE_BY_TIER[inputRarity];
   const pityThr = FUSION_PITY_THRESHOLD_BY_TIER[inputRarity] || Infinity;
   const up2 = roll < up2c && idx + 2 <= maxIdx;
-  const up1 = roll < Math.min(FUSION_UP_CHANCE_CAP, up2c + up1c);
+  const up1 = roll < Math.min(FUSION_UP_CHANCE_CAP, up2c + up1c + sameEntityBonus);
   const pityForced = pity >= pityThr;
   if (up2) return { rarity: RARITY_ORDER[idx + 2], rarityUp: true, pityApplicable: true };
   if (up1 || pityForced) return { rarity: RARITY_ORDER[idx + 1], rarityUp: true, pityApplicable: true };
@@ -182,9 +199,10 @@ export function pickFusionOutput(
 }
 
 /** Quanta consumed by one fusion — a fixed fraction of the current bank (sink). */
-export function getFusionQuantaCost(quanta: number): number {
+export function getFusionQuantaCost(rarity: EntityRarity, quanta: number): number {
   if (!Number.isFinite(quanta) || quanta <= 0) return 0;
-  return quanta * ENTROPY_FUSION_COST_FRAC;
+  const mult = FUSION_COST_RARITY_MULT[rarity] ?? 1;
+  return Math.min(quanta, quanta * ENTROPY_FUSION_COST_FRAC * mult);
 }
 
 /**

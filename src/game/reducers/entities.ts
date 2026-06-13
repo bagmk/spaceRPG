@@ -30,6 +30,9 @@ import {
   ENHANCE_DESTROY_CHANCE_ON_FAIL,
   ENHANCE_STONE_THRESHOLD,
   FUSION_FAIL_STONES_BY_TIER,
+  FUSION_SAME_ENTITY_UP_BONUS,
+  FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
+  FUSION_SAME_SUBSET_BURST_MULT,
 } from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
@@ -170,8 +173,13 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   if (!validation.ok || !validation.rarity || !validation.stageId) return state;
 
   const currentStageIdForFusion = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+  // P2b bonuses: 3-of-the-same-entity lifts the up chance; 3-from-one-codex
+  // category amplifies the entropy burst.
+  const sameEntity = validation.sameEntity === true;
+  const sameSubset = validation.sameSubsetId != null;
   const rarityResult = rollFusionRarity(
     validation.rarity, action.rarityRoll, state.fusionPity, currentStageIdForFusion,
+    sameEntity ? FUSION_SAME_ENTITY_UP_BONUS : 0,
   );
   // Output pool stage follows the same player-stage weighting as drops
   // (Phase 4-1) — input origin stages no longer determine the output pool.
@@ -185,13 +193,15 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   }, outputStageId !== currentStageIdForFusion);
   if (!output) return state;
 
-  const cost = getFusionQuantaCost(state.quanta);
+  const cost = getFusionQuantaCost(validation.rarity, state.quanta);
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
   const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
-  // Lv5+ enhancement (R1). Stones scale with the input tier.
-  const stonesEarned = rarityResult.rarityUp ? 0 : (FUSION_FAIL_STONES_BY_TIER[validation.rarity] ?? 1);
+  // Lv5+ enhancement (R1). Stones scale with the input tier; +bonus for same-entity.
+  const stonesEarned = rarityResult.rarityUp
+    ? 0
+    : (FUSION_FAIL_STONES_BY_TIER[validation.rarity] ?? 1) + (sameEntity ? FUSION_SAME_ENTITY_FAIL_STONE_BONUS : 0);
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
@@ -206,7 +216,8 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
     fusionModifiers.fusionBurstMult *
     entropyEchoMult *
-    burstCostScale;
+    burstCostScale *
+    (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);
   const nextEntropy = safeAdd(state.entropy, burst);
   const eventId = nextEventId(state);
   const nextPity = rarityResult.pityApplicable

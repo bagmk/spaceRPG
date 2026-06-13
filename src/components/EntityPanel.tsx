@@ -5,7 +5,6 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   CODEX_MASS_BONUS,
-  ENTROPY_FUSION_COST_FRAC,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_PITY_THRESHOLD_BY_TIER,
@@ -19,11 +18,11 @@ import {
   type SecondaryStatType,
 } from '../game/balance';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
-import { getMaxFusionRarityIdx } from '../game/entities/fusion';
+import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
@@ -903,7 +902,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const remaining = pityThr > 0 ? Math.max(0, pityThr - fusionPity) : 0;
           const pityPct = pityThr > 0 ? Math.min(100, Math.round((fusionPity / pityThr) * 100)) : 0;
           const ready = fuseInputs.length === FUSION_INPUT_COUNT;
-          const cost = quanta * ENTROPY_FUSION_COST_FRAC;
+          const cost = getFusionQuantaCost(oddsTier, quanta);
+          // P2b bonus indicators: 3-same-entity / 3-same-codex-category.
+          const sameEntityTray = ready && new Set(fuseInputs).size === 1;
+          const sameSubsetTray = ready && (() => {
+            const subs = fuseInputs.map((id) => { const e = findEntityById(id); return e ? getCodexSubsetIdForEntity(e) : null; });
+            return subs[0] != null && subs.every((s) => s === subs[0]);
+          })();
 
           // Fusable-trio pressure + auto-fill: copies available per rarity.
           const copiesByRarity = new Map<EntityRarity, number>();
@@ -966,6 +971,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       ? t(language, 'fuseAltarReady')
                       : t(language, 'fuseHint')}
                 </div>
+                {sameEntityTray || sameSubsetTray ? (
+                  <div className="gacha-bonus">
+                    {sameEntityTray ? <span className="gacha-bonus__chip">★ {t(language, 'fuseBonusSameEntity')}</span> : null}
+                    {sameSubsetTray ? <span className="gacha-bonus__chip">◈ {t(language, 'fuseBonusSameCategory')}</span> : null}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && !fusing ? 'gacha-fuse-btn--armed' : ''}`}

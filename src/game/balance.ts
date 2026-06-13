@@ -170,17 +170,17 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // investment, not auto-scaling. Re-run the sim + repaste on any income change.
   1: 4.118e3,
   2: 2.406e4,
-  3: 8.756e4,
-  4: 3.664e5,
-  5: 5.390e5,
-  6: 1.746e6,
-  7: 4.157e6,
-  8: 9.208e6,
-  9: 1.441e7,
-  10: 2.321e7,
-  11: 3.796e7,
-  12: 6.008e7,
-  13: 8.507e7,
+  3: 8.498e4,
+  4: 3.593e5,
+  5: 5.320e5,
+  6: 1.738e6,
+  7: 4.149e6,
+  8: 9.201e6,
+  9: 1.440e7,
+  10: 2.320e7,
+  11: 3.795e7,
+  12: 6.007e7,
+  13: 8.506e7,
   14: 1.505e8,
   15: 3.325e8,
   16: 4.060e8,
@@ -292,6 +292,15 @@ export const FUSION_PITY_THRESHOLD_BY_TIER: Record<EntityRarity, number> = {
 };
 /** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
 export const FUSION_UP_CHANCE_CAP = 0.65;
+// P2b cost (R4): cheap for common, steep from rare up (× the 10%-of-bank base);
+// stage scaling is implicit since the bank grows with stage. Capped at the bank.
+export const FUSION_COST_RARITY_MULT: Record<EntityRarity, number> = {
+  common: 0.4, rare: 1.0, epic: 2.5, legendary: 6,
+};
+// P2b bonuses (R9): fusing 3 of the SAME entity, or 3 from the same codex category.
+export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance
+export const FUSION_SAME_ENTITY_FAIL_STONE_BONUS = 1;  // +1 강화석 on a failed same-entity fuse
+export const FUSION_SAME_SUBSET_BURST_MULT = 1.5;      // entropy burst ×1.5 when all 3 share a codex subset
 /** @deprecated flat legacy odds — kept for the sim/UI fallback; use the *_BY_TIER tables. */
 export const FUSION_UP1_CHANCE = 0.4;
 /** @deprecated */

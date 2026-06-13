@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { STAGE_ENTITIES, getEntitiesForStage } from '../entities/stageItems';
-import { rollFusionRarity, validateFusionInputs } from '../entities/fusion';
+import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../entities/fusion';
 import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
@@ -89,6 +89,20 @@ describe('fusion (Phase 3)', () => {
     expect(result.rarity).toBe('legendary');
     expect(result.rarityUp).toBe(false);
     expect(result.pityApplicable).toBe(false);
+  });
+
+  it('P2b: fusion cost scales by input rarity (common cheap, legendary steep)', () => {
+    expect(getFusionQuantaCost('common', 1000)).toBeCloseTo(1000 * 0.1 * 0.4, 5);
+    expect(getFusionQuantaCost('legendary', 1000)).toBeGreaterThan(getFusionQuantaCost('common', 1000) * 10);
+    expect(getFusionQuantaCost('epic', 1e12)).toBeLessThanOrEqual(1e12); // never exceeds the bank
+  });
+
+  it('P2b: validateFusionInputs flags same-entity and same-codex-subset', () => {
+    const c = commons[0];
+    const v = validateFusionInputs([{ entityId: c.id, count: 3, level: 1 }], [c.id, c.id, c.id]);
+    expect(v.sameEntity).toBe(true);
+    // Three copies of one entity necessarily share its codex subset (or null).
+    expect(v.sameSubsetId === null || typeof v.sameSubsetId === 'string').toBe(true);
   });
 
   it('P2: up-odds decrease per input tier (common 40 → rare 20 → epic 10)', () => {

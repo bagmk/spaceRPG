@@ -5,7 +5,7 @@ import { applyEntityModifiers } from '../entities/effects';
 import { getSecondaryStats } from '../entities/substats';
 import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
 import { getRarityGateRamp, rollEntityDrop } from '../entities/drops';
-import { getMaxFusionRarityIdx, rollFusionRarity } from '../entities/fusion';
+import { getMaxFusionRarityIdx, rollFusionRarity, getFusionQuantaCost } from '../entities/fusion';
 import { isEntityLockedByAnchor } from '../entities/anchors';
 import { defaultModifiers } from '../skills/effects';
 import {
@@ -242,8 +242,9 @@ describe('gear system (category purity + refunds)', () => {
       type: 'FUSE_ENTITIES', inputEntityIds: inputIds, rarityRoll: 0.99, pickRoll: 0.1,
     });
     expect(next.lastFusionEvent!.refund).toBeCloseTo(expected, 5);
-    // quanta = start - 10% cost + refund (event may add nothing else at this roll)
-    expect(next.quanta).toBeCloseTo(1000 - 100 + expected, 3);
+    // quanta = start - cost + refund. P2b: common fusion cost = 10% × 0.4 mult = 40.
+    const fuseCost = getFusionQuantaCost('common', 1000);
+    expect(next.quanta).toBeCloseTo(1000 - fuseCost + expected, 3);
     // remaining stack keeps no stale investment (all copies consumed)
     const remaining = next.inventory.find((e) => e.entityId === input.id);
     expect(remaining?.invested ?? 0).toBeCloseTo(0, 5);

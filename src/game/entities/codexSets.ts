@@ -247,6 +247,21 @@ export function codexRewardLabel(reward: CodexReward, lang: Lang): string {
 }
 
 /** Which top-level set an entity belongs to (first matching set). */
+/**
+ * The first codex SUBSET id an entity belongs to (the "category" the player
+ * sees), or null if none. Used for the same-codex-category fusion bonus (P2b)
+ * and the codex-subset set bonus (P5). Skips the overlapping genesis set.
+ */
+export function getCodexSubsetIdForEntity(entity: StageEntity): string | null {
+  for (const set of CODEX_SETS) {
+    if (set.id === 'genesis') continue;
+    for (const sub of set.subsets) {
+      if (subsetMatches(sub, entity)) return `${set.id}/${sub.id}`;
+    }
+  }
+  return null;
+}
+
 export function getCodexSetForEntity(entity: StageEntity): CodexSet {
   for (const set of CODEX_SETS) {
     if (set.id === 'genesis') continue; // Genesis overlaps; don't claim entities from families
