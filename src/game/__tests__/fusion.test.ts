@@ -91,6 +91,18 @@ describe('fusion (Phase 3)', () => {
     expect(result.pityApplicable).toBe(false);
   });
 
+  it('P2: up-odds decrease per input tier (common 40 → rare 20 → epic 10)', () => {
+    // common: up1 window = 0.05 + 0.40 = 0.45.
+    expect(rollFusionRarity('common', 0.39, 0, 16).rarity).toBe('rare');
+    expect(rollFusionRarity('common', 0.50, 0, 16).rarityUp).toBe(false);
+    // rare: up1 window = 0.02 + 0.20 = 0.22.
+    expect(rollFusionRarity('rare', 0.10, 0, 16).rarity).toBe('epic');
+    expect(rollFusionRarity('rare', 0.30, 0, 16).rarityUp).toBe(false);
+    // epic: up1 window = 0.10.
+    expect(rollFusionRarity('epic', 0.05, 0, 16).rarity).toBe('legendary');
+    expect(rollFusionRarity('epic', 0.20, 0, 16).rarityUp).toBe(false);
+  });
+
   it('feeds duplicate outputs at max count into level-ups (dup sink)', () => {
     // Force a same-rarity output and aim the pick at a known entity by
     // saturating the inventory with that entity at maxCount.

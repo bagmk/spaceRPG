@@ -276,11 +276,27 @@ export const DROP_CURRENT_STAGE_WEIGHT = 0.6;
 
 /** Copies consumed per fusion (all inputs must share one rarity). */
 export const FUSION_INPUT_COUNT = 3;
-/** Chance the output is one rarity above the inputs. */
+// P2: rarity-up odds DECREASE per input tier — the higher you climb, the rarer
+// the jump (the gamble's tension). Keyed by the INPUT rarity. legendary→mythic
+// is set in P2b (the Mythic tier); 0 here keeps legendary inputs no-up for now.
+export const FUSION_UP1_CHANCE_BY_TIER: Record<EntityRarity, number> = {
+  common: 0.40, rare: 0.20, epic: 0.10, legendary: 0,
+};
+/** Double-jump chance, by input tier (only when +2 is reachable). */
+export const FUSION_UP2_CHANCE_BY_TIER: Record<EntityRarity, number> = {
+  common: 0.05, rare: 0.02, epic: 0, legendary: 0,
+};
+/** Pity: consecutive non-upgrades before a forced +1, by input tier (rarer tiers wait longer). */
+export const FUSION_PITY_THRESHOLD_BY_TIER: Record<EntityRarity, number> = {
+  common: 4, rare: 6, epic: 10, legendary: 0,
+};
+/** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
+export const FUSION_UP_CHANCE_CAP = 0.65;
+/** @deprecated flat legacy odds — kept for the sim/UI fallback; use the *_BY_TIER tables. */
 export const FUSION_UP1_CHANCE = 0.4;
-/** Chance the output is two rarities above the inputs (rolled within up window). */
+/** @deprecated */
 export const FUSION_UP2_CHANCE = 0.05;
-/** D4 pity: after this many consecutive non-upgrades, the next fusion guarantees +1 rarity. */
+/** @deprecated */
 export const FUSION_PITY_THRESHOLD = 5;
 /**
  * Entropy burst per fusion ≈ ENTROPY_FUSION_VALUE_SEC seconds of entropy income

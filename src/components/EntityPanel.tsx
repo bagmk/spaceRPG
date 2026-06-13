@@ -8,9 +8,9 @@ import {
   ENTROPY_FUSION_COST_FRAC,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
-  FUSION_PITY_THRESHOLD,
-  FUSION_UP1_CHANCE,
-  FUSION_UP2_CHANCE,
+  FUSION_PITY_THRESHOLD_BY_TIER,
+  FUSION_UP1_CHANCE_BY_TIER,
+  FUSION_UP2_CHANCE_BY_TIER,
   ENTITY_LEVEL_EFFECT_BONUS,
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
   RARITY_STAGE_GATES,
@@ -895,8 +895,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
           const capped = trayRarity !== undefined && trayIdx >= maxIdx;
           const up2Possible = trayIdx + 2 <= maxIdx;
-          const remaining = Math.max(0, FUSION_PITY_THRESHOLD - fusionPity);
-          const pityPct = Math.min(100, Math.round((fusionPity / FUSION_PITY_THRESHOLD) * 100));
+          // Odds + pity are now per-input-tier (P2). Default to common when the tray is empty.
+          const oddsTier = trayRarity ?? 'common';
+          const up1Pct = Math.round(FUSION_UP1_CHANCE_BY_TIER[oddsTier] * 100);
+          const up2Pct = Math.round(FUSION_UP2_CHANCE_BY_TIER[oddsTier] * 100);
+          const pityThr = FUSION_PITY_THRESHOLD_BY_TIER[oddsTier] || 0;
+          const remaining = pityThr > 0 ? Math.max(0, pityThr - fusionPity) : 0;
+          const pityPct = pityThr > 0 ? Math.min(100, Math.round((fusionPity / pityThr) * 100)) : 0;
           const ready = fuseInputs.length === FUSION_INPUT_COUNT;
           const cost = quanta * ENTROPY_FUSION_COST_FRAC;
 
@@ -983,9 +988,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     </span>
                   ) : (
                     <>
-                      <span className="gacha-odds__up1">{`⬆ ${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}%`}</span>
-                      {up2Possible ? (
-                        <span className="gacha-odds__up2">{`⬆⬆ ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%`}</span>
+                      <span className="gacha-odds__up1">{`⬆ ${t(language, 'fuseOddsUp1')} ${up1Pct}%`}</span>
+                      {up2Possible && up2Pct > 0 ? (
+                        <span className="gacha-odds__up2">{`⬆⬆ ${t(language, 'fuseOddsUp2')} ${up2Pct}%`}</span>
                       ) : null}
                     </>
                   )}

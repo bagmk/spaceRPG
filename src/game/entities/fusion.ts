@@ -19,10 +19,11 @@ import {
   FUSION_CAP_DUP_REFUND_FRAC,
   FUSION_FAMILY_BIAS,
   FUSION_INPUT_COUNT,
-  FUSION_PITY_THRESHOLD,
+  FUSION_PITY_THRESHOLD_BY_TIER,
   FUSION_REF_CPS,
-  FUSION_UP1_CHANCE,
-  FUSION_UP2_CHANCE,
+  FUSION_UP1_CHANCE_BY_TIER,
+  FUSION_UP2_CHANCE_BY_TIER,
+  FUSION_UP_CHANCE_CAP,
   RARITY_STAGE_GATES,
 } from '../balance';
 import { getSetKey } from './effects';
@@ -127,9 +128,12 @@ export function rollFusionRarity(
     // No upgrade possible (legendary inputs, or inputs already at the stage cap).
     return { rarity: inputRarity, rarityUp: false, pityApplicable: false };
   }
-  const up2 = roll < FUSION_UP2_CHANCE && idx + 2 <= maxIdx;
-  const up1 = roll < FUSION_UP2_CHANCE + FUSION_UP1_CHANCE;
-  const pityForced = pity >= FUSION_PITY_THRESHOLD;
+  const up1c = FUSION_UP1_CHANCE_BY_TIER[inputRarity];
+  const up2c = FUSION_UP2_CHANCE_BY_TIER[inputRarity];
+  const pityThr = FUSION_PITY_THRESHOLD_BY_TIER[inputRarity] || Infinity;
+  const up2 = roll < up2c && idx + 2 <= maxIdx;
+  const up1 = roll < Math.min(FUSION_UP_CHANCE_CAP, up2c + up1c);
+  const pityForced = pity >= pityThr;
   if (up2) return { rarity: RARITY_ORDER[idx + 2], rarityUp: true, pityApplicable: true };
   if (up1 || pityForced) return { rarity: RARITY_ORDER[idx + 1], rarityUp: true, pityApplicable: true };
   return { rarity: inputRarity, rarityUp: false, pityApplicable: true };
