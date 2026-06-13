@@ -116,7 +116,13 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 4 진행 중 — 4-1·4-2·4-3 완료. 다음: 4-4 페이싱 압축**
+- Current Phase: **Phase 4 완료 (4-1~4-4, 2026-06-13). 엔티티 리디자인 전 단계 종료.**
+- Phase 4-4: 페이싱 검증 + idle floor (2026-06-13):
+  - **핵심 판단**: 4-1/4-2의 재캘리브레이션 덕에 시뮬 불변식이 이미 전부 통과(reference 1.00× 고정, active≥50%, 스프레드 58×≤150, 크리 1.23×). 따라서 4-4는 강제 리밸런스가 아니라 **검증 영구화 + 실질 갭 보강**.
+  - **오프라인 엔트로피 floor**(백로그 "idle floor"): rift 기어 0인 클릭 전용 빌드는 오프라인 진행이 0이었음. `OFFLINE_ENTROPY_FLOOR_FRAC`(0.05) — 현 스테이지 게이트 span의 5%/풀 오프라인캡, away·offlineMult 스케일, `max(auto수입, floor)`로 적용(기어 플레이어는 auto가 압도 → 불변). useGameState 오프라인 경로.
+  - **페이싱 회귀 테스트**(`pacing.test.ts`): 임계값 16개 단조증가 + STAGES 미러 + 메타 상수 임계값 상대식(BIG_CRUNCH=0.5×T[3] 등) + 기어 곡선 검증(스테이지당 ×STAGE_POWER_BASE, 클릭 3슬롯 ≈ 8×) — 향후 밸런스 편집이 페이싱을 무음으로 깨지 못하게 잠금.
+  - **스프레드 판단**: casual/hardcore 58×는 ≤150 통과. 강제 압축은 "액티브 플레이가 보상받는다" 속성을 깎으므로 **현행 유지**(곤봉 없는 곡선이 이미 의도대로 작동). 추가 압축은 향후 플레이테스트 데이터가 있을 때.
+  - 검증: 746 통과(신규 pacing 6건), tsc, build, sim ALL PASS. 세이브 범프 없음(v17).
 - Phase 4-3: 프레스티지 carry (D2) + 도감 % 메타 보너스 (2026-06-13; 멀티에이전트 3렌즈 리뷰가 원안을 needs-redesign 판정 → 파워 스트립으로 재설계 후 구현):
   - **치명적 발견**: 스테이지 독립 곡선의 E=max(player-1+gate, itemStage-1) 클램프 탓에 16스테이지 아이템을 그대로 carry하면 새 우주 1스테이지부터 풀파워(클릭 ×~1.15e5, 오토 ~1.1e17/s)라 엔트로피 게이트 ~13스테이지까지 초 단위로 붕괴. → **carry 시 파워 스트립**: `EntityInstance.carried` 추가, `getGearPowerExponent(...,carried)`가 carried면 itemStage 클램프를 버리고 플레이어 항만 사용. carry는 **레벨 유지 + 파워는 새 시대 기준 재성장** = 헤드스타트(곤봉 아님).
   - **carry 규칙**: handlePrestige에서 인벤토리 중 최고 클릭 1 + 최고 균열 1(등급>레벨>수량), count는 PRESTIGE_CARRY_COUNT_CAP(1)로 클램프, id 정규화, carried:true로 새 우주 inventory에 시드. 장착 슬롯은 비움(재장착은 의도적 1클릭). 세이브 필드 추가 없음(handlePrestige 계산).

@@ -207,6 +207,15 @@ export const CRIT_MULT_GEAR_CAP = 5;
  */
 export const PRESTIGE_CARRY_COUNT_CAP = 1;
 /**
+ * Offline entropy floor (Phase 4-4 idle floor): even a player with zero auto
+ * income (e.g. a click-only build with no rift gear equipped) makes a little
+ * gate progress while away. Floor = this fraction of the current stage's gate
+ * SPAN per FULL offline cap, scaled by away-time and the offline multiplier,
+ * applied as max() against the auto-based offline entropy (a floor, never a
+ * bonus — geared players' auto income dwarfs it and is unchanged).
+ */
+export const OFFLINE_ENTROPY_FLOOR_FRAC = 0.05;
+/**
  * Codex completion multiplies the prestige condensedMass reward:
  * ×(1 + collected/total × CODEX_MASS_BONUS). 1.0 → ×1.5 at 50% codex, ×2.0 at
  * 100%. condensedMass is spent only in the Singularity tree (never the entropy

@@ -7,10 +7,12 @@ import {
   getCosmicTimeFillRate,
   getEffectiveThreshold,
   getEntropyFromMatterGain,
+  getEntropyGateFloor,
   getEntropyGateProgress,
   getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
+import { OFFLINE_ENTROPY_FLOOR_FRAC } from '../game/balance';
 import {
   getOfflineRewardCapSec,
   integrateBoostedSeconds,
@@ -126,7 +128,16 @@ export function useGameState(): UseGameStateResult {
       const nextQuanta = safeAdd(baseState.quanta, gained);
       const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
       const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
-      const entropyGained = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult * modifiers.entropyGainMult;
+      const autoEntropy = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult * modifiers.entropyGainMult;
+      // Offline entropy floor (Phase 4-4 idle floor): a no-auto build (e.g.
+      // click-only, no rift gear) still inches the gate forward. Floor =
+      // OFFLINE_ENTROPY_FLOOR_FRAC of the current stage's gate span per full
+      // offline cap, scaled by away-time + the offline multiplier. max() —
+      // never reduces a geared player's auto-driven gain.
+      const gateSpan = Math.max(0, stage.entropyThreshold - getEntropyGateFloor(payload.stageIdx));
+      const entropyFloor =
+        gateSpan * OFFLINE_ENTROPY_FLOOR_FRAC * (awaySec / offlineCapSec) * offlineMultiplier * modifiers.entropyGainMult;
+      const entropyGained = Math.max(autoEntropy, entropyFloor);
       const stageStartCosmic = getStageStartCosmicTime(payload.stageIdx);
       const logSpan = Math.log10(stage.cosmicTimeSec) - Math.log10(stageStartCosmic);
       const safeCosmic = Math.max(payload.cosmicClockSec, stageStartCosmic);
