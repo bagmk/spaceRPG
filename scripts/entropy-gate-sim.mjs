@@ -68,6 +68,13 @@ const GATE_RAMP = 3;
 // Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × 1.9^(L-1)
 const ENHANCE_COST_FACTOR = 1.5;
 const ENHANCE_COST_GROWTH = 2.2;
+// P1 강화석: Lv1→5 matter, Lv5+ stones (minted by failed fusions). The stone
+// budget per stage = expected fusions × fail rate × stones-per-fail(best rarity).
+const ENHANCE_STONE_THRESHOLD = 5;
+const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
+const ENHANCE_STONE_GROWTH = 1.5;
+const SIM_FUSION_FAIL_RATE = 0.55; // ≈ 1 − (UP1+UP2) at the flat P1 odds
+const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
@@ -125,39 +132,55 @@ function maturity(stageId, p) {
  * ENHANCE_BUDGET_FRAC of the stage's expected income (≈ stage cost anchor
  * scale — quanta income tracks the anchor by construction of the curve).
  */
-function derivedLevel(stageId, rarity) {
+function derivedLevel(stageId, rarity, stoneBudget = 0) {
   const budget = ENTITY_COST_ANCHORS[stageId] * ENHANCE_BUDGET_FRAC;
   const base = ENTITY_COST_ANCHORS[stageId] * RARITY_FACTOR[rarity] * ENHANCE_COST_FACTOR;
   let total = 0;
   let level = 1;
-  while (level < LEVEL_CAPS[rarity]) {
+  // Matter phase: levels up to the stone threshold (or the budget runs out).
+  while (level < Math.min(ENHANCE_STONE_THRESHOLD, LEVEL_CAPS[rarity])) {
     const next = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
-    if (total + next > budget) break;
+    if (total + next > budget) return level;
     total += next;
+    level += 1;
+  }
+  // Stone phase: levels funded by 강화석 from fusion fails (P1).
+  let stoneTotal = 0;
+  while (level < LEVEL_CAPS[rarity]) {
+    const over = level - ENHANCE_STONE_THRESHOLD;
+    const nextStone = ENHANCE_STONE_BASE[rarity] * Math.pow(ENHANCE_STONE_GROWTH, over);
+    if (stoneTotal + nextStone > stoneBudget) break;
+    stoneTotal += nextStone;
     level += 1;
   }
   return level;
 }
 const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.6;
 
-function gearClickMult(stageId, p) {
+function gearClickMult(stageId, p, stoneBudget = 0) {
   const E = (stageId - 1) + p;
   const g = Math.pow(STAGE_POWER_BASE, E);
   const r = bestRarity(stageId);
   const q = GEAR.click[r];
-  const lvl = levelMult(derivedLevel(stageId, r));
+  const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
   const stack = (q.pct * q.eff * lvl * maturity(stageId, p) * g) / 100;
   return Math.pow(1 + stack, clickSlots(stageId));
 }
-function gearAutoFlat(stageId, p) {
+function gearAutoFlat(stageId, p, stoneBudget = 0) {
   const E = (stageId - 1) + p;
   const g = Math.pow(AUTO_STAGE_POWER_BASE, E);
   const r = bestRarity(stageId);
   const q = GEAR.auto[r];
-  const lvl = levelMult(derivedLevel(stageId, r));
+  const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
   const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * lvl * maturity(stageId, p)) / 100;
   const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power late
   return perSlot * riftSlots(stageId) * autoPowerMult;
+}
+/** Expected 강화석 a profile banks during a stage (drives stone-phase levels). */
+function stoneBudgetFor(stage, profile) {
+  if (!profile.fusionIntervalSec || profile.activeFraction <= 0) return 0;
+  const fusions = (stage.realPlayTargetSec * profile.activeFraction) / profile.fusionIntervalSec;
+  return fusions * SIM_FUSION_FAIL_RATE * FUSION_FAIL_STONES[bestRarity(stage.id)];
 }
 
 /**
@@ -165,11 +188,11 @@ function gearAutoFlat(stageId, p) {
  * bounded by CRIT_MULT_GEAR_CAP. `critGear` 0..1 scales how crit-focused the
  * loadout is (median 0.5 for calibration; 0 / 1 for the spread invariant).
  */
-function critFactor(stageId, combo, critGear = 0.5) {
+function critFactor(stageId, combo, critGear = 0.5, stoneBudget = 0) {
   const r = bestRarity(stageId);
   const statCount = { common: 0, rare: 1, epic: 2, legendary: 3 }[r];
   const rarityScale = { common: 0, rare: 1, epic: 1.5, legendary: 2.2 }[r];
-  const lvl = levelMult(derivedLevel(stageId, r));
+  const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
   // critChance substat: base 0.4% × rarityScale × lvl per stat; assume critGear
   // share of (slots × statCount) stats are crit-flavored.
   const chanceAdd = 0.004 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
@@ -191,14 +214,15 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
   const src = { click: 0, auto: 0, fusion: 0 };
   const combo = profile.combo ?? 0;
   const stageMaxSec = calibrateTo ?? 1000 * 3600;
+  const stoneBudget = stoneBudgetFor(stage, profile); // P1: funds Lv5+ levels
   while (safety++ < 400000) {
     if (entropy >= thresholds[stageIdx]) break;
     if (elapsed >= stageMaxSec) break;
     const p = Math.min(1, Math.max(0, (entropy - floor) / Math.max(1e-9, thresholds[stageIdx] - floor)));
-    const cp = Math.max(1, gearClickMult(stage.id, p)) * CLICK_OUTPUT_MULTIPLIER * (MECHANIC_CLICK_BOOST[stage.mechanic] ?? 1);
-    const eCrit = critFactor(stage.id, combo, profile.critGear ?? 0.5);
+    const cp = Math.max(1, gearClickMult(stage.id, p, stoneBudget)) * CLICK_OUTPUT_MULTIPLIER * (MECHANIC_CLICK_BOOST[stage.mechanic] ?? 1);
+    const eCrit = critFactor(stage.id, combo, profile.critGear ?? 0.5, stoneBudget);
     const clickG = profile.cps * cp * eCrit * comboMult(combo) * profile.activeFraction;
-    const autoG = gearAutoFlat(stage.id, p);
+    const autoG = gearAutoFlat(stage.id, p, stoneBudget);
     const eRate = clickG * ENTROPY_CFG.wClick + autoG * ENTROPY_CFG.wAuto;
     let dt = 30;
     if (eRate > 0) dt = Math.min(dt, Math.max(0.5, (thresholds[stageIdx] - entropy) / eRate / 8));

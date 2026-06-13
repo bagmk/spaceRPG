@@ -265,6 +265,18 @@ describe('save migration', () => {
     expect(migrated.seenPanelHints).toEqual(['codex']);
   });
 
+  it('v19 seeds enhanceStones=0 for existing saves and preserves it for v19', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 18 }));
+    expect(loadGame()!.enhanceStones).toBe(0); // veteran: no retroactive stones
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 19, enhanceStones: 42 }));
+    expect(loadGame()!.enhanceStones).toBe(42); // genuine v19 keeps its balance
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

@@ -33,6 +33,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastCollisionEvent: null,
     lastEncounterEvent: null,
     lastFusionEvent: null,
+    lastEnhanceEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -63,6 +64,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     unlockedRiftSlotCount: payload.unlockedRiftSlotCount ?? 1,
     codexSeenIds: payload.codexSeenIds ?? [],
     seenPanelHints: payload.seenPanelHints ?? [],
+    enhanceStones: payload.enhanceStones ?? 0,
   };
 }
 
@@ -132,6 +134,11 @@ export function handleClearClickEvent(state: GameState, action: ClearClickEventA
 
 export function handleClearFusionEvent(state: GameState, action: ClearFusionEventAction): GameState {
   return state.lastFusionEvent?.id === action.id ? { ...state, lastFusionEvent: null } : state;
+}
+
+type ClearEnhanceEventAction = Extract<GameAction, { type: 'CLEAR_ENHANCE_EVENT' }>;
+export function handleClearEnhanceEvent(state: GameState, action: ClearEnhanceEventAction): GameState {
+  return state.lastEnhanceEvent?.id === action.id ? { ...state, lastEnhanceEvent: null } : state;
 }
 
 export function handleClearCollisionEvent(

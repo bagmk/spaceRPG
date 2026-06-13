@@ -5,11 +5,55 @@
  * and are capped by rarity. Tunables live in balance.ts (ENHANCE_*).
  */
 
-import { ENHANCE_COST_FACTOR, ENHANCE_COST_GROWTH, ENHANCE_LEVEL_CAPS } from '../balance';
+import {
+  ENHANCE_COST_FACTOR,
+  ENHANCE_COST_GROWTH,
+  ENHANCE_LEVEL_CAPS,
+  ENHANCE_STONE_THRESHOLD,
+  ENHANCE_STONE_BASE,
+  ENHANCE_STONE_GROWTH,
+  ENHANCE_FAIL_BASE,
+  ENHANCE_FAIL_PER_LEVEL,
+  ENHANCE_FAIL_MAX,
+  ENHANCE_DESTROY_WINDOW_FROM_CAP,
+  ENHANCE_PROTECT_STONE_MULT,
+} from '../balance';
 import { getPlayerAnchoredBaseCost, type StageEntity } from './types';
 
 export function getEnhanceLevelCap(entity: StageEntity): number {
   return ENHANCE_LEVEL_CAPS[entity.rarity] ?? 10;
+}
+
+// ── Stone phase (P1): levels ≥ ENHANCE_STONE_THRESHOLD cost 강화석, not matter,
+//    and carry failure risk. Levels below it use matter (getEnhanceCost) and
+//    never fail. ──────────────────────────────────────────────────────────────
+
+/** True when going from `level` to `level+1` costs stones (and can fail). */
+export function isEnhanceStonePhase(level: number): boolean {
+  return Math.floor(level) >= ENHANCE_STONE_THRESHOLD;
+}
+
+/** 강화석 cost to go from a stone-phase `level` to `level+1`. */
+export function getEnhanceStoneCost(entity: StageEntity, level: number): number {
+  const over = Math.max(0, Math.floor(level) - ENHANCE_STONE_THRESHOLD);
+  return Math.ceil(ENHANCE_STONE_BASE[entity.rarity] * Math.pow(ENHANCE_STONE_GROWTH, over));
+}
+
+/** Extra 강화석 to protect a stone-phase attempt (a failed protected attempt loses nothing). */
+export function getEnhanceProtectStoneCost(entity: StageEntity, level: number): number {
+  return Math.ceil(getEnhanceStoneCost(entity, level) * ENHANCE_PROTECT_STONE_MULT);
+}
+
+/** Chance a stone-phase enhance FAILS (0 below the threshold), rising with level. */
+export function getEnhanceFailChance(level: number): number {
+  if (!isEnhanceStonePhase(level)) return 0;
+  const over = Math.max(0, Math.floor(level) - ENHANCE_STONE_THRESHOLD);
+  return Math.min(ENHANCE_FAIL_MAX, ENHANCE_FAIL_BASE + over * ENHANCE_FAIL_PER_LEVEL);
+}
+
+/** Within this band of the cap, a failed stone-phase enhance can DESTROY a copy. */
+export function isEnhanceDestroyEligible(entity: StageEntity, level: number): boolean {
+  return isEnhanceStonePhase(level) && Math.floor(level) >= getEnhanceLevelCap(entity) - ENHANCE_DESTROY_WINDOW_FROM_CAP;
 }
 
 /**

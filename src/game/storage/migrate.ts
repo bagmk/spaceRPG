@@ -268,6 +268,7 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     prestigeUpgrades: (record as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
     codexSeenIds: [],
     seenPanelHints: [],
+    enhanceStones: 0,
     ...convertEntityModelV14(record),
   };
 }
@@ -396,6 +397,8 @@ export function validateV5(
     // defaults for pre-v18 saves (where these are absent → []).
     codexSeenIds: isStringArray((parsed as any).codexSeenIds) ? (parsed as any).codexSeenIds : [],
     seenPanelHints: isStringArray((parsed as any).seenPanelHints) ? (parsed as any).seenPanelHints : [],
+    // v19 강화석 — preserved if present; finalizeV17 seeds 0 for pre-v19 saves.
+    enhanceStones: isFiniteNumber((parsed as any).enhanceStones) ? Math.max(0, (parsed as any).enhanceStones) : 0,
     ...convertEntityModelV14(parsed),
   };
 }

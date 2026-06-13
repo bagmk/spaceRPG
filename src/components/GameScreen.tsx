@@ -762,6 +762,8 @@ export function GameScreen({
             codexSeenIds={state.codexSeenIds}
             seenPanelHints={state.seenPanelHints}
             quanta={state.quanta}
+            enhanceStones={state.enhanceStones}
+            lastEnhanceEvent={state.lastEnhanceEvent}
             stats={{
               clickPower: getClickPower(modifiers),
               autoRate: displayedAutoRate,
@@ -779,12 +781,13 @@ export function GameScreen({
             language={language}
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
-            onEnhance={(entityId) => { dispatch({ type: 'ENHANCE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
+            onEnhance={(entityId, protect) => { dispatch({ type: 'ENHANCE_ENTITY', entityId, failRoll: Math.random(), destroyRoll: Math.random(), protect }); soundManager?.playEntityLevelUp(); }}
             onFuse={(inputEntityIds) => {
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random() });
               soundManager?.playEntityLevelUp();
             }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
+            onClearEnhanceEvent={(id) => dispatch({ type: 'CLEAR_ENHANCE_EVENT', id })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
             onClose={() => { setPanelView(null); soundManager?.playUIClose(); }}

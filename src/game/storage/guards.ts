@@ -137,7 +137,8 @@ export function isEntityInstance(value: unknown): value is EntityInstance {
     typeof r.entityId === 'string' &&
     isFiniteNumber(r.count) &&
     isFiniteNumber(r.level) &&
-    (r.invested === undefined || isFiniteNumber(r.invested))
+    (r.invested === undefined || isFiniteNumber(r.invested)) &&
+    (r.investedStones === undefined || isFiniteNumber(r.investedStones))
   );
 }
 

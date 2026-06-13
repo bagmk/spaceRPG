@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { EntityInstance, FusionEvent } from '../game/types';
+import type { EntityInstance, FusionEvent, EnhanceEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
@@ -20,7 +20,7 @@ import {
 } from '../game/balance';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx } from '../game/entities/fusion';
-import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
+import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
 import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
@@ -239,13 +239,17 @@ interface Props {
   /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
   seenPanelHints?: string[];
   quanta: number;
+  /** 강화석 balance — Lv5+ enhancement currency (v19). */
+  enhanceStones?: number;
+  lastEnhanceEvent?: EnhanceEvent | null;
   stats: PanelStats;
   language: Lang;
   onEquip: (entityId: string, slot?: number) => void;
   onUnequip: (slot: number, target: EquipCategory) => void;
-  onEnhance: (entityId: string) => void;
+  onEnhance: (entityId: string, protect?: boolean) => void;
   onFuse: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
+  onClearEnhanceEvent?: (id: number) => void;
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
   onUITap?: () => void;
@@ -255,7 +259,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab, setTab] = useState<PanelPage>(page);
@@ -276,6 +280,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [protectEnhance, setProtectEnhance] = useState(false);
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   // Gacha suspense: brief "charging" beat before the result is committed.
@@ -322,6 +327,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   useEffect(() => () => {
     if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
   }, []);
+
+  // Auto-dismiss the 강화 result flash (break lingers a touch longer).
+  useEffect(() => {
+    if (!lastEnhanceEvent || !onClearEnhanceEvent) return undefined;
+    const ms = lastEnhanceEvent.outcome === 'break' ? 2200 : 1100;
+    const id = window.setTimeout(() => onClearEnhanceEvent(lastEnhanceEvent.id), ms);
+    return () => window.clearTimeout(id);
+  }, [lastEnhanceEvent, onClearEnhanceEvent]);
 
   // The gear array this equip page edits.
   const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
@@ -494,6 +507,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             <div className="entity-fs__wallet">
               <span>{t(language, 'hudQuanta')}</span>
               <strong>⚛{formatEntityCost(quanta)}</strong>
+            </div>
+          ) : null}
+          {tab !== 'lab' ? (
+            <div className="entity-fs__wallet entity-fs__wallet--stones">
+              <span>{t(language, 'hudStones')}</span>
+              <strong>◆{formatEntityCost(enhanceStones)}</strong>
             </div>
           ) : null}
           <button className="entity-fs__close" aria-label={t(language, 'panelClose')} onClick={onClose}>✕</button>
@@ -1068,6 +1087,31 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(lastFusionEvent.refund)}`}
                 </div>
               ) : null}
+              {lastFusionEvent.stonesEarned > 0 ? (
+                <div className="fusion-result__stones">
+                  {t(language, 'fuseStonesEarned').replace('{n}', String(lastFusionEvent.stonesEarned))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      })() : null}
+      {/* 강화 result flash (P1) */}
+      {lastEnhanceEvent ? (() => {
+        const ent = findEntityById(lastEnhanceEvent.entityId);
+        const palette: Record<string, string> = { up: '#bb8cff', down: '#d8a24a', break: '#e2554a', protected: '#4a8fff' };
+        const col = palette[lastEnhanceEvent.outcome];
+        const labelKey = ({ up: 'enhanceOutcomeUp', down: 'enhanceOutcomeDown', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[lastEnhanceEvent.outcome];
+        return (
+          <div
+            className={`enhance-flash enhance-flash--${lastEnhanceEvent.outcome}`}
+            role="status"
+            onClick={() => onClearEnhanceEvent?.(lastEnhanceEvent.id)}
+          >
+            <div className="enhance-flash__card" style={{ '--flash-color': col } as CSSProperties}>
+              <div className="enhance-flash__tag">{t(language, labelKey)}</div>
+              {ent ? <EntityGlyph entity={ent} color={col} /> : null}
+              <div className="enhance-flash__lv">{`Lv.${lastEnhanceEvent.level}`}</div>
             </div>
           </div>
         );
@@ -1091,8 +1135,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const lvl = entry?.level ?? 1;
         const cap = getEnhanceLevelCap(ent);
         const atCap = lvl >= cap;
-        const cost = getEnhanceCost(ent, lvl, currentStageId);
-        const affordable = !atCap && quanta >= cost;
+        const stonePhase = isEnhanceStonePhase(lvl);
+        const matterCost = getEnhanceCost(ent, lvl, currentStageId);
+        const stoneCost = getEnhanceStoneCost(ent, lvl);
+        const protectCost = getEnhanceProtectStoneCost(ent, lvl);
+        const totalStones = stoneCost + (protectEnhance ? protectCost : 0);
+        const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
+        const affordable = !atCap && (stonePhase ? enhanceStones >= totalStones : quanta >= matterCost);
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
@@ -1112,16 +1161,27 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   ))}
                 </div>
               ) : null}
+              {stonePhase && !atCap ? (
+                <button
+                  type="button"
+                  className={`slot-detail__protect ${protectEnhance ? 'slot-detail__protect--on' : ''}`}
+                  onClick={() => { setProtectEnhance((v) => !v); onUITap?.(); }}
+                >
+                  {`${protectEnhance ? '☑' : '☐'} ${t(language, 'enhanceProtect')} +◆${formatEntityCost(protectCost)}`}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
                 style={affordable ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
                 disabled={!affordable}
-                onClick={() => onEnhance(ent.id)}
+                onClick={() => onEnhance(ent.id, stonePhase ? protectEnhance : false)}
               >
                 {atCap
                   ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
-                  : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(cost)}`}
+                  : stonePhase
+                    ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
+                    : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)}`}
               </button>
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip" style={{ borderColor: rc, color: rc }} onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>

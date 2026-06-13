@@ -130,5 +130,7 @@ export function createInitialGameState(now: number): GameState {
     peakEntropy: 0,
     codexSeenIds: [],
     seenPanelHints: [],
+    enhanceStones: 0,
+    lastEnhanceEvent: null,
   };
 }

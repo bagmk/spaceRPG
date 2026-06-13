@@ -47,4 +47,17 @@ export interface FusionEvent {
   refund: number;
   /** Output was already at max count AND max level — refunded instead. */
   atCap: boolean;
+  /** 강화석 minted by a failed (non-rarity-up) fusion (P1). 0 on a rarity-up. */
+  stonesEarned: number;
+}
+
+/** Outcome of a 강화 attempt — drives the reveal flash (P1). */
+export type EnhanceOutcome = 'up' | 'down' | 'break' | 'protected';
+
+export interface EnhanceEvent {
+  id: number;
+  entityId: string;
+  outcome: EnhanceOutcome;
+  /** The stack's level AFTER the attempt. */
+  level: number;
 }

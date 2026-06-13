@@ -11,6 +11,7 @@
 
 import {
   ENHANCE_REFUND_RATE,
+  ENHANCE_STONE_REFUND_RATE,
   ENTROPY_FUSION_COST_FRAC,
   ENTROPY_FUSION_VALUE_SEC,
   ENTROPY_W_AUTO,
@@ -216,8 +217,10 @@ export function getExpectedFusionRefund(
 
 export interface ConsumeResult {
   inventory: EntityInstance[];
-  /** Enhance-investment refund earned by consuming these copies. */
+  /** Enhance-investment (matter) refund earned by consuming these copies. */
   refund: number;
+  /** 강화석 refund from consumed stacks' stone-phase investment (P1). */
+  stoneRefund: number;
 }
 
 /** Consume the input copies (counts may reach 0; entries are kept for the almanac/UI). */
@@ -228,11 +231,13 @@ export function consumeFusionInputs(
   const needed = new Map<string, number>();
   for (const id of inputEntityIds) needed.set(id, (needed.get(id) ?? 0) + 1);
   const refund = getExpectedFusionRefund(inventory, inputEntityIds);
+  let stoneRefund = 0;
   const next = inventory.map((e) => {
     const consumed = needed.get(e.entityId);
     if (consumed === undefined) return e;
     const share = e.count > 0 ? Math.min(1, consumed / e.count) : 0;
     const remaining = e.count - consumed;
+    stoneRefund += (e.investedStones ?? 0) * share * ENHANCE_STONE_REFUND_RATE;
     return {
       ...e,
       count: remaining,
@@ -241,9 +246,10 @@ export function consumeFusionInputs(
       // for a net 40% of an already-paid cost (permanent level inflation).
       level: remaining <= 0 ? 1 : e.level,
       invested: Math.max(0, (e.invested ?? 0) * (1 - share)),
+      investedStones: remaining <= 0 ? 0 : Math.max(0, (e.investedStones ?? 0) * (1 - share)),
     };
   });
-  return { inventory: next, refund };
+  return { inventory: next, refund, stoneRefund: Math.floor(stoneRefund) };
 }
 
 export interface FusionOutputResult {

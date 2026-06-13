@@ -356,6 +356,33 @@ export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
 };
 /** Fraction of a consumed stack's invested enhance quanta refunded on fusion. */
 export const ENHANCE_REFUND_RATE = 0.6;
+
+// ── 강화석 (enhance stones, P1) — the Lv5+ enhancement currency, minted by
+//    failed fusions. Levels 1→5 still cost matter; 5→cap cost stones + carry
+//    failure risk (운빨 존망: mostly level-down, destroy only near the cap). ──
+/** Enhancing FROM this level and up costs 강화석 instead of matter (1→5 are matter). */
+export const ENHANCE_STONE_THRESHOLD = 5;
+/** Stones for the first stone-phase level (the 5→6 step), by rarity. */
+export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8 };
+/** Each further stone-phase level multiplies the stone cost by this. */
+export const ENHANCE_STONE_GROWTH = 1.5;
+/** Fraction of invested stones refunded when a stack is consumed by fusion. */
+export const ENHANCE_STONE_REFUND_RATE = 0.5;
+/** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */
+export const FUSION_FAIL_STONES_BY_TIER: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 4, legendary: 7 };
+/** Enhance fail chance at the threshold level (stone phase only). */
+export const ENHANCE_FAIL_BASE = 0.15;
+/** Fail chance added per level above the threshold. */
+export const ENHANCE_FAIL_PER_LEVEL = 0.04;
+/** Fail chance ceiling. */
+export const ENHANCE_FAIL_MAX = 0.55;
+/** Destruction is only possible within this many levels of the rarity cap. */
+export const ENHANCE_DESTROY_WINDOW_FROM_CAP = 3;
+/** Of failures inside the destroy window, this fraction destroy a copy (else level-down). */
+export const ENHANCE_DESTROY_CHANCE_ON_FAIL = 0.25;
+/** Protection ("보호 강화") costs this × the level's stone cost EXTRA; a failed
+ *  protected attempt loses no level and destroys nothing (stones still spent). */
+export const ENHANCE_PROTECT_STONE_MULT = 1.0;
 /** At-cap duplicate fusion output refunds this fraction of the output's base cost. */
 export const FUSION_CAP_DUP_REFUND_FRAC = 0.5;
 /** When all fusion inputs share a glyph family, the output stays in that family this often. */

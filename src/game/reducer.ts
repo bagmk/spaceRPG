@@ -54,6 +54,7 @@ import {
   handleMarkTutorialStageSeen,
   handleClearClickEvent,
   handleClearFusionEvent,
+  handleClearEnhanceEvent,
   handleClearCollisionEvent,
   handleClearEncounterEvent,
 } from './reducers/meta';
@@ -127,8 +128,9 @@ export type GameAction =
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
   | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number }
-  | { type: 'ENHANCE_ENTITY'; entityId: string }
+  | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; destroyRoll?: number; protect?: boolean }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
+  | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
 
@@ -189,6 +191,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     peakEntropy: state.peakEntropy,
     codexSeenIds: state.codexSeenIds,
     seenPanelHints: state.seenPanelHints,
+    enhanceStones: state.enhanceStones,
   };
 }
 
@@ -233,6 +236,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'FUSE_ENTITIES':         return handleFuseEntities(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
+    case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;

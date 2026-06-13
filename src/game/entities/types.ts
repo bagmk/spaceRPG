@@ -102,6 +102,8 @@ export interface EntityInstance {
   level: number;
   /** Cumulative quanta spent enhancing this stack — partially refunded on fusion. */
   invested?: number;
+  /** Cumulative 강화석 spent on stone-phase levels — partially refunded on fusion (P1, v19). */
+  investedStones?: number;
   /**
    * Carried across prestige (Phase 4-3 D2). Carried items keep their level but
    * NOT their origin-stage power: getGearPowerExponent drops the itemStage

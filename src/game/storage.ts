@@ -42,7 +42,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
   };
 
   // Final numeric sanity pass for fields that legacy bugs may have corrupted.
-  for (const field of ['quanta', 'entropy', 'peakEntropy', 'condensedMass', 'echoes'] as const) {
+  for (const field of ['quanta', 'entropy', 'peakEntropy', 'condensedMass', 'echoes', 'enhanceStones'] as const) {
     const v = (result as any)[field];
     if (v !== undefined && (!Number.isFinite(v) || v < 0)) (result as any)[field] = 0;
   }
@@ -50,7 +50,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 18;
+export const SAVE_SCHEMA_VERSION = 19;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -168,6 +168,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     peakEntropy: state.peakEntropy,
     codexSeenIds: state.codexSeenIds,
     seenPanelHints: state.seenPanelHints,
+    enhanceStones: state.enhanceStones,
   };
 }
 
@@ -335,6 +336,9 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
   const seenPanelHints = sourceVersion < 18
     ? ['codex', 'equip', 'fuse']
     : (state.seenPanelHints ?? []);
+  // v19: 강화석 — veterans start at 0 (their existing levels were all matter-
+  // bought; the stone phase did not exist, so no stone debt is owed).
+  const enhanceStones = sourceVersion < 19 ? 0 : (state.enhanceStones ?? 0);
 
   return {
     ...state,
@@ -343,6 +347,7 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
     condensedMass,
     codexSeenIds,
     seenPanelHints,
+    enhanceStones,
     endingProgressFlags: {
       ...state.endingProgressFlags,
       criticalUpgradedThisUniverse,
@@ -449,9 +454,10 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18) {
-      // v14..v18 share a field schema (v17 dropped the legacy skill fields;
-      // v18 added codexSeenIds/seenPanelHints — both optional in validateV5).
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19) {
+      // v14..v19 share a field schema (v17 dropped the legacy skill fields;
+      // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones — all
+      // optional in validateV5; finalizeV17 seeds veteran defaults for pre-N).
       // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
       // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
       // and seeds the v18 codex/hint fields for pre-v18 saves).

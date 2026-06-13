@@ -11,7 +11,7 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent } from './types/events';
+import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent } from './types/events';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 18;
+  version: 19;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -287,6 +287,8 @@ export interface SaveState {
   codexSeenIds: string[];
   /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
   seenPanelHints: string[];
+  /** 강화석 (enhance stones) balance — Lv5+ enhancement currency, minted by fusion fails (v19). */
+  enhanceStones: number;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
@@ -302,6 +304,7 @@ export interface GameState extends PersistentGameState {
   lastCollisionEvent: FloatingCollisionEvent | null;
   lastEncounterEvent: EncounterEvent | null;
   lastFusionEvent: FusionEvent | null;
+  lastEnhanceEvent: EnhanceEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
   offlineEntropyGained: number;

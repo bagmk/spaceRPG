@@ -13,9 +13,24 @@ import {
   rollFusionRarity,
   validateFusionInputs,
 } from '../entities/fusion';
-import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
+import {
+  getEnhanceCost,
+  getEnhanceLevelCap,
+  getEnhanceStoneCost,
+  getEnhanceProtectStoneCost,
+  getEnhanceFailChance,
+  isEnhanceStonePhase,
+  isEnhanceDestroyEligible,
+} from '../entities/enhance';
 import { getSecondaryStats } from '../entities/substats';
-import { ENTITY_COST_ANCHORS, FUSION_BURST_REF_COST_FRAC, RARITY_STAGE_GATES } from '../balance';
+import {
+  ENTITY_COST_ANCHORS,
+  FUSION_BURST_REF_COST_FRAC,
+  RARITY_STAGE_GATES,
+  ENHANCE_DESTROY_CHANCE_ON_FAIL,
+  ENHANCE_STONE_THRESHOLD,
+  FUSION_FAIL_STONES_BY_TIER,
+} from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
@@ -171,9 +186,12 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   if (!output) return state;
 
   const cost = getFusionQuantaCost(state.quanta);
-  const { inventory: consumed, refund: enhanceRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
+  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
   const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
+  // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
+  // Lv5+ enhancement (R1). Stones scale with the input tier.
+  const stonesEarned = rarityResult.rarityUp ? 0 : (FUSION_FAIL_STONES_BY_TIER[validation.rarity] ?? 1);
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
@@ -200,6 +218,7 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     quanta: Math.max(0, state.quanta - cost + totalRefund),
     entropy: nextEntropy,
     peakEntropy: Math.max(state.peakEntropy, nextEntropy),
+    enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
     fusionPity: nextPity,
@@ -212,13 +231,16 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       entropyBurst: burst,
       refund: totalRefund,
       atCap: capRefund > 0,
+      stonesEarned,
     },
   }));
 }
 
 /**
- * ENHANCE_ENTITY (강화소): spend quanta to level an owned stack directly.
- * Shares the level field with the fusion duplicate sink; capped by rarity.
+ * ENHANCE_ENTITY (강화소): level an owned stack directly. Lv1→5 spend matter and
+ * always succeed; Lv5+ spend 강화석 and CAN FAIL — mostly a level-down, with a
+ * small chance to destroy a copy near the cap. "보호 강화" (protect) costs extra
+ * stones and negates any loss on a failed attempt (운빨 존망겜, P1).
  */
 export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
@@ -228,18 +250,80 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   if (!entity) return state;
   const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
   if (!owned || owned.count <= 0) return state;
-  if (owned.level >= getEnhanceLevelCap(entity)) return state;
+  const level = owned.level;
+  if (level >= getEnhanceLevelCap(entity)) return state;
 
-  const cost = getEnhanceCost(entity, owned.level, STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id);
-  if (state.quanta < cost) return state;
+  const eventId = nextEventId(state);
+  const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
 
-  return withCurrentUniverseEndingProgress({
-    ...state,
-    quanta: state.quanta - cost,
-    inventory: state.inventory.map((e) =>
-      e.entityId === owned.entityId
-        ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
-        : e,
-    ),
+  // ── Matter phase (Lv < 5): pay quanta, always succeeds. ──
+  if (!isEnhanceStonePhase(level)) {
+    const cost = getEnhanceCost(entity, level, stageId);
+    if (state.quanta < cost) return state;
+    return withCurrentUniverseEndingProgress({
+      ...state,
+      quanta: state.quanta - cost,
+      eventCounter: eventId,
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1 },
+      inventory: state.inventory.map((e) =>
+        e.entityId === owned.entityId
+          ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
+          : e,
+      ),
+    });
+  }
+
+  // ── Stone phase (Lv ≥ 5): pay 강화석, can fail. ──
+  const protect = action.protect === true;
+  const stoneCost = getEnhanceStoneCost(entity, level);
+  const protectCost = protect ? getEnhanceProtectStoneCost(entity, level) : 0;
+  const totalStones = stoneCost + protectCost;
+  if (state.enhanceStones < totalStones) return state;
+
+  const failChance = getEnhanceFailChance(level);
+  const succeeded = (action.failRoll ?? 1) >= failChance;
+  const nextStones = state.enhanceStones - totalStones;
+
+  let outcome: 'up' | 'down' | 'break' | 'protected';
+  let nextLevel = level;
+  let destroyed = false;
+  if (succeeded) {
+    outcome = 'up';
+    nextLevel = level + 1;
+  } else if (protect) {
+    outcome = 'protected'; // loss negated — stones still spent
+  } else if (isEnhanceDestroyEligible(entity, level) && (action.destroyRoll ?? 1) < ENHANCE_DESTROY_CHANCE_ON_FAIL) {
+    outcome = 'break';
+    destroyed = true;
+  } else {
+    outcome = 'down';
+    nextLevel = Math.max(ENHANCE_STONE_THRESHOLD, level - 1); // never below the matter-bought line
+  }
+
+  // Apply to the stack. A break consumes one copy and resets the stack's level;
+  // if it empties, drop the entry's slot references.
+  let nextInventory = state.inventory.map((e) => {
+    if (e.entityId !== owned.entityId) return e;
+    const investedStones = succeeded ? (e.investedStones ?? 0) + stoneCost : (e.investedStones ?? 0);
+    if (destroyed) {
+      return { ...e, count: e.count - 1, level: 1, investedStones: 0 };
+    }
+    return { ...e, level: nextLevel, investedStones };
   });
+  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones) };
+  if (destroyed && (nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
+    nextInventory = nextInventory.filter((e) => e.entityId !== owned.entityId);
+    nextState = {
+      ...nextState,
+      equippedSlots: state.equippedSlots.filter((id) => id !== owned.entityId),
+      riftSlots: state.riftSlots.filter((id) => id !== owned.entityId),
+    };
+  }
+
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+    ...nextState,
+    inventory: nextInventory,
+    eventCounter: eventId,
+    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome, level: destroyed ? 1 : nextLevel },
+  }));
 }
