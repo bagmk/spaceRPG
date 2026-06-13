@@ -84,12 +84,13 @@ describe('Phase 4-1: economy re-anchors', () => {
     expect(getEnhanceCost(s1Legendary, 1, 16)).toBeGreaterThan(getEnhanceCost(s1Legendary, 1, 1));
   });
 
-  it('auto anchor follows the player stage, clamped at the item origin', () => {
+  it('auto anchor is fixed across player stages (P0: per-stage scaling removed)', () => {
     const s1Auto = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'auto')!;
     const atP1 = getAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 });
     const atP5 = getAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 });
-    expect(atP5 / atP1).toBeCloseTo(Math.pow(8, 4), 5);
-    // Late-origin item at player stage 1 clamps to its origin exponent.
+    // base^E collapsed to 1.0 — the anchor no longer grows with the player stage.
+    expect(atP5 / atP1).toBeCloseTo(1, 5);
+    // A late-origin item is likewise stage-invariant now.
     const s13Auto = STAGE_ENTITIES.find((e) => e.stageId === 13 && e.effect.type === 'auto')!;
     expect(getAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }))
       .toBeCloseTo(getAutoOutputAnchor(s13Auto, { stageId: 13, gateProgress01: 0 }), 5);

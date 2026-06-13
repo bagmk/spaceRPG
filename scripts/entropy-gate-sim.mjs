@@ -49,8 +49,10 @@ const MECHANIC_CLICK_BOOST = {
 // ---------------------------------------------------------------------------
 // Balance knobs (Phase 4-2 — these are the values to write into balance.ts)
 // ---------------------------------------------------------------------------
-const STAGE_POWER_BASE = 2.0;
-const AUTO_STAGE_POWER_BASE = 8;
+// FIXED-EFFECT OVERHAUL (P0): per-stage scaling neutralised to 1.0 (lockstep
+// with balance.ts). Item effect == printed base%; growth comes from levels.
+const STAGE_POWER_BASE = 1.0;
+const AUTO_STAGE_POWER_BASE = 1.0;
 const ANCHOR1 = 1725;
 const ENTITY_COST_ANCHORS = [0, 1725, 3800, 52000, 750000, 1.1e7, 1.6e8, 2.4e9, 3.7e10, 6e11, 1e13, 1.8e14, 3.5e15, 6.5e16, 1.3e18, 2.7e19, 5.6e20];
 // Re-anchored entropy weights: without the 2^level skill click base, raw click
@@ -65,7 +67,7 @@ const RARITY_GATES = { common: 1, rare: 3, epic: 7, legendary: 12 };
 const GATE_RAMP = 3;
 // Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × 1.9^(L-1)
 const ENHANCE_COST_FACTOR = 1.5;
-const ENHANCE_COST_GROWTH = 1.9;
+const ENHANCE_COST_GROWTH = 2.2;
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
@@ -136,7 +138,7 @@ function derivedLevel(stageId, rarity) {
   }
   return level;
 }
-const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.25;
+const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.6;
 
 function gearClickMult(stageId, p) {
   const E = (stageId - 1) + p;
@@ -299,10 +301,10 @@ const maxCrit = runEntropy({ ...PROFILES.reference, critGear: 1 }, thresholds);
 
 // Threshold-relative meta constants (write into balance.ts).
 const BIG_CRUNCH_KB = 0.5 * thresholds[2];   // reachable mid-stage-3 (as v16)
-const BIG_RIP_KB = 2.2 * thresholds[8];      // same relative slot between st9/st10 gates
+const BIG_RIP_KB = 1.3 * thresholds[8];      // between st9/st10 gates (flat P0 ladder)
 console.log('\n=== Threshold-relative meta constants ===');
 console.log(`BIG_CRUNCH_ENTROPY_KB = ${BIG_CRUNCH_KB.toExponential(3)} (0.5 × T[3])`);
-console.log(`BIG_RIP_ENTROPY_KB    = ${BIG_RIP_KB.toExponential(3)} (2.2 × T[9])`);
+console.log(`BIG_RIP_ENTROPY_KB    = ${BIG_RIP_KB.toExponential(3)} (1.3 × T[9])`);
 // Prestige costs: anchored so Lv1 ≈ first affordable at stage 8 (as v16), ×~5/level.
 const PRESTIGE_BASE = thresholds[7] * 0.5;
 console.log(`PRESTIGE_COSTS_KB     = [${[0, 1, 2, 3, 4].map((i) => (PRESTIGE_BASE * Math.pow(5, i)).toExponential(2)).join(', ')}] (0.5 × T[8] × 5^level)`);

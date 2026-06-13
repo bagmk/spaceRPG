@@ -35,7 +35,7 @@ describe('entropy-gate pacing ladder', () => {
 
   it('meta constants stay anchored to the ladder (no absolute drift)', () => {
     expect(BIG_CRUNCH_ENTROPY_KB).toBeCloseTo(0.5 * ENTROPY_THRESHOLDS[3], 6);
-    expect(BIG_RIP_ENTROPY_KB).toBeCloseTo(2.2 * ENTROPY_THRESHOLDS[9], 6);
+    expect(BIG_RIP_ENTROPY_KB).toBeCloseTo(1.3 * ENTROPY_THRESHOLDS[9], 6);
     expect(PRESTIGE_COST_BASE_KB).toBeCloseTo(0.5 * ENTROPY_THRESHOLDS[8], 6);
     // Big Rip sits between the stage-9 and stage-10 gates (as designed).
     expect(BIG_RIP_ENTROPY_KB).toBeGreaterThan(ENTROPY_THRESHOLDS[9]);
@@ -43,16 +43,20 @@ describe('entropy-gate pacing ladder', () => {
   });
 });
 
-describe('gear power curve sanity', () => {
+describe('fixed-effect gear power (P0: no per-stage scaling)', () => {
   const P = (stageId: number) => ({ stageId, gateProgress01: 0 });
 
-  it('one player stage multiplies % gear power by STAGE_POWER_BASE', () => {
-    expect(getGearPowerMult(P(6), 1) / getGearPowerMult(P(5), 1)).toBeCloseTo(STAGE_POWER_BASE, 6);
+  it('the scaling bases are neutralised to 1.0', () => {
+    expect(STAGE_POWER_BASE).toBe(1.0);
+    expect(AUTO_STAGE_POWER_BASE).toBe(1.0);
   });
 
-  it('three click slots roughly match auto growth per stage (8×)', () => {
-    // Three multiplicative click slots ≈ STAGE_POWER_BASE^3 per stage.
-    expect(Math.pow(STAGE_POWER_BASE, 3)).toBeCloseTo(AUTO_STAGE_POWER_BASE, 6);
+  it('gear power is identically 1.0 at every stage (label == applied)', () => {
+    for (let s = 1; s <= 16; s++) {
+      expect(getGearPowerMult(P(s), 1)).toBeCloseTo(1.0, 9);
+    }
+    // And in-stage gate progress no longer changes it either.
+    expect(getGearPowerMult({ stageId: 8, gateProgress01: 0.9 }, 1)).toBeCloseTo(1.0, 9);
   });
 });
 

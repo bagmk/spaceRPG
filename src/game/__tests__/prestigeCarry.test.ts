@@ -53,16 +53,16 @@ describe('Phase 4-3: prestige item carry (D2)', () => {
     expect(next.endingProgressFlags).toEqual(createDefaultEndingProgressFlags());
   });
 
-  it('a carried item drops its origin-stage power (head start, not a cudgel)', () => {
+  it('a carried item applies the same fixed effect as a normal copy (P0: no stage scaling)', () => {
     const lateClick = STAGE_ENTITIES.find((e) => e.stageId >= 13 && e.effect.type === 'click')!;
     const power = { stageId: 1, gateProgress01: 0 };
     const asCarried = defaultModifiers();
     const asNormal = defaultModifiers();
     applyEntityModifiers(asCarried, [{ entityId: lateClick.id, count: 1, level: 1, carried: true }], power);
     applyEntityModifiers(asNormal, [{ entityId: lateClick.id, count: 1, level: 1 }], power);
-    // Normal late item at player stage 1 keeps its huge origin-stage exponent;
-    // the carried copy collapses to ~stage-1 power.
-    expect(asNormal.clickPowerMult).toBeGreaterThan(asCarried.clickPowerMult * 20);
+    // Fixed effects: the `carried` flag no longer changes power — the carry is
+    // the head start of OWNING the item across prestige, not a power clamp.
+    expect(asCarried.clickPowerMult).toBeCloseTo(asNormal.clickPowerMult, 9);
     expect(asCarried.clickPowerMult).toBeGreaterThan(1); // still does something (level/value)
   });
 });

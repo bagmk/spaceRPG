@@ -165,22 +165,25 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  1: 3.985e3,
-  2: 3.227e4,
-  3: 2.255e5,
-  4: 8.317e6,
-  5: 2.716e7,
-  6: 9.041e9,
-  7: 1.509e11,
-  8: 2.436e12,
-  9: 2.929e13,
-  10: 5.974e14,
-  11: 8.389e15,
-  12: 1.019e17,
-  13: 1.011e18,
-  14: 9.778e18,
-  15: 2.973e20,
-  16: 1.384e21,
+  // P0 fixed-effect recalibration (scripts/entropy-gate-sim.mjs, base^E=1.0,
+  // level mult 0.6, enhance growth 2.2) — re-derived so progression comes from
+  // investment, not auto-scaling. Re-run the sim + repaste on any income change.
+  1: 4.118e3,
+  2: 2.406e4,
+  3: 8.756e4,
+  4: 3.664e5,
+  5: 5.390e5,
+  6: 1.746e6,
+  7: 4.157e6,
+  8: 9.208e6,
+  9: 1.441e7,
+  10: 2.321e7,
+  11: 3.796e7,
+  12: 6.008e7,
+  13: 8.507e7,
+  14: 1.505e8,
+  15: 3.325e8,
+  16: 4.060e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -189,8 +192,10 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
 
 /** Big Crunch eligibility: reach this entropy before leaving stage 3 (≈ mid-gate). */
 export const BIG_CRUNCH_ENTROPY_KB = 0.5 * ENTROPY_THRESHOLDS[3];
-/** Big Rip eligibility: grind to this entropy (between the stage 9 and 10 gates). */
-export const BIG_RIP_ENTROPY_KB = 2.2 * ENTROPY_THRESHOLDS[9];
+/** Big Rip eligibility: grind to this entropy (between the stage 9 and 10 gates).
+ *  P0: multiplier 2.2→1.3 — the fixed-effect threshold ladder is far flatter
+ *  (T[10]/T[9] ≈ 1.6×), so 1.3× keeps Big Rip sitting between the two gates. */
+export const BIG_RIP_ENTROPY_KB = 1.3 * ENTROPY_THRESHOLDS[9];
 /** Prestige upgrade costs: level i costs base × growth^i (Lv1 affordable ≈ stage 8). */
 export const PRESTIGE_COST_BASE_KB = 0.5 * ENTROPY_THRESHOLDS[8];
 export const PRESTIGE_COST_GROWTH = 5;
@@ -291,8 +296,14 @@ export const FUSION_REF_CPS = 3;
  */
 export const FUSION_BURST_REF_COST_FRAC = 0.1;
 
-/** Each entity level above 1 adds this fraction to the entity's effect. */
-export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
+/**
+ * Each entity level above 1 adds this fraction to the entity's effect.
+ * Raised to 0.6 in the fixed-effect overhaul (P0): with the per-stage gear
+ * curve neutralised, ENHANCEMENT is the main growth lever, so each level must
+ * pull more weight (a player carries a build forward by levelling it, not by
+ * the item auto-scaling with their stage).
+ */
+export const ENTITY_LEVEL_EFFECT_BONUS = 0.6;
 
 // ── Item progression (gear power curve + rarity gates) ──────────────────────
 
@@ -310,14 +321,14 @@ export const ENTITY_LEVEL_EFFECT_BONUS = 0.25;
  * three multiplicative click slots grow ≈2³ = 8×/stage — parity with auto's
  * 8×/stage. Flat chance-type stats (crit chance, combo cap) do NOT scale.
  */
-export const STAGE_POWER_BASE = 2.0;
-/**
- * Rift/auto output anchor growth — rides the SAME shared exponent E as
- * STAGE_POWER_BASE (player-stage anchored since Phase 4-1; an item's origin
- * stage no longer matters for rift output, only its rarity weight).
- * Output per copy = (baseCost / origin cost anchor) × anchor(stage1) × base^E × value%.
- */
-export const AUTO_STAGE_POWER_BASE = 8;
+// FIXED-EFFECT OVERHAUL (P0): the per-stage auto-scaling is NEUTRALISED to 1.0.
+// An item's effect is now exactly its printed base% — it does NOT grow with the
+// player's stage. base^E collapses to 1 at every stage, so label == applied.
+// Per-era growth is re-supplied by enhancement levels, higher-rarity drops,
+// codex-keyed sets, fusion and combo — never by silent stage scaling.
+export const STAGE_POWER_BASE = 1.0;
+/** Rift/auto anchor growth — also neutralised to 1.0 (see STAGE_POWER_BASE). */
+export const AUTO_STAGE_POWER_BASE = 1.0;
 
 /** Stage at which each rarity starts dropping and selling. Fusion crafts one tier above. */
 export const RARITY_STAGE_GATES: Record<EntityRarity, number> = {
@@ -333,8 +344,9 @@ export const RARITY_GATE_RAMP_STAGES = 3;
 
 /** First enhance costs this multiple of the item's base cost. */
 export const ENHANCE_COST_FACTOR = 1.5;
-/** Each further level multiplies the enhance cost by this. */
-export const ENHANCE_COST_GROWTH = 1.9;
+/** Each further level multiplies the enhance cost by this (raised in P0 — levels
+ *  now give 0.6/level so costs must climb faster to stay the pacing throttle). */
+export const ENHANCE_COST_GROWTH = 2.2;
 /** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
 export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   common: 10,
