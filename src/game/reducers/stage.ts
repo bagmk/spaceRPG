@@ -32,7 +32,7 @@ import {
 import { createDefaultEndingProgressFlags } from '../defaults';
 import { syncSlotUnlocks } from './entities';
 
-const RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+const RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
 
 /**
  * Prestige carry (Phase 4-3 D2): keep the single best click-gear item AND the

@@ -139,8 +139,11 @@ describe('rarity gates', () => {
     const capped = rollFusionRarity('rare', 0.0, 99, 1);
     expect(capped.rarity).toBe('rare');
     expect(capped.pityApplicable).toBe(false);
-    // Late game: full ladder.
-    expect(getMaxFusionRarityIdx(16)).toBe(3);
+    // Late game: full ladder reaches mythic (idx 4) — legendary is droppable
+    // (gate 12), so fusion can craft one tier above it (the fusion-only tier).
+    expect(getMaxFusionRarityIdx(16)).toBe(4);
+    // Mythic only becomes craftable once legendary drops (stage 12+).
+    expect(getMaxFusionRarityIdx(11)).toBe(3);
   });
 });
 

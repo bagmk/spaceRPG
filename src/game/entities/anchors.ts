@@ -21,7 +21,7 @@ export const STAGE_ANCHOR_ENTITY: Record<number, string> = {
  * rare → epic (stage 3+)
  * epic → legendary (stage 4+)
  */
-const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 const RARITY_GATE_START_STAGE = 3;
 const LEGENDARY_GATE_START_STAGE = 4;
 

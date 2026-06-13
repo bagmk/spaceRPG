@@ -32,6 +32,7 @@ const ICON_SIZE: Record<EntityRarity, number> = {
   rare: 10 * CANVAS_SCALE,
   epic: 14 * CANVAS_SCALE,
   legendary: 19 * CANVAS_SCALE,
+  mythic: 22 * CANVAS_SCALE,
 };
 
 const GLOW_RADIUS: Record<EntityRarity, number> = {
@@ -39,6 +40,7 @@ const GLOW_RADIUS: Record<EntityRarity, number> = {
   rare: 13 * CANVAS_SCALE,
   epic: 18 * CANVAS_SCALE,
   legendary: 28 * CANVAS_SCALE,
+  mythic: 34 * CANVAS_SCALE,
 };
 
 /**
@@ -58,6 +60,7 @@ const RARITY_MAX_VISIBLE: Record<EntityRarity, number> = {
   rare: 10,
   epic: 5,
   legendary: 1,
+  mythic: 1,
 };
 // Walk-down pattern: take one slot off this rarity each iteration. Length 6,
 // containing 3 commons + 2 rares + 1 epic, so the cumulative reduction over
@@ -1390,6 +1393,7 @@ function lifeEntitySize(item: EntityDrawItem): number {
     rare: 0.74,
     epic: 0.82,
     legendary: 0.95,
+    mythic: 1.0,
   };
   return ICON_SIZE[item.rarity] * scaleByRarity[item.rarity];
 }
@@ -1400,6 +1404,7 @@ function lifeEntityGlow(item: EntityDrawItem): number {
     rare: 0.54,
     epic: 0.52,
     legendary: 0.5,
+    mythic: 0.5,
   };
   return GLOW_RADIUS[item.rarity] * scaleByRarity[item.rarity];
 }

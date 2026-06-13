@@ -11,6 +11,7 @@ const RARITY_DETAIL_COUNT = {
   rare: 3,
   epic: 4,
   legendary: 6,
+  mythic: 7,
 } as const;
 
 function hashString(value: string): number {

@@ -12,8 +12,8 @@ import type { EntityEffectType } from '../entities/types';
  * only fixes name↔effect coherence. These tests lock that in.
  */
 describe('identity pass: structure preserved', () => {
-  it('keeps the full entity set (205) and stable IDs', () => {
-    expect(STAGE_ENTITIES.length).toBe(205);
+  it('keeps the full entity set (210: 205 + 5 mythic) and stable IDs', () => {
+    expect(STAGE_ENTITIES.length).toBe(210);
     // Legacy name-derived ids still resolve (kept as aliases after decoupling).
     expect(findEntityById('s13_07_pulsar')).toBeDefined();
     expect(findEntityById('s10_01_sun')).toBeDefined();

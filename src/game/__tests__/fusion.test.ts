@@ -84,11 +84,21 @@ describe('fusion (Phase 3)', () => {
     expect(forced.fusionPity).toBe(0);
   });
 
-  it('rollFusionRarity caps at legendary and skips pity there', () => {
-    const result = rollFusionRarity('legendary', 0.0, 99, 16);
-    expect(result.rarity).toBe('legendary');
+  it('rollFusionRarity caps at mythic and skips pity there', () => {
+    // Mythic is the true ceiling — no upgrade possible, pity frozen.
+    const result = rollFusionRarity('mythic', 0.0, 99, 16);
+    expect(result.rarity).toBe('mythic');
     expect(result.rarityUp).toBe(false);
     expect(result.pityApplicable).toBe(false);
+  });
+
+  it('P2c: legendary inputs can forge mythic in the late game (stage 12+)', () => {
+    // At stage 16 the ladder reaches mythic: a legendary up1 roll (3% window)
+    // crafts the fusion-only tier; pity also forces it after a dry streak.
+    expect(rollFusionRarity('legendary', 0.0, 0, 16).rarity).toBe('mythic');
+    expect(rollFusionRarity('legendary', 0.99, 99, 16).rarity).toBe('mythic');
+    // Before legendary is droppable (gate 12) there is no mythic ceiling yet.
+    expect(rollFusionRarity('legendary', 0.0, 0, 11).rarity).toBe('legendary');
   });
 
   it('P2b: fusion cost scales by input rarity (common cheap, legendary steep)', () => {

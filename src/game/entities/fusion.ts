@@ -29,12 +29,12 @@ import {
 } from '../balance';
 import { getSetKey } from './effects';
 import { getCodexSubsetIdForEntity } from './codexSets';
-import { getEntitiesForStage, findEntityById } from './stageItems';
+import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
 import { getEnhanceLevelCap } from './enhance';
 import { getEquipCategory, getPlayerAnchoredBaseCost, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
-const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 
 export interface FusionValidation {
   ok: boolean;
@@ -176,6 +176,16 @@ export function pickFusionOutput(
   bias: FusionOutputBias = {},
   excludeTime = false,
 ): StageEntity | null {
+  // Mythic is a single global pool (the non-playable stage-17 bucket), not a
+  // per-stage roster — the rolled output stage doesn't contain mythics. This
+  // is the ONLY path that yields a mythic (legendary-3 fusion → rarity-up).
+  if (rarity === 'mythic') {
+    const mythics = STAGE_ENTITIES.filter((e) => e.rarity === 'mythic');
+    if (mythics.length === 0) return null;
+    const idx = Math.floor(((pick01 * 9973) % 1) * mythics.length);
+    return mythics[Math.min(idx, mythics.length - 1)];
+  }
+
   let pool = getEntitiesForStage(stageId);
   if (excludeTime) pool = pool.filter((e) => e.effect.type !== 'time');
   if (pool.length === 0) return null;

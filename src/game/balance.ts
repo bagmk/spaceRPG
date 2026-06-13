@@ -33,6 +33,11 @@ export const ENTITY_COST_ANCHORS = {
   14: 1.3e18,
   15: 2.7e19,
   16: 5.6e20,
+  // Stage 17 is a NON-PLAYABLE bucket: it holds the Mythic fusion-only pool.
+  // It is never a `state.stageIdx` (STAGES has 16 entries) so it never appears
+  // in the shop/canvas; it exists only so mythic entities have a home id-space
+  // and a cost anchor. Continues the late-game ~20× geometric step.
+  17: 1.2e22,
 } as const;
 
 // Color accent per stage — used to tint each stage's entity icons.
@@ -53,6 +58,7 @@ export const ENTITY_STAGE_ACCENT: Record<number, string> = {
   14: '#8e69c9',
   15: '#857299',
   16: '#b0b5c7',
+  17: '#ff5db5', // Mythic bucket — pink to match ENTITY_RARITY_TINT.mythic.
 };
 
 // Starting prices are anchored to each stage threshold, then tuned by rarity.
@@ -61,6 +67,7 @@ export const ENTITY_BASE_COST_FACTOR: Record<EntityRarity, number> = {
   rare: 0.32,
   epic: 1.5,
   legendary: 3.6,
+  mythic: 8.0,
 };
 
 export const ENTITY_COST_SCALING: Record<EntityRarity, number> = {
@@ -68,6 +75,7 @@ export const ENTITY_COST_SCALING: Record<EntityRarity, number> = {
   rare: 1.18,
   epic: 1.28,
   legendary: 1.55,
+  mythic: 1.8,
 };
 
 export const ENTITY_MAX_COUNT: Record<EntityRarity, number> = {
@@ -75,6 +83,7 @@ export const ENTITY_MAX_COUNT: Record<EntityRarity, number> = {
   rare: 10,
   epic: 5,
   legendary: 1,
+  mythic: 1,
 };
 
 export const ENTITY_TIME_MAX_COUNT: Partial<Record<EntityRarity, number>> = {
@@ -88,6 +97,7 @@ export const ENTITY_RARITY_SIZE: Record<EntityRarity, EntityVisual['size']> = {
   rare: 'small',
   epic: 'medium',
   legendary: 'large',
+  mythic: 'large',
 };
 
 // Color tint blended with the stage accent — gives each rarity a distinct hue feel
@@ -96,6 +106,7 @@ export const ENTITY_RARITY_TINT: Record<EntityRarity, { hex: string; amount: num
   rare:      { hex: '#44aaff', amount: 0.16 },
   epic:      { hex: '#cc44ff', amount: 0.26 },
   legendary: { hex: '#ffcc22', amount: 0.36 },
+  mythic:    { hex: '#ff5db5', amount: 0.5 },
 };
 
 // Non-flat effect values are scaled up by rarity so legendary/epic feel impactful.
@@ -105,6 +116,7 @@ export const ENTITY_RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
   rare:      1.0,
   epic:      1.8,
   legendary: 3.0,
+  mythic:    5.0,
 };
 
 // ── Output anchors (Phase 4-2: gear-only economy) ───────────────────────────
@@ -258,6 +270,7 @@ export const DROP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
   rare: 16,
   epic: 3.5,
   legendary: 0.5,
+  mythic: 0,
 };
 /** Crit multiplies rare/epic/legendary weights by this factor. */
 export const DROP_CRIT_RARITY_BIAS = 2;
@@ -280,22 +293,22 @@ export const FUSION_INPUT_COUNT = 3;
 // the jump (the gamble's tension). Keyed by the INPUT rarity. legendary→mythic
 // is set in P2b (the Mythic tier); 0 here keeps legendary inputs no-up for now.
 export const FUSION_UP1_CHANCE_BY_TIER: Record<EntityRarity, number> = {
-  common: 0.40, rare: 0.20, epic: 0.10, legendary: 0,
+  common: 0.40, rare: 0.20, epic: 0.10, legendary: 0.03, mythic: 0,
 };
 /** Double-jump chance, by input tier (only when +2 is reachable). */
 export const FUSION_UP2_CHANCE_BY_TIER: Record<EntityRarity, number> = {
-  common: 0.05, rare: 0.02, epic: 0, legendary: 0,
+  common: 0.05, rare: 0.02, epic: 0, legendary: 0, mythic: 0,
 };
 /** Pity: consecutive non-upgrades before a forced +1, by input tier (rarer tiers wait longer). */
 export const FUSION_PITY_THRESHOLD_BY_TIER: Record<EntityRarity, number> = {
-  common: 4, rare: 6, epic: 10, legendary: 0,
+  common: 4, rare: 6, epic: 10, legendary: 20, mythic: 0,
 };
 /** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
 export const FUSION_UP_CHANCE_CAP = 0.65;
 // P2b cost (R4): cheap for common, steep from rare up (× the 10%-of-bank base);
 // stage scaling is implicit since the bank grows with stage. Capped at the bank.
 export const FUSION_COST_RARITY_MULT: Record<EntityRarity, number> = {
-  common: 0.4, rare: 1.0, epic: 2.5, legendary: 6,
+  common: 0.4, rare: 1.0, epic: 2.5, legendary: 6, mythic: 12,
 };
 // P2b bonuses (R9): fusing 3 of the SAME entity, or 3 from the same codex category.
 export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance
@@ -361,6 +374,7 @@ export const RARITY_STAGE_GATES: Record<EntityRarity, number> = {
   rare: 3,
   epic: 7,
   legendary: 12,
+  mythic: 999,
 };
 /** Drop weight ramps from ~0 to full over this many stages after a gate opens. */
 export const RARITY_GATE_RAMP_STAGES = 3;
@@ -378,6 +392,7 @@ export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   rare: 15,
   epic: 20,
   legendary: 25,
+  mythic: 30,
 };
 /** Fraction of a consumed stack's invested enhance quanta refunded on fusion. */
 export const ENHANCE_REFUND_RATE = 0.6;
@@ -388,13 +403,13 @@ export const ENHANCE_REFUND_RATE = 0.6;
 /** Enhancing FROM this level and up costs 강화석 instead of matter (1→5 are matter). */
 export const ENHANCE_STONE_THRESHOLD = 5;
 /** Stones for the first stone-phase level (the 5→6 step), by rarity. */
-export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8 };
+export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8, mythic: 12 };
 /** Each further stone-phase level multiplies the stone cost by this. */
 export const ENHANCE_STONE_GROWTH = 1.5;
 /** Fraction of invested stones refunded when a stack is consumed by fusion. */
 export const ENHANCE_STONE_REFUND_RATE = 0.5;
 /** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */
-export const FUSION_FAIL_STONES_BY_TIER: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 4, legendary: 7 };
+export const FUSION_FAIL_STONES_BY_TIER: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 4, legendary: 7, mythic: 10 };
 /** Enhance fail chance at the threshold level (stone phase only). */
 export const ENHANCE_FAIL_BASE = 0.15;
 /** Fail chance added per level above the threshold. */
@@ -458,6 +473,7 @@ export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
   rare: 1,
   epic: 2,
   legendary: 3,
+  mythic: 3,
 };
 
 /** Secondary magnitudes scale with rarity on top of the per-stat base. */
@@ -466,6 +482,7 @@ export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
   rare: 1,
   epic: 1.5,
   legendary: 2.2,
+  mythic: 3.0,
 };
 
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────

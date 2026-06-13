@@ -1388,6 +1388,25 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('True Vacuum Bubble',       '◉→',   'A lower-energy vacuum expands and rewrites physics.',   'legendary','multiplier',50.0, false, 'vacuum_decay'),
     item('Quantum Bounce',           '⟳',   'Collapse rebounds into an entirely new expansion.',     'legendary','multiplier',50.0, false, 'bounce'),
   ]),
+
+  // ── Stage 17: Mythic (fusion-only pool — NON-PLAYABLE bucket) ────────────────
+  // These never drop and can never be bought (RARITY_STAGE_GATES.mythic = 999);
+  // the ONLY source is fusing three legendaries (FUSION_UP1_CHANCE_BY_TIER.
+  // legendary). Stage 17 is not in STAGES, so it never appears in the shop or on
+  // the canvas — mythics surface only via fusion, the equip screen, and the
+  // codex (Mythic set). Append-only: never reorder these (codex refs positions).
+  ...stage(17, [
+    { ...item('Singularity Core',  '●',    'The infinitely dense heart where spacetime itself folds shut.',           'mythic', 'click',     20.0),
+      nameKo: '특이점 핵',    descriptionKo: '시공간이 스스로 닫혀 무한히 응축되는 핵심.' },
+    { ...item('Zero-Point Field',  '⟨0|0⟩','The vacuum’s irreducible energy, humming beneath all of reality.',  'mythic', 'auto',      12.0),
+      nameKo: '영점장',       descriptionKo: '모든 실재 아래에서 진동하는, 진공의 줄일 수 없는 에너지.' },
+    { ...item('Quantum Foam',      '∿',    'Spacetime frothing at the Planck scale, where certainty dissolves.',      'mythic', 'crit',       1.5, true),
+      nameKo: '양자 거품',    descriptionKo: '플랑크 척도에서 들끓는 시공간, 확실성이 녹아내리는 곳.' },
+    { ...item('Multiverse Seed',   '✶',    'A bud of inflation ready to bloom into a universe of its own.',           'mythic', 'auto_mult',  6.0),
+      nameKo: '다중우주의 씨앗', descriptionKo: '스스로 하나의 우주로 피어날, 인플레이션의 씨눈.' },
+    { ...item('Cosmic String',     '|',    'A one-dimensional flaw in spacetime, taut with primordial energy.',       'mythic', 'click',     18.0),
+      nameKo: '우주 끈',      descriptionKo: '원시 에너지로 팽팽히 당겨진, 시공간의 1차원 결함.' },
+  ]),
 ];
 
 export function getEntitiesForStage(stageId: number): StageEntity[] {

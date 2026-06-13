@@ -31,7 +31,7 @@ import { formatAutoRateValue, formatEntropyAmount, getCosmicTimeFillRate } from 
 import { EntityGlyph } from './EntityGlyph';
 import { t, type Lang } from '../i18n';
 
-const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 const RARITY_RANK = new Map<EntityRarity, number>(RARITY_ORDER.map((rarity, index) => [rarity, index]));
 
 const RARITY_COLORS: Record<EntityRarity, string> = {
@@ -39,6 +39,7 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   rare: '#4a8fff',
   epic: '#b060f0',
   legendary: '#ffa500',
+  mythic: '#ff5db5',
 };
 
 const SUBSTAT_LABEL_KEY: Record<SecondaryStatType, Parameters<typeof t>[1]> = {
@@ -70,6 +71,7 @@ const RARITY_LABEL_KEY: Record<EntityRarity, Parameters<typeof t>[1]> = {
   rare: 'rarityRare',
   epic: 'rarityEpic',
   legendary: 'rarityLegendary',
+  mythic: 'rarityMythic',
 };
 
 function formatEntityCost(value: number): string {

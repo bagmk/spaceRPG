@@ -172,6 +172,20 @@ export const CODEX_SETS: CodexSet[] = [
       { id: 'quantum_fate', label: { en: 'Quantum Fate', ko: '양자의 운명' }, match: { entityIds: ['s14_13', 's15_02', 's16_09', 's16_13'] }, reward: { stat: 'entropyGain', value: 8 } },
     ],
   },
+  {
+    // The Mythic pool (fusion-only, stage-17 bucket). Browsable + counted here
+    // so codex completion includes the ultimate craftable tier. Matched by the
+    // bucket stage id so it auto-includes any future mythic appended to it.
+    id: 'mythic',
+    label: { en: 'Mythic', ko: '신화' },
+    blurb: { en: 'Forged, never found — the apex of fusion', ko: '발견이 아닌 제련 — 융합의 정점' },
+    icon: '✷',
+    accent: '#ff5db5',
+    reward: { stat: 'clickPower', value: 25 },
+    subsets: [
+      { id: 'mythic', label: { en: 'Mythic', ko: '신화' }, match: { stageIds: [17] }, reward: { stat: 'autoPower', value: 18 } },
+    ],
+  },
 ];
 
 // ── Membership + completion ─────────────────────────────────────────────────

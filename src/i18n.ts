@@ -60,6 +60,7 @@ export const STRINGS = {
   rarityRare:      { en: 'Rare', ko: '레어' },
   rarityEpic:      { en: 'Epic', ko: '에픽' },
   rarityLegendary: { en: 'Legendary', ko: '전설' },
+  rarityMythic:    { en: 'Mythic', ko: '신화' },
   setBonusLabel:  { en: 'Set bonus', ko: '세트 보너스' },
   setBonusNone:   { en: 'No set bonus — equip 2 entities of the same family', ko: '세트 없음 — 같은 계열 2개를 장착하면 보너스' },
   equipPickTitle: { en: 'Choose an entity to equip', ko: '장착할 엔티티 선택' },

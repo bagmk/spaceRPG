@@ -3,7 +3,7 @@
 import { ENTITY_BASE_COST_FACTOR, ENTITY_COST_ANCHORS } from '../balance';
 import type { EndingId } from '../types';
 
-export type EntityRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type EntityRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export type EntityGlyph =
   | 'quantum'

@@ -21,7 +21,7 @@ import {
 import { getEntitiesForStage } from './stageItems';
 import type { EntityInstance, EntityRarity, StageEntity } from './types';
 
-const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 
 export interface DropRoll {
   /** 0..1 — decides whether anything drops. */
@@ -65,6 +65,7 @@ function getRarityWeights(stageId: number, context: DropContext): Record<EntityR
     rare: DROP_RARITY_WEIGHTS.rare * bias * getRarityGateRamp('rare', stageId),
     epic: DROP_RARITY_WEIGHTS.epic * bias * getRarityGateRamp('epic', stageId),
     legendary: DROP_RARITY_WEIGHTS.legendary * bias * getRarityGateRamp('legendary', stageId),
+    mythic: 0, // never drops — Mythic is fusion-only (legendary-3)
   };
 }
 
