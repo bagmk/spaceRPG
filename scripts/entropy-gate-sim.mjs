@@ -192,8 +192,11 @@ function stoneBudgetFor(stage, profile) {
  */
 function critFactor(stageId, combo, critGear = 0.5, stoneBudget = 0) {
   const r = bestRarity(stageId);
-  const statCount = { common: 0, rare: 1, epic: 2, legendary: 3 }[r];
-  const rarityScale = { common: 0, rare: 1, epic: 1.5, legendary: 2.2 }[r];
+  // Lockstep with SECONDARY_RARITY_COUNT/SCALE in balance.ts. P4: commons now
+  // carry 1 weak signature substat (count 1, scale 0.6) — matters only at the
+  // earliest stages where common is the best equippable rarity.
+  const statCount = { common: 1, rare: 1, epic: 2, legendary: 3 }[r];
+  const rarityScale = { common: 0.6, rare: 1, epic: 1.5, legendary: 2.2 }[r];
   const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
   // critChance substat: base 0.4% × rarityScale × lvl per stat; assume critGear
   // share of (slots × statCount) stats are crit-flavored.

@@ -303,6 +303,48 @@ describe('secondary stats (A안)', () => {
     }
   });
 
+  it('P4: every entity including commons carries one signature specialty', () => {
+    expect(SECONDARY_RARITY_COUNT.common).toBe(1);
+    const commons = STAGE_ENTITIES.filter((e) => e.rarity === 'common');
+    expect(commons.length).toBeGreaterThan(0);
+    for (const c of commons) {
+      const stats = getSecondaryStats(c);
+      expect(stats.length).toBe(1);
+      expect(stats[0].value).toBeGreaterThan(0);
+    }
+  });
+
+  it('P4: common signatures never roll crit (keeps vacuum_decay reachable)', () => {
+    // Equipping starter (common) gear must not silently forfeit the
+    // never-equip-crit ending — crit stays reserved for deliberate rare+ rolls.
+    for (const c of STAGE_ENTITIES.filter((e) => e.rarity === 'common')) {
+      const sig = getSecondaryStats(c)[0];
+      expect(sig.type).not.toBe('critChance');
+      expect(sig.type).not.toBe('critMult');
+    }
+  });
+
+  it('P4: commons in a stage+category have distinct signatures (round-robin)', () => {
+    // R7: no two same-primary commons read identically. Round-robin assignment
+    // guarantees distinctness up to the (crit-free) category pool size.
+    const byBucket = new Map<string, Set<string>>();
+    const counts = new Map<string, number>();
+    for (const c of STAGE_ENTITIES.filter((e) => e.rarity === 'common')) {
+      const cat = getEquipCategory(c);
+      const key = `${c.stageId}:${cat}`;
+      const sig = getSecondaryStats(c)[0].type;
+      const set = byBucket.get(key) ?? new Set<string>();
+      set.add(sig);
+      byBucket.set(key, set);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    // Each padded stage has 5 click + 5 rift commons and a 5-type crit-free
+    // pool per category, so every common in a bucket is distinct.
+    for (const [key, set] of byBucket) {
+      expect(set.size).toBe(counts.get(key));
+    }
+  });
+
   it('feeds the new modifiers (drop/entropy/fusion) when such a stat exists', () => {
     const carriers = STAGE_ENTITIES.filter((e) =>
       getSecondaryStats(e).some((s) => s.type === 'dropRate' || s.type === 'entropyGain' || s.type === 'fusionBurst'),

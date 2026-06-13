@@ -675,6 +675,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                               const dropText = entity.rarity === 'mythic'
                                 ? t(language, 'codexDropFusionOnly')
                                 : `${dropPct >= 1 ? dropPct.toFixed(1) : dropPct.toFixed(2)}%`;
+                              // Signature specialty (P4) — the item's one varied identity stat.
+                              const signature = getSecondaryStats(entity)[0];
                               return (
                                 <button
                                   key={entity.id}
@@ -693,6 +695,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                   </div>
                                   {collected ? (
                                     <div className="almanac-card__name">{entityName(entity, language)}</div>
+                                  ) : null}
+                                  {collected && signature ? (
+                                    <span className="almanac-card__specialty" style={{ color: rarityColor }}>
+                                      {t(language, SUBSTAT_LABEL_KEY[signature.type])}
+                                    </span>
                                   ) : null}
                                   {entity.stageId <= 16 ? (
                                     <span className="almanac-card__era">{`S${entity.stageId}`}</span>
@@ -1196,8 +1203,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               </div>
               {getSecondaryStats(ent).length > 0 ? (
                 <div className="entity-detail-card__substats">
-                  {getSecondaryStats(ent).map((sub) => (
-                    <span key={sub.type} style={{ color: rc }}>{formatSubstat(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried))}</span>
+                  {getSecondaryStats(ent).map((sub, si) => (
+                    <span key={sub.type} className={si === 0 ? 'substat substat--specialty' : 'substat'} style={{ color: rc }}>
+                      {si === 0 ? <span className="substat__tag">{t(language, 'substatSpecialty')}</span> : null}
+                      {formatSubstat(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried))}
+                    </span>
                   ))}
                 </div>
               ) : null}
@@ -1307,6 +1317,16 @@ function EntityDetailCard({
           <span style={{ color: rarityColor }}>{effectLabel}</span>
           <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
         </div>
+        {getSecondaryStats(entity).length > 0 ? (
+          <div className="entity-detail-card__substats">
+            {getSecondaryStats(entity).map((sub, si) => (
+              <span key={sub.type} className={si === 0 ? 'substat substat--specialty' : 'substat'} style={{ color: rarityColor }}>
+                {si === 0 ? <span className="substat__tag">{t(language, 'substatSpecialty')}</span> : null}
+                {formatSubstat(sub, language, ownedLevel, getGearPowerMult(power, entity.stageId))}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
       </article>
     </div>

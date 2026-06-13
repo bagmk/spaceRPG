@@ -50,6 +50,7 @@ export const STRINGS = {
   substatEntropyGain: { en: 'Entropy Gain', ko: '엔트로피 획득' },
   substatDropRate:    { en: 'Drop Rate', ko: '드랍률' },
   substatFusionBurst: { en: 'Fusion Burst', ko: '융합 버스트' },
+  substatSpecialty:   { en: 'Specialty', ko: '특기' },
   statOffline:        { en: 'Offline Eff.', ko: '오프라인 효율' },
   effectAutoPower:    { en: 'Auto Power', ko: '오토 파워' },
   statEmission:       { en: 'Emission', ko: '방출 주기' },

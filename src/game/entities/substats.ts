@@ -18,6 +18,7 @@ import {
   type SecondaryStatType,
 } from '../balance';
 import { getEquipCategory, type StageEntity } from './types';
+import { getEntitiesForStage } from './stageItems';
 
 export interface SecondaryStat {
   type: SecondaryStatType;
@@ -90,6 +91,29 @@ export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
   const rarityScale = SECONDARY_RARITY_SCALE[entity.rarity] ?? 0;
   // Category-pure pool: click gear never rolls auto stats and vice versa.
   const pool = SECONDARY_STAT_POOLS[getEquipCategory(entity)];
+
+  // P4: COMMON signature gets special handling (the 72 starter commons):
+  //  (1) crit stats are excluded so equipping a starter common can never
+  //      silently forfeit the never-equip-crit (vacuum_decay) ending — that
+  //      irreversible flag stays reserved for deliberate rare+ crit rolls;
+  //  (2) the single stat is assigned ROUND-ROBIN by the common's rank among its
+  //      same-stage, same-category siblings, so every common in a stage reads
+  //      distinctly (independent hashing collided constantly — R7's whole point).
+  if (entity.rarity === 'common' && count > 0 && rarityScale > 0) {
+    const category = getEquipCategory(entity);
+    const commonPool = pool.filter((s) => s !== 'critChance' && s !== 'critMult');
+    const siblings = getEntitiesForStage(entity.stageId).filter(
+      (e) => e.rarity === 'common' && getEquipCategory(e) === category,
+    );
+    const rank = Math.max(0, siblings.findIndex((e) => e.id === entity.id));
+    const seed = hashString(`${entity.stageId}:${category}`) % commonPool.length;
+    const type = commonPool[(rank + seed) % commonPool.length];
+    const def = SECONDARY_STAT_DEFS[type];
+    const stat: SecondaryStat[] = [{ type, value: def.base * rarityScale, scales: def.scales }];
+    cache.set(entity.id, stat);
+    return stat;
+  }
+
   const stats: SecondaryStat[] = [];
   if (count > 0 && rarityScale > 0) {
     const taken = new Set<SecondaryStatType>();

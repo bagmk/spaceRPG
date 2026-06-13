@@ -461,9 +461,14 @@ export const SECONDARY_STAT_POOLS: Record<'click' | 'rift', SecondaryStatType[]>
   rift: ['autoPct', 'entropyGain', 'dropRate', 'fusionBurst', 'offlineEff'],
 };
 
-/** How many secondary stats each rarity carries (deterministic from entity id). */
+/**
+ * How many secondary stats each rarity carries (deterministic from entity id).
+ * P4 (spec variety, R7): commons now carry ONE weak "signature" specialty so no
+ * two same-primary commons read identically — the first stat is the item's
+ * specialty (특기), the rest are weak minors. 주력(effect) + 약한 보조(these).
+ */
 export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
-  common: 0,
+  common: 1,
   rare: 1,
   epic: 2,
   legendary: 3,
@@ -472,7 +477,7 @@ export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
 
 /** Secondary magnitudes scale with rarity on top of the per-stat base. */
 export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
-  common: 0,
+  common: 0.6,
   rare: 1,
   epic: 1.5,
   legendary: 2.2,
