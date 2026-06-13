@@ -873,6 +873,484 @@ button.hud-stage-title--clickable:hover {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Full-screen entity panel — Codex / Equip / Fusion in one overlay
+   (replaces the old .entity-overlay/.entity-panel slide-out + the
+   per-stage timeline; every era's items show at once now)
+   ════════════════════════════════════════════════════════════════ */
+.entity-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  background: rgba(2, 3, 7, 0.62);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  animation: entity-fs-in 0.18s ease-out;
+}
+@keyframes entity-fs-in { from { opacity: 0; } to { opacity: 1; } }
+
+.entity-fs__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--stage-accent, #2a3050) 16%, transparent), transparent 60%),
+    #06080f;
+  overflow: hidden;
+}
+
+.entity-fs__topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  padding: 14px clamp(16px, 4vw, 48px);
+  border-bottom: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 18%, rgba(255, 255, 255, 0.06));
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.entity-fs__tabs { display: flex; gap: 6px; margin-right: auto; }
+
+.entity-fs__tab {
+  padding: 9px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(232, 236, 244, 0.72);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.entity-fs__tab:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.entity-fs__tab--active {
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 22%, rgba(255, 255, 255, 0.08));
+  border-color: color-mix(in srgb, var(--stage-accent, #8090b0) 60%, rgba(255, 255, 255, 0.3));
+  color: #fff;
+}
+
+.entity-fs__wallet {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+.entity-fs__wallet span {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+.entity-fs__wallet strong {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: #fff7df;
+  font-variant-numeric: tabular-nums;
+}
+
+.entity-fs__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfd6e6;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.entity-fs__close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+.entity-fs__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 48px) 48px;
+}
+.entity-fs__body > * { max-width: 1080px; margin-inline: auto; }
+
+/* Tab content sits inside the body's own scroll — drop the old panel's
+   self-scroll/padding so we don't nest scroll regions. */
+.entity-fs__body .equip-page,
+.entity-fs__body .fuse-page {
+  padding: 0;
+  overflow: visible;
+  gap: 14px;
+}
+
+/* ── Rarity filter chips (shared by equip + fusion grids) ── */
+.rarity-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.rarity-filter__chip {
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(232, 236, 244, 0.7);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.rarity-filter__chip--active {
+  border-color: color-mix(in srgb, var(--rarity-color, #8090b0) 65%, rgba(255, 255, 255, 0.3));
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 18%, rgba(255, 255, 255, 0.04));
+  color: #fff;
+}
+
+/* ── Owned inventory section (equip + fuse) ── */
+.entity-inv { display: grid; gap: 9px; }
+.entity-inv__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.entity-inv__title { font-size: 13px; color: #cfd6e6; }
+.entity-inv__sub { font-size: 11px; color: rgba(255, 255, 255, 0.4); }
+.entity-inv__hint { font-size: 11px; color: color-mix(in srgb, var(--stage-accent, #8090b0) 70%, #fff); }
+
+/* ── Equip: click vs rift toggle + picking highlight ── */
+.equip-cat-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.equip-cat-toggle__btn {
+  padding: 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(232, 236, 244, 0.62);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.equip-cat-toggle__btn--active {
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 22%, rgba(255, 255, 255, 0.08));
+  color: #fff;
+}
+.equip-slot-card--picking {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+/* ════ Gacha fusion — pity ladder, altar, dramatic reveal ════ */
+.gacha-meta { display: grid; gap: 10px; }
+.gacha-pity {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 170, 60, 0.22);
+  border-radius: 11px;
+  background: rgba(255, 170, 60, 0.06);
+}
+.gacha-pity__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+}
+.gacha-pity__count { color: #ffd76a; }
+.gacha-pity__bar {
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.gacha-pity__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ffae3b, #ffd76a);
+  transition: width 0.3s ease;
+}
+.gacha-odds { display: flex; gap: 16px; font-size: 12px; }
+.gacha-odds__up1 { color: #9fd0ff; }
+.gacha-odds__up2 { color: #d9a9ff; }
+.gacha-odds__cap { color: rgba(255, 255, 255, 0.55); }
+
+.gacha-altar {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px 16px 18px;
+  border: 1px solid rgba(180, 150, 255, 0.2);
+  border-radius: 16px;
+  background: radial-gradient(70% 70% at 50% 30%, rgba(120, 90, 220, 0.16), transparent 72%);
+}
+.gacha-altar--ready {
+  border-color: rgba(180, 150, 255, 0.5);
+  box-shadow: inset 0 0 40px rgba(150, 110, 240, 0.16);
+}
+.gacha-altar__slots { display: flex; gap: 14px; }
+.gacha-slot {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.gacha-slot:hover { transform: translateY(-2px); }
+.gacha-slot--filled {
+  border-style: solid;
+  border-color: var(--rarity-color);
+  background: color-mix(in srgb, var(--rarity-color) 12%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--rarity-color) 35%, transparent);
+}
+.gacha-slot__plus { font-size: 28px; opacity: 0.4; }
+.gacha-altar__caption {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+.gacha-altar__cost {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: rgba(255, 255, 255, 0.75);
+}
+.gacha-altar__refund { color: #9fe0c5; }
+.gacha-fuse-btn {
+  width: min(420px, 100%);
+  padding: 14px;
+  border: 1px solid rgba(255, 180, 90, 0.5);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 170, 60, 0.22), rgba(180, 90, 220, 0.2));
+  color: #ffe6b0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.gacha-fuse-btn:hover:not(:disabled) { box-shadow: 0 0 22px rgba(255, 170, 60, 0.35); }
+.gacha-fuse-btn:active:not(:disabled) { transform: scale(0.98); }
+.gacha-fuse-btn:disabled { opacity: 0.4; cursor: default; }
+.gacha-fuse-btn--charging { animation: gacha-pulse 0.5s ease-in-out infinite alternate; }
+@keyframes gacha-pulse {
+  from { box-shadow: 0 0 8px rgba(255, 170, 60, 0.2); }
+  to { box-shadow: 0 0 26px rgba(200, 130, 255, 0.5); }
+}
+
+/* Charging beat — suspense before the reveal */
+.fusion-charge {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: rgba(3, 4, 10, 0.7);
+  backdrop-filter: blur(4px);
+}
+.fusion-charge__core {
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 0 24px rgba(190, 150, 255, 0.7));
+  animation: gacha-charge-spin 0.85s ease-in-out infinite alternate;
+}
+@keyframes gacha-charge-spin {
+  from { transform: scale(0.75) rotate(0deg); opacity: 0.55; }
+  to { transform: scale(1.12) rotate(330deg); opacity: 1; }
+}
+.fusion-charge__label { font-size: 13px; letter-spacing: 0.25em; color: #cda8ff; }
+
+/* Rarity-up reveal rays */
+.fusion-result__card { position: relative; overflow: hidden; }
+.fusion-result__card > :not(.fusion-result__rays) { position: relative; z-index: 1; }
+.fusion-result__rays {
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  background: conic-gradient(from 0deg,
+    transparent 0 9deg,
+    color-mix(in srgb, var(--rarity-color) 42%, transparent) 9deg 13deg,
+    transparent 13deg 30deg);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: fusion-rays-spin 7s linear infinite;
+}
+@keyframes fusion-rays-spin { to { transform: rotate(360deg); } }
+
+/* ════ Codex curation: hero completion meter + glyph wall ════ */
+.codex-hero {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--stage-accent, #7a5be0) 12%, transparent), transparent);
+  border: 1px solid color-mix(in srgb, var(--stage-accent, #7a5be0) 24%, rgba(255, 255, 255, 0.08));
+  border-radius: 13px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.codex-hero__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.codex-hero__count { font-size: 26px; font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
+.codex-hero__total { font-size: 14px; color: rgba(255, 255, 255, 0.5); font-weight: 400; }
+.codex-hero__mass { font-size: 13px; color: #cda8ff; white-space: nowrap; }
+.codex-hero__mass b { color: #e7d5ff; }
+.codex-hero__bar { height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); margin-top: 9px; overflow: hidden; }
+.codex-hero__fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7a5be0, #b78cff); transition: width 0.3s ease; }
+.codex-hero__caption { font-size: 10.5px; color: rgba(255, 255, 255, 0.4); margin-top: 7px; }
+.codex-hero__nudge { font-size: 11px; color: #ffb35d; margin-top: 4px; }
+
+.codex-set-chip--near { border-color: rgba(255, 179, 93, 0.6); box-shadow: 0 0 0 1px rgba(255, 179, 93, 0.25); }
+.codex-set-chip--toggle { margin-left: auto; color: #9fd0ff; }
+
+.codex-divider { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
+.codex-divider--set { margin-top: 20px; padding-bottom: 2px; border-bottom: 1px solid color-mix(in srgb, var(--set-accent, #8090b0) 28%, transparent); }
+.codex-divider__icon { font-size: 15px; }
+.codex-divider__label { font-size: 12px; color: #cfd6e6; }
+.codex-divider--set .codex-divider__label { font-size: 13.5px; color: #fff; font-weight: 500; }
+.codex-divider__count { font-size: 10.5px; color: rgba(255, 255, 255, 0.4); }
+.codex-divider__rule { flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+
+.almanac-card { position: relative; }
+.almanac-card__era {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.28);
+}
+.almanac-card--locked .almanac-card__era { color: rgba(255, 255, 255, 0.18); }
+
+/* ════ Equip curation: hero number + slim slots + pick deltas ════ */
+.equip-purpose { font-size: 10.5px; color: rgba(255, 255, 255, 0.4); }
+
+.equip-hero { text-align: center; padding: 4px 0 6px; }
+.equip-hero__label { font-size: 10px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.45); text-transform: uppercase; }
+.equip-hero__value-row { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.equip-hero__value { font-size: 32px; font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; animation: equip-hero-pop 0.4s ease-out; }
+@keyframes equip-hero-pop { 0% { transform: scale(0.92); opacity: 0.4; } 100% { transform: scale(1); opacity: 1; } }
+.equip-hero__toggle { width: 26px; height: 26px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 7px; background: rgba(255, 255, 255, 0.03); color: #cfd6e6; cursor: pointer; transition: transform 0.15s; }
+.equip-hero__toggle--open { transform: rotate(180deg); }
+.equip-hero__breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.equip-hero__stat { display: grid; gap: 2px; padding: 7px 6px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; background: rgba(255, 255, 255, 0.02); }
+.equip-hero__stat-label { font-size: 9px; letter-spacing: 0.05em; color: rgba(255, 255, 255, 0.5); }
+.equip-hero__stat-value { font-family: var(--mono); font-size: 12px; }
+
+.entity-fs__body .equip-slot-card { min-height: 98px; gap: 4px; justify-content: center; }
+.equip-slot-card__effect { font-size: 12px; font-family: var(--mono); margin-top: 2px; }
+.equip-slot-card--linked {
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--rarity-color, #8090b0) 55%, #fff),
+    0 0 16px color-mix(in srgb, var(--rarity-color, #8090b0) 30%, transparent);
+}
+.equip-slot-card__set { position: absolute; top: 5px; left: 7px; font-size: 11px; color: color-mix(in srgb, var(--rarity-color, #8090b0) 80%, #fff); }
+.equip-slot-card--picking { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+
+.equip-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.equip-set-chip { font-size: 11px; color: #8fe0c0; }
+.equip-enhance-all {
+  padding: 7px 14px;
+  border: 1px solid rgba(187, 140, 255, 0.4);
+  border-radius: 9px;
+  background: rgba(187, 140, 255, 0.1);
+  color: #d9c2ff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.equip-enhance-all:hover { background: rgba(187, 140, 255, 0.18); }
+
+.entity-inv__filter {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #cfd6e6;
+  cursor: pointer;
+}
+.entity-inv__filter--on { background: rgba(255, 255, 255, 0.13); color: #fff; }
+
+.owned-card { position: relative; }
+.owned-card__delta {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #cfd6e6;
+}
+.owned-card__delta--up { background: #1f6b46; color: #b8f0d0; }
+.owned-card__delta--down { background: #6b2a2a; color: #f0c0c0; }
+
+.slot-detail__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.slot-detail__remove { border-color: rgba(220, 120, 120, 0.5) !important; color: #e89a9a !important; }
+
+/* ════ Fusion lever curation: cost+pity on the lever, reveal fork ════ */
+.gacha-fuse-btn { position: relative; overflow: hidden; }
+.gacha-fuse-btn__label { position: relative; z-index: 1; }
+.gacha-fuse-btn__pity {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  z-index: 0;
+  background: linear-gradient(90deg, #ffae3b, #ffd76a);
+  transition: width 0.3s ease;
+}
+.gacha-fuse-btn--armed { animation: gacha-pulse 0.7s ease-in-out infinite alternate; }
+
+.gacha-altar .gacha-odds { width: min(420px, 100%); align-items: baseline; }
+.gacha-odds__pity { margin-left: auto; color: rgba(255, 255, 255, 0.5); }
+
+.gacha-again {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 180, 90, 0.45);
+  border-radius: 9px;
+  background: rgba(255, 170, 60, 0.12);
+  color: #ffe0b0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gacha-again:hover { background: rgba(255, 170, 60, 0.2); }
+
+.fusion-result--boom { background: rgba(0, 0, 0, 0.72); }
+.fusion-result--quiet { background: transparent; pointer-events: none; }
+.fusion-result--quiet .fusion-result__card {
+  box-shadow: 0 0 18px color-mix(in srgb, var(--rarity-color) 40%, transparent);
+  animation: fusion-quiet 1s ease-out forwards;
+}
+@keyframes fusion-quiet {
+  0% { transform: scale(0.85); opacity: 0; }
+  20% { transform: scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .entity-fs__topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .entity-fs__tab { padding: 8px 14px; font-size: 13px; }
+  .entity-fs__body { padding: 14px 12px 32px; }
+  .gacha-altar__slots { gap: 10px; }
+  .gacha-slot { width: 62px; height: 62px; }
+  .equip-page__stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 
 .hud-time-estimate {
   margin-top: 3px;

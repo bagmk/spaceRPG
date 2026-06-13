@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, MouseEvent } from 'react';
+import type { CSSProperties } from 'react';
 import type { EntityInstance, FusionEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
-import { STAGE_ENTITIES, entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
+import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
+  CODEX_MASS_BONUS,
   ENTROPY_FUSION_COST_FRAC,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
@@ -18,18 +19,18 @@ import {
   type SecondaryStatType,
 } from '../game/balance';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
-import { getExpectedFusionRefund, getMaxFusionRarityIdx } from '../game/entities/fusion';
+import { getMaxFusionRarityIdx } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexRewardLabel, codexSetBlurb, codexSetLabel, codexSubsetLabel, collectedIdSet, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
 import { STAGES } from '../game/stages';
 import { formatAutoRateValue, formatEntropyAmount, getCosmicTimeFillRate } from '../game/formulas';
 import { EntityGlyph } from './EntityGlyph';
-import { t, stageName, type Lang } from '../i18n';
+import { t, type Lang } from '../i18n';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary'];
 const RARITY_RANK = new Map<EntityRarity, number>(RARITY_ORDER.map((rarity, index) => [rarity, index]));
@@ -247,41 +248,99 @@ interface Props {
 }
 
 export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
-  const [selectedStageId, setSelectedStageId] = useState(currentStageId);
-  // Live gear-power context — all effect labels derive from this, never from
-  // the browsed stage, so label == applied value everywhere.
+  // Full-screen tab + equip-category are now interactive state (seeded from the
+  // entry point), so one overlay hosts all three pages and the click/rift toggle.
+  const [tab, setTab] = useState<PanelPage>(page);
+  const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
+  const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
+  // Stage browsing is gone — items show across all eras at once. The prop stays
+  // for API compatibility but is no longer driven from here.
+  void onStageSelect;
+  // Live gear-power context — all effect labels derive from this (label == applied).
   const power: GearPower = { stageId: currentStageId, gateProgress01 };
-  const [selectedSetId, setSelectedSetId] = useState(CODEX_SETS[0].id);
+  const [selectedSetId, setSelectedSetId] = useState<string>('all');
+  const [showMissing, setShowMissing] = useState(false);
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
-  const tab = page;
+  // Equip: hero-stat breakdown expand, slot-detail inspector, on-demand filter.
+  const [statsExpanded, setStatsExpanded] = useState(false);
+  const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
-  const timelineRef = useRef<HTMLDivElement>(null);
+  // Gacha suspense: brief "charging" beat before the result is committed.
+  const [fusing, setFusing] = useState(false);
+  const [hasFused, setHasFused] = useState(false);
+  const fuseTimerRef = useRef<number | null>(null);
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
-  // The gear array this equip page edits.
-  const gearSlots = equipCategory === 'rift' ? riftSlots : equippedSlots;
-  const gearSlotCount = equipCategory === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
-  const gearRules = equipCategory === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
+  const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
+  const accent = playerStage?.accent ?? '#8090b0';
 
-  // Owned stacks resolved to entities, selected stage only (tracking stays simple;
-  // the timeline switches stages on every page).
+  const switchTab = (next: PanelPage) => {
+    if (next === tab) return;
+    setTab(next);
+    setInspectedEntityId(null);
+    setInspectedSlot(null);
+    setPickingSlot(null);
+    onUITap?.();
+  };
+  const switchEquipCat = (next: EquipCategory) => {
+    if (next === equipCat) return;
+    setEquipCat(next);
+    setInspectedSlot(null);
+    setPickingSlot(null);
+    onUITap?.();
+  };
+
+  // Gacha "tempt fate" beat: spin for a moment, THEN commit the fusion so the
+  // result lands as a reveal (suspense, not an instant swap).
+  const FUSE_CHARGE_MS = 720;
+  const triggerFuse = (inputsArg?: string[]) => {
+    const inputs = inputsArg ?? fuseInputs;
+    if (fusing || inputs.length !== FUSION_INPUT_COUNT) return;
+    setFusing(true);
+    setHasFused(true);
+    onUITap?.();
+    fuseTimerRef.current = window.setTimeout(() => {
+      onFuse(inputs);
+      setFuseInputs([]);
+      setFusing(false);
+      fuseTimerRef.current = null;
+    }, FUSE_CHARGE_MS);
+  };
+  useEffect(() => () => {
+    if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
+  }, []);
+
+  // The gear array this equip page edits.
+  const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
+  const gearSlotCount = equipCat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
+  const gearRules = equipCat === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
+
+  // Every owned stack, across ALL eras — sorted best-first (rarity desc → era asc).
   const ownedEntities = useMemo(() => {
     return inventory
       .filter((entry) => entry.count > 0)
       .map((entry) => ({ entry, entity: findEntityById(entry.entityId) }))
       .filter((x): x is { entry: EntityInstance; entity: StageEntity } => Boolean(x.entity))
-      .filter((x) => x.entity.stageId === selectedStageId)
       .sort((a, b) => {
+        const rr = (RARITY_RANK.get(b.entity.rarity) ?? 0) - (RARITY_RANK.get(a.entity.rarity) ?? 0);
+        if (rr !== 0) return rr;
         if (a.entity.stageId !== b.entity.stageId) return a.entity.stageId - b.entity.stageId;
-        return (RARITY_RANK.get(a.entity.rarity) ?? 0) - (RARITY_RANK.get(b.entity.rarity) ?? 0);
+        return a.entity.baseCost - b.entity.baseCost;
       });
-  }, [inventory, selectedStageId]);
+  }, [inventory]);
 
-  // Picker shows only the matching gear category.
+  // Rarity-filter chip applied on top of the full list (shared by equip + fuse grids).
+  const rarityFiltered = useMemo(
+    () => (rarityFilter === 'all' ? ownedEntities : ownedEntities.filter(({ entity }) => entity.rarity === rarityFilter)),
+    [ownedEntities, rarityFilter],
+  );
+
+  // Equip grid shows only the matching gear category (click vs rift).
   const pickerEntities = useMemo(
-    () => ownedEntities.filter(({ entity }) => getEquipCategory(entity) === equipCategory),
-    [ownedEntities, equipCategory],
+    () => rarityFiltered.filter(({ entity }) => getEquipCategory(entity) === equipCat),
+    [rarityFiltered, equipCat],
   );
 
   // Active set bonus spans both gear categories (largest glyph family counts).
@@ -320,49 +379,21 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onUITap?.();
   };
 
-  // Auto-dismiss the fusion result reveal.
+  // Auto-dismiss the fusion reveal — a rarity-up detonation lingers; a plain
+  // level-up/refund is a quick flash so spam-fusing never waits on a cutscene.
   useEffect(() => {
     if (!lastFusionEvent) return undefined;
-    const timeoutId = window.setTimeout(() => onClearFusionEvent(lastFusionEvent.id), 2600);
+    const ms = lastFusionEvent.rarityUp ? 3200 : 1000;
+    const timeoutId = window.setTimeout(() => onClearFusionEvent(lastFusionEvent.id), ms);
     return () => window.clearTimeout(timeoutId);
   }, [lastFusionEvent, onClearFusionEvent]);
-
-  const accessibleStages = useMemo(
-    () => STAGES.filter((s) => s.id <= currentStageId),
-    [currentStageId],
-  );
-
-  const selectedStage =
-    accessibleStages.find((s) => s.id === selectedStageId) ??
-    accessibleStages[accessibleStages.length - 1];
-
-  const stageEntities = useMemo(
-    () =>
-      [...getEntitiesForStage(selectedStageId)].sort((a, b) => {
-        if (a.baseCost !== b.baseCost) return a.baseCost - b.baseCost;
-        return (RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0);
-      }),
-    [selectedStageId],
-  );
-  const entities = stageEntities;
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
   // Alias-aware stack lookup — migrated saves may store entries under legacy ids.
   const ownedEntryOf = (entity: StageEntity) =>
     inventory.find((e) => entityMatchesId(entity, e.entityId));
-  const equippedSlotOf = (entity: StageEntity) =>
-    (getEquipCategory(entity) === 'rift' ? riftSlots : equippedSlots).indexOf(entity.id);
-  const inspectedEntity = entities.find((entity) => entity.id === inspectedEntityId) ?? null;
-
-  useEffect(() => {
-    if (!timelineRef.current) return;
-    const selected = timelineRef.current.querySelector<HTMLElement>('.entity-timeline__node--selected');
-    selected?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, [selectedStageId]);
-
-  useEffect(() => {
-    setInspectedEntityId(null);
-  }, [selectedStageId]);
+  // Inspected card resolves across the whole roster (codex spans all eras).
+  const inspectedEntity = inspectedEntityId ? findEntityById(inspectedEntityId) : null;
 
   useEffect(() => {
     if (!inspectedEntityId) return undefined;
@@ -375,105 +406,137 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [inspectedEntityId]);
 
-  return (
-    <div className="entity-overlay" onClick={onClose}>
-      <aside
-        className="entity-panel"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="entity-panel__header"
-          style={{ '--stage-accent': selectedStage?.accent ?? '#8090b0' } as CSSProperties}
+  const TABS: { id: PanelPage; key: Parameters<typeof t>[1] }[] = [
+    { id: 'lab', key: 'tabCodex' },
+    { id: 'equip', key: 'tabEquip' },
+    { id: 'fuse', key: 'tabFuse' },
+  ];
+
+  // Shared rarity-filter chip row (equip + fusion grids).
+  const rarityFilterBar = (
+    <div className="rarity-filter">
+      {(['all', 'common', 'rare', 'epic', 'legendary'] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          className={`rarity-filter__chip ${rarityFilter === r ? 'rarity-filter__chip--active' : ''}`}
+          style={r === 'all' ? undefined : ({ '--rarity-color': RARITY_COLORS[r] } as CSSProperties)}
+          onClick={() => { setRarityFilter(r); onUITap?.(); }}
         >
-          <div className="entity-panel__stage" style={{ color: selectedStage?.accent }}>
-            {tab === 'equip'
-              ? t(language, equipCategory === 'rift' ? 'equipRiftTitle' : 'equipClickTitle')
-              : tab === 'fuse'
-                ? t(language, 'fuseTitle')
-                : selectedStage ? `${String(selectedStage.id).padStart(2, '0')} · ${stageName(language, selectedStage.id, selectedStage.name)}` : ''}
-          </div>
-          <button className="entity-panel__close" onClick={onClose}>✕</button>
-        </div>
+          {r === 'all' ? t(language, 'rarityAll') : t(language, RARITY_LABEL_KEY[r])}
+        </button>
+      ))}
+    </div>
+  );
 
-        {/* Stage Timeline — equip/fuse pages filter owned items by stage. The
-            Codex uses thematic sets instead, so the timeline is hidden there. */}
-        {tab !== 'lab' ? (
-        <div className="entity-timeline" ref={timelineRef}>
-          <div className="entity-timeline__track">
-            {accessibleStages.map((s, i) => {
-              const prev = i > 0 ? accessibleStages[i - 1] : null;
-              const isSelected = s.id === selectedStageId;
-              const isCurrent = s.id === currentStageId;
+  return (
+    <div className="entity-fs" onClick={onClose}>
+      <section
+        className="entity-fs__panel"
+        onClick={(e) => e.stopPropagation()}
+        style={{ '--stage-accent': accent } as CSSProperties}
+      >
+        {/* Top bar — tabs / wallet / close (one overlay hosts all three pages) */}
+        <header className="entity-fs__topbar">
+          <nav className="entity-fs__tabs" aria-label={t(language, 'tabCodex')}>
+            {TABS.map((tabDef) => (
+              <button
+                key={tabDef.id}
+                type="button"
+                className={`entity-fs__tab ${tab === tabDef.id ? 'entity-fs__tab--active' : ''}`}
+                aria-pressed={tab === tabDef.id}
+                onClick={() => switchTab(tabDef.id)}
+              >
+                {t(language, tabDef.key)}
+              </button>
+            ))}
+          </nav>
+          {tab !== 'lab' ? (
+            <div className="entity-fs__wallet">
+              <span>{t(language, 'hudQuanta')}</span>
+              <strong>⚛{formatEntityCost(quanta)}</strong>
+            </div>
+          ) : null}
+          <button className="entity-fs__close" aria-label={t(language, 'panelClose')} onClick={onClose}>✕</button>
+        </header>
 
-              return (
-                <Fragment key={s.id}>
-                  {prev && (
-                    <div
-                      className="entity-timeline__line"
-                      style={{
-                        background: `linear-gradient(to right, ${prev.accent}55, ${s.accent}55)`,
-                      }}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    className={[
-                      'entity-timeline__node',
-                      isSelected ? 'entity-timeline__node--selected' : '',
-                      isCurrent ? 'entity-timeline__node--current' : '',
-                      s.id < currentStageId ? 'entity-timeline__node--completed' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    style={{ '--node-color': s.accent } as CSSProperties}
-                    onClick={() => { setSelectedStageId(s.id); onStageSelect?.(s.id); }}
-                    aria-label={`${t(language, 'entityLabStageLabel')} ${s.id}: ${stageName(language, s.id, s.name)}`}
-                    aria-pressed={isSelected}
-                  >
-                    <span className="entity-timeline__dot">
-                      {s.id < currentStageId && !isSelected ? '✓' : s.id}
-                    </span>
-                    <span className="entity-timeline__label">{stageName(language, s.id, s.name)}</span>
-                  </button>
-                </Fragment>
-              );
-            })}
-          </div>
-        </div>
-        ) : null}
+        <div className="entity-fs__body">
 
 
         {tab === 'lab' ? (() => {
-          // Codex: nested thematic sets (set → subsets) that span all stages.
+          // Codex: a glyph wall crowned by ONE completion meter. Sets→subsets
+          // span all eras; chips are an opt-in filter (default = all).
           const collectedSet = collectedIdSet(almanacCollected);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
 
-          const activeSet = CODEX_SETS.find((cs) => cs.id === selectedSetId) ?? CODEX_SETS[0];
-          // Set-level progress = union of all subset members (deduped).
-          const setMemberIds = new Set<string>();
-          for (const sub of activeSet.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) setMemberIds.add(m.id);
-          const setMembers = STAGE_ENTITIES.filter((e) => setMemberIds.has(e.id));
-          const got = setMembers.filter(isCollected).length;
-          const total = setMembers.length;
-          const pct = total > 0 ? Math.round((got / total) * 100) : 0;
-          const setDone = isSetComplete(activeSet, collectedSet, STAGE_ENTITIES);
+          // HERO meter — global completion + the prestige-mass factor it grants.
+          const totalAll = STAGE_ENTITIES.length;
+          const collectedAll = STAGE_ENTITIES.filter(isCollected).length;
+          const codexPct = totalAll > 0 ? Math.round((collectedAll / totalAll) * 100) : 0;
+          const massFactor = 1 + getCodexCompletionFraction(almanacCollected) * CODEX_MASS_BONUS;
+
+          // Closest-to-completion nudge — the cheapest next reward (fewest missing).
+          let closest: { label: string; remaining: number } | null = null;
+          for (const cs of CODEX_SETS) {
+            for (const sub of cs.subsets) {
+              const rem = getSubsetMembers(sub, STAGE_ENTITIES).filter((m) => !isCollected(m)).length;
+              if (rem > 0 && (closest === null || rem < closest.remaining)) {
+                closest = { label: codexSubsetLabel(sub, language), remaining: rem };
+              }
+            }
+          }
+
+          const shortReward = (r: CodexReward) => `+${r.value}%`;
+          const setsToRender = selectedSetId === 'all'
+            ? CODEX_SETS
+            : CODEX_SETS.filter((cs) => cs.id === selectedSetId);
 
           return (
             <>
-              {/* Set selector chips */}
+              {/* HERO completion meter */}
+              <div className="codex-hero">
+                <div className="codex-hero__row">
+                  <span className="codex-hero__count">
+                    {collectedAll}
+                    <span className="codex-hero__total">{` / ${totalAll} ${t(language, 'codexMeterFound')} · ${codexPct}%`}</span>
+                  </span>
+                  <span className="codex-hero__mass">
+                    {t(language, 'codexMassFactor')} <b>×{massFactor.toFixed(2)}</b>
+                  </span>
+                </div>
+                <div className="codex-hero__bar">
+                  <div className="codex-hero__fill" style={{ width: `${codexPct}%` }} />
+                </div>
+                <div className="codex-hero__caption">{t(language, 'codexPurpose')}</div>
+                {closest ? (
+                  <div className="codex-hero__nudge">
+                    {`▸ ${t(language, 'codexClosest').replace('{name}', closest.label).replace('{n}', String(closest.remaining))}`}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Set filter chips (default 전체) + missing-only toggle. No mini-bar. */}
               <div className="codex-sets">
+                <button
+                  type="button"
+                  className={`codex-set-chip ${selectedSetId === 'all' ? 'codex-set-chip--active' : ''}`}
+                  onClick={() => { setSelectedSetId('all'); onUITap?.(); }}
+                >
+                  <span className="codex-set-chip__label">{t(language, 'rarityAll')}</span>
+                  <span className="codex-set-chip__count">{`${collectedAll}/${totalAll}`}</span>
+                </button>
                 {CODEX_SETS.map((cs) => {
                   const ids = new Set<string>();
                   for (const sub of cs.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) ids.add(m.id);
                   const members = STAGE_ENTITIES.filter((e) => ids.has(e.id));
                   const done = members.filter(isCollected).length;
                   const full = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
+                  const near = !full && members.length - done > 0 && members.length - done <= 2;
                   return (
                     <button
                       key={cs.id}
                       type="button"
-                      className={`codex-set-chip ${cs.id === selectedSetId ? 'codex-set-chip--active' : ''} ${full ? 'codex-set-chip--full' : ''}`}
+                      className={`codex-set-chip ${cs.id === selectedSetId ? 'codex-set-chip--active' : ''} ${full ? 'codex-set-chip--full' : ''} ${near ? 'codex-set-chip--near' : ''}`}
                       style={{ '--set-accent': cs.accent } as CSSProperties}
                       onClick={() => { setSelectedSetId(cs.id); onUITap?.(); }}
                     >
@@ -483,73 +546,77 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  className={`codex-set-chip codex-set-chip--toggle ${showMissing ? 'codex-set-chip--active' : ''}`}
+                  onClick={() => { setShowMissing((v) => !v); onUITap?.(); }}
+                >
+                  <span className="codex-set-chip__label">{t(language, 'codexShowMissing')}</span>
+                </button>
               </div>
 
-              <div className={`almanac-progress ${setDone ? 'almanac-progress--complete' : ''}`}>
-                <div className="almanac-progress__row">
-                  <span>{codexSetBlurb(activeSet, language)}</span>
-                  <span>{`${got} / ${total} · ${pct}%`}</span>
-                </div>
-                <div className="almanac-progress__bar">
-                  <div className="almanac-progress__fill" style={{ width: `${pct}%`, background: activeSet.accent }} />
-                </div>
-                {/* Set completion reward — grants when every subset is full. */}
-                <div className={`codex-reward codex-reward--set ${setDone ? 'codex-reward--earned' : ''}`}>
-                  <span className="codex-reward__star">{setDone ? '★' : '☆'}</span>
-                  <span className="codex-reward__text">{codexRewardLabel(activeSet.reward, language)}</span>
-                </div>
-              </div>
-
-              {/* Subset sections */}
-              {activeSet.subsets.map((sub) => {
-                const members = getSubsetMembers(sub, STAGE_ENTITIES)
-                  .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
-                const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
-                const subGot = members.filter(isCollected).length;
+              {/* The glyph wall — thin set/subset dividers, dense cards. */}
+              {setsToRender.map((cs) => {
+                const setDone = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
                 return (
-                  <div className="codex-subset" key={sub.id}>
-                    <div className="codex-subset__head">
-                      <span className="codex-subset__label">{codexSubsetLabel(sub, language)}</span>
-                      <span className="codex-subset__count">{`${subGot}/${members.length}`}</span>
-                      <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`}>
-                        <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
-                        <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>
-                      </span>
-                    </div>
-                    <div className="almanac-grid">
-                      {members.map((entity, idx) => {
-                        const collected = isCollected(entity);
-                        const entry = ownedEntryOf(entity);
-                        const rarityColor = RARITY_COLORS[entity.rarity];
-                        return (
-                          <button
-                            key={entity.id}
-                            type="button"
-                            className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
-                            style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
-                            onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
-                          >
-                            <div className="almanac-card__glyph">
-                              {collected
-                                ? <EntityGlyph entity={entity} color={rarityColor} />
-                                : <span className="almanac-card__mystery">?</span>}
-                              {equippedSlotOf(entity) >= 0 ? <span className="almanac-card__equipped">★</span> : null}
-                            </div>
-                            <div className="almanac-card__name">
-                              {collected ? entityName(entity, language) : '???'}
-                            </div>
-                            {collected && entry ? (
-                              <div className="almanac-card__meta" style={{ color: rarityColor }}>
-                                {`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}
-                              </div>
-                            ) : (
-                              <div className="almanac-card__meta almanac-card__meta--stage">{`S${entity.stageId}`}</div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <Fragment key={cs.id}>
+                    {selectedSetId === 'all' ? (
+                      <div className="codex-divider codex-divider--set" style={{ '--set-accent': cs.accent } as CSSProperties}>
+                        <span className="codex-divider__icon">{cs.icon}</span>
+                        <span className="codex-divider__label">{codexSetLabel(cs, language)}</span>
+                        <span className={`codex-reward ${setDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(cs.reward, language)}>
+                          <span className="codex-reward__star">{setDone ? '★' : '☆'}</span>
+                          <span className="codex-reward__text">{shortReward(cs.reward)}</span>
+                        </span>
+                      </div>
+                    ) : null}
+                    {cs.subsets.map((sub) => {
+                      const members = getSubsetMembers(sub, STAGE_ENTITIES)
+                        .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
+                      const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
+                      const subGot = members.filter(isCollected).length;
+                      const visible = showMissing ? members.filter((m) => !isCollected(m)) : members;
+                      if (visible.length === 0) return null;
+                      return (
+                        <div className="codex-subset" key={sub.id}>
+                          <div className="codex-divider">
+                            <span className="codex-divider__label">{codexSubsetLabel(sub, language)}</span>
+                            <span className="codex-divider__count">{`${subGot}/${members.length}`}</span>
+                            <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(sub.reward, language)}>
+                              <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
+                              <span className="codex-reward__text">{shortReward(sub.reward)}</span>
+                            </span>
+                            <span className="codex-divider__rule" />
+                          </div>
+                          <div className="almanac-grid">
+                            {visible.map((entity, idx) => {
+                              const collected = isCollected(entity);
+                              const rarityColor = RARITY_COLORS[entity.rarity];
+                              return (
+                                <button
+                                  key={entity.id}
+                                  type="button"
+                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
+                                  style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
+                                  onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
+                                >
+                                  <div className="almanac-card__glyph">
+                                    {collected
+                                      ? <EntityGlyph entity={entity} color={rarityColor} />
+                                      : <span className="almanac-card__mystery">?</span>}
+                                  </div>
+                                  {collected ? (
+                                    <div className="almanac-card__name">{entityName(entity, language)}</div>
+                                  ) : null}
+                                  <span className="almanac-card__era">{`S${entity.stageId}`}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </Fragment>
                 );
               })}
             </>
@@ -557,138 +624,195 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         })() : null}
 
         {/* ── Equip page ── */}
-        {tab === 'equip' ? (
-          <div className="equip-page">
-            <div className="equip-page__stats">
-              {(equipCategory === 'click'
-                ? ([
-                    [t(language, 'effectClickPower'), `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`],
-                    [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
-                    [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
-                    [t(language, 'statComboCapMax'), `×${stats.comboCapMult.toFixed(1)}`],
-                  ] as [string, string][])
-                : ([
-                    [t(language, 'hudAuto'), `${formatAutoRateValue(stats.autoRate)}/s`],
-                    [t(language, 'effectAutoPower'), `×${stats.autoFlatMult.toFixed(2)}`],
-                    [t(language, 'statEmission'), `${(stats.emissionIntervalMs / 1000).toFixed(1)}s`],
-                    [t(language, 'statOffline'), `${Math.round(stats.offlineEff * 100)}%`],
-                  ] as [string, string][])
-              ).map(([label, value]) => (
-                <div key={label} className="equip-page__stat">
-                  <span className="equip-page__stat-label">{label}</span>
-                  <span className="equip-page__stat-value">{value}</span>
-                </div>
-              ))}
-            </div>
-            <div className={`equip-page__set ${setInfo ? 'equip-page__set--active' : ''}`}>
-              {setInfo
-                ? `${t(language, 'setBonusLabel')}: ${setInfo.key} ×${setInfo.count} — ${t(language, 'effectClickPower')}/${t(language, 'hudAuto')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`
-                : t(language, 'setBonusNone')}
-            </div>
-            <div className="equip-page__slots">
-              {Array.from({ length: 3 }, (_, i) => {
-                if (i >= gearSlotCount) {
-                  const rule = gearRules.find((r) => r.slot === i + 1);
-                  const hint = rule?.minStageId !== undefined
-                    ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
-                    : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
-                  return (
-                    <div key={i} className="equip-slot-card equip-slot-card--locked">
-                      <span className="equip-slot-card__lock">🔒</span>
-                      <span className="equip-slot-card__hint">{hint}</span>
-                    </div>
-                  );
-                }
-                const slotEntity = equippedEntities[i];
-                const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
-                return (
+        {tab === 'equip' ? (() => {
+          const heroValue = equipCat === 'click'
+            ? `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`
+            : `${formatAutoRateValue(stats.autoRate)}/s`;
+          const heroLabel = equipCat === 'click' ? t(language, 'effectClickPower') : t(language, 'hudAuto');
+          const breakdown: [string, string][] = equipCat === 'click'
+            ? [
+                [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
+                [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
+                [t(language, 'statComboCapMax'), `×${stats.comboCapMult.toFixed(1)}`],
+              ]
+            : [
+                [t(language, 'effectAutoPower'), `×${stats.autoFlatMult.toFixed(2)}`],
+                [t(language, 'statEmission'), `${(stats.emissionIntervalMs / 1000).toFixed(1)}s`],
+                [t(language, 'statOffline'), `${Math.round(stats.offlineEff * 100)}%`],
+              ];
+          // Strength score proportional to applied multiplicative contribution —
+          // used only for relative deltas while picking (ratio is meaningful).
+          const gearStrength = (entity: StageEntity, entry?: EntityInstance) => {
+            const count = entry?.count ?? 1;
+            const level = entry?.level ?? 1;
+            return entity.effect.value * getEffectiveCount(count, entity.maxCount, false)
+              * getLevelMult(level) * getGearPowerMult(power, entity.stageId, entry?.carried);
+          };
+          const pickEquipped = pickingSlot !== null ? equippedEntities[pickingSlot] : undefined;
+          const pickBase = pickEquipped ? gearStrength(pickEquipped, ownedEntryOf(pickEquipped)) : 0;
+          const dominantKey = setInfo?.key;
+          return (
+            <div className="equip-page">
+              <div className="equip-purpose">{t(language, 'equipPurpose')}</div>
+              {/* Click vs Rift(auto) gear toggle — plain-outcome labels */}
+              <div className="equip-cat-toggle">
+                {(['click', 'rift'] as EquipCategory[]).map((cat) => (
                   <button
-                    key={i}
+                    key={cat}
                     type="button"
-                    className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''}`}
-                    style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
-                    onClick={() => { setPickingSlot(pickingSlot === i ? null : i); onUITap?.(); }}
+                    className={`equip-cat-toggle__btn ${equipCat === cat ? 'equip-cat-toggle__btn--active' : ''}`}
+                    aria-pressed={equipCat === cat}
+                    onClick={() => switchEquipCat(cat)}
                   >
-                    {slotEntity ? (
-                      <>
-                        <div className="equip-slot-card__glyph">
-                          <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
-                        </div>
-                        <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
-                        <div className="equip-slot-card__meta">
-                          {`Lv.${entry?.level ?? 1} · ×${entry?.count ?? 1}`}
-                        </div>
-                        <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
-                        </div>
-                        {getSecondaryStats(slotEntity).length > 0 ? (
-                          <div className="equip-slot-card__substats">
-                            {getSecondaryStats(slotEntity).map((sub) => (
-                              <span key={sub.type}>{formatSubstat(sub, language, entry?.level ?? 1, getGearPowerMult(power, slotEntity.stageId, entry?.carried))}</span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {(() => {
-                          const level = entry?.level ?? 1;
-                          const cap = getEnhanceLevelCap(slotEntity);
-                          const atCap = level >= cap;
-                          const cost = getEnhanceCost(slotEntity, level, currentStageId);
-                          return (
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              className={`equip-slot-card__enhance ${atCap || quanta < cost ? 'equip-slot-card__enhance--off' : ''}`}
-                              onClick={(e) => { e.stopPropagation(); if (!atCap && quanta >= cost) onEnhance(slotEntity.id); }}
-                              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !atCap && quanta >= cost) { e.stopPropagation(); onEnhance(slotEntity.id); } }}
-                            >
-                              {atCap
-                                ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')}`
-                                : `${t(language, 'enhanceLabel')} ⚛${formatEntityCost(cost)}`}
-                            </span>
-                          );
-                        })()}
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          className="equip-slot-card__remove"
-                          aria-label={t(language, 'entityUnequip')}
-                          onClick={(e) => { e.stopPropagation(); onUnequip(i, equipCategory); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onUnequip(i, equipCategory); } }}
-                        >
-                          ✕
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="equip-slot-card__plus">＋</span>
-                        <span className="equip-slot-card__hint">{t(language, 'equipSlotEmpty')}</span>
-                      </>
-                    )}
+                    {t(language, cat === 'rift' ? 'equipCatRift' : 'equipCatClick')}
                   </button>
-                );
-              })}
-            </div>
-            {pickingSlot !== null ? (
-              <div className="equip-picker">
-                <div className="equip-picker__title">{t(language, 'equipPickTitle')}</div>
+                ))}
+              </div>
+
+              {/* HERO — the one number you grow (4-stat detail behind ⌄) */}
+              <div className="equip-hero">
+                <div className="equip-hero__label">{heroLabel}</div>
+                <div className="equip-hero__value-row">
+                  <span className="equip-hero__value" key={heroValue}>{heroValue}</span>
+                  <button
+                    type="button"
+                    className={`equip-hero__toggle ${statsExpanded ? 'equip-hero__toggle--open' : ''}`}
+                    aria-label={t(language, 'equipStatDetails')}
+                    aria-expanded={statsExpanded}
+                    onClick={() => { setStatsExpanded((v) => !v); onUITap?.(); }}
+                  >⌄</button>
+                </div>
+                {statsExpanded ? (
+                  <div className="equip-hero__breakdown">
+                    {breakdown.map(([label, value]) => (
+                      <div key={label} className="equip-hero__stat">
+                        <span className="equip-hero__stat-label">{label}</span>
+                        <span className="equip-hero__stat-value">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Loadout — slots show identity + strength only; tap for detail */}
+              <div className="equip-page__slots">
+                {Array.from({ length: 3 }, (_, i) => {
+                  if (i >= gearSlotCount) {
+                    const rule = gearRules.find((r) => r.slot === i + 1);
+                    const hint = rule?.minStageId !== undefined
+                      ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
+                      : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
+                    return (
+                      <div key={i} className="equip-slot-card equip-slot-card--locked">
+                        <span className="equip-slot-card__lock">🔒</span>
+                        <span className="equip-slot-card__hint">{hint}</span>
+                      </div>
+                    );
+                  }
+                  const slotEntity = equippedEntities[i];
+                  const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+                  const linked = Boolean(slotEntity && dominantKey && getSetKey(slotEntity) === dominantKey);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${pickingSlot === i ? 'equip-slot-card--picking' : ''} ${linked ? 'equip-slot-card--linked' : ''}`}
+                      style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                      onClick={() => {
+                        if (slotEntity) { setInspectedSlot(i); }
+                        else { setPickingSlot(pickingSlot === i ? null : i); }
+                        onUITap?.();
+                      }}
+                    >
+                      {slotEntity ? (
+                        <>
+                          {linked ? <span className="equip-slot-card__set">⬡</span> : null}
+                          <div className="equip-slot-card__glyph">
+                            <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
+                          </div>
+                          <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
+                          <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                            {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="equip-slot-card__plus">＋</span>
+                          <span className="equip-slot-card__hint">{t(language, 'equipSlotTapFill')}</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active set magnitude (compact) + batch enhance */}
+              <div className="equip-actions">
+                {setInfo ? (
+                  <span className="equip-set-chip">
+                    {`⬡ ${t(language, 'setBonusLabel')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}
+                  </span>
+                ) : <span />}
+                <button
+                  type="button"
+                  className="equip-enhance-all"
+                  onClick={() => { equippedEntities.forEach((e) => { if (e) onEnhance(e.id); }); }}
+                >
+                  {t(language, 'enhanceAll')}
+                </button>
+              </div>
+
+              {/* Owned gear of this category — quiet at rest, deltas while picking */}
+              <div className="entity-inv">
+                <div className="entity-inv__head">
+                  <span className="entity-inv__title">
+                    {pickingSlot !== null
+                      ? t(language, 'equipPickActive')
+                      : `${t(language, 'ownedItemsLabel')} (${pickerEntities.length})`}
+                  </span>
+                  <button
+                    type="button"
+                    className={`entity-inv__filter ${filterOpen ? 'entity-inv__filter--on' : ''}`}
+                    aria-label={t(language, 'rarityAll')}
+                    onClick={() => { setFilterOpen((v) => !v); onUITap?.(); }}
+                  >
+                    <i className="ti ti-filter" aria-hidden="true"></i>
+                  </button>
+                </div>
+                {filterOpen ? rarityFilterBar : null}
                 {pickerEntities.length === 0 ? (
                   <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
                 ) : (
                   <div className="owned-grid">
                     {pickerEntities.map(({ entry, entity }) => {
                       const alreadyAt = gearSlots.indexOf(entity.id);
+                      let delta: number | null = null;
+                      if (pickingSlot !== null && pickBase > 0 && alreadyAt < 0) {
+                        const d = Math.round((gearStrength(entity, entry) / pickBase - 1) * 100);
+                        if (Number.isFinite(d)) delta = d;
+                      }
                       return (
                         <button
                           key={entity.id}
                           type="button"
                           className={`owned-card ${alreadyAt >= 0 ? 'owned-card--dim' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
-                          disabled={alreadyAt >= 0 && alreadyAt !== pickingSlot}
+                          disabled={alreadyAt >= 0}
                           onClick={() => {
-                            onEquip(entity.id, pickingSlot);
+                            let target = pickingSlot;
+                            if (target === null) {
+                              for (let s = 0; s < gearSlotCount; s++) { if (!gearSlots[s]) { target = s; break; } }
+                            }
+                            if (target === null) return;
+                            onEquip(entity.id, target);
                             setPickingSlot(null);
                           }}
                         >
+                          {delta !== null ? (
+                            <span className={`owned-card__delta ${delta > 0 ? 'owned-card__delta--up' : delta < 0 ? 'owned-card__delta--down' : ''}`}>
+                              {delta > 0 ? `+${delta}%` : `${delta}%`}
+                            </span>
+                          ) : null}
                           <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                           <span className="owned-card__name">{entityName(entity, language)}</span>
                           <span className="owned-card__count">{`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}</span>
@@ -698,130 +822,180 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   </div>
                 )}
               </div>
+            </div>
+          );
+        })() : null}
+
+        {/* ── Fusion forge page — luck-based gacha ── */}
+        {tab === 'fuse' ? (() => {
+          const maxIdx = getMaxFusionRarityIdx(currentStageId);
+          const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
+          const capped = trayRarity !== undefined && trayIdx >= maxIdx;
+          const up2Possible = trayIdx + 2 <= maxIdx;
+          const remaining = Math.max(0, FUSION_PITY_THRESHOLD - fusionPity);
+          const pityPct = Math.min(100, Math.round((fusionPity / FUSION_PITY_THRESHOLD) * 100));
+          const ready = fuseInputs.length === FUSION_INPUT_COUNT;
+          const cost = quanta * ENTROPY_FUSION_COST_FRAC;
+
+          // Fusable-trio pressure + auto-fill: copies available per rarity.
+          const copiesByRarity = new Map<EntityRarity, number>();
+          for (const { entry, entity } of ownedEntities) {
+            copiesByRarity.set(entity.rarity, (copiesByRarity.get(entity.rarity) ?? 0) + entry.count);
+          }
+          const triosAt = (r: EntityRarity) => Math.floor((copiesByRarity.get(r) ?? 0) / FUSION_INPUT_COUNT);
+          const trios = trayRarity ? triosAt(trayRarity) : RARITY_ORDER.reduce((s, r) => s + triosAt(r), 0);
+          const autoFillAndFuse = () => {
+            const cand = trayRarity && triosAt(trayRarity) > 0
+              ? trayRarity
+              : RARITY_ORDER.filter((r) => triosAt(r) > 0)
+                  .sort((a, b) => (copiesByRarity.get(b) ?? 0) - (copiesByRarity.get(a) ?? 0))[0];
+            if (!cand) return;
+            const ids: string[] = [];
+            for (const { entry, entity } of ownedEntities) {
+              if (entity.rarity !== cand) continue;
+              for (let k = 0; k < entry.count && ids.length < FUSION_INPUT_COUNT; k++) ids.push(entity.id);
+              if (ids.length >= FUSION_INPUT_COUNT) break;
+            }
+            if (ids.length < FUSION_INPUT_COUNT) return;
+            setFuseInputs(ids);
+            triggerFuse(ids);
+          };
+
+          return (
+            <div className="fuse-page">
+              {/* The altar — the whole bet (stake / cost / odds / pity) on one lever */}
+              <div className={`gacha-altar ${ready ? 'gacha-altar--ready' : ''}`}>
+                <div className="gacha-altar__slots">
+                  {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {
+                    const inputId = fuseInputs[i];
+                    const inputEntity = inputId ? findEntityById(inputId) : undefined;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`gacha-slot ${inputEntity ? 'gacha-slot--filled' : ''}`}
+                        style={inputEntity ? ({ '--rarity-color': RARITY_COLORS[inputEntity.rarity] } as CSSProperties) : undefined}
+                        onClick={() => {
+                          if (!inputId) return;
+                          setFuseInputs((current) => current.filter((_, j) => j !== i));
+                          onUITap?.();
+                        }}
+                      >
+                        {inputEntity ? (
+                          <EntityGlyph entity={inputEntity} color={RARITY_COLORS[inputEntity.rarity]} />
+                        ) : (
+                          <span className="gacha-slot__plus">＋</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="gacha-altar__caption">
+                  {fuseInputs.length === 0
+                    ? t(language, 'fuseAltarEmpty')
+                    : ready
+                      ? t(language, 'fuseAltarReady')
+                      : t(language, 'fuseHint')}
+                </div>
+                <button
+                  type="button"
+                  className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && !fusing ? 'gacha-fuse-btn--armed' : ''}`}
+                  disabled={!ready || fusing}
+                  onClick={() => triggerFuse()}
+                >
+                  <span className="gacha-fuse-btn__label">
+                    {fusing
+                      ? t(language, 'fuseChanting')
+                      : ready
+                        ? t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))
+                        : t(language, 'fuseLeverNeed')}
+                  </span>
+                  <span className="gacha-fuse-btn__pity" style={{ width: `${pityPct}%` }} aria-hidden="true" />
+                </button>
+                <div className="gacha-odds">
+                  {capped ? (
+                    <span className="gacha-odds__cap">
+                      {t(language, 'fuseMaxRarity').replace('{r}', t(language, RARITY_LABEL_KEY[RARITY_ORDER[maxIdx]]))}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="gacha-odds__up1">{`⬆ ${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}%`}</span>
+                      {up2Possible ? (
+                        <span className="gacha-odds__up2">{`⬆⬆ ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%`}</span>
+                      ) : null}
+                    </>
+                  )}
+                  <span className="gacha-odds__pity">
+                    {remaining === 0
+                      ? t(language, 'fusePityNow')
+                      : `${t(language, 'fusePityTitle')} ${t(language, 'fuseTimesUnit').replace('{n}', String(remaining))}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Fuel tray — quiet, adjacent; first tap locks rarity */}
+              <div className="entity-inv entity-inv--fuse">
+                <div className="entity-inv__head">
+                  <span className="entity-inv__title">{t(language, 'fuseFuel')}</span>
+                  {trios > 0 ? <span className="entity-inv__sub">{t(language, 'fuseTrios').replace('{n}', String(trios))}</span> : null}
+                </div>
+                {hasFused && fuseInputs.length === 0 && trios > 0 ? (
+                  <button type="button" className="gacha-again" onClick={autoFillAndFuse}>
+                    {t(language, 'fuseAgainAuto')}
+                  </button>
+                ) : null}
+                {rarityFilterBar}
+                {rarityFiltered.length === 0 ? (
+                  <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
+                ) : (
+                  <div className="owned-grid">
+                    {rarityFiltered.map(({ entry, entity }) => {
+                      const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
+                      const blocked =
+                        fuseInputs.length >= FUSION_INPUT_COUNT ||
+                        entry.count <= usedCopies ||
+                        (trayRarity !== undefined && entity.rarity !== trayRarity);
+                      return (
+                        <button
+                          key={entity.id}
+                          type="button"
+                          className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
+                          style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
+                          disabled={blocked}
+                          onClick={() => addFuseInput(entity)}
+                        >
+                          <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
+                          <span className="owned-card__name">{entityName(entity, language)}</span>
+                          <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })() : null}
+        </div>
+      </section>
+      {/* Charging beat — suspense before the reveal lands */}
+      {fusing ? (
+        <div className="fusion-charge" role="status" aria-live="polite">
+          <div className="fusion-charge__core">
+            {fuseInputs[0] ? (
+              <EntityGlyph entity={findEntityById(fuseInputs[0])!} color={RARITY_COLORS[trayRarity ?? 'common']} />
             ) : null}
           </div>
-        ) : null}
-
-        {/* ── Fusion forge page ── */}
-        {tab === 'fuse' ? (
-          <div className="fuse-page">
-            <div className="fuse-page__hint">{t(language, 'fuseHint')}</div>
-            <div className="owned-grid fuse-page__grid">
-              {ownedEntities.length === 0 ? (
-                <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
-              ) : (
-                ownedEntities.map(({ entry, entity }) => {
-                  const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
-                  const blocked =
-                    fuseInputs.length >= FUSION_INPUT_COUNT ||
-                    entry.count <= usedCopies ||
-                    (trayRarity !== undefined && entity.rarity !== trayRarity);
-                  return (
-                    <button
-                      key={entity.id}
-                      type="button"
-                      className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
-                      style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
-                      disabled={blocked}
-                      onClick={() => addFuseInput(entity)}
-                    >
-                      <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
-                      <span className="owned-card__name">{entityName(entity, language)}</span>
-                      <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        {/* Fusion tray (Phase 3) */}
-        {tab === 'fuse' ? (
-          <div className="fusion-tray">
-            <div className="fusion-tray__slots">
-              {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {
-                const inputId = fuseInputs[i];
-                const inputEntity = inputId ? findEntityById(inputId) : undefined;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`fusion-tray__slot ${inputEntity ? 'fusion-tray__slot--filled' : ''}`}
-                    onClick={() => {
-                      if (!inputId) return;
-                      setFuseInputs((current) => current.filter((_, j) => j !== i));
-                    }}
-                  >
-                    {inputEntity ? (
-                      <span style={{ color: RARITY_COLORS[inputEntity.rarity] }}>{inputEntity.formula}</span>
-                    ) : (
-                      <span className="fusion-tray__plus">+</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="fusion-tray__info">
-              {fuseInputs.length === 0 ? (
-                <span>{t(language, 'fuseHint')}</span>
-              ) : (
-                <>
-                  {(() => {
-                    // Upgrade odds + pity only apply below the stage's fusion cap;
-                    // a capped tray shows the cap instead of impossible odds.
-                    const maxIdx = getMaxFusionRarityIdx(currentStageId);
-                    const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
-                    if (trayIdx >= maxIdx) {
-                      return (
-                        <span className="fusion-tray__cap">
-                          {t(language, 'fuseMaxRarity').replace('{r}', t(language, RARITY_LABEL_KEY[RARITY_ORDER[maxIdx]]))}
-                        </span>
-                      );
-                    }
-                    const up2Possible = trayIdx + 2 <= maxIdx;
-                    return (
-                      <>
-                        <span>
-                          {`${t(language, 'fuseOddsUp1')} ${Math.round(FUSION_UP1_CHANCE * 100)}%${up2Possible ? ` · ${t(language, 'fuseOddsUp2')} ${Math.round(FUSION_UP2_CHANCE * 100)}%` : ''}`}
-                        </span>
-                        <span className="fusion-tray__pity">
-                          {t(language, 'fusePity').replace('{n}', String(Math.max(0, FUSION_PITY_THRESHOLD - fusionPity)))}
-                        </span>
-                      </>
-                    );
-                  })()}
-                  <span>{`${t(language, 'fuseCostLabel')} ⚛${formatEntityCost(quanta * ENTROPY_FUSION_COST_FRAC)}`}</span>
-                  {(() => {
-                    const expected = getExpectedFusionRefund(inventory, fuseInputs);
-                    if (expected <= 0) return null;
-                    return (
-                      <span className="fusion-tray__refund">
-                        {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(expected)}`}
-                      </span>
-                    );
-                  })()}
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              className="fusion-tray__fuse"
-              disabled={fuseInputs.length !== FUSION_INPUT_COUNT}
-              onClick={() => { onFuse(fuseInputs); setFuseInputs([]); }}
-            >
-              {t(language, 'fuseButton')}
-            </button>
-          </div>
-        ) : null}
-      </aside>
+          <div className="fusion-charge__label">{t(language, 'fuseChanting')}</div>
+        </div>
+      ) : null}
       {/* Fusion result reveal */}
       {lastFusionEvent ? (() => {
         const output = findEntityById(lastFusionEvent.outputEntityId);
         if (!output) return null;
         return (
           <div
-            className="fusion-result"
+            className={`fusion-result ${lastFusionEvent.rarityUp ? 'fusion-result--boom' : 'fusion-result--quiet'}`}
             role="status"
             onClick={(e) => { e.stopPropagation(); onClearFusionEvent(lastFusionEvent.id); }}
           >
@@ -829,6 +1003,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               className={`fusion-result__card fusion-result__card--${output.rarity} ${lastFusionEvent.rarityUp ? 'fusion-result__card--up' : ''}`}
               style={{ '--rarity-color': RARITY_COLORS[output.rarity] } as CSSProperties}
             >
+              {lastFusionEvent.rarityUp ? <div className="fusion-result__rays" aria-hidden="true" /> : null}
               <div className="fusion-result__tag">
                 {lastFusionEvent.atCap
                   ? t(language, 'fuseResultRefund')
@@ -856,18 +1031,65 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         <EntityDetailCard
           entity={inspectedEntity}
           count={getOwnedEntityCount(inventory, inspectedEntity)}
-          quanta={quanta}
           language={language}
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
           power={power}
-          equippedSlot={equippedSlotOf(inspectedEntity)}
           ownedLevel={ownedEntryOf(inspectedEntity)?.level ?? 1}
-          onEquip={onEquip}
-          onUnequip={(slot) => onUnequip(slot, getEquipCategory(inspectedEntity))}
-          onEnhance={onEnhance}
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}
+      {/* Equip slot detail — gear actions (enhance / swap / unequip) live here */}
+      {inspectedSlot !== null && equippedEntities[inspectedSlot] ? (() => {
+        const i = inspectedSlot;
+        const ent = equippedEntities[i]!;
+        const entry = ownedEntryOf(ent);
+        const lvl = entry?.level ?? 1;
+        const cap = getEnhanceLevelCap(ent);
+        const atCap = lvl >= cap;
+        const cost = getEnhanceCost(ent, lvl, currentStageId);
+        const affordable = !atCap && quanta >= cost;
+        const rc = RARITY_COLORS[ent.rarity];
+        return (
+          <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
+            <article className={`entity-detail-card entity-detail-card--${ent.rarity}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
+              <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={() => setInspectedSlot(null)}>×</button>
+              <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
+              <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
+              <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
+              <div className="entity-detail-card__stats">
+                <span style={{ color: rc }}>{formatEntityEffectTotal(ent, entry?.count ?? 1, language, power, lvl, entry?.carried)}</span>
+                <span>{`Lv.${lvl} · ×${entry?.count ?? 1}`}</span>
+              </div>
+              {getSecondaryStats(ent).length > 0 ? (
+                <div className="entity-detail-card__substats">
+                  {getSecondaryStats(ent).map((sub) => (
+                    <span key={sub.type} style={{ color: rc }}>{formatSubstat(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried))}</span>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="entity-detail-card__equip entity-detail-card__enhance"
+                style={affordable ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+                disabled={!affordable}
+                onClick={() => onEnhance(ent.id)}
+              >
+                {atCap
+                  ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
+                  : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(cost)}`}
+              </button>
+              <div className="slot-detail__actions">
+                <button type="button" className="entity-detail-card__equip" style={{ borderColor: rc, color: rc }} onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
+                  {t(language, 'equipSwap')}
+                </button>
+                <button type="button" className="entity-detail-card__equip slot-detail__remove" onClick={() => { onUnequip(i, equipCat); setInspectedSlot(null); }}>
+                  {t(language, 'entityUnequip')}
+                </button>
+              </div>
+            </article>
+          </div>
+        );
+      })() : null}
     </div>
   );
 }
@@ -875,36 +1097,28 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 interface DetailCardProps {
   entity: StageEntity;
   count: number;
-  quanta: number;
   language: Lang;
   rarityColor: string;
   power: GearPower;
-  /** Slot index this entity occupies, or -1 when not equipped. */
-  equippedSlot: number;
   ownedLevel: number;
-  onEquip: (entityId: string) => void;
-  onUnequip: (slot: number) => void;
-  onEnhance: (entityId: string) => void;
   onClose: () => void;
 }
 
+/**
+ * Codex trophy view — a found-entity showcase, NOT a control panel. Identity
+ * first (glyph, name, family, what it does, lore); gear actions (equip/enhance)
+ * and gear-optimisation math (substats, totals) live on the 장착 tab instead.
+ */
 function EntityDetailCard({
   entity,
   count,
-  quanta,
   language,
   rarityColor,
   power,
-  equippedSlot,
   ownedLevel,
-  onEquip,
-  onUnequip,
-  onEnhance,
   onClose,
 }: DetailCardProps) {
-  const isEquipped = equippedSlot >= 0;
   const effectLabel = formatEntityEffect(entity, language, power, count, ownedLevel);
-  const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, power, ownedLevel) : '';
 
   return (
     <div
@@ -946,48 +1160,9 @@ function EntityDetailCard({
         <p className="entity-detail-card__description">{entityDescription(entity, language)}</p>
         <div className="entity-detail-card__stats">
           <span style={{ color: rarityColor }}>{effectLabel}</span>
-          <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'entityLabUnowned')}</span>
-          {totalEffectLabel ? <span style={{ color: rarityColor }}>{totalEffectLabel}</span> : null}
+          <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
         </div>
-        {getSecondaryStats(entity).length > 0 ? (
-          <div className="entity-detail-card__substats">
-            {getSecondaryStats(entity).map((sub) => (
-              <span key={sub.type} style={{ color: rarityColor }}>{formatSubstat(sub, language, ownedLevel, getGearPowerMult(power, entity.stageId))}</span>
-            ))}
-          </div>
-        ) : null}
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
-        {count > 0 ? (
-          <button
-            type="button"
-            className={`entity-detail-card__equip ${isEquipped ? 'entity-detail-card__equip--on' : ''}`}
-            style={isEquipped ? { borderColor: rarityColor, color: rarityColor } : { background: rarityColor }}
-            onClick={() => (isEquipped ? onUnequip(equippedSlot) : onEquip(entity.id))}
-          >
-            {isEquipped ? t(language, 'entityUnequip') : t(language, 'entityEquip')}
-          </button>
-        ) : (
-          <div className="entity-detail-card__undiscovered">{t(language, 'codexConsumed')}</div>
-        )}
-        {count > 0 ? (() => {
-          const cap = getEnhanceLevelCap(entity);
-          const atCap = ownedLevel >= cap;
-          const enhCost = getEnhanceCost(entity, ownedLevel, power.stageId);
-          const affordable = !atCap && quanta >= enhCost;
-          return (
-            <button
-              type="button"
-              className="entity-detail-card__equip entity-detail-card__enhance"
-              style={affordable ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-              disabled={!affordable}
-              onClick={() => onEnhance(entity.id)}
-            >
-              {atCap
-                ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${ownedLevel})`
-                : `${t(language, 'enhanceLabel')} Lv.${ownedLevel} → ${ownedLevel + 1} · ⚛${formatEntityCost(enhCost)}`}
-            </button>
-          );
-        })() : null}
       </article>
     </div>
   );
