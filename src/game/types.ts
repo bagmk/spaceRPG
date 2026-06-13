@@ -303,6 +303,13 @@ export interface GameState extends PersistentGameState {
   offlineEntropyGained: number;
   offlineTimeProgressGained: number;
   endingStartedAt: number | null;
+  /**
+   * Transient display breakdown of the last completion reward (Phase 4-3) —
+   * lets the final screen show "base × codex = total". NOT persisted (omitted
+   * from createSaveSnapshot); recomputed each run.
+   */
+  lastCondensedMassEarned: number;
+  lastCodexMassBonus: number;
 }
 
 // ---------------------------------------------------------------------------

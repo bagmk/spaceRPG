@@ -6,9 +6,14 @@ import {
 } from '../game/formulas';
 import type { GameState } from '../game/types';
 import type { PrestigeUpgradeId } from '../game/prestige';
+import type { SingularityUnlockId } from '../game/types';
 import type { SoundManager } from '../game/audio';
 import { PRESTIGE_CHAPTER_ID, getPrestigeTrackUrls } from '../game/musicChapters';
+import { computeCarriedInventory } from '../game/reducers/stage';
+import { findEntityById, entityName } from '../game/entities/stageItems';
+import { getCodexCompletionFraction } from '../game/entities/codexSets';
 import { PrestigeShop } from './PrestigeShop';
+import { SingularityTree } from './SingularityTree';
 import { t, type Lang } from '../i18n';
 
 const FINAL_QUOTES: { en: string; ko: string; attr: string; attrKo: string }[] = [
@@ -80,12 +85,20 @@ interface FinalScreenProps {
   soundManager?: SoundManager | null;
   onPrestige: () => void;
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
+  onBuySingularityUnlock: (unlockId: SingularityUnlockId) => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
 }
 
-export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
+export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onBuySingularityUnlock, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
+  // Phase 4-3: what carries to the next universe (best click + rift item) and
+  // the codex completion that boosted this run's condensed-mass reward.
+  const carried = computeCarriedInventory(state.inventory);
+  const codexPct = Math.round(getCodexCompletionFraction(state.almanacCollected) * 100);
+  const massEarned = state.lastCondensedMassEarned;
+  const codexFactor = state.lastCodexMassBonus;
+  const massBase = codexFactor > 0 ? massEarned / codexFactor : massEarned;
 
   // Prestige/final screen music — "Amazing Grace" instrumental, calm closer.
   // Fades out on unmount so the next screen starts clean.
@@ -137,6 +150,30 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
           </div>
         </div>
 
+        {/* Completion reward breakdown (Phase 4-3): base × codex = total. */}
+        {massEarned > 0 ? (
+          <div className="final-reward-row">
+            <span className="final-reward-label">{t(language, 'finalCompletionReward')}</span>
+            <span className="final-reward-value">
+              {formatWhole(massBase)}
+              {codexFactor > 1 ? (
+                <span className="final-reward-codex">
+                  {` × ${codexFactor.toFixed(2)} (${t(language, 'finalCodexProgress')} ${codexPct}%)`}
+                </span>
+              ) : null}
+              {` = ${formatWhole(massEarned)} ${t(language, 'finalCondensedMass')}`}
+            </span>
+          </div>
+        ) : null}
+
+        {/* Singularity tree — spends condensed mass (was never mounted before 4-3). */}
+        <SingularityTree
+          condensedMass={state.condensedMass}
+          unlocks={state.singularityUnlocks}
+          onUnlock={onBuySingularityUnlock}
+          language={language}
+        />
+
         {/* Prestige Shop */}
         <PrestigeShop
           entropy={state.entropy}
@@ -165,6 +202,26 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
             <div className="overlay-card prestige-confirm" onClick={(e) => e.stopPropagation()}>
               <h2>{t(language, 'prestigeConfirmTitle')}</h2>
               <p className="prestige-confirm__body">{t(language, 'finalPrestigeWarning')}</p>
+              {/* Carry preview (Phase 4-3) — on the same overlay as the commit click. */}
+              <div className="prestige-confirm__carry">
+                <span className="prestige-confirm__carry-title">{t(language, 'finalCarryTitle')}</span>
+                {carried.length === 0 ? (
+                  <span className="prestige-confirm__carry-none">{t(language, 'finalCarryNone')}</span>
+                ) : (
+                  <ul className="prestige-confirm__carry-list">
+                    {carried.map((inst) => {
+                      const ent = findEntityById(inst.entityId);
+                      return (
+                        <li key={inst.entityId}>
+                          {ent ? entityName(ent, language) : inst.entityId}
+                          {inst.level > 1 ? ` · Lv.${inst.level}` : ''}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <span className="prestige-confirm__carry-hint">{t(language, 'finalCarryHint')}</span>
+              </div>
               <div className="prestige-confirm__actions">
                 <button className="final-action-primary" type="button" onClick={onPrestige}>
                   {t(language, 'prestigeConfirmYes')}

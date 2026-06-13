@@ -116,7 +116,13 @@ Cosmic Coalescence의 entity 시스템을 재설계한다.
 
 ## Status (빌드 세션이 누적 기록)
 
-- Current Phase: **Phase 4 진행 중 — 4-1, 4-2 완료(2026-06-12). 다음: 4-3 프레스티지 carry**
+- Current Phase: **Phase 4 진행 중 — 4-1·4-2·4-3 완료. 다음: 4-4 페이싱 압축**
+- Phase 4-3: 프레스티지 carry (D2) + 도감 % 메타 보너스 (2026-06-13; 멀티에이전트 3렌즈 리뷰가 원안을 needs-redesign 판정 → 파워 스트립으로 재설계 후 구현):
+  - **치명적 발견**: 스테이지 독립 곡선의 E=max(player-1+gate, itemStage-1) 클램프 탓에 16스테이지 아이템을 그대로 carry하면 새 우주 1스테이지부터 풀파워(클릭 ×~1.15e5, 오토 ~1.1e17/s)라 엔트로피 게이트 ~13스테이지까지 초 단위로 붕괴. → **carry 시 파워 스트립**: `EntityInstance.carried` 추가, `getGearPowerExponent(...,carried)`가 carried면 itemStage 클램프를 버리고 플레이어 항만 사용. carry는 **레벨 유지 + 파워는 새 시대 기준 재성장** = 헤드스타트(곤봉 아님).
+  - **carry 규칙**: handlePrestige에서 인벤토리 중 최고 클릭 1 + 최고 균열 1(등급>레벨>수량), count는 PRESTIGE_CARRY_COUNT_CAP(1)로 클램프, id 정규화, carried:true로 새 우주 inventory에 시드. 장착 슬롯은 비움(재장착은 의도적 1클릭). 세이브 필드 추가 없음(handlePrestige 계산).
+  - **도감 % 보너스**: `getCondensedMassReward × (1 + getCodexCompletionFraction × CODEX_MASS_BONUS)` (1.0 → 50%에서 ×1.5, 100%에서 ×2.0). **condensedMass 채널 한정**(엔트로피 게이트 무영향, 스테이지 페이싱 불변) — 기존 도감 *modifier* 보너스(applyCollectionRewards)와 이중지급 아님. 완료 시점(COMPLETE_ENDING) 적용.
+  - **기존 버그 동반 수정**: SingularityTree가 게임 전체에서 **한 번도 mount 안 됨** → condensedMass 사용처 부재였음. FinalScreen에 완료보상 행(base×codex=total) + SingularityTree mount + prestige-confirm 모달에 carry 미리보기 추가, App에 BUY_SINGULARITY_UNLOCK 배선. i18n EN/KO 키 추가. 전이 표시필드 lastCondensedMassEarned/lastCodexMassBonus(미영속).
+  - 검증: 740 통과(신규 prestigeCarry 7건, drops 프레스티지 테스트 carry로 갱신), tsc, build. 세이브 v17 유지(범프 없음).
 - Phase 4-2: 스킬 트리 제거 — 기어 단독 경제 (2026-06-12, D3 완성; 멀티에이전트 적대 리뷰 3렌즈 후 구현):
   - **발견**: 스킬 트리 UI는 Entity Lab 커밋부터 **도달 불가**(BUY_TRACK_LEVEL 디스패치 불가) — 실경제는 이미 기어 단독, 4-1 캘리브레이션은 못 사는 스킬을 가정한 과대치였음. 4-2 = 죽은 시스템 제거 + 정직한 재캘리브레이션.
   - **제거**: getActiveModifiers에서 skills 파라미터/2^level 베이스/크로스노드/apex 제거(기어+세트+도감+프레스티지만). 액션 7종(BUY_TRACK_LEVEL/BUY_CROSS_NODE/BUY_CLICK/AUTO/CRIT/AWARD_SKILL_POINTS/UNLOCK_TRACK)·reducers/skills.ts·skills/definitions.ts·components/skills/* 삭제. getCritChance(combo,mods)/getCritMultiplier(mods)/getTimeMultiplier(mods)/getCosmicTimeFillRate(mods,…) 시그니처 축소. quark_foam = ×1.1(라벨 동기화). GameState/SaveState에서 skills/skillPoints/clickLevel/autoLevel/critLevel 필드 제거.

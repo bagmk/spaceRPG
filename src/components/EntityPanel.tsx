@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
 import type { EntityInstance, FusionEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
-import { getEntityCost } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   ENTROPY_FUSION_COST_FRAC,
@@ -24,7 +23,6 @@ import { getEnhanceCost, getEnhanceLevelCap } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
 import { CODEX_SETS, codexRewardLabel, codexSetBlurb, codexSetLabel, codexSubsetLabel, collectedIdSet, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
-import { getEntityLockPrerequisite, isEntityLockedByAnchor } from '../game/entities/anchors';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
@@ -93,9 +91,9 @@ function formatPct(value: number): string {
 }
 
 // Labels share the EXACT applied formula (entities/effects.ts) — anchor + soft-capped count + level.
-function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1): number {
+function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1, carried = false): number {
   const effCount = getEffectiveCount(count, entity.maxCount, false);
-  return Math.max(0, getAutoOutputAnchor(entity, power) * (entity.effect.value * effCount * getLevelMult(level)) / 100);
+  return Math.max(0, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * getLevelMult(level)) / 100);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {
@@ -143,16 +141,17 @@ function formatEntityEffect(
   power: GearPower,
   count = 0,
   level = 1,
+  carried = false,
 ): string {
   const { type, value, isFlat } = entity.effect;
   const lvl = getLevelMult(level);
-  // Curve always follows the player's live power context, never a browsed stage.
-  const curved = value * lvl * getGearPowerMult(power, entity.stageId);
+  // Curve follows the player's live power; carried items drop the itemStage clamp.
+  const curved = value * lvl * getGearPowerMult(power, entity.stageId, carried);
   if (type === 'click') {
     return `+${formatPct(curved)} ${t(lang, 'effectClickPower')}`;
   }
   if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, 1, level))}${t(lang, 'effectAutoRateUnit')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, 1, level, carried))}${t(lang, 'effectAutoRateUnit')}`;
   }
   if (type === 'crit') {
     return isFlat
@@ -173,18 +172,19 @@ function formatEntityEffectTotal(
   lang: Lang,
   power: GearPower,
   level = 1,
+  carried = false,
 ): string {
   if (count === 0) return '';
   const { type, value, isFlat } = entity.effect;
   // Soft-capped count + player-power curve — matches applyEntityModifiers exactly.
   const effCount = getEffectiveCount(count, entity.maxCount, type === 'time');
   const lvl = getLevelMult(level);
-  const curvedTotal = value * effCount * lvl * getGearPowerMult(power, entity.stageId);
+  const curvedTotal = value * effCount * lvl * getGearPowerMult(power, entity.stageId, carried);
   if (type === 'click') {
     return `+${formatPct(curvedTotal)} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, count, level))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
+    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, count, level, carried))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
   }
   if (type === 'crit') {
     return isFlat
@@ -236,7 +236,6 @@ interface Props {
   quanta: number;
   stats: PanelStats;
   language: Lang;
-  onPurchase: (entityId: string) => void;
   onEquip: (entityId: string, slot?: number) => void;
   onUnequip: (slot: number, target: EquipCategory) => void;
   onEnhance: (entityId: string) => void;
@@ -247,7 +246,7 @@ interface Props {
   onUITap?: () => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onPurchase, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, fusionPity, lastFusionEvent, almanacCollected, quanta, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClose, onStageSelect, onUITap }: Props) {
   const [selectedStageId, setSelectedStageId] = useState(currentStageId);
   // Live gear-power context — all effect labels derive from this, never from
   // the browsed stage, so label == applied value everywhere.
@@ -620,12 +619,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           {`Lv.${entry?.level ?? 1} · ×${entry?.count ?? 1}`}
                         </div>
                         <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1)}
+                          {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
                         </div>
                         {getSecondaryStats(slotEntity).length > 0 ? (
                           <div className="equip-slot-card__substats">
                             {getSecondaryStats(slotEntity).map((sub) => (
-                              <span key={sub.type}>{formatSubstat(sub, language, entry?.level ?? 1, getGearPowerMult(power, slotEntity.stageId))}</span>
+                              <span key={sub.type}>{formatSubstat(sub, language, entry?.level ?? 1, getGearPowerMult(power, slotEntity.stageId, entry?.carried))}</span>
                             ))}
                           </div>
                         ) : null}
@@ -857,18 +856,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         <EntityDetailCard
           entity={inspectedEntity}
           count={getOwnedEntityCount(inventory, inspectedEntity)}
-          cost={getEntityCost(inspectedEntity, countOf(inspectedEntity), currentStageId)}
           quanta={quanta}
           language={language}
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
-          canPurchase={
-            selectedStageId <= currentStageId &&
-            !isEntityLockedByAnchor(inspectedEntity, inventory)
-          }
           power={power}
           equippedSlot={equippedSlotOf(inspectedEntity)}
           ownedLevel={ownedEntryOf(inspectedEntity)?.level ?? 1}
-          onPurchase={onPurchase}
           onEquip={onEquip}
           onUnequip={(slot) => onUnequip(slot, getEquipCategory(inspectedEntity))}
           onEnhance={onEnhance}
@@ -879,191 +872,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   );
 }
 
-interface CardProps {
-  entity: StageEntity;
-  count: number;
-  quanta: number;
-  language: Lang;
-  rarityColor: string;
-  onPurchase: (entityId: string) => void;
-  onInspect: () => void;
-  animDelay: number;
-  canPurchase: boolean;
-  anchorLockedBy?: string;
-  power: GearPower;
-  isEquipped: boolean;
-  /** Rarity gate not reached yet — render as a "???" mystery teaser. */
-  rarityLocked?: boolean;
-  ownedLevel?: number;
-}
-
-function EntityCard({ entity, count, quanta, language, rarityColor, onPurchase, onInspect, animDelay, canPurchase, anchorLockedBy, power, isEquipped, rarityLocked, ownedLevel = 1 }: CardProps) {
-  const [isCelebrating, setIsCelebrating] = useState(false);
-  const celebrationTimeoutRef = useRef<number | null>(null);
-  const cost = getEntityCost(entity, count, power.stageId);
-  const maxed = entity.maxCount > 0 && count >= entity.maxCount;
-  const canAfford = canPurchase && quanta >= cost && !maxed;
-  const showLevelProgress = entity.maxCount > 1;
-  const levelProgress = showLevelProgress
-    ? Math.min(100, Math.max(0, (count / entity.maxCount) * 100))
-    : 0;
-  const totalEffectLabel = formatEntityEffectTotal(entity, count, language, power);
-
-  useEffect(() => {
-    return () => {
-      if (celebrationTimeoutRef.current !== null) {
-        window.clearTimeout(celebrationTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handlePurchase = (event?: MouseEvent<HTMLButtonElement>) => {
-    event?.stopPropagation();
-    if (!canAfford) return;
-    onPurchase(entity.id);
-    setIsCelebrating(true);
-    if (celebrationTimeoutRef.current !== null) {
-      window.clearTimeout(celebrationTimeoutRef.current);
-    }
-    celebrationTimeoutRef.current = window.setTimeout(() => {
-      setIsCelebrating(false);
-      celebrationTimeoutRef.current = null;
-    }, entity.rarity === 'legendary' ? 1050 : 650);
-  };
-
-  const effectLabel = formatEntityEffect(entity, language, power, count, ownedLevel);
-  const displayName = entityName(entity, language);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={[
-        'entity-card',
-        `entity-card--${entity.rarity}`,
-        canAfford ? 'entity-card--affordable' : '',
-        maxed ? 'entity-card--maxed' : '',
-        isCelebrating ? 'entity-card--celebrate' : '',
-        rarityLocked ? 'entity-card--mystery' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={
-        {
-          '--card-anim-delay': `${animDelay}ms`,
-          '--rarity-color': rarityColor,
-        } as CSSProperties
-      }
-      onClick={onInspect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onInspect();
-        }
-      }}
-    >
-      {/* Glyph with count badge */}
-      <div className="entity-card__glyph">
-        <EntityGlyph entity={entity} color={rarityColor} />
-        {count > 0 && (
-          <div className="entity-card__count" style={{ background: rarityColor }}>
-            ×{count}
-          </div>
-        )}
-        {isEquipped && (
-          <div className="entity-card__equipped-badge" title={t(language, 'entityEquipped')}>
-            {t(language, 'entityEquipped')}
-          </div>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="entity-card__info">
-        <div className="entity-card__name">{rarityLocked ? '???' : displayName}</div>
-        <div className="entity-card__meta">
-          <span className="entity-card__effect" style={{ color: rarityColor }}>
-            {rarityLocked
-              ? t(language, 'equipSlotLockedStage').replace('{n}', String(RARITY_STAGE_GATES[entity.rarity] ?? 1))
-              : anchorLockedBy
-                ? t(language, 'entityLabAnchorLockHint').replace('{anchor}', anchorLockedBy)
-                : effectLabel}
-          </span>
-        </div>
-        {showLevelProgress ? (
-          <div
-            className="entity-card__progress-row"
-            aria-label={`${displayName} level ${count} of ${entity.maxCount}`}
-          >
-            <div className="entity-card__progress-track">
-              <div
-                className="entity-card__progress-fill"
-                style={{ width: `${levelProgress}%`, background: rarityColor }}
-              />
-            </div>
-            <span className="entity-card__progress-level">{`${count}/${entity.maxCount}`}</span>
-            <span className="entity-card__progress-bonus" style={{ color: rarityColor }}>
-              {totalEffectLabel}
-            </span>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Right: cost + buy button */}
-      <div className="entity-card__right">
-        <button
-          className={[
-            'entity-card__buy',
-            maxed ? 'entity-card__buy--maxed' : '',
-            !canPurchase ? 'entity-card__buy--view' : '',
-          ].filter(Boolean).join(' ')}
-          style={
-            !canPurchase
-              ? { borderColor: rarityColor, color: rarityColor }
-              : maxed
-              ? { borderColor: rarityColor, color: rarityColor }
-              : canAfford
-                ? { background: rarityColor }
-                : {}
-          }
-          disabled={!canAfford}
-          onClick={handlePurchase}
-        >
-          {canPurchase && !maxed ? (
-            <>
-              <span className="entity-card__buy-cost">
-                <span className="entity-card__buy-symbol" aria-hidden="true">⚛</span>
-                <span>{formatEntityCost(cost)}</span>
-              </span>
-              <span className="entity-card__buy-label">{t(language, 'entityLabGet')}</span>
-            </>
-          ) : (
-            <span className="entity-card__buy-label">
-              {anchorLockedBy
-                ? t(language, 'entityLabAnchorLock').replace('{anchor}', anchorLockedBy)
-                : !canPurchase
-                  ? t(language, 'entityLabLocked')
-                  : t(language, 'entityLabMax')}
-            </span>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 interface DetailCardProps {
   entity: StageEntity;
   count: number;
-  cost: number;
   quanta: number;
   language: Lang;
   rarityColor: string;
-  canPurchase: boolean;
   power: GearPower;
   /** Slot index this entity occupies, or -1 when not equipped. */
   equippedSlot: number;
   ownedLevel: number;
-  onPurchase: (entityId: string) => void;
   onEquip: (entityId: string) => void;
   onUnequip: (slot: number) => void;
   onEnhance: (entityId: string) => void;
@@ -1073,22 +891,17 @@ interface DetailCardProps {
 function EntityDetailCard({
   entity,
   count,
-  cost,
   quanta,
   language,
   rarityColor,
-  canPurchase,
   power,
   equippedSlot,
   ownedLevel,
-  onPurchase,
   onEquip,
   onUnequip,
   onEnhance,
   onClose,
 }: DetailCardProps) {
-  const maxed = entity.maxCount > 0 && count >= entity.maxCount;
-  const canAfford = canPurchase && !maxed && quanta >= cost;
   const isEquipped = equippedSlot >= 0;
   const effectLabel = formatEntityEffect(entity, language, power, count, ownedLevel);
   const totalEffectLabel = count > 0 ? formatEntityEffectTotal(entity, count, language, power, ownedLevel) : '';

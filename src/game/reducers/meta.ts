@@ -38,6 +38,8 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     offlineEntropyGained: 0,
     offlineTimeProgressGained: 0,
     endingStartedAt: null,
+    lastCondensedMassEarned: 0,
+    lastCodexMassBonus: 0,
     tutorialDone: payload.tutorialDone ?? false,
     cosmicHoursThisRun: payload.cosmicHoursThisRun ?? 0,
     dailyCheckIns: payload.dailyCheckIns ?? createDefaultDailyCheckIns(),

@@ -197,6 +197,24 @@ export const PRESTIGE_COST_GROWTH = 5;
 /** Gear-driven crit multiplier is bounded (substats stack across slots). */
 export const CRIT_MULT_GEAR_CAP = 5;
 
+// ── Prestige carry + codex meta bonus (Phase 4-3) ───────────────────────────
+
+/**
+ * Max stack count carried across prestige per carried item (D2: highest-tier
+ * item carry). The item keeps its LEVEL but its power is stripped to the
+ * player's stage (carried flag in getGearPowerExponent) — a head start, never
+ * an origin-stage cudgel that would collapse the entropy gate.
+ */
+export const PRESTIGE_CARRY_COUNT_CAP = 1;
+/**
+ * Codex completion multiplies the prestige condensedMass reward:
+ * ×(1 + collected/total × CODEX_MASS_BONUS). 1.0 → ×1.5 at 50% codex, ×2.0 at
+ * 100%. condensedMass is spent only in the Singularity tree (never the entropy
+ * gate), so this rewards collection without touching stage pacing. Distinct
+ * from the live codex set/subset stat modifiers (applyCollectionRewards).
+ */
+export const CODEX_MASS_BONUS = 1.0;
+
 /** Entropy gained per quanta earned by clicking (active play drives progress). */
 export const ENTROPY_W_CLICK = 0.6;
 /**

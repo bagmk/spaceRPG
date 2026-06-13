@@ -93,7 +93,7 @@ describe('entity drops', () => {
     expect(next.almanacCollected[entity.stageId]).toContain(entity.id);
   });
 
-  it('PRESTIGE preserves the almanac but resets the inventory (D2)', () => {
+  it('PRESTIGE preserves the almanac and carries the best gear (D2, Phase 4-3)', () => {
     const entity = getEntitiesForStage(1)[0];
     const state = {
       ...createInitialGameState(0),
@@ -101,7 +101,10 @@ describe('entity drops', () => {
       almanacCollected: { 1: [entity.id] },
     };
     const next = gameReducer(state, { type: 'PRESTIGE', now: 1000 });
-    expect(next.inventory).toEqual([]);
+    // Almanac survives; the best item of its category carries (power stripped),
+    // equip slots reset.
     expect(next.almanacCollected[1]).toContain(entity.id);
+    expect(next.inventory.some((e) => e.carried === true)).toBe(true);
+    expect(next.equippedSlots).toEqual([]);
   });
 });

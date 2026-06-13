@@ -7,6 +7,7 @@ import {
   getEntropyOnCondense,
   getProgress,
   getTimeGaugeForCosmicClock,
+  getCodexMassBonusFactor,
   getCondensedMassReward,
   getEchoReward,
 } from '../formulas';
@@ -17,6 +18,9 @@ import {
   withCurrentUniverseEndingProgress,
 } from '../multiverse';
 import { createInitialGameState } from '../defaults';
+import { findEntityById } from '../entities/stageItems';
+import { getEquipCategory, type EntityInstance, type EntityRarity } from '../entities/types';
+import { PRESTIGE_CARRY_COUNT_CAP } from '../balance';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
@@ -27,6 +31,53 @@ import {
 } from './helpers';
 import { createDefaultEndingProgressFlags } from '../defaults';
 import { syncSlotUnlocks } from './entities';
+
+const RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+
+/**
+ * Prestige carry (Phase 4-3 D2): keep the single best click-gear item AND the
+ * single best rift-gear item across prestige (highest rarity, ties by level
+ * then count). Matches the fresh universe's 1+1 starting slots so nothing is
+ * wasted. The carried stack keeps its LEVEL but its power is stripped to the
+ * player's stage (carried:true → getGearPowerExponent), so it's a head start,
+ * never an origin-stage cudgel. Count is clamped and the id canonicalized here
+ * (this bypasses the load-time normalize/clamp passes). Equip/rift slots are
+ * NOT carried — re-equipping is a deliberate player action.
+ */
+export function computeCarriedInventory(inventory: EntityInstance[]): EntityInstance[] {
+  type Candidate = { entry: EntityInstance; rank: number };
+  let bestClick: Candidate | null = null;
+  let bestRift: Candidate | null = null;
+  for (const entry of inventory) {
+    if (entry.count <= 0) continue;
+    const entity = findEntityById(entry.entityId);
+    if (!entity) continue;
+    const rank = RARITY_RANK[entity.rarity] ?? 0;
+    const isRift = getEquipCategory(entity) === 'rift';
+    const cur: Candidate | null = isRift ? bestRift : bestClick;
+    const better =
+      cur === null ||
+      rank > cur.rank ||
+      (rank === cur.rank && entry.level > cur.entry.level) ||
+      (rank === cur.rank && entry.level === cur.entry.level && entry.count > cur.entry.count);
+    if (better) {
+      const winner: Candidate = { entry, rank };
+      if (isRift) bestRift = winner; else bestClick = winner;
+    }
+  }
+  const carried: EntityInstance[] = [];
+  for (const best of [bestClick, bestRift]) {
+    if (!best) continue;
+    const canonicalId = findEntityById(best.entry.entityId)?.id ?? best.entry.entityId;
+    carried.push({
+      entityId: canonicalId,
+      count: Math.min(best.entry.count, PRESTIGE_CARRY_COUNT_CAP),
+      level: best.entry.level,
+      carried: true,
+    });
+  }
+  return carried;
+}
 
 type StartCondenseAction = Extract<GameAction, { type: 'START_CONDENSE' }>;
 type AdvanceStageAction = Extract<GameAction, { type: 'ADVANCE_STAGE' }>;
@@ -138,12 +189,16 @@ export function handleCompleteEnding(state: GameState, action: CompleteEndingAct
   const atlasEntry = buildAtlasEntry(state, action.now);
   const universeAtlas = atlasEntry ? [...state.universeAtlas, atlasEntry] : state.universeAtlas;
   const permanentUnlocks = Array.from(new Set([...state.endingsUnlocked, state.selectedEndingId]));
+  const massEarned = getCondensedMassReward(
+    state.entropy, state.selectedEndingId, state.universeCount, state.almanacCollected,
+  );
   return {
     ...state,
     completedRun: true,
-    condensedMass:
-      state.condensedMass +
-      getCondensedMassReward(state.entropy, state.selectedEndingId, state.universeCount),
+    condensedMass: state.condensedMass + massEarned,
+    // Transient display breakdown for the final screen (base × codex = total).
+    lastCondensedMassEarned: massEarned,
+    lastCodexMassBonus: getCodexMassBonusFactor(state.almanacCollected),
     echoes:
       state.echoes +
       (state.endingsCompleted.includes(state.selectedEndingId)
@@ -177,8 +232,10 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     endingProgressFlags: createDefaultEndingProgressFlags(),
     universeAtlas: state.universeAtlas,
     currentUniverseSeed: nextSeed,
-    // Almanac collection survives prestige (D2). Inventory/equip reset with the run.
+    // Almanac survives prestige (D2); the best click + rift item carry over
+    // (power stripped to the player's stage). Equip slots stay empty.
     almanacCollected: state.almanacCollected,
+    inventory: computeCarriedInventory(state.inventory),
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,

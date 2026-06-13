@@ -62,10 +62,10 @@ export function getEffectiveCount(count: number, maxCount: number, isTime: boole
  * exponent follows the player's progression (Phase 4-1 stage independence),
  * so rift gear from any stage stays viable.
  */
-export function getAutoOutputAnchor(entity: StageEntity, power: GearPower): number {
+export function getAutoOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
   const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
   const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
-  return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId));
+  return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
 }
 
 export function applyEntityModifiers(
@@ -85,13 +85,15 @@ export function applyEntityModifiers(
     const levelMult = 1 + Math.max(0, (entry.level ?? 1) - 1) * ENTITY_LEVEL_EFFECT_BONUS;
     // % effects ride the shared gear power curve anchored to the PLAYER's
     // progression (stage independence); capped/flat resources (crit chance,
-    // combo cap) and auto (own anchor, same exponent) don't.
-    const gearPower = getGearPowerMult(power, entity.stageId);
+    // combo cap) and auto (own anchor, same exponent) don't. Carried items
+    // (prestige) follow only the player term — see getGearPowerExponent.
+    const carried = entry.carried === true;
+    const gearPower = getGearPowerMult(power, entity.stageId, carried);
     const total = value * count * levelMult;
 
     switch (type) {
       case 'auto':
-        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power) * (total / 100));
+        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':
         // Auto Power — % multiplier on entity flat-auto. Isolated modifier so

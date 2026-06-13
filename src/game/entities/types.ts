@@ -102,6 +102,13 @@ export interface EntityInstance {
   level: number;
   /** Cumulative quanta spent enhancing this stack — partially refunded on fusion. */
   invested?: number;
+  /**
+   * Carried across prestige (Phase 4-3 D2). Carried items keep their level but
+   * NOT their origin-stage power: getGearPowerExponent drops the itemStage
+   * clamp so the exponent follows the player's stage only — a head start, not
+   * an entropy-gate-collapsing cudgel.
+   */
+  carried?: boolean;
 }
 
 /**

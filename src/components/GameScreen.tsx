@@ -31,12 +31,12 @@ import {
   getOfflineRewardCapSec,
   isCashShopUnlocked,
 } from '../game/shop/boosts';
-import { getEntityCost } from '../game/entities/types';
 import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
 import { FloatingNumber } from './FloatingNumber';
+import { ComboMeter } from './ComboMeter';
 import { ParticleField, type ParticleFieldHandle } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
 import { ScaleIndicator } from './ScaleIndicator';
@@ -71,6 +71,17 @@ interface FloatingEntry {
   entropyGained?: number;
   variant: 'normal' | 'crit' | 'collision';
   delayMs?: number;
+}
+
+interface ComboDisplay {
+  combo: number;
+  mult: number;
+  /** Click event id driving the per-hit pulse. */
+  pulseId: number;
+  /** True on the click that bumped the multiplier to a higher step. */
+  levelUp: boolean;
+  /** True while the meter is fading out after the combo lapses. */
+  fading: boolean;
 }
 
 interface TutorialBubble {
@@ -202,6 +213,10 @@ export function GameScreen({
   const entropyGateProgress01 = getEntropyGateProgress(state.entropy, state.stageIdx);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
+  const maxComboMult =
+    TUNING.COMBO_MULT_MAX +
+    (state.singularityUnlocks.includes('free_combo') ? 2 : 0) +
+    modifiers.comboCapAdd;
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
   const endingOptions = getEndingOptions(state, wallNow, language);
   const [endingChooserDismissed, setEndingChooserDismissed] = useState(false);
@@ -222,6 +237,9 @@ export function GameScreen({
     canChooseEnding;
   useBoostNotifications(state.shopBoosts, language);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
+  const [comboDisplay, setComboDisplay] = useState<ComboDisplay | null>(null);
+  const comboTimersRef = useRef<number[]>([]);
+  const lastComboMultRef = useRef(1);
   const [shakeClass, setShakeClass] = useState('');
   const saveErrorVisible = useSaveErrorToast();
   useAudioUnlockOnPointer(soundManager);
@@ -242,11 +260,6 @@ export function GameScreen({
     soundManager?.playUIOpen();
   };
   const currentStageEntities = useMemo(() => getEntitiesForStage(stage.id), [stage.id]);
-  const hasAffordableEntity = currentStageEntities.some((entity) => {
-    const count = getPurchasedEntityCount(state.inventory, entity);
-    const maxed = entity.maxCount > 0 && count >= entity.maxCount;
-    return !maxed && state.quanta >= getEntityCost(entity, count, stage.id);
-  });
   const ownedCurrentStageEntityCount = currentStageEntities.reduce((sum, entity) => {
     return sum + getPurchasedEntityCount(state.inventory, entity);
   }, 0);
@@ -335,7 +348,6 @@ export function GameScreen({
     canShowShop,
     entityPanelOpen,
     hasActiveBoost,
-    hasAffordableEntity,
     language,
     ownedCurrentStageEntityCount,
     stage.id,
@@ -456,6 +468,35 @@ export function GameScreen({
         };
       }),
     ]);
+
+    // ── Combo meter feedback ──
+    // event.combo === 1 marks a fresh combo (or an isolated click); only show
+    // the meter once a streak is actually building.
+    if (event.combo >= 2) {
+      const leveledUp = event.comboMult > lastComboMultRef.current;
+      setComboDisplay({
+        combo: event.combo,
+        mult: event.comboMult,
+        pulseId: event.id,
+        levelUp: leveledUp,
+        fading: false,
+      });
+      comboTimersRef.current.forEach(window.clearTimeout);
+      comboTimersRef.current = [];
+      // Fade, then unmount, once clicking lapses past the combo window.
+      const fadeTimer = window.setTimeout(() => {
+        setComboDisplay((current) => (current ? { ...current, fading: true } : null));
+        const removeTimer = window.setTimeout(() => setComboDisplay(null), 350);
+        comboTimersRef.current.push(removeTimer);
+      }, TUNING.COMBO_CLEAR_MS);
+      comboTimersRef.current.push(fadeTimer);
+    } else {
+      comboTimersRef.current.forEach(window.clearTimeout);
+      comboTimersRef.current = [];
+      setComboDisplay(null);
+    }
+    lastComboMultRef.current = event.comboMult;
+
     soundManager?.playClick(state.stageIdx, event.isCrit);
     dispatch({ type: 'CLEAR_CLICK_EVENT', id: event.id });
     const timeoutId = window.setTimeout(() => {
@@ -463,6 +504,9 @@ export function GameScreen({
     }, event.isCrit ? TUNING.FLOAT_CRIT_MS : TUNING.FLOAT_NORMAL_MS);
     return () => window.clearTimeout(timeoutId);
   }, [clickEmissionCount, dispatch, language, soundManager, state.lastClickEvent, state.stageIdx]);
+
+  // Drop any pending combo-meter timers on unmount.
+  useEffect(() => () => { comboTimersRef.current.forEach(window.clearTimeout); }, []);
 
   useEffect(() => {
     if (!state.lastCollisionEvent) {
@@ -721,10 +765,7 @@ export function GameScreen({
               autoRate: displayedAutoRate,
               critChance: getCritChance(0, modifiers),
               critMult: getCritMultiplier(modifiers),
-              comboCapMult:
-                TUNING.COMBO_MULT_MAX +
-                (state.singularityUnlocks.includes('free_combo') ? 2 : 0) +
-                modifiers.comboCapAdd,
+              comboCapMult: maxComboMult,
               offlineEff:
                 (modifiers.hawkingEcho || state.singularityUnlocks.includes('hawking_echo')
                   ? 1
@@ -734,7 +775,6 @@ export function GameScreen({
               autoFlatMult: modifiers.autoFlatMult,
             }}
             language={language}
-            onPurchase={(entityId) => { dispatch({ type: 'PURCHASE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
             onEnhance={(entityId) => { dispatch({ type: 'ENHANCE_ENTITY', entityId }); soundManager?.playEntityLevelUp(); }}
@@ -952,6 +992,17 @@ export function GameScreen({
             delayMs={entry.delayMs}
           />
         ))}
+        {comboDisplay ? (
+          <ComboMeter
+            combo={comboDisplay.combo}
+            mult={comboDisplay.mult}
+            pulseId={comboDisplay.pulseId}
+            levelUp={comboDisplay.levelUp}
+            fading={comboDisplay.fading}
+            maxMult={maxComboMult}
+            language={language}
+          />
+        ) : null}
       </main>
 
       {state.pendingCondenseStageIdx !== null && !state.imploding && transitionPhase === 'quote' ? (

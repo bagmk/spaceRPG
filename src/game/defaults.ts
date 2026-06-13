@@ -105,6 +105,8 @@ export function createInitialGameState(now: number): GameState {
     offlineEntropyGained: 0,
     offlineTimeProgressGained: 0,
     endingStartedAt: null,
+    lastCondensedMassEarned: 0,
+    lastCodexMassBonus: 0,
     endingsUnlocked: [],
     endingProgressFlags: createDefaultEndingProgressFlags(),
     clickRateLog: [],

@@ -4,6 +4,7 @@ import {
   AUTO_OUTPUT_MULTIPLIER,
   CLICK_OUTPUT_MULTIPLIER,
   ENTROPY_W_AUTO,
+  CODEX_MASS_BONUS,
   ENTROPY_W_CLICK,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -15,6 +16,7 @@ import {
 import { getActiveShopBoostMultiplier } from './shop/boosts';
 import type { EndingId, GameState, ShopBoost, ShopBoostCategory, Stage, TimedShopBoost } from './types';
 import type { Modifiers } from './skills/effects';
+import { getCodexCompletionFraction } from './entities/codexSets';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
@@ -496,6 +498,7 @@ export function getCondensedMassReward(
   runEntropy: number,
   endingId: EndingId,
   universeCount: number,
+  almanacCollected: Record<number, string[]> = {},
 ): number {
   const base = Math.pow(Math.max(1, runEntropy), 0.4);
   const endingMult: Record<EndingId, number> = {
@@ -506,7 +509,16 @@ export function getCondensedMassReward(
     bounce: 2.5,
   };
   const firstTimeBonus = universeCount === 1 ? 3 : 1;
-  return base * endingMult[endingId] * firstTimeBonus;
+  // Codex completion meta bonus (Phase 4-3): ×(1 + collected% × CODEX_MASS_BONUS).
+  // Spends only into the Singularity tree, never the entropy gate — rewards
+  // collection without touching stage pacing. Distinct from the live codex
+  // stat modifiers (applyCollectionRewards).
+  return base * endingMult[endingId] * firstTimeBonus * getCodexMassBonusFactor(almanacCollected);
+}
+
+/** The codex completion factor applied to the condensed-mass reward (for display). */
+export function getCodexMassBonusFactor(almanacCollected: Record<number, string[]>): number {
+  return 1 + getCodexCompletionFraction(almanacCollected) * CODEX_MASS_BONUS;
 }
 
 export function getEchoReward(uniqueEndingsCompleted: number): number {

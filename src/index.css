@@ -1941,6 +1941,133 @@ button.stat-header-item {
   }
 }
 
+/* ── Combo meter ──────────────────────────────────────────────
+   Surfaces the click-combo multiplier near the play field so the
+   player can see why rapid clicks hit harder. Colour escalates by
+   tier; the number punches on each hit and flares on every ×step. */
+.combo-meter {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  text-align: center;
+  --combo-color: #cfe8ff;
+  color: var(--combo-color);
+  animation: comboMeterIn 0.25s ease-out;
+}
+
+.combo-meter--out {
+  animation: comboMeterOut 0.35s ease-in forwards;
+}
+
+.combo-meter__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  opacity: 0.8;
+  text-shadow: 0 0 8px var(--combo-color);
+}
+
+.combo-meter__mult {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  text-shadow: 0 0 18px var(--combo-color), 0 0 6px rgba(255, 255, 255, 0.5);
+  animation: comboPulse 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.combo-meter__times {
+  font-size: 0.6em;
+  opacity: 0.85;
+  margin-right: 0.02em;
+}
+
+.combo-meter__track {
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.combo-meter__fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--combo-color);
+  box-shadow: 0 0 10px var(--combo-color);
+  transition: width 0.18s ease-out;
+}
+
+.combo-meter__hits {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.combo-meter__burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px solid var(--combo-color);
+  pointer-events: none;
+  animation: comboBurst 0.5s ease-out forwards;
+}
+
+.combo-meter--levelup .combo-meter__mult {
+  font-size: 56px;
+}
+
+.combo-meter--max .combo-meter__mult {
+  animation: comboPulse 0.32s cubic-bezier(0.2, 1.4, 0.4, 1),
+    comboMaxGlow 1.2s ease-in-out infinite;
+}
+
+/* Escalation colour tiers. */
+.combo-meter--t0 { --combo-color: #cfe8ff; }
+.combo-meter--t1 { --combo-color: #ffd64a; }
+.combo-meter--t2 { --combo-color: #ff9b3d; }
+.combo-meter--t3 { --combo-color: #ff5e3a; }
+.combo-meter--t4 { --combo-color: #ff2d55; }
+
+@keyframes comboMeterIn {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.9); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes comboMeterOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+}
+
+@keyframes comboPulse {
+  0% { transform: scale(1.35); }
+  60% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+@keyframes comboBurst {
+  0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.4); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+}
+
+@keyframes comboMaxGlow {
+  0%, 100% { text-shadow: 0 0 18px var(--combo-color), 0 0 6px rgba(255, 255, 255, 0.5); }
+  50% { text-shadow: 0 0 30px var(--combo-color), 0 0 12px rgba(255, 255, 255, 0.85); }
+}
+
 .encounter-alert {
   position: absolute;
   top: 50%;
@@ -2899,6 +3026,38 @@ button.stat-header-item {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
+/* Phase 4-3: completion reward breakdown + prestige carry preview */
+.final-reward-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 4px 0 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+}
+.final-reward-label { opacity: 0.7; }
+.final-reward-value { font-family: var(--mono); text-align: right; }
+.final-reward-codex { color: #ffd76a; }
+
+.prestige-confirm__carry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+.prestige-confirm__carry-title { font-size: 12px; opacity: 0.65; letter-spacing: 0.02em; }
+.prestige-confirm__carry-none { font-size: 13px; opacity: 0.8; }
+.prestige-confirm__carry-list { margin: 2px 0; padding-left: 18px; font-size: 13px; }
+.prestige-confirm__carry-list li { list-style: '✦ '; }
+.prestige-confirm__carry-hint { font-size: 11px; opacity: 0.55; line-height: 1.4; }
 
 .final-prestige-warning {
   grid-column: 1 / -1;

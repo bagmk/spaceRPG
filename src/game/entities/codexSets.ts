@@ -17,6 +17,7 @@
 
 import type { EntityGlyph, StageEntity } from './types';
 import type { Lang } from '../../i18n';
+import { STAGE_ENTITIES } from './stageItems';
 
 export type CodexRewardStat =
   | 'clickPower'
@@ -192,6 +193,20 @@ export function collectedIdSet(almanacCollected: Record<number, string[]>): Set<
   const out = new Set<string>();
   for (const ids of Object.values(almanacCollected)) for (const id of ids) out.add(id);
   return out;
+}
+
+/**
+ * Codex completion fraction 0..1 (collected / total entities). Drives the
+ * Phase 4-3 prestige condensedMass bonus. Counts only ids that resolve to a
+ * real entity so stray/legacy ids can't push it above 1.
+ */
+export function getCodexCompletionFraction(almanacCollected: Record<number, string[]>): number {
+  const total = STAGE_ENTITIES.length;
+  if (total <= 0) return 0;
+  const valid = new Set(STAGE_ENTITIES.map((e) => e.id));
+  let collected = 0;
+  for (const id of collectedIdSet(almanacCollected)) if (valid.has(id)) collected += 1;
+  return Math.min(1, collected / total);
 }
 
 export function isSubsetComplete(subset: CodexSubset, collected: Set<string>, allEntities: StageEntity[]): boolean {

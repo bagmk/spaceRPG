@@ -62,14 +62,18 @@ export interface GearPower {
  * origin-stage value (migration is a strict buff; prestige-persistent
  * inventories stay safe).
  */
-export function getGearPowerExponent(power: GearPower, itemStageId: number): number {
+export function getGearPowerExponent(power: GearPower, itemStageId: number, carried = false): number {
   const player = Math.max(0, power.stageId - 1) + Math.min(1, Math.max(0, power.gateProgress01));
+  // Carried items (Phase 4-3 prestige carry) drop the itemStage clamp — their
+  // power follows ONLY the player's progression, so a carried late item is a
+  // head start at its kept level, never full origin-stage power on turn one.
+  if (carried) return player;
   return Math.max(player, Math.max(0, itemStageId - 1));
 }
 
 /** The gear power multiplier shared by % effects and scaling substats. */
-export function getGearPowerMult(power: GearPower, itemStageId: number): number {
-  return Math.pow(STAGE_POWER_BASE, getGearPowerExponent(power, itemStageId));
+export function getGearPowerMult(power: GearPower, itemStageId: number, carried = false): number {
+  return Math.pow(STAGE_POWER_BASE, getGearPowerExponent(power, itemStageId, carried));
 }
 
 /**
