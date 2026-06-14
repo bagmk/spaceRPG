@@ -11,6 +11,8 @@ import {
   formatWhole,
   getAutoRate,
   getClickPower,
+  getComboMult,
+  getComboCapMult,
   getCosmicTimeFillRate,
   getCondensedMassReward,
   getCritChance,
@@ -24,7 +26,7 @@ import {
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, BIG_RIP_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
-import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS } from '../balance';
+import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS, COMBO_CAP_BASE, COMBO_CAP_CEIL } from '../balance';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
@@ -316,5 +318,22 @@ describe('safeAdd', () => {
   });
   it('caps sum that overflows to Infinity', () => {
     expect(safeAdd(1e300, 1e300)).toBe(MAX_SAFE_QUANTA);
+  });
+});
+
+describe('combo cap growth (P5/R10)', () => {
+  it('starts at COMBO_CAP_BASE and grows with the bonus, ceiled at COMBO_CAP_CEIL', () => {
+    expect(getComboCapMult(0)).toBeCloseTo(COMBO_CAP_BASE);
+    expect(getComboCapMult(2)).toBeCloseTo(COMBO_CAP_BASE + 2);
+    expect(getComboCapMult(1000)).toBe(COMBO_CAP_CEIL); // hard ceiling
+  });
+
+  it('getComboMult is bounded by the (growing) cap, not a flat 8', () => {
+    // A huge combo at zero bonus is held to the base cap (mult = base).
+    expect(getComboMult(100000, 0)).toBeCloseTo(COMBO_CAP_BASE);
+    // The same combo with a +3 cap bonus reaches a higher multiplier.
+    expect(getComboMult(100000, 3)).toBeCloseTo(COMBO_CAP_BASE + 3);
+    // Low combo never exceeds its own floor(combo/10)*0.4 contribution.
+    expect(getComboMult(20, 5)).toBeCloseTo(1 + 0.8);
   });
 });

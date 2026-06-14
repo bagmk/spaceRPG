@@ -81,7 +81,18 @@ const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on leve
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
 
-const comboMult = (combo) => 1 + Math.min(7, Math.floor(combo / 10) * 0.4);
+// Combo cap GROWS with stage (P5/R10) — lockstep with balance.ts COMBO_CAP_*
+// and formulas.ts getComboMult/getComboCapMult. The sim mirrors the BASE+stage
+// curve only (codex/gear/singularity are player buffs ABOVE the calibration
+// baseline). stageId is 1-based; stageIdx = stageId - 1.
+const COMBO_CAP_BASE = 3.0;
+const COMBO_CAP_CEIL = 12.0;
+const COMBO_CAP_PER_STAGE = 0.4;
+const COMBO_MULT_PER_10 = 0.4; // mirrors TUNING.COMBO_MULT_PER_10 (constants.ts)
+const comboCapMult = (stageId) =>
+  Math.min(COMBO_CAP_CEIL, COMBO_CAP_BASE + COMBO_CAP_PER_STAGE * Math.max(0, stageId - 1));
+const comboMult = (combo, stageId) =>
+  1 + Math.min(comboCapMult(stageId) - 1, Math.floor(combo / 10) * COMBO_MULT_PER_10);
 
 // ---------------------------------------------------------------------------
 // Gear model — deterministic stacks per stage (gear-only economy).
@@ -226,7 +237,7 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
     const p = Math.min(1, Math.max(0, (entropy - floor) / Math.max(1e-9, thresholds[stageIdx] - floor)));
     const cp = Math.max(1, gearClickMult(stage.id, p, stoneBudget)) * CLICK_OUTPUT_MULTIPLIER * (MECHANIC_CLICK_BOOST[stage.mechanic] ?? 1);
     const eCrit = critFactor(stage.id, combo, profile.critGear ?? 0.5, stoneBudget);
-    const clickG = profile.cps * cp * eCrit * comboMult(combo) * profile.activeFraction;
+    const clickG = profile.cps * cp * eCrit * comboMult(combo, stage.id) * profile.activeFraction;
     const autoG = gearAutoFlat(stage.id, p, stoneBudget);
     const eRate = clickG * ENTROPY_CFG.wClick + autoG * ENTROPY_CFG.wAuto;
     let dt = 30;

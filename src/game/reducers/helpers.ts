@@ -4,8 +4,10 @@
  */
 
 import { STAGES } from '../stages';
+import { COMBO_CAP_PER_STAGE, COMBO_CAP_CODEX_MAX, COMBO_CAP_SINGULARITY } from '../balance';
 import { getActiveModifiers } from '../skills/effects';
 import { getEquippedInstances } from '../entities/effects';
+import { getCodexCompletionFraction } from '../entities/codexSets';
 import { getClickPower, getEntropyGateProgress, getProgress, getEffectiveThreshold } from '../formulas';
 import type { GameState } from '../types';
 import type { FloatingClickEvent, FloatingCollisionEvent, EncounterEvent } from '../types/events';
@@ -29,8 +31,19 @@ export function hasUnlock(state: GameState, unlockId: SingularityUnlockId): bool
   return state.singularityUnlocks.includes(unlockId);
 }
 
+/**
+ * Combo-cap BONUS above COMBO_CAP_BASE (P5/R10): grows with stage progression,
+ * codex completion, and the free_combo singularity. The gear comboCap substat
+ * (modifiers.comboCapAdd) is added separately at the call site.
+ */
 export function getComboCapBonus(state: GameState): number {
-  return hasUnlock(state, 'free_combo') ? 2 : 0;
+  const stage = COMBO_CAP_PER_STAGE * state.stageIdx;
+  // NOTE: codex completion is intentionally consumed TWICE — here (combo cap)
+  // and in the prestige mass bonus (getCondensedMassReward, ×CODEX_MASS_BONUS).
+  // Collecting deliberately pays off on two axes; both terms are bounded.
+  const codex = getCodexCompletionFraction(state.almanacCollected) * COMBO_CAP_CODEX_MAX;
+  const singularity = hasUnlock(state, 'free_combo') ? COMBO_CAP_SINGULARITY : 0;
+  return stage + codex + singularity;
 }
 
 export function getLateStageCompression(state: GameState): number {

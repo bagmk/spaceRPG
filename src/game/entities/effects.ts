@@ -16,6 +16,7 @@ import { getGearPowerExponent, getGearPowerMult, getSecondaryStats, type GearPow
 import {
   CODEX_SETS,
   collectedIdSet,
+  getCodexSubsetIdForEntity,
   isSetComplete,
   isSubsetComplete,
   type CodexReward,
@@ -170,21 +171,34 @@ export function applyEntityModifiers(
   }
 }
 
-/** Set key = glyph family (entity redesign §3 — no per-entity data needed). */
+/** Set key = glyph family. Used for the FUSION same-family output bias only. */
 export function getSetKey(entity: StageEntity): string {
   return entity.visual.glyph;
 }
 
 /**
- * Set bonus (Phase 3): equipping 2–3 entities sharing a setKey multiplies
- * click/auto output and can add crit chance. The largest matching family counts.
+ * Equip set key = codex subset/category (P5, R8). Equipping items from the same
+ * codex category grants the set bonus — "같은 도감 카테고리 같이 장착". Returns null
+ * for entities that map to no NON-genesis subset (getCodexSubsetIdForEntity skips
+ * the overlapping genesis set), e.g. the stage-1 tutorial entities s1_01/s1_03 —
+ * those simply can't form an equip set. All consumers guard the null.
+ */
+export function getEquipSetKey(entity: StageEntity): string | null {
+  return getCodexSubsetIdForEntity(entity);
+}
+
+/**
+ * Set bonus (P5, R8): equipping 2–3 entities sharing a codex CATEGORY (subset)
+ * multiplies click/auto output and can add crit chance. The largest matching
+ * category counts.
  */
 export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): void {
   const counts = new Map<string, number>();
   for (const entry of equipped) {
     const entity = findEntityById(entry.entityId);
     if (!entity) continue;
-    const key = getSetKey(entity);
+    const key = getEquipSetKey(entity);
+    if (key === null) continue;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   let best = 0;

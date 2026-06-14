@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { STAGE_ENTITIES, getEntitiesForStage } from '../entities/stageItems';
 import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../entities/fusion';
-import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount } from '../entities/effects';
+import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount, getEquipSetKey } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
   FUSION_UP1_CHANCE,
@@ -157,27 +157,40 @@ describe('fusion (Phase 3)', () => {
 });
 
 describe('set bonuses + slot unlocks (Phase 3)', () => {
-  it('applies the 2-piece and 3-piece set bonuses for matching glyph families', () => {
-    // Find two entities sharing a glyph family (sets may mix stages).
-    const byGlyph = new Map<string, typeof STAGE_ENTITIES>();
+  it('applies the 2-piece set bonus for entities sharing a codex category (R8)', () => {
+    // P5/R8: the equip set bonus keys on the codex SUBSET, not the glyph family.
+    const bySubset = new Map<string, typeof STAGE_ENTITIES>();
     for (const e of STAGE_ENTITIES) {
-      byGlyph.set(e.visual.glyph, [...(byGlyph.get(e.visual.glyph) ?? []), e]);
+      const key = getEquipSetKey(e);
+      if (key === null) continue;
+      bySubset.set(key, [...(bySubset.get(key) ?? []), e]);
     }
-    const family = [...byGlyph.values()].find((list) => list.length >= 2);
-    expect(family).toBeDefined();
-    if (!family) return;
+    const category = [...bySubset.values()].find((list) => list.length >= 2);
+    expect(category).toBeDefined();
+    if (!category) return;
 
     const mods = defaultModifiers();
     const baseClick = mods.clickPowerMult;
     applySetBonuses(mods, [
-      { entityId: family[0].id, count: 1, level: 1 },
-      { entityId: family[1].id, count: 1, level: 1 },
+      { entityId: category[0].id, count: 1, level: 1 },
+      { entityId: category[1].id, count: 1, level: 1 },
     ]);
     expect(mods.clickPowerMult).toBeCloseTo(baseClick * SET_BONUS[2].clickAutoMult);
 
     const single = defaultModifiers();
-    applySetBonuses(single, [{ entityId: family[0].id, count: 1, level: 1 }]);
+    applySetBonuses(single, [{ entityId: category[0].id, count: 1, level: 1 }]);
     expect(single.clickPowerMult).toBe(1);
+
+    // Two items in DIFFERENT categories grant no set bonus.
+    const otherCategory = [...bySubset.entries()].find(([k]) => k !== getEquipSetKey(category[0]))?.[1];
+    if (otherCategory) {
+      const mixed = defaultModifiers();
+      applySetBonuses(mixed, [
+        { entityId: category[0].id, count: 1, level: 1 },
+        { entityId: otherCategory[0].id, count: 1, level: 1 },
+      ]);
+      expect(mixed.clickPowerMult).toBe(1);
+    }
   });
 
   it('derives slot unlocks from stage and almanac progress', () => {

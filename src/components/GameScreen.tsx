@@ -12,6 +12,7 @@ import {
   canCondense as canCondenseNow,
   getAutoRate,
   getClickPower,
+  getComboCapMult,
   getCritChance,
   getCritMultiplier,
   getEffectiveThreshold,
@@ -23,6 +24,7 @@ import {
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
 import { getEquippedInstances } from '../game/entities/effects';
+import { getComboCapBonus } from '../game/reducers/helpers';
 import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
 import { STAGES } from '../game/stages';
@@ -213,10 +215,7 @@ export function GameScreen({
   const entropyGateProgress01 = getEntropyGateProgress(state.entropy, state.stageIdx);
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
-  const maxComboMult =
-    TUNING.COMBO_MULT_MAX +
-    (state.singularityUnlocks.includes('free_combo') ? 2 : 0) +
-    modifiers.comboCapAdd;
+  const maxComboMult = getComboCapMult(getComboCapBonus(state) + modifiers.comboCapAdd);
   const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
   const endingOptions = getEndingOptions(state, wallNow, language);
   const [endingChooserDismissed, setEndingChooserDismissed] = useState(false);

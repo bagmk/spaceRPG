@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock } from '../formulas';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntityCost } from '../entities/types';
-import { getEntitiesForStage } from '../entities/stageItems';
+import { getComboCapBonus } from '../reducers/helpers';
+import { getSetKey, getEquipSetKey } from '../entities/effects';
+import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
+import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
   it('carries all quanta into the next stage without resetting skill-backed levels', () => {
@@ -363,5 +366,36 @@ describe('gameReducer', () => {
     expect(next.echoes).toBe(1);
     expect(next.endingsCompleted).toContain('heat_death');
     expect(next.lastEndingId).toBeNull();
+  });
+});
+
+describe('P5: combo cap growth (R10) + set-key split (R8)', () => {
+  it('combo cap bonus grows with stage progression', () => {
+    const base = createInitialGameState(0);
+    const delta = getComboCapBonus({ ...base, stageIdx: 5 }) - getComboCapBonus({ ...base, stageIdx: 0 });
+    expect(delta).toBeCloseTo(5 * COMBO_CAP_PER_STAGE);
+  });
+
+  it('free_combo singularity adds to the combo cap bonus', () => {
+    const base = createInitialGameState(0);
+    const boosted = { ...base, singularityUnlocks: ['free_combo'] as typeof base.singularityUnlocks };
+    expect(getComboCapBonus(boosted) - getComboCapBonus(base)).toBeCloseTo(COMBO_CAP_SINGULARITY);
+  });
+
+  it('prestige resets the per-stage combo ramp but keeps the singularity term', () => {
+    const before = { ...createInitialGameState(0), stageIdx: 5, completedRun: true, selectedEndingId: null,
+      singularityUnlocks: ['free_combo'] as ReturnType<typeof createInitialGameState>['singularityUnlocks'] };
+    const prestiged = gameReducer(before, { type: 'PRESTIGE', now: 1000 });
+    expect(prestiged.stageIdx).toBe(0);
+    // stage ramp gone (stageIdx 0), but the free_combo singularity persists.
+    expect(getComboCapBonus(prestiged)).toBeCloseTo(COMBO_CAP_SINGULARITY);
+    expect(getComboCapBonus(prestiged)).toBeLessThan(getComboCapBonus(before));
+  });
+
+  it('R8: equip set bonus keys on codex subset; fusion family bias stays glyph', () => {
+    const e = STAGE_ENTITIES.find((x) => getEquipSetKey(x) !== null)!;
+    expect(e).toBeDefined();
+    expect(getSetKey(e)).toBe(e.visual.glyph);            // fusion same-family bias unchanged
+    expect(getEquipSetKey(e)).not.toBe(getSetKey(e));     // equip set re-keyed (codex subset id)
   });
 });

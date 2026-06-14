@@ -16,7 +16,7 @@ import {
   SET_BONUS,
   type SecondaryStatType,
 } from '../game/balance';
-import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getSetKey, type EquipCategory } from '../game/entities/effects';
+import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
@@ -380,7 +380,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     const counts = new Map<string, number>();
     for (const entity of allEquippedEntities) {
       if (!entity) continue;
-      const key = getSetKey(entity);
+      const key = getEquipSetKey(entity);
+      if (key === null) continue;
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     let bestKey = '';
@@ -807,7 +808,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   }
                   const slotEntity = equippedEntities[i];
                   const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
-                  const linked = Boolean(slotEntity && dominantKey && getSetKey(slotEntity) === dominantKey);
+                  const linked = Boolean(slotEntity && dominantKey && getEquipSetKey(slotEntity) === dominantKey);
                   return (
                     <button
                       key={i}
@@ -844,11 +845,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
               {/* Active set magnitude (compact) + batch enhance */}
               <div className="equip-actions">
-                {setInfo ? (
-                  <span className="equip-set-chip">
-                    {`⬡ ${t(language, 'setBonusLabel')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}
-                  </span>
-                ) : <span />}
+                {setInfo ? (() => {
+                  // setInfo.key is a codex subset id "setId/subId" — name the category.
+                  const [sid, subid] = setInfo.key.split('/');
+                  const sub = CODEX_SETS.find((s) => s.id === sid)?.subsets.find((x) => x.id === subid);
+                  const name = sub ? `${codexSubsetLabel(sub, language)} ` : '';
+                  return (
+                    <span className="equip-set-chip">
+                      {`⬡ ${name}${t(language, 'setBonusLabel')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}
+                    </span>
+                  );
+                })() : <span />}
                 <button
                   type="button"
                   className="equip-enhance-all"

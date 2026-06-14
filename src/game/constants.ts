@@ -24,7 +24,8 @@ export const TUNING = {
   COMBO_TIMEOUT_MS: 700,
   COMBO_CLEAR_MS: 1200,
   COMBO_MULT_PER_10: 0.4,
-  COMBO_MULT_MAX: 8.0,
+  // Combo multiplier CAP moved to balance.ts (P5/R10): it now grows with
+  // progression — see COMBO_CAP_BASE/CEIL/PER_STAGE and getComboCapMult.
   CRIT_BASE_CHANCE: 0.05,
   CRIT_PER_COMBO: 0.01,
   CRIT_MAX: 0.5,

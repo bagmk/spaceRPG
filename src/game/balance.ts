@@ -177,21 +177,23 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  // P0 fixed-effect recalibration (scripts/entropy-gate-sim.mjs, base^E=1.0,
-  // level mult 0.6, enhance growth 2.2) — re-derived so progression comes from
-  // investment, not auto-scaling. Re-run the sim + repaste on any income change.
-  1: 4.118e3,
-  2: 2.406e4,
-  3: 8.498e4,
-  4: 3.593e5,
-  5: 5.320e5,
-  6: 1.738e6,
-  7: 4.149e6,
-  8: 9.201e6,
+  // P5 (R10) recalibration: the combo cap now starts at 3 and grows per stage,
+  // so the early stages (1-4) earn less from combo until the cap matures —
+  // re-derived (scripts/entropy-gate-sim.mjs) so target times hold. Early stages
+  // (1-4) shift the most; stages 5+ move only by float noise from the
+  // binary-search recalibration (the cap already exceeds the reference combo).
+  1: 2.972e3,
+  2: 1.927e4,
+  3: 7.446e4,
+  4: 3.541e5,
+  5: 5.338e5,
+  6: 1.740e6,
+  7: 4.151e6,
+  8: 9.203e6,
   9: 1.440e7,
   10: 2.320e7,
   11: 3.795e7,
-  12: 6.007e7,
+  12: 6.008e7,
   13: 8.506e7,
   14: 1.505e8,
   15: 3.325e8,
@@ -498,11 +500,28 @@ export const RIFT_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacC
   { slot: 3, minAlmanacCount: 60 },
 ];
 
-/** Set bonus by number of equipped entities sharing a setKey (glyph family). */
+/** Set bonus by number of equipped entities sharing a codex CATEGORY (P5/R8). */
 export const SET_BONUS: Record<number, { clickAutoMult: number; critChanceAdd: number }> = {
   2: { clickAutoMult: 1.25, critChanceAdd: 0 },
   3: { clickAutoMult: 1.6, critChanceAdd: 0.05 },
 };
+
+// ── Combo cap growth (P5, R10) ───────────────────────────────────────────────
+// The combo MULTIPLIER cap starts low and GROWS with progression (a stage of
+// its own). Effective cap = min(CEIL, BASE + perStage·stageIdx + codex + gear +
+// singularity). Early game caps around BASE; by the late stages it reaches the
+// former flat 8 and beyond. getComboMult (formulas.ts) + getComboCapBonus
+// (reducers/helpers.ts) consume these; the sim mirrors the BASE+stage curve.
+/** Starting combo multiplier cap (was a flat 8.0 from stage 1). */
+export const COMBO_CAP_BASE = 3.0;
+/** Absolute ceiling so stacked bonuses can't run the cap away. */
+export const COMBO_CAP_CEIL = 12.0;
+/** Combo cap gained per stage cleared (0-based stageIdx). 0.4 → ≈8 by stage 13. */
+export const COMBO_CAP_PER_STAGE = 0.4;
+/** Max combo cap from a fully-completed codex (scales with completion fraction). */
+export const COMBO_CAP_CODEX_MAX = 2.0;
+/** Combo cap from the free_combo singularity unlock. */
+export const COMBO_CAP_SINGULARITY = 2.0;
 
 // ── Intro / Big Bang timing ──────────────────────────────────────────────────
 

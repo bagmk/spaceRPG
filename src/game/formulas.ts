@@ -3,6 +3,8 @@ import { STAGES } from './stages';
 import {
   AUTO_OUTPUT_MULTIPLIER,
   CLICK_OUTPUT_MULTIPLIER,
+  COMBO_CAP_BASE,
+  COMBO_CAP_CEIL,
   ENTROPY_W_AUTO,
   CODEX_MASS_BONUS,
   ENTROPY_W_CLICK,
@@ -307,11 +309,21 @@ export function getEffectiveThreshold(stage: Stage, _prestigeBoost: number): num
   return stage.threshold;
 }
 
+/**
+ * Maximum combo multiplier reachable right now (P5/R10). Starts at COMBO_CAP_BASE
+ * and grows via comboCapBonus (stage + codex + gear + singularity), hard-capped
+ * at COMBO_CAP_CEIL. The single source of truth for both the click math and the
+ * HUD readout.
+ */
+export function getComboCapMult(comboCapBonus = 0): number {
+  return Math.min(COMBO_CAP_CEIL, COMBO_CAP_BASE + comboCapBonus);
+}
+
 export function getComboMult(combo: number, comboCapBonus = 0): number {
   return (
     1 +
     Math.min(
-      TUNING.COMBO_MULT_MAX + comboCapBonus - 1,
+      getComboCapMult(comboCapBonus) - 1,
       Math.floor(combo / 10) * TUNING.COMBO_MULT_PER_10,
     )
   );
