@@ -91,7 +91,6 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
           {status === 'loading' && <p className="login-screen__status">{ko ? '연결 중...' : 'Connecting...'}</p>}
           {signingIn && <p className="login-screen__status">{ko ? '로그인 중...' : 'Signing in...'}</p>}
           {error && <p className="login-screen__error">{error}</p>}
-          {status === 'signedOut' && error && <p className="login-screen__error">{error}</p>}
         </div>
 
         {/* [+ CONSENT] Store-required notice. Tapping a sign-in button = acceptance. */}
