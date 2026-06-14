@@ -73,7 +73,14 @@ const ENHANCE_COST_GROWTH = 2.2;
 const ENHANCE_STONE_THRESHOLD = 5;
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.5;
-const SIM_FUSION_FAIL_RATE = 0.55; // ≈ 1 − (UP1+UP2) at the flat P1 odds
+// Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
+// A fusion that does NOT rarity-up mints 강화석, so failRate = 1 − up1 − up2 for
+// the tier being fused. P6 fix: this was a flat 0.55 (a P1 leftover from before
+// the odds were tiered) — now per-tier, so the stone budget that funds Lv5+
+// enhancement is accurate for rare+ stages (which fail, and thus mint, far more).
+const FUSION_UP1 = { common: 0.40, rare: 0.20, epic: 0.10, legendary: 0.03 };
+const FUSION_UP2 = { common: 0.05, rare: 0.02, epic: 0, legendary: 0 };
+const fusionFailRate = (rarity) => 1 - (FUSION_UP1[rarity] ?? 0) - (FUSION_UP2[rarity] ?? 0);
 const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
 // P2b: fusion matter cost scales by the (best) input rarity — cheap common, steep rare+.
 const FUSION_COST_RARITY_MULT = { common: 0.4, rare: 1.0, epic: 2.5, legendary: 6 };
@@ -193,7 +200,8 @@ function gearAutoFlat(stageId, p, stoneBudget = 0) {
 function stoneBudgetFor(stage, profile) {
   if (!profile.fusionIntervalSec || profile.activeFraction <= 0) return 0;
   const fusions = (stage.realPlayTargetSec * profile.activeFraction) / profile.fusionIntervalSec;
-  return fusions * SIM_FUSION_FAIL_RATE * FUSION_FAIL_STONES[bestRarity(stage.id)];
+  const r = bestRarity(stage.id);
+  return fusions * fusionFailRate(r) * FUSION_FAIL_STONES[r];
 }
 
 /**
