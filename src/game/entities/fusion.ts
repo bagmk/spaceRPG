@@ -13,13 +13,13 @@
 import {
   ENHANCE_REFUND_RATE,
   ENHANCE_STONE_REFUND_RATE,
-  ENTROPY_FUSION_COST_FRAC,
+  ENTITY_COST_ANCHORS,
   ENTROPY_FUSION_VALUE_SEC,
   ENTROPY_W_AUTO,
   ENTROPY_W_CLICK,
   FUSION_CAP_DUP_REFUND_FRAC,
   FUSION_FAMILY_BIAS,
-  FUSION_COST_RARITY_MULT,
+  FUSION_FLAT_COST,
   FUSION_INPUT_COUNT,
   FUSION_REF_CPS,
   FUSION_UP1_CHANCE_BY_TIER,
@@ -203,11 +203,16 @@ export function pickFusionOutput(
   return candidates[Math.min(index, candidates.length - 1)];
 }
 
-/** Quanta consumed by one fusion — a fixed fraction of the current bank (sink). */
-export function getFusionQuantaCost(rarity: EntityRarity, quanta: number): number {
-  if (!Number.isFinite(quanta) || quanta <= 0) return 0;
-  const mult = FUSION_COST_RARITY_MULT[rarity] ?? 1;
-  return Math.min(quanta, quanta * ENTROPY_FUSION_COST_FRAC * mult);
+/**
+ * Quanta consumed by one fusion — a FIXED fraction of the player-stage cost
+ * anchor (Overhaul-2 🅠1), cheap for common and steep from rare up. No longer a
+ * fraction of the (growing) bank, so chained fusions cost the same per era. The
+ * fusion reducer requires the player to afford this in full.
+ */
+export function getFusionQuantaCost(rarity: EntityRarity, playerStageId: number): number {
+  const anchor =
+    ENTITY_COST_ANCHORS[playerStageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
+  return anchor * (FUSION_FLAT_COST[rarity] ?? 0.1);
 }
 
 /**

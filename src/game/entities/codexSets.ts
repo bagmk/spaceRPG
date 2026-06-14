@@ -17,6 +17,7 @@
 
 import type { EntityGlyph, StageEntity } from './types';
 import type { Lang } from '../../i18n';
+import { CODEX_REWARD_MULT } from '../balance';
 import { STAGE_ENTITIES } from './stageItems';
 
 export type CodexRewardStat =
@@ -274,10 +275,11 @@ const REWARD_STAT_LABEL: Record<CodexRewardStat, { en: string; ko: string }> = {
   offline: { en: 'Offline Gain', ko: '오프라인 획득' },
 };
 
-/** "+8% Click Power" / "+3%p Crit Chance" — crit chance is flat percentage points. */
+/** "+12% Click Power" / "+6%p Crit Chance" — crit chance is flat percentage points.
+ *  Scaled by CODEX_REWARD_MULT (rounded), matching applyCodexReward (label == applied). */
 export function codexRewardLabel(reward: CodexReward, lang: Lang): string {
   const unit = reward.stat === 'critChance' ? '%p' : '%';
-  return `+${reward.value}${unit} ${REWARD_STAT_LABEL[reward.stat][lang]}`;
+  return `+${Math.round(reward.value * CODEX_REWARD_MULT)}${unit} ${REWARD_STAT_LABEL[reward.stat][lang]}`;
 }
 
 /** Which top-level set an entity belongs to (first matching set). */

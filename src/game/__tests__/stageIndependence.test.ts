@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DROP_CURRENT_STAGE_WEIGHT, ENTITY_COST_ANCHORS, ENTITY_BASE_COST_FACTOR, FUSION_BURST_REF_COST_FRAC } from '../balance';
 import { pickDropStage, pickEntityByRarity, rollEntityDrop } from '../entities/drops';
-import { consumeFusionInputs, pickFusionOutput } from '../entities/fusion';
+import { consumeFusionInputs, getFusionQuantaCost, pickFusionOutput } from '../entities/fusion';
 import { getEffectiveCount, getAutoOutputAnchor } from '../entities/effects';
 import { getEntityCost, getPlayerAnchoredBaseCost } from '../entities/types';
 import { getEnhanceCost } from '../entities/enhance';
@@ -107,7 +107,7 @@ describe('Phase 4-1: economy re-anchors', () => {
     expect(entry.level).toBe(1);
   });
 
-  it('fusion burst scales with cost paid against the player-stage reference', () => {
+  it('🅠1: fusion cost is a fixed per-era price — burst is bank-independent + gated on affordability', () => {
     const commons = getEntitiesForStage(1).filter((e) => e.rarity === 'common');
     const input = commons[0];
     const mkState = (quanta: number): GameState => ({
@@ -116,19 +116,21 @@ describe('Phase 4-1: economy re-anchors', () => {
       inventory: [{ entityId: input.id, count: 6, level: 1 }],
     });
     const inputs = [input.id, input.id, input.id];
-    // Full reference cost: bank == anchor → costPaid = 0.1×anchor = refCost → scale 1.
-    const fullRef = ENTITY_COST_ANCHORS[1];
-    const rich = gameReducer(mkState(fullRef), {
+    // Fixed cost = anchor[1] × FUSION_FLAT_COST.common (no bank dependence).
+    const cost = getFusionQuantaCost('common', 1);
+    // A bank that just covers the cost and a far richer bank → identical burst.
+    const justEnough = gameReducer(mkState(cost), {
       type: 'FUSE_ENTITIES', inputEntityIds: inputs, rarityRoll: 0.99, pickRoll: 0.1,
     });
-    // Tiny bank → costPaid ≪ refCost → proportionally tiny burst.
-    const poor = gameReducer(mkState(fullRef / 100), {
+    const rich = gameReducer(mkState(cost * 1000), {
       type: 'FUSE_ENTITIES', inputEntityIds: inputs, rarityRoll: 0.99, pickRoll: 0.1,
     });
-    const richBurst = rich.lastFusionEvent!.entropyBurst;
-    const poorBurst = poor.lastFusionEvent!.entropyBurst;
-    expect(poorBurst).toBeLessThan(richBurst);
-    expect(poorBurst / richBurst).toBeCloseTo(1 / 100, 1);
+    expect(justEnough.lastFusionEvent!.entropyBurst).toBeCloseTo(rich.lastFusionEvent!.entropyBurst, 5);
+    // A bank below the fixed cost cannot fuse at all (affordability guard).
+    const poor = gameReducer(mkState(cost * 0.5), {
+      type: 'FUSE_ENTITIES', inputEntityIds: inputs, rarityRoll: 0.99, pickRoll: 0.1,
+    });
+    expect(poor.lastFusionEvent).toBeFalsy();
     expect(FUSION_BURST_REF_COST_FRAC).toBeGreaterThan(0);
   });
 });

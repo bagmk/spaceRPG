@@ -5,6 +5,8 @@ import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../
 import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount, getEquipSetKey } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
+  ENTITY_COST_ANCHORS,
+  FUSION_FLAT_COST,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
   FUSION_FAIL_STONES_BY_TIER,
@@ -102,10 +104,14 @@ describe('fusion (Phase 3)', () => {
     expect(rollFusionRarity('legendary', 0.0, 11).rarity).toBe('legendary');
   });
 
-  it('P2b: fusion cost scales by input rarity (common cheap, legendary steep)', () => {
-    expect(getFusionQuantaCost('common', 1000)).toBeCloseTo(1000 * 0.1 * 0.4, 5);
-    expect(getFusionQuantaCost('legendary', 1000)).toBeGreaterThan(getFusionQuantaCost('common', 1000) * 10);
-    expect(getFusionQuantaCost('epic', 1e12)).toBeLessThanOrEqual(1e12); // never exceeds the bank
+  it('🅠1: fusion cost is a fixed fraction of the player-stage anchor (common cheap, legendary steep)', () => {
+    // cost = ENTITY_COST_ANCHORS[playerStage] × FUSION_FLAT_COST[rarity] — no bank dependence.
+    expect(getFusionQuantaCost('common', 3)).toBeCloseTo(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.common, 5);
+    expect(getFusionQuantaCost('legendary', 3)).toBeCloseTo(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.legendary, 5);
+    // legendary costs far more than common at the same stage…
+    expect(getFusionQuantaCost('legendary', 3)).toBeGreaterThan(getFusionQuantaCost('common', 3) * 10);
+    // …and the absolute cost rises with the player's stage anchor.
+    expect(getFusionQuantaCost('common', 10)).toBeGreaterThan(getFusionQuantaCost('common', 3));
   });
 
   it('P2b: validateFusionInputs flags same-entity and same-codex-subset', () => {
@@ -245,7 +251,7 @@ describe('P6: mythic is fusion-only + tier-accurate fusion stones', () => {
     const base = {
       ...createInitialGameState(0),
       stageIdx: 8, // stage 9 — rare can attempt an up (epic is droppable)
-      quanta: 1e9,
+      quanta: 1e12, // 🅠1: must cover the fixed rare fuse cost (anchor[9] × 0.10 = 6e10)
       inventory: rares.map((e) => ({ entityId: e.id, count: 1, level: 1 })),
     };
     const ids = rares.map((e) => e.id);

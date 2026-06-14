@@ -65,14 +65,15 @@ const CRIT_MULT_GEAR_CAP = 5;
 const CRIT_MAX = 0.5;
 const RARITY_GATES = { common: 1, rare: 3, epic: 7, legendary: 12 };
 const GATE_RAMP = 3;
-// Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × 1.9^(L-1)
+// Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × growth^(L-1).
+// Overhaul-2 🅠1: growth 2.2 → 1.0 (FLAT per level) — lockstep with balance.ts.
 const ENHANCE_COST_FACTOR = 1.5;
-const ENHANCE_COST_GROWTH = 2.2;
+const ENHANCE_COST_GROWTH = 1.0;
 // P1 강화석: Lv1→5 matter, Lv5+ stones (minted by failed fusions). The stone
 // budget per stage = expected fusions × fail rate × stones-per-fail(best rarity).
 const ENHANCE_STONE_THRESHOLD = 5;
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
-const ENHANCE_STONE_GROWTH = 1.5;
+const ENHANCE_STONE_GROWTH = 1.0; // Overhaul-2 🅠1: 1.5 → 1.0 (FLAT) — lockstep with balance.ts.
 // Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
 // A fusion that does NOT rarity-up mints 강화석, so failRate = 1 − up1 − up2 for
 // the tier being fused. P6 fix: this was a flat 0.55 (a P1 leftover from before
@@ -82,8 +83,11 @@ const FUSION_UP1 = { common: 0.40, rare: 0.20, epic: 0.10, legendary: 0.03 };
 const FUSION_UP2 = { common: 0.05, rare: 0.02, epic: 0, legendary: 0 };
 const fusionFailRate = (rarity) => 1 - (FUSION_UP1[rarity] ?? 0) - (FUSION_UP2[rarity] ?? 0);
 const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
-// P2b: fusion matter cost scales by the (best) input rarity — cheap common, steep rare+.
-const FUSION_COST_RARITY_MULT = { common: 0.4, rare: 1.0, epic: 2.5, legendary: 6 };
+// Overhaul-2 🅠1: fusion cost is now a FIXED FRACTION OF THE PLAYER-STAGE ANCHOR
+// (was 10%-of-bank × rarity mult). Lockstep with balance.ts FUSION_FLAT_COST.
+// Values equal the old effective cost at "bank == anchor", so burst scaling
+// (cost vs anchor × burstRefCostFrac) is unchanged.
+const FUSION_FLAT_COST = { common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60 };
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
@@ -175,7 +179,8 @@ function derivedLevel(stageId, rarity, stoneBudget = 0) {
   }
   return level;
 }
-const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.6;
+// Overhaul-2 🅠1: 0.6 → 0.85 per level — lockstep with balance.ts ENTITY_LEVEL_EFFECT_BONUS.
+const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.85;
 
 function gearClickMult(stageId, p, stoneBudget = 0) {
   const E = (stageId - 1) + p;
@@ -262,7 +267,9 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
     elapsed += dt;
     activeClock += profile.activeFraction * dt;
     if (profile.fusionIntervalSec && activeClock >= nextFusionAt) {
-      const costPaid = Math.min(quanta, quanta * ENTROPY_CFG.fusionCostFrac * (FUSION_COST_RARITY_MULT[bestRarity(stage.id)] ?? 1));
+      // Fixed per-era price (anchor × FUSION_FLAT_COST[rarity]); the game gates
+      // on affordability, the sim caps at the bank (partial burst when short).
+      const costPaid = Math.min(quanta, ENTITY_COST_ANCHORS[stage.id] * (FUSION_FLAT_COST[bestRarity(stage.id)] ?? 0.1));
       const refCost = ENTITY_COST_ANCHORS[stage.id] * ENTROPY_CFG.burstRefCostFrac;
       const scale = refCost > 0 ? Math.min(1, costPaid / refCost) : 1;
       const burst = ENTROPY_CFG.fusionValueSec * Math.max(eRate, 1e-9) * scale;

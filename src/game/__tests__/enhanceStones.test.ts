@@ -95,10 +95,10 @@ describe('P6: enhance fail / phase / destroy math (direct)', () => {
     expect(getEnhanceFailChance(9999)).toBeCloseTo(ENHANCE_FAIL_MAX);
   });
 
-  it('stone cost starts at the rarity base and grows per stone level', () => {
+  it('🅠1: stone cost is the flat rarity base at every stone level (growth 1.0)', () => {
     expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD)).toBe(ENHANCE_STONE_BASE.common);
-    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 2))
-      .toBeGreaterThan(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD));
+    // Overhaul-2 🅠1: ENHANCE_STONE_GROWTH = 1.0 → every stone-phase level costs the same.
+    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 2)).toBe(ENHANCE_STONE_BASE.common);
   });
 
   it('destroy is only eligible within the window near the cap', () => {

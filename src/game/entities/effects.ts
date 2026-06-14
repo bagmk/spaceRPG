@@ -4,6 +4,7 @@ import type { Modifiers } from '../skills/effects';
 import type { EntityInstance, StageEntity } from './types';
 import {
   AUTO_STAGE_POWER_BASE,
+  CODEX_REWARD_MULT,
   ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
@@ -216,7 +217,9 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
 
 /** Apply one codex completion reward to the modifiers. */
 function applyCodexReward(mods: Modifiers, reward: CodexReward): void {
-  const v = reward.value;
+  // Scaled by CODEX_REWARD_MULT and rounded — identical to the label sites
+  // (codexRewardLabel / shortReward) so the shown bonus equals the applied one.
+  const v = Math.round(reward.value * CODEX_REWARD_MULT);
   switch (reward.stat) {
     case 'clickPower': mods.clickPowerMult *= 1 + v / 100; break;
     case 'critChance': mods.critChanceAdd += v / 100; break;

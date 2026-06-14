@@ -178,27 +178,28 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  // P5 (R10) recalibration: the combo cap now starts at 3 and grows per stage,
-  // so the early stages (1-4) earn less from combo until the cap matures —
-  // re-derived (scripts/entropy-gate-sim.mjs) so target times hold. Early stages
-  // (1-4) shift the most; stages 5+ move only by float noise from the
-  // binary-search recalibration (the cap already exceeds the reference combo).
-  1: 2.972e3,
-  2: 1.927e4,
-  3: 7.446e4,
-  4: 3.541e5,
-  5: 5.338e5,
-  6: 1.740e6,
-  7: 4.151e6,
-  8: 9.203e6,
-  9: 1.440e7,
-  10: 2.320e7,
-  11: 3.795e7,
-  12: 6.008e7,
-  13: 8.506e7,
-  14: 1.505e8,
-  15: 3.325e8,
-  16: 4.060e8,
+  // Overhaul-2 (🅠1) recalibration: stronger per-level effect (0.85) + FLAT
+  // enhance/stone/fusion costs let players power up faster, so the ladder is
+  // re-derived (scripts/entropy-gate-sim.mjs, reference pinned to target) and
+  // rises — most in the early-mid stages where cheap levelling bites hardest.
+  // Re-run the sim after touching the gear curve / costs / level bonus and
+  // re-paste; the v16 ladder stays FROZEN in storage/migrate.ts for the remap.
+  1: 4.430e3,
+  2: 2.867e4,
+  3: 1.212e5,
+  4: 9.332e5,
+  5: 1.146e6,
+  6: 2.692e6,
+  7: 5.778e6,
+  8: 1.225e7,
+  9: 1.744e7,
+  10: 2.625e7,
+  11: 4.100e7,
+  12: 6.312e7,
+  13: 8.810e7,
+  14: 1.535e8,
+  15: 3.355e8,
+  16: 4.090e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -237,12 +238,24 @@ export const PRESTIGE_CARRY_COUNT_CAP = 1;
 export const OFFLINE_ENTROPY_FLOOR_FRAC = 0.05;
 /**
  * Codex completion multiplies the prestige condensedMass reward:
- * ×(1 + collected/total × CODEX_MASS_BONUS). 1.0 → ×1.5 at 50% codex, ×2.0 at
- * 100%. condensedMass is spent only in the Singularity tree (never the entropy
- * gate), so this rewards collection without touching stage pacing. Distinct
- * from the live codex set/subset stat modifiers (applyCollectionRewards).
+ * ×(1 + collected/total × CODEX_MASS_BONUS). Overhaul-2 (🅠1): 1.0 → 2.0, so
+ * ×2.0 at 50% codex, ×3.0 at 100% — collection pays off harder to reward the
+ * (now rarer) high-rarity grind. condensedMass is spent only in the Singularity
+ * tree (never the entropy gate), so this rewards collection without touching
+ * stage pacing. Distinct from the live codex set/subset stat modifiers
+ * (applyCollectionRewards).
  */
-export const CODEX_MASS_BONUS = 1.0;
+export const CODEX_MASS_BONUS = 2.0;
+
+/**
+ * Global multiplier on every codex completion reward % (Overhaul-2 🅠1). One
+ * central knob so the collection payoff can be tuned without editing ~35 inline
+ * reward values in codexSets.ts. Applied (rounded) at BOTH the modifier site
+ * (applyCodexReward) and the label sites (codexRewardLabel / shortReward) so the
+ * shown bonus always equals the applied bonus (label == applied). Set/subset
+ * bonuses still trigger only on full completion (locked decision unchanged).
+ */
+export const CODEX_REWARD_MULT = 1.5;
 
 /** Entropy gained per quanta earned by clicking (active play drives progress). */
 export const ENTROPY_W_CLICK = 0.6;
@@ -258,6 +271,19 @@ export const ENTROPY_W_AUTO = 0.04;
 export const ENTROPY_FUSION_VALUE_SEC = 30;
 /** Each fusion consumes this fraction of the quanta bank (Phase 3 sink). */
 export const ENTROPY_FUSION_COST_FRAC = 0.1;
+/**
+ * Per-collision (comet) entropy reward CAP, as a fraction of the CURRENT stage's
+ * entropy-gate span (Overhaul-2 🅠1). The legacy comet entropy was scaled off
+ * the MATTER threshold (stage.threshold, up to 4e21) while the entropy gate
+ * maxes at ~4e8 — so one late comet could dump ~10^11× the whole ladder. Capping
+ * to a fraction of the live entropy span keeps a comet a satisfying-but-bounded
+ * burst (≤ a few % of a stage), never 2–3 stages. Keyed by rogue tier.
+ */
+export const COLLISION_ENTROPY_SPAN_CAP: Record<'massive' | 'major' | 'minor', number> = {
+  massive: 0.06,
+  major: 0.03,
+  minor: 0.012,
+};
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 
@@ -267,12 +293,18 @@ export const DROP_CHANCE_BASE = 0.04;
 export const DROP_CHANCE_CRIT_MULT = 3;
 /** Chance an entity drops on a rogue collision reward. */
 export const DROP_CHANCE_COLLISION = 0.35;
-/** Base rarity weights for a drop roll (relative, need not sum to 1). */
+/**
+ * Base rarity weights for a drop roll (relative, need not sum to 1).
+ * Overhaul-2 (🅠1): steepened to 90/9/0.9/0.1 — high-rarity DROPS are now rare
+ * enough that fusion (not the drop table) is the intended path to epic/legendary
+ * gear. Mythic stays drop-impossible (fusion-only). Compensated by the stronger
+ * per-level effect (ENTITY_LEVEL_EFFECT_BONUS) + CODEX_MASS_BONUS bump.
+ */
 export const DROP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
-  common: 80,
-  rare: 16,
-  epic: 3.5,
-  legendary: 0.5,
+  common: 90,
+  rare: 9,
+  epic: 0.9,
+  legendary: 0.1,
   mythic: 0,
 };
 /** Crit multiplies rare/epic/legendary weights by this factor. */
@@ -304,10 +336,18 @@ export const FUSION_UP2_CHANCE_BY_TIER: Record<EntityRarity, number> = {
 };
 /** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
 export const FUSION_UP_CHANCE_CAP = 0.65;
-// P2b cost (R4): cheap for common, steep from rare up (× the 10%-of-bank base);
-// stage scaling is implicit since the bank grows with stage. Capped at the bank.
-export const FUSION_COST_RARITY_MULT: Record<EntityRarity, number> = {
-  common: 0.4, rare: 1.0, epic: 2.5, legendary: 6, mythic: 12,
+/**
+ * Fusion matter cost as a FRACTION OF THE PLAYER-STAGE COST ANCHOR (Overhaul-2
+ * 🅠1). Replaces the old 10%-of-bank model, which ballooned as the bank grew
+ * (a chained-fusion session felt punishingly expensive). Now a fusion is a
+ * fixed-price action per era: cost = ENTITY_COST_ANCHORS[playerStage] × this.
+ * Cheap for common, steep from rare up. Values equal the old effective cost at
+ * "bank == anchor" (0.1 × the previous rarity mult), so burst scaling — which
+ * compares cost against ENTITY_COST_ANCHORS × FUSION_BURST_REF_COST_FRAC — is
+ * unchanged. The player must AFFORD the full cost (no bank-cap discount).
+ */
+export const FUSION_FLAT_COST: Record<EntityRarity, number> = {
+  common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60, mythic: 1.2,
 };
 // P2b bonuses (R9): fusing 3 of the SAME entity, or 3 from the same codex category.
 export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance
@@ -329,12 +369,12 @@ export const FUSION_BURST_REF_COST_FRAC = 0.1;
 
 /**
  * Each entity level above 1 adds this fraction to the entity's effect.
- * Raised to 0.6 in the fixed-effect overhaul (P0): with the per-stage gear
- * curve neutralised, ENHANCEMENT is the main growth lever, so each level must
- * pull more weight (a player carries a build forward by levelling it, not by
- * the item auto-scaling with their stage).
+ * Overhaul-2 (🅠1): 0.6 → 0.85. With enhance costs now FLAT per level (growth
+ * 1.0), levelling is cheap, so each level pulls harder to keep enhancement the
+ * dominant growth lever (locked decision: power STRONG). Re-calibrated against
+ * ENTROPY_THRESHOLDS via scripts/entropy-gate-sim.mjs (levelMult mirrors this).
  */
-export const ENTITY_LEVEL_EFFECT_BONUS = 0.6;
+export const ENTITY_LEVEL_EFFECT_BONUS = 0.85;
 
 // ── Item progression (gear power curve + rarity gates) ──────────────────────
 
@@ -376,9 +416,10 @@ export const RARITY_GATE_RAMP_STAGES = 3;
 
 /** First enhance costs this multiple of the item's base cost. */
 export const ENHANCE_COST_FACTOR = 1.5;
-/** Each further level multiplies the enhance cost by this (raised in P0 — levels
- *  now give 0.6/level so costs must climb faster to stay the pacing throttle). */
-export const ENHANCE_COST_GROWTH = 2.2;
+/** Each further level multiplies the enhance cost by this. Overhaul-2 (🅠1):
+ *  2.2 → 1.0 (FLAT — every matter-phase level costs the same anchor×1.5). Locked
+ *  decision: costs fully fixed; pacing is held by re-tuned ENTROPY_THRESHOLDS. */
+export const ENHANCE_COST_GROWTH = 1.0;
 /** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
 export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   common: 10,
@@ -397,8 +438,9 @@ export const ENHANCE_REFUND_RATE = 0.6;
 export const ENHANCE_STONE_THRESHOLD = 5;
 /** Stones for the first stone-phase level (the 5→6 step), by rarity. */
 export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8, mythic: 12 };
-/** Each further stone-phase level multiplies the stone cost by this. */
-export const ENHANCE_STONE_GROWTH = 1.5;
+/** Each further stone-phase level multiplies the stone cost by this. Overhaul-2
+ *  (🅠1): 1.5 → 1.0 (FLAT — every stone-phase level costs ENHANCE_STONE_BASE). */
+export const ENHANCE_STONE_GROWTH = 1.0;
 /** Fraction of invested stones refunded when a stack is consumed by fusion. */
 export const ENHANCE_STONE_REFUND_RATE = 0.5;
 /** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */

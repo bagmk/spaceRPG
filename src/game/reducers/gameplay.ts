@@ -1,7 +1,7 @@
 /** Handlers: TICK, CLICK, BUY_CLICK, BUY_AUTO, BUY_CRIT, REPORT_COLLISION, REPORT_ENCOUNTER */
 
 import { TUNING } from '../constants';
-import { ENTROPY_W_CLICK } from '../balance';
+import { COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
 import {
   safeAdd,
   getAutoRate,
@@ -11,6 +11,7 @@ import {
   getCritMultiplier,
   getEffectiveThreshold,
   getEntropyFromMatterGain,
+  getEntropyGateFloor,
   getEntropyGateProgress,
   getLifeStep,
   getProgress,
@@ -236,9 +237,16 @@ export function handleReportCollision(state: GameState, action: ReportCollisionA
   const tierEntropyFloor = action.tier === 'massive' ? 200 : action.tier === 'major' ? 50 : 10;
   const matterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', Date.now());
   const boostedBonus = cappedBonus * matterBoost;
-  const entropyGained =
+  const rawEntropyGain =
     (boostedBonus * ENTROPY_W_CLICK + Math.max(action.entropyBonus, tierEntropyFloor) * mult) *
     modifiers.entropyGainMult;
+  // Overhaul-2 🅠1: the matter bonus rides the MATTER threshold (stage.threshold,
+  // up to 4e21), but the entropy gate maxes at ~4e8 — so an uncapped late comet
+  // dumped many stages of entropy at once. Cap the entropy reward to a fraction
+  // of the CURRENT stage's entropy span so a comet is a bounded burst.
+  const entropySpan = Math.max(1, stage.entropyThreshold - getEntropyGateFloor(state.stageIdx));
+  const tierSpanCap = COLLISION_ENTROPY_SPAN_CAP[action.tier] ?? COLLISION_ENTROPY_SPAN_CAP.minor;
+  const entropyGained = Math.min(rawEntropyGain, entropySpan * tierSpanCap);
   const eventId = nextEventId(state);
   const droppedEntity =
     action.dropRoll !== undefined && action.dropPickRoll !== undefined

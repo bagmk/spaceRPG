@@ -173,6 +173,10 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   if (!validation.ok || !validation.rarity || !validation.stageId) return state;
 
   const currentStageIdForFusion = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+  // Fusion is a fixed per-era price (Overhaul-2 🅠1): anchor × FUSION_FLAT_COST.
+  // The player must afford it in full — there is no bank-fraction discount.
+  const cost = getFusionQuantaCost(validation.rarity, currentStageIdForFusion);
+  if (state.quanta < cost) return state;
   // P2b bonuses: 3-of-the-same-entity lifts the up chance; 3-from-one-codex
   // category amplifies the entropy burst.
   const sameEntity = validation.sameEntity === true;
@@ -193,7 +197,6 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   }, outputStageId !== currentStageIdForFusion);
   if (!output) return state;
 
-  const cost = getFusionQuantaCost(validation.rarity, state.quanta);
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
   const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
@@ -205,9 +208,9 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
-  // Burst scales by what the fusion actually cost against a flat player-stage
-  // reference price — closes the bank-then-burst-dump exploit (cost is a
-  // fraction of the bank, so an emptied bank used to buy full bursts for free).
+  // Burst scales by what the fusion cost against a flat player-stage reference
+  // price. Overhaul-2 🅠1: cost is itself anchor-fixed now, so this resolves to
+  // a fixed per-rarity burst fraction (no longer bank-dependent).
   const burstRefCost =
     (ENTITY_COST_ANCHORS[currentStageIdForFusion as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16]) *
     FUSION_BURST_REF_COST_FRAC;

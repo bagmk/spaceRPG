@@ -245,8 +245,8 @@ describe('gear system (category purity + refunds)', () => {
       type: 'FUSE_ENTITIES', inputEntityIds: inputIds, rarityRoll: 0.99, pickRoll: 0.1,
     });
     expect(next.lastFusionEvent!.refund).toBeCloseTo(expected, 5);
-    // quanta = start - cost + refund. P2b: common fusion cost = 10% × 0.4 mult = 40.
-    const fuseCost = getFusionQuantaCost('common', 1000);
+    // quanta = start - cost + refund. 🅠1: common fusion cost = anchor[stage 1] × 0.04 (fixed).
+    const fuseCost = getFusionQuantaCost('common', 1);
     expect(next.quanta).toBeCloseTo(1000 - fuseCost + expected, 3);
     // remaining stack keeps no stale investment (all copies consumed)
     const remaining = next.inventory.find((e) => e.entityId === input.id);

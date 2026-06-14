@@ -5,6 +5,7 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   CODEX_MASS_BONUS,
+  CODEX_REWARD_MULT,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_UP1_CHANCE_BY_TIER,
@@ -547,7 +548,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             }
           }
 
-          const shortReward = (r: CodexReward) => `+${r.value}%`;
+          const shortReward = (r: CodexReward) => `+${Math.round(r.value * CODEX_REWARD_MULT)}%`;
           const setsToRender = selectedSetId === 'all'
             ? CODEX_SETS
             : CODEX_SETS.filter((cs) => cs.id === selectedSetId);
@@ -940,7 +941,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const up1Pct = Math.round(FUSION_UP1_CHANCE_BY_TIER[oddsTier] * 100);
           const up2Pct = Math.round(FUSION_UP2_CHANCE_BY_TIER[oddsTier] * 100);
           const ready = fuseInputs.length === FUSION_INPUT_COUNT;
-          const cost = getFusionQuantaCost(oddsTier, quanta);
+          // Overhaul-2 🅠1: fusion cost is a fixed per-era price (anchor-based),
+          // not a fraction of the bank — and must be afforded in full.
+          const cost = getFusionQuantaCost(oddsTier, currentStageId);
+          const affordable = quanta >= cost;
           // P2b bonus indicators: 3-same-entity / 3-same-codex-category.
           const sameEntityTray = ready && new Set(fuseInputs).size === 1;
           const sameSubsetTray = ready && (() => {
@@ -1017,16 +1021,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 ) : null}
                 <button
                   type="button"
-                  className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && !fusing ? 'gacha-fuse-btn--armed' : ''}`}
-                  disabled={!ready || fusing}
+                  className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && affordable && !fusing ? 'gacha-fuse-btn--armed' : ''}`}
+                  disabled={!ready || !affordable || fusing}
                   onClick={() => triggerFuse()}
                 >
                   <span className="gacha-fuse-btn__label">
                     {fusing
                       ? t(language, 'fuseChanting')
-                      : ready
-                        ? t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))
-                        : t(language, 'fuseLeverNeed')}
+                      : !ready
+                        ? t(language, 'fuseLeverNeed')
+                        : t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))}
                   </span>
                 </button>
                 <div className="gacha-odds">
