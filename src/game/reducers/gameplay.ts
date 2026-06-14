@@ -1,4 +1,4 @@
-/** Handlers: TICK, CLICK, BUY_CLICK, BUY_AUTO, BUY_CRIT, REPORT_COLLISION, REPORT_ENCOUNTER */
+/** Handlers: TICK, CLICK, BUY_CLICK, BUY_AUTO, BUY_CRIT, ABSORB_COMET, REPORT_ENCOUNTER */
 
 import { TUNING } from '../constants';
 import { COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
@@ -54,7 +54,7 @@ type ClickAction = Extract<GameAction, { type: 'CLICK' }>;
 type BuyClickAction = Extract<GameAction, { type: 'BUY_CLICK' }>;
 type BuyAutoAction = Extract<GameAction, { type: 'BUY_AUTO' }>;
 type BuyCritAction = Extract<GameAction, { type: 'BUY_CRIT' }>;
-type ReportCollisionAction = Extract<GameAction, { type: 'REPORT_COLLISION' }>;
+type AbsorbCometAction = Extract<GameAction, { type: 'ABSORB_COMET' }>;
 type ReportEncounterAction = Extract<GameAction, { type: 'REPORT_ENCOUNTER' }>;
 
 export function handleTick(state: GameState, action: TickAction): GameState {
@@ -220,7 +220,7 @@ function isInteractionBlocked(state: GameState): boolean {
   );
 }
 
-export function handleReportCollision(state: GameState, action: ReportCollisionAction): GameState {
+export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): GameState {
   if (state.pendingCondenseStageIdx !== null || state.completedRun) return state;
   const stage = getCurrentStage(state);
   const modifiers = getCurrentModifiers(state);

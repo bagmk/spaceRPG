@@ -22,7 +22,7 @@ export { createInitialGameState, createDefaultSkills } from './defaults';
 import {
   handleTick,
   handleClick,
-  handleReportCollision,
+  handleAbsorbComet,
   handleReportEncounter,
 } from './reducers/gameplay';
 import {
@@ -98,7 +98,8 @@ export type GameAction =
   | { type: 'DISMISS_OFFLINE_MODAL' }
   | { type: 'REPORT_ENCOUNTER'; name: string; color: string }
   | {
-      type: 'REPORT_COLLISION';
+      // 🅠2: comets are absorbed by CLICKING them (was: drifting into the core).
+      type: 'ABSORB_COMET';
       x: number;
       y: number;
       bonus: number;
@@ -219,7 +220,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'BUY_SINGULARITY_UNLOCK': return handleBuySingularityUnlock(state, action);
     case 'DISMISS_OFFLINE_MODAL': return handleDismissOfflineModal(state);
     case 'REPORT_ENCOUNTER':      return handleReportEncounter(state, action);
-    case 'REPORT_COLLISION':      return handleReportCollision(state, action);
+    case 'ABSORB_COMET':          return handleAbsorbComet(state, action);
     case 'CLEAR_CLICK_EVENT':     return handleClearClickEvent(state, action);
     case 'CLEAR_COLLISION_EVENT': return handleClearCollisionEvent(state, action);
     case 'CLEAR_ENCOUNTER_EVENT': return handleClearEncounterEvent(state, action);

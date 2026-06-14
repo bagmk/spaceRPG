@@ -726,9 +726,9 @@ export function GameScreen({
               trigger: mechanicResult?.trigger,
             });
           }}
-          onCollision={(payload) =>
+          onAbsorbComet={(payload) =>
             dispatch({
-              type: 'REPORT_COLLISION',
+              type: 'ABSORB_COMET',
               x: payload.x,
               y: payload.y,
               bonus: payload.bonus,

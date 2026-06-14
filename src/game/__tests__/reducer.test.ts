@@ -48,7 +48,7 @@ describe('gameReducer', () => {
       quanta: 0,
     };
     const next = gameReducer(state, {
-      type: 'REPORT_COLLISION',
+      type: 'ABSORB_COMET',
       x: 0,
       y: 0,
       bonus: 999,
@@ -266,7 +266,7 @@ describe('gameReducer', () => {
   it('floors encounter rewards at a tiered multiple of current click power', () => {
     const state = createInitialGameState(0);
     const massive = gameReducer(state, {
-      type: 'REPORT_COLLISION',
+      type: 'ABSORB_COMET',
       x: 0,
       y: 0,
       bonus: 1,

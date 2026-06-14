@@ -229,7 +229,7 @@ function updateAndDrawRift(
   }
 }
 
-interface CollisionPayload {
+interface AbsorbCometPayload {
   x: number;
   y: number;
   bonus: number;
@@ -265,7 +265,7 @@ interface ParticleFieldProps {
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   /** Tapping the bottom-left spatial rift opens the rift gear page. */
   onRiftClick?: () => void;
-  onCollision: (payload: CollisionPayload) => void;
+  onAbsorbComet: (payload: AbsorbCometPayload) => void;
 }
 
 export interface ParticleFieldHandle {
@@ -843,7 +843,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   riftPower,
   onGatherClick,
   onRiftClick,
-  onCollision,
+  onAbsorbComet,
 }: ParticleFieldProps, ref) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<CanvasWorld | null>(null);
@@ -910,7 +910,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   ) => {
     const world = worldRef.current;
     if (!world) {
-      return { x: 0, y: 0, hitRogue: false };
+      return { x: 0, y: 0, hitRogue: undefined as Rogue | undefined };
     }
     const x = clientX - rect.left;
     const y = clientY - rect.top;
@@ -919,9 +919,11 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     const dx = x - cx;
     const dy = y - cy;
     const distance = Math.hypot(dx, dy);
-    const hitRogue = world.rogues.some((rogue) => {
+    // 🅠2: return the actual comet hit (if any) so the caller can absorb it on
+    // click. Generous tap radius (+14) so floating comets are easy to grab.
+    const hitRogue = world.rogues.find((rogue) => {
       const hitDistance = Math.hypot(x - rogue.x, y - rogue.y);
-      return hitDistance <= rogue.r + 10;
+      return hitDistance <= rogue.r + 14;
     });
     if (distance > 0) {
       world.coreVX += (dx / distance) * TUNING.CLICK_NUDGE_STRENGTH * strengthMultiplier;
@@ -929,6 +931,35 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       world.driftAngle = Math.atan2(dy, dx);
     }
     return { x, y, hitRogue };
+  };
+
+  /**
+   * 🅠2: absorb a clicked comet — instant entropy + drop reward, a burst/shockwave
+   * at the comet, and removal from the field. Replaces the old "drift into the
+   * core to recover" path; comets are now active click targets.
+   */
+  const absorbComet = (rogue: Rogue) => {
+    const world = worldRef.current;
+    if (!world) return;
+    const burstCount =
+      rogue.typeKey === 'massive'
+        ? TUNING.MASSIVE_COLLISION_BURST_COUNT
+        : rogue.typeKey === 'major'
+          ? TUNING.MAJOR_COLLISION_BURST_COUNT
+          : TUNING.MINOR_COLLISION_BURST_COUNT;
+    world.bursts.push(
+      ...createBurstSet(rogue.x, rogue.y, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4, stage.id),
+    );
+    world.shockwaves.push(createShockwave(stage.accent));
+    onAbsorbComet({
+      x: rogue.x,
+      y: rogue.y,
+      bonus: rogue.bonus,
+      entropyBonus: rogue.entropyBonus,
+      tier: rogue.typeKey,
+      name: rogue.name,
+    });
+    world.rogues = world.rogues.filter((rg) => rg.id !== rogue.id);
   };
 
   useEffect(() => {
@@ -1389,30 +1420,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         rogue.y += rogue.vy - world.coreVY;
         rogue.age += frameDt;
         rogue.rotation += frameDt * 0.001;
-        const dx = cx - rogue.x;
-        const dy = cy - rogue.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance < coreRadius + rogue.r) {
-          const burstCount =
-            rogue.typeKey === 'massive'
-              ? TUNING.MASSIVE_COLLISION_BURST_COUNT
-              : rogue.typeKey === 'major'
-                ? TUNING.MAJOR_COLLISION_BURST_COUNT
-                : TUNING.MINOR_COLLISION_BURST_COUNT;
-          world.bursts.push(
-            ...createBurstSet(cx, cy, burstCount, rogue.color, rogue.typeKey === 'massive' ? 7 : 4, stage.id),
-          );
-          world.shockwaves.push(createShockwave(stage.accent));
-          onCollision({
-            x: cx,
-            y: cy - 20,
-            bonus: rogue.bonus,
-            entropyBonus: rogue.entropyBonus,
-            tier: rogue.typeKey,
-            name: rogue.name,
-          });
-          continue rogueLoop;
-        }
+        // 🅠2: comets are NO LONGER absorbed by drifting into the core — they are
+        // clicked (see absorbComet). An un-clicked comet just keeps drifting and
+        // eventually expires / despawns below with no reward.
         const onScreen = rogue.x > 0 && rogue.x < width && rogue.y > 0 && rogue.y < height;
         if (onScreen && !rogue.spotted) {
           rogue.spotted = true;
@@ -1597,7 +1607,12 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         }
 
         if (event.button !== 1) {
-          onGatherClick(x, y, hitRogue);
+          if (hitRogue) {
+            // 🅠2: clicking a comet absorbs it (no normal gather-click fires).
+            absorbComet(hitRogue);
+          } else {
+            onGatherClick(x, y, false);
+          }
         }
       }}
       onPointerMove={(event) => {
