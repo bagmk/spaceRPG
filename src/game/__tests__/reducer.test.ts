@@ -159,6 +159,37 @@ describe('gameReducer', () => {
     expect(ticked.entropy).toBeGreaterThan(equipped.entropy);
   });
 
+  it('🅠3: TICK emits a throttled auto-income float for the primary equipped rift entity', () => {
+    const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'auto');
+    expect(entity).toBeDefined();
+    if (!entity) return;
+    const funded = { ...createInitialGameState(0), quanta: getEntityCost(entity, 0, 1) * 10 };
+    const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
+    const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    expect(equipped.riftSlots[0]).toBe(entity.id);
+
+    // First tick (t=1000, gap from t0=0 ≥ 1s) emits for the equipped rift entity.
+    const t1 = gameReducer({ ...equipped, lastAutoIncomeEvent: null }, { type: 'TICK', now: 1000, dt: 1000 });
+    expect(t1.lastAutoIncomeEvent).not.toBeNull();
+    expect(t1.lastAutoIncomeEvent!.entityId).toBe(entity.id);
+    expect(t1.lastAutoIncomeEvent!.gained).toBeGreaterThan(0);
+    expect(t1.lastAutoIncomeEvent!.t).toBe(1000);
+
+    // A tick 100ms later is throttled — no re-emit (same event id).
+    const t2 = gameReducer(t1, { type: 'TICK', now: 1100, dt: 100 });
+    expect(t2.lastAutoIncomeEvent!.id).toBe(t1.lastAutoIncomeEvent!.id);
+
+    // A tick ≥1s after the last emission re-emits (new id).
+    const t3 = gameReducer(t2, { type: 'TICK', now: 2200, dt: 1100 });
+    expect(t3.lastAutoIncomeEvent!.id).not.toBe(t1.lastAutoIncomeEvent!.id);
+  });
+
+  it('🅠3: no auto-income float when no rift entity is equipped', () => {
+    const base = { ...createInitialGameState(0), lastAutoIncomeEvent: null };
+    const ticked = gameReducer(base, { type: 'TICK', now: 1000, dt: 1000 });
+    expect(ticked.lastAutoIncomeEvent).toBeNull();
+  });
+
   it('applies equipped click entities to click gains (and not unequipped ones)', () => {
     const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'click');
     expect(entity).toBeDefined();

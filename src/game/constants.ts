@@ -198,6 +198,10 @@ export const TUNING = {
   FLOAT_NORMAL_MS: 1000,
   FLOAT_CRIT_MS: 1400,
   FLOAT_COLLISION_MS: 2000,
+  /** 🅠3: how long the passive auto-income float lingers. */
+  FLOAT_AUTO_MS: 1600,
+  /** 🅠3: min real-ms between auto-income floating-text emissions (throttle). */
+  AUTO_INCOME_EVENT_INTERVAL_MS: 1000,
   ENCOUNTER_ALERT_MS: 1700,
 
   RESET_MODAL_Z_INDEX: 140,

@@ -33,7 +33,7 @@ import {
   getOfflineRewardCapSec,
   isCashShopUnlocked,
 } from '../game/shop/boosts';
-import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
+import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
@@ -71,7 +71,7 @@ interface FloatingEntry {
   particleName?: string;
   particleDefinition?: string;
   entropyGained?: number;
-  variant: 'normal' | 'crit' | 'collision';
+  variant: 'normal' | 'crit' | 'collision' | 'auto';
   delayMs?: number;
 }
 
@@ -244,6 +244,7 @@ export function GameScreen({
   useAudioUnlockOnPointer(soundManager);
   const logicAccumulator = useRef(0);
   const particleFieldRef = useRef<ParticleFieldHandle>(null);
+  const fieldRef = useRef<HTMLElement | null>(null);
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
   void lastToastStageIdRef; // suppress unused-variable lint
@@ -541,6 +542,30 @@ export function GameScreen({
     };
   }, [dispatch, language, soundManager, state.lastCollisionEvent]);
 
+  // 🅠3: passive auto-income floating text — "+N/s · <entity>" rising from the
+  // rift (bottom-left). Emitted ~1/sec by handleTick; transient (no CLEAR needed,
+  // the throttle in the reducer controls re-emission).
+  useEffect(() => {
+    if (!state.lastAutoIncomeEvent) {
+      return undefined;
+    }
+    const event = state.lastAutoIncomeEvent;
+    const entity = findEntityById(event.entityId);
+    const name = entity ? entityName(entity, language) : '';
+    const text = `+${formatFloatingGain(event.gained)}/s${name ? ` · ${name}` : ''}`;
+    const height = fieldRef.current?.clientHeight ?? 600;
+    const x = 64 + Math.random() * 28;
+    const y = height - 96 - Math.random() * 16;
+    setFloatingEntries((current) => [
+      ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + 1),
+      { id: event.id, x, y, text, variant: 'auto' },
+    ]);
+    const timeoutId = window.setTimeout(() => {
+      setFloatingEntries((current) => current.filter((entry) => entry.id !== event.id));
+    }, TUNING.FLOAT_AUTO_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [language, state.lastAutoIncomeEvent]);
+
   useEffect(() => {
     if (state.lastEncounterEvent) {
       dispatch({ type: 'CLEAR_ENCOUNTER_EVENT', id: state.lastEncounterEvent.id });
@@ -623,7 +648,7 @@ export function GameScreen({
           {t(language, 'saveFailedQuota')}
         </div>
       ) : null}
-      <main className="field">
+      <main className="field" ref={fieldRef}>
         <span className="field-center-tutorial-anchor" ref={fieldCenterAnchorRef} aria-hidden="true" />
         {import.meta.env.DEV ? (
           <div className="admin-panel">

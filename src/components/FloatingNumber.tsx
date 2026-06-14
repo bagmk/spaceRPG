@@ -4,7 +4,7 @@ interface FloatingNumberProps {
   text: string;
   particleName?: string;
   particleDefinition?: string;
-  variant: 'normal' | 'crit' | 'collision';
+  variant: 'normal' | 'crit' | 'collision' | 'auto';
   delayMs?: number;
 }
 

@@ -97,6 +97,7 @@ export function createInitialGameState(now: number): GameState {
     condenseStartedAt: null,
     eventCounter: 0,
     lastClickEvent: null,
+    lastAutoIncomeEvent: null,
     lastCollisionEvent: null,
     lastEncounterEvent: null,
     lastFusionEvent: null,

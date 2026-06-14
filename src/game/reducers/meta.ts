@@ -30,6 +30,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     condenseStartedAt: null,
     eventCounter: 0,
     lastClickEvent: null,
+    lastAutoIncomeEvent: null,
     lastCollisionEvent: null,
     lastEncounterEvent: null,
     lastFusionEvent: null,

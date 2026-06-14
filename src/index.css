@@ -2455,6 +2455,16 @@ button.stat-header-item {
   animation: floatcrit 2s ease-out forwards;
 }
 
+/* 🅠3: passive auto-income — ambient teal, dimmer + smaller than active clicks. */
+.float-text.auto {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7fe9ff;
+  opacity: 0.92;
+  text-shadow: 0 0 8px rgba(127, 233, 255, 0.75);
+  animation: floatup 1.6s ease-out forwards;
+}
+
 .float-amount {
   display: inline-block;
   white-space: nowrap;

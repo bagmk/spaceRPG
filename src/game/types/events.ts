@@ -17,6 +17,21 @@ export interface FloatingClickEvent {
   droppedEntityId?: string;
 }
 
+/**
+ * Throttled (~1/sec) passive auto-income tick for the primary equipped rift
+ * entity (🅠3). Drives the "+N/s · <entity>" floating text. Transient — never
+ * persisted (dropped by the save whitelist, like the other Floating*Events).
+ */
+export interface FloatingAutoIncomeEvent {
+  id: number;
+  /** Per-second auto matter gained (display amount). */
+  gained: number;
+  /** Primary equipped rift entity id — resolve name/glyph via findEntityById. */
+  entityId: string;
+  /** Emission timestamp; handleTick uses it to throttle to ~1/sec. */
+  t: number;
+}
+
 export interface FloatingCollisionEvent {
   id: number;
   x: number;
