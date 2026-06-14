@@ -5,8 +5,9 @@ import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../
 import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount, getEquipSetKey } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
-  FUSION_UP1_CHANCE,
-  FUSION_UP2_CHANCE,
+  FUSION_UP1_CHANCE_BY_TIER,
+  FUSION_UP2_CHANCE_BY_TIER,
+  FUSION_FAIL_STONES_BY_TIER,
   SET_BONUS,
 } from '../balance';
 import type { GameState } from '../types';
@@ -65,8 +66,8 @@ describe('fusion (Phase 3)', () => {
 
   it('upgrades rarity when the roll lands in the up window', () => {
     const state = fusionReadyState();
-    // roll just inside the up1 window (after the up2 slice)
-    const next = fuse(state, FUSION_UP2_CHANCE + FUSION_UP1_CHANCE / 2, 0.3);
+    // roll just inside the common up1 window (after the up2 slice)
+    const next = fuse(state, FUSION_UP2_CHANCE_BY_TIER.common + FUSION_UP1_CHANCE_BY_TIER.common / 2, 0.3);
     expect(next.lastFusionEvent!.rarityUp).toBe(true);
     // A successful upgrade mints NO stones — stones are the failure consolation.
     expect(next.lastFusionEvent!.stonesEarned).toBe(0);
@@ -224,5 +225,36 @@ describe('set bonuses + slot unlocks (Phase 3)', () => {
     applyEntityModifiers(lv1, [{ entityId: clickEntity.id, count: 1, level: 1 }], { stageId: 1, gateProgress01: 0 });
     applyEntityModifiers(lv3, [{ entityId: clickEntity.id, count: 1, level: 3 }], { stageId: 1, gateProgress01: 0 });
     expect(lv3.clickPowerMult).toBeGreaterThan(lv1.clickPowerMult);
+  });
+});
+
+describe('P6: mythic is fusion-only + tier-accurate fusion stones', () => {
+  it('mythic entities can never be PURCHASED (fusion-only, even at the last stage)', () => {
+    const mythic = getEntitiesForStage(17)[0];
+    expect(mythic.rarity).toBe('mythic');
+    const s = { ...createInitialGameState(0), quanta: 1e30, stageIdx: 15 }; // highest playable
+    const next = gameReducer(s, { type: 'PURCHASE_ENTITY', entityId: mythic.id });
+    expect(next.inventory.find((e) => e.entityId === mythic.id)).toBeUndefined();
+    expect(next.quanta).toBe(s.quanta); // nothing spent
+  });
+
+  it('fusion failure mints tier-accurate stones; a rarity-up mints none (rare inputs)', () => {
+    // Three DISTINCT rares (no same-entity stone bonus) so the count is exact.
+    const rares = getEntitiesForStage(2).filter((e) => e.rarity === 'rare').slice(0, 3);
+    expect(rares).toHaveLength(3);
+    const base = {
+      ...createInitialGameState(0),
+      stageIdx: 8, // stage 9 — rare can attempt an up (epic is droppable)
+      quanta: 1e9,
+      inventory: rares.map((e) => ({ entityId: e.id, count: 1, level: 1 })),
+    };
+    const ids = rares.map((e) => e.id);
+    const fail = gameReducer(base, { type: 'FUSE_ENTITIES', inputEntityIds: ids, rarityRoll: 0.99, pickRoll: 0.1 });
+    expect(fail.lastFusionEvent!.rarityUp).toBe(false);
+    expect(fail.lastFusionEvent!.stonesEarned).toBe(FUSION_FAIL_STONES_BY_TIER.rare);
+
+    const up = gameReducer(base, { type: 'FUSE_ENTITIES', inputEntityIds: ids, rarityRoll: 0.0, pickRoll: 0.1 });
+    expect(up.lastFusionEvent!.rarityUp).toBe(true);
+    expect(up.lastFusionEvent!.stonesEarned).toBe(0);
   });
 });

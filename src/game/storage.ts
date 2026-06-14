@@ -86,6 +86,11 @@ function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameStat
     if (existing) {
       existing.count += e.count;
       existing.level = Math.max(existing.level ?? 1, e.level ?? 1);
+      // Preserve BOTH stacks' enhance investment (P1 refund basis) on a
+      // canonical-id collision — otherwise the merged-away entry's matter/강화석
+      // silently vanishes from refund accounting.
+      existing.invested = (existing.invested ?? 0) + (e.invested ?? 0);
+      existing.investedStones = (existing.investedStones ?? 0) + (e.investedStones ?? 0);
     } else {
       invMap.set(id, { ...e, entityId: id });
     }

@@ -168,8 +168,9 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 
 // ── Entropy gate (entity redesign D1) ────────────────────────────────────────
 // Stage advancement gate: cumulative entropy >= ENTROPY_THRESHOLDS[stageId].
-// Recalibrated for Phase 4-2 (GEAR-ONLY economy — skill tree removed): gear
-// 2.0^E click ×CLICK_OUTPUT_MULTIPLIER / 8^E auto, gear-substat crit (capped),
+// Recalibrated for the fixed-effect economy (P0 removed per-stage gear scaling —
+// STAGE_POWER_BASE/AUTO_STAGE_POWER_BASE = 1.0): item effects are rarity/level
+// based (×CLICK_OUTPUT_MULTIPLIER for clicks), gear-substat crit (capped),
 // cost-scaled fusion burst, honest enhance levels. scripts/entropy-gate-sim.mjs
 // pins the reference profile (cps 3, af 0.5, fusion 90s) to realPlayTargetSec
 // via per-stage span binary search. Re-run the sim after touching the gear
@@ -247,7 +248,7 @@ export const CODEX_MASS_BONUS = 1.0;
 export const ENTROPY_W_CLICK = 0.6;
 /**
  * Entropy gained per quanta earned by auto income. Re-anchored 0.25 → 0.04 in
- * Phase 4-2: without the skill click base, rift auto (8^E) would dominate the
+ * Phase 4-2: without the skill click base, rift auto would dominate the
  * gate — auto still earns full QUANTA (the economy engine), it just pushes
  * the progression gate ~15× slower than clicking. Sim invariants: active
  * share ≥ 50% every stage; idle ≥ 4× slower than reference but never walled.
@@ -312,10 +313,6 @@ export const FUSION_COST_RARITY_MULT: Record<EntityRarity, number> = {
 export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance
 export const FUSION_SAME_ENTITY_FAIL_STONE_BONUS = 1;  // +1 강화석 on a failed same-entity fuse
 export const FUSION_SAME_SUBSET_BURST_MULT = 1.5;      // entropy burst ×1.5 when all 3 share a codex subset
-/** @deprecated flat legacy odds — kept for the sim/UI fallback; use the *_BY_TIER tables. */
-export const FUSION_UP1_CHANCE = 0.4;
-/** @deprecated */
-export const FUSION_UP2_CHANCE = 0.05;
 /**
  * Entropy burst per fusion ≈ ENTROPY_FUSION_VALUE_SEC seconds of entropy income
  * at the reference click rate. Keeps fusion's progression share near the
@@ -585,8 +582,8 @@ export const BALANCE = {
   },
   fusion: {
     inputCount: FUSION_INPUT_COUNT,
-    up1Chance: FUSION_UP1_CHANCE,
-    up2Chance: FUSION_UP2_CHANCE,
+    up1ChanceByTier: FUSION_UP1_CHANCE_BY_TIER,
+    up2ChanceByTier: FUSION_UP2_CHANCE_BY_TIER,
     refCps: FUSION_REF_CPS,
     valueSec: ENTROPY_FUSION_VALUE_SEC,
     costFrac: ENTROPY_FUSION_COST_FRAC,

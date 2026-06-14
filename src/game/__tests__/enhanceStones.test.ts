@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { STAGE_ENTITIES } from '../entities/stageItems';
+import {
+  isEnhanceStonePhase,
+  getEnhanceFailChance,
+  getEnhanceStoneCost,
+  isEnhanceDestroyEligible,
+  getEnhanceLevelCap,
+} from '../entities/enhance';
+import {
+  ENHANCE_FAIL_BASE,
+  ENHANCE_FAIL_MAX,
+  ENHANCE_STONE_BASE,
+  ENHANCE_STONE_THRESHOLD,
+} from '../balance';
 import type { GameState } from '../types';
 
 const common = STAGE_ENTITIES.find((e) => e.rarity === 'common')!;
@@ -63,5 +76,34 @@ describe('P1: 강화석 (enhance stones) two-phase enhancement', () => {
     const failed = gameReducer(s, { type: 'FUSE_ENTITIES', inputEntityIds: [common.id, common.id, common.id], rarityRoll: 0.99, pickRoll: 0.5, stageRoll: 0 });
     expect(failed.enhanceStones).toBeGreaterThan(0);
     expect(failed.lastFusionEvent?.stonesEarned).toBeGreaterThan(0);
+  });
+});
+
+describe('P6: enhance fail / phase / destroy math (direct)', () => {
+  const common = STAGE_ENTITIES.find((e) => e.rarity === 'common')!;
+  const legendary = STAGE_ENTITIES.find((e) => e.rarity === 'legendary')!;
+
+  it('two-currency phase boundary is exactly Lv5', () => {
+    expect(isEnhanceStonePhase(4)).toBe(false); // last matter level
+    expect(isEnhanceStonePhase(5)).toBe(true);  // first stone level
+  });
+
+  it('fail chance is 0 in the matter phase, then rises and saturates at the cap', () => {
+    expect(getEnhanceFailChance(4)).toBe(0);
+    expect(getEnhanceFailChance(ENHANCE_STONE_THRESHOLD)).toBeCloseTo(ENHANCE_FAIL_BASE);
+    expect(getEnhanceFailChance(10)).toBeGreaterThan(getEnhanceFailChance(6));
+    expect(getEnhanceFailChance(9999)).toBeCloseTo(ENHANCE_FAIL_MAX);
+  });
+
+  it('stone cost starts at the rarity base and grows per stone level', () => {
+    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD)).toBe(ENHANCE_STONE_BASE.common);
+    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 2))
+      .toBeGreaterThan(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD));
+  });
+
+  it('destroy is only eligible within the window near the cap', () => {
+    const cap = getEnhanceLevelCap(legendary);
+    expect(isEnhanceDestroyEligible(legendary, cap - 1)).toBe(true);
+    expect(isEnhanceDestroyEligible(legendary, ENHANCE_STONE_THRESHOLD)).toBe(false); // far from cap
   });
 });
