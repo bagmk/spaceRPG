@@ -32,7 +32,7 @@ import {
   handleCompleteEnding,
   handlePrestige,
 } from './reducers/stage';
-import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
+import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -129,6 +129,9 @@ export type GameAction =
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
   | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number }
+  // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
+  // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
+  | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number }[] }
   | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; destroyRoll?: number; protect?: boolean }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
@@ -234,6 +237,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);
     case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
     case 'FUSE_ENTITIES':         return handleFuseEntities(state, action);
+    case 'FUSE_BATCH':            return handleFuseBatch(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);

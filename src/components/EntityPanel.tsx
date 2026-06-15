@@ -8,6 +8,7 @@ import {
   CODEX_REWARD_MULT,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
+  FUSION_BATCH_MAX_TRIOS,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
   ENTITY_LEVEL_EFFECT_BONUS,
@@ -249,6 +250,8 @@ interface Props {
   onUnequip: (slot: number, target: EquipCategory) => void;
   onEnhance: (entityId: string, protect?: boolean) => void;
   onFuse: (inputEntityIds: string[]) => void;
+  /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
+  onFuseBatch: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
   onClearEnhanceEvent?: (id: number) => void;
   onClose: () => void;
@@ -260,7 +263,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab, setTab] = useState<PanelPage>(page);
@@ -286,7 +289,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   // Gacha suspense: brief "charging" beat before the result is committed.
   const [fusing, setFusing] = useState(false);
-  const [hasFused, setHasFused] = useState(false);
+  // 🅠4: remember the last fuse so the result reveal's 재시도 can repeat it.
+  const [lastFuse, setLastFuse] = useState<{ rarity: EntityRarity; batch: boolean } | null>(null);
   const fuseTimerRef = useRef<number | null>(null);
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
@@ -315,8 +319,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const triggerFuse = (inputsArg?: string[]) => {
     const inputs = inputsArg ?? fuseInputs;
     if (fusing || inputs.length !== FUSION_INPUT_COUNT) return;
+    const rarity = findEntityById(inputs[0])?.rarity;
     setFusing(true);
-    setHasFused(true);
+    if (rarity) setLastFuse({ rarity, batch: false });
     onUITap?.();
     fuseTimerRef.current = window.setTimeout(() => {
       onFuse(inputs);
@@ -325,6 +330,44 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       fuseTimerRef.current = null;
     }, FUSE_CHARGE_MS);
   };
+
+  // 🅠4: draw a flat list of FUSION_INPUT_COUNT × N owned copies of one rarity
+  // (N = up to maxTrios) for a batch fuse. The reducer caps at what's affordable.
+  const drawTriosOfRarity = (rarity: EntityRarity, maxTrios: number): string[] => {
+    const ids: string[] = [];
+    for (const e of inventory) {
+      if (e.count <= 0) continue;
+      const ent = findEntityById(e.entityId);
+      if (!ent || ent.rarity !== rarity) continue;
+      for (let k = 0; k < e.count; k++) ids.push(e.entityId);
+    }
+    const trios = Math.min(maxTrios, Math.floor(ids.length / FUSION_INPUT_COUNT));
+    return ids.slice(0, trios * FUSION_INPUT_COUNT);
+  };
+
+  const triggerBatch = (rarity: EntityRarity) => {
+    if (fusing) return;
+    const ids = drawTriosOfRarity(rarity, FUSION_BATCH_MAX_TRIOS);
+    if (ids.length < FUSION_INPUT_COUNT) return;
+    setLastFuse({ rarity, batch: true });
+    setFuseInputs([]);
+    onUITap?.();
+    onFuseBatch(ids);
+  };
+
+  // 🅠4: repeat the last fuse (single or batch) with freshly-drawn copies.
+  const retryFuse = () => {
+    if (!lastFuse || !lastFusionEvent) return;
+    onClearFusionEvent(lastFusionEvent.id);
+    if (lastFuse.batch) {
+      triggerBatch(lastFuse.rarity);
+    } else {
+      const ids = drawTriosOfRarity(lastFuse.rarity, 1);
+      if (ids.length === FUSION_INPUT_COUNT) triggerFuse(ids);
+    }
+  };
+  const canRetry =
+    lastFuse !== null && drawTriosOfRarity(lastFuse.rarity, 1).length === FUSION_INPUT_COUNT;
   useEffect(() => () => {
     if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
   }, []);
@@ -405,15 +448,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onUITap?.();
   };
 
-  // Auto-dismiss the fusion reveal — a rarity-up detonation lingers longest; a
-  // failure must stay long enough to read the 실패 verdict + 강화석 payout; both
-  // are also tap-to-dismiss so spam-fusing never waits on the full timer.
-  useEffect(() => {
-    if (!lastFusionEvent) return undefined;
-    const ms = lastFusionEvent.rarityUp ? 3200 : 2600;
-    const timeoutId = window.setTimeout(() => onClearFusionEvent(lastFusionEvent.id), ms);
-    return () => window.clearTimeout(timeoutId);
-  }, [lastFusionEvent, onClearFusionEvent]);
+  // 🅠4: the fusion reveal no longer auto-dismisses — it stays until the player
+  // taps 재시도 (retry) or 닫기 (close), so the result + new item description can
+  // be read at leisure and the next fuse is an explicit choice (no auto-refill).
 
   const countOf = (entity: StageEntity) => getPurchasedEntityCount(inventory, entity);
   // Alias-aware stack lookup — migrated saves may store entries under legacy ids.
@@ -959,22 +996,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           }
           const triosAt = (r: EntityRarity) => Math.floor((copiesByRarity.get(r) ?? 0) / FUSION_INPUT_COUNT);
           const trios = trayRarity ? triosAt(trayRarity) : RARITY_ORDER.reduce((s, r) => s + triosAt(r), 0);
-          const autoFillAndFuse = () => {
-            const cand = trayRarity && triosAt(trayRarity) > 0
-              ? trayRarity
-              : RARITY_ORDER.filter((r) => triosAt(r) > 0)
-                  .sort((a, b) => (copiesByRarity.get(b) ?? 0) - (copiesByRarity.get(a) ?? 0))[0];
-            if (!cand) return;
-            const ids: string[] = [];
-            for (const { entry, entity } of ownedEntities) {
-              if (entity.rarity !== cand) continue;
-              for (let k = 0; k < entry.count && ids.length < FUSION_INPUT_COUNT; k++) ids.push(entity.id);
-              if (ids.length >= FUSION_INPUT_COUNT) break;
-            }
-            if (ids.length < FUSION_INPUT_COUNT) return;
-            setFuseInputs(ids);
-            triggerFuse(ids);
-          };
+          // 🅠4: trios available of the tray rarity — gates the batch (×N) button.
+          const batchTrios = trayRarity ? Math.min(FUSION_BATCH_MAX_TRIOS, triosAt(trayRarity)) : 0;
 
           return (
             <div className="fuse-page">
@@ -1033,6 +1056,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         : t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))}
                   </span>
                 </button>
+                {/* 🅠4: batch-fuse all available trios of the tray rarity (up to N). */}
+                {trayRarity && batchTrios >= 2 ? (
+                  <button
+                    type="button"
+                    className="gacha-batch-btn"
+                    disabled={fusing || !affordable}
+                    onClick={() => triggerBatch(trayRarity)}
+                  >
+                    {t(language, 'fuseBatch').replace('{n}', String(batchTrios))}
+                  </button>
+                ) : null}
                 <div className="gacha-odds">
                   {capped ? (
                     <span className="gacha-odds__cap">
@@ -1055,11 +1089,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <span className="entity-inv__title">{t(language, 'fuseFuel')}</span>
                   {trios > 0 ? <span className="entity-inv__sub">{t(language, 'fuseTrios').replace('{n}', String(trios))}</span> : null}
                 </div>
-                {hasFused && fuseInputs.length === 0 && trios > 0 ? (
-                  <button type="button" className="gacha-again" onClick={autoFillAndFuse}>
-                    {t(language, 'fuseAgainAuto')}
-                  </button>
-                ) : null}
                 {rarityFilterBar}
                 {rarityFiltered.length === 0 ? (
                   <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
@@ -1113,18 +1142,21 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           <div
             className={`fusion-result ${lastFusionEvent.rarityUp ? 'fusion-result--boom' : 'fusion-result--fail'}`}
             role="status"
-            onClick={(e) => { e.stopPropagation(); onClearFusionEvent(lastFusionEvent.id); }}
           >
             <div
               className={`fusion-result__card fusion-result__card--${output.rarity} ${lastFusionEvent.rarityUp ? 'fusion-result__card--up' : 'fusion-result__card--fail'}`}
               style={{ '--rarity-color': RARITY_COLORS[output.rarity] } as CSSProperties}
             >
               {lastFusionEvent.rarityUp ? <div className="fusion-result__rays" aria-hidden="true" /> : null}
-              {/* Primary verdict: rarity-up succeeded, or the upgrade failed. */}
+              {/* Primary verdict: batch summary (N/M), or single up/fail. */}
               <div className={`fusion-result__tag ${lastFusionEvent.rarityUp ? '' : 'fusion-result__tag--fail'}`}>
-                {lastFusionEvent.rarityUp
-                  ? t(language, 'fuseResultUp')
-                  : t(language, 'fuseResultFail')}
+                {lastFusionEvent.batchCount > 1
+                  ? t(language, 'fuseBatchSummary')
+                      .replace('{s}', String(lastFusionEvent.successCount))
+                      .replace('{n}', String(lastFusionEvent.batchCount))
+                  : lastFusionEvent.rarityUp
+                    ? t(language, 'fuseResultUp')
+                    : t(language, 'fuseResultFail')}
               </div>
               <EntityGlyph entity={output} color={RARITY_COLORS[output.rarity]} />
               <div className="fusion-result__name">{entityName(output, language)}</div>
@@ -1150,6 +1182,24 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(lastFusionEvent.refund)}`}
                 </div>
               ) : null}
+              {/* 🅠4: explicit retry + close — no auto-dismiss, no auto-refill. */}
+              <div className="fusion-result__actions">
+                <button
+                  type="button"
+                  className="fusion-result__retry"
+                  disabled={!canRetry}
+                  onClick={(e) => { e.stopPropagation(); retryFuse(); }}
+                >
+                  {t(language, 'fuseRetry')}
+                </button>
+                <button
+                  type="button"
+                  className="fusion-result__close"
+                  onClick={(e) => { e.stopPropagation(); onClearFusionEvent(lastFusionEvent.id); }}
+                >
+                  {t(language, 'fuseClose')}
+                </button>
+              </div>
             </div>
           </div>
         );

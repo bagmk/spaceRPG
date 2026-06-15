@@ -1410,18 +1410,22 @@ button.hud-stage-title--clickable:hover {
 }
 .gacha-altar .gacha-odds { width: min(420px, 100%); align-items: baseline; justify-content: center; }
 
-.gacha-again {
-  justify-self: start;
+/* 🅠4: batch-fuse button (replaces the old auto-refill "again" button). */
+.gacha-batch-btn {
+  width: 100%;
+  margin-top: 6px;
   padding: 8px 14px;
-  border: 1px solid rgba(255, 180, 90, 0.45);
+  border: 1px solid rgba(255, 180, 90, 0.4);
   border-radius: 9px;
-  background: rgba(255, 170, 60, 0.12);
+  background: rgba(255, 170, 60, 0.1);
   color: #ffe0b0;
   font: inherit;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
-.gacha-again:hover { background: rgba(255, 170, 60, 0.2); }
+.gacha-batch-btn:hover:not(:disabled) { background: rgba(255, 170, 60, 0.2); }
+.gacha-batch-btn:disabled { opacity: 0.4; cursor: default; }
 
 .fusion-result--boom { background: rgba(0, 0, 0, 0.72); }
 /* Failure: a dimmed, TAP-TO-DISMISS overlay that pops in and HOLDS so the
@@ -13321,6 +13325,36 @@ button.stat-header-item {
   color: #e9b94a;
   font-size: 11px;
 }
+
+/* 🅠4: explicit retry / close actions on the fusion reveal. */
+.fusion-result__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.fusion-result__retry,
+.fusion-result__close {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.fusion-result__retry {
+  background: rgba(127, 233, 255, 0.16);
+  color: #cdeaff;
+  border-color: rgba(127, 233, 255, 0.4);
+}
+.fusion-result__retry:hover:not(:disabled) { background: rgba(127, 233, 255, 0.26); }
+.fusion-result__retry:disabled { opacity: 0.4; cursor: default; }
+.fusion-result__close {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8ecf5;
+}
+.fusion-result__close:hover { background: rgba(255, 255, 255, 0.12); }
 
 /* Family identity badge on the entity detail card (정체성 패스) */
 .entity-detail-card__family {

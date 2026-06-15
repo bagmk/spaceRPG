@@ -263,4 +263,42 @@ describe('P6: mythic is fusion-only + tier-accurate fusion stones', () => {
     expect(up.lastFusionEvent!.rarityUp).toBe(true);
     expect(up.lastFusionEvent!.stonesEarned).toBe(0);
   });
+
+  it('🅠4: FUSE_BATCH fuses each trio, accumulating success/fail counts + stones', () => {
+    const c = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
+    const state = { ...createInitialGameState(0), quanta: 1e9, inventory: [{ entityId: c.id, count: 9, level: 1 }] };
+    const inputEntityIds = Array.from({ length: 9 }, () => c.id); // 3 trios
+    const rolls = [
+      { rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }, // fail
+      { rarityRoll: 0.0, pickRoll: 0.1, stageRoll: 0.1 },  // rarity-up
+      { rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }, // fail
+    ];
+    const next = gameReducer(state, { type: 'FUSE_BATCH', inputEntityIds, rolls });
+    expect(next.lastFusionEvent!.batchCount).toBe(3);
+    expect(next.lastFusionEvent!.successCount).toBe(1);
+    expect(next.lastFusionEvent!.failCount).toBe(2);
+    expect(next.quanta).toBeLessThan(state.quanta); // paid 3 fixed costs
+    expect(next.enhanceStones).toBeGreaterThan(0);  // the 2 fails minted 강화석
+  });
+
+  it('🅠4: FUSE_BATCH stops when copies run out', () => {
+    const c = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
+    // 6 copies but 3 trios requested → only 2 trios can run.
+    const state = { ...createInitialGameState(0), quanta: 1e9, inventory: [{ entityId: c.id, count: 6, level: 1 }] };
+    const inputEntityIds = Array.from({ length: 9 }, () => c.id);
+    const rolls = Array.from({ length: 3 }, () => ({ rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }));
+    const next = gameReducer(state, { type: 'FUSE_BATCH', inputEntityIds, rolls });
+    expect(next.lastFusionEvent!.batchCount).toBe(2);
+  });
+
+  it('🅠4: FUSE_BATCH stops when quanta runs out', () => {
+    const c = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
+    const cost = getFusionQuantaCost('common', 1);
+    // Copies for 3 trios but quanta for only 1 fusion.
+    const state = { ...createInitialGameState(0), quanta: cost + 1, inventory: [{ entityId: c.id, count: 9, level: 1 }] };
+    const inputEntityIds = Array.from({ length: 9 }, () => c.id);
+    const rolls = Array.from({ length: 3 }, () => ({ rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }));
+    const next = gameReducer(state, { type: 'FUSE_BATCH', inputEntityIds, rolls });
+    expect(next.lastFusionEvent!.batchCount).toBe(1);
+  });
 });

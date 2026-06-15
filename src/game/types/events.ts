@@ -62,8 +62,15 @@ export interface FusionEvent {
   refund: number;
   /** Output was already at max count AND max level — refunded instead. */
   atCap: boolean;
-  /** 강화석 minted by a failed (non-rarity-up) fusion (P1). 0 on a rarity-up. */
+  /** 강화석 minted by a failed (non-rarity-up) fusion (P1). 0 on a rarity-up.
+   *  For a batch this is the TOTAL minted across all fusions. */
   stonesEarned: number;
+  /** 🅠4: how many fusions this event represents (1 for a single fuse). */
+  batchCount: number;
+  /** 🅠4: rarity-up successes in the batch (1/0 for a single fuse). */
+  successCount: number;
+  /** 🅠4: non-rarity-up failures in the batch (0/1 for a single fuse). */
+  failCount: number;
 }
 
 /** Outcome of a 강화 attempt — drives the reveal flash (P1). */

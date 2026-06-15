@@ -26,6 +26,7 @@ import { getSecondaryStats } from '../entities/substats';
 import {
   ENTITY_COST_ANCHORS,
   FUSION_BURST_REF_COST_FRAC,
+  FUSION_INPUT_COUNT,
   RARITY_STAGE_GATES,
   ENHANCE_DESTROY_CHANCE_ON_FAIL,
   ENHANCE_STONE_THRESHOLD,
@@ -45,6 +46,7 @@ type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
 type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
 type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
 type FuseAction = Extract<GameAction, { type: 'FUSE_ENTITIES' }>;
+type FuseBatchAction = Extract<GameAction, { type: 'FUSE_BATCH' }>;
 type EnhanceAction = Extract<GameAction, { type: 'ENHANCE_ENTITY' }>;
 
 /** Raise slot counts when stage/almanac progress earns new slots (never lowers). */
@@ -165,39 +167,63 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
  * fire an entropy burst, and feed duplicates at max count into level-ups.
  * Randomness arrives via action rolls so the reducer stays pure.
  */
-export function handleFuseEntities(state: GameState, action: FuseAction): GameState {
-  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
-    return state;
-  }
-  const validation = validateFusionInputs(state.inventory, action.inputEntityIds);
-  if (!validation.ok || !validation.rarity || !validation.stageId) return state;
+interface FuseRolls {
+  rarityRoll: number;
+  pickRoll: number;
+  stageRoll?: number;
+}
+
+interface OneFusionResult {
+  outputId: string;
+  rarityUp: boolean;
+  leveledUp: boolean;
+  atCap: boolean;
+  stonesEarned: number;
+  burst: number;
+  refund: number;
+}
+
+/**
+ * Core of one fusion (🅠4): validate + afford-check + roll + consume + apply,
+ * returning the MUTATED state (quanta / entropy / 강화석 / inventory / almanac)
+ * WITHOUT the lastFusionEvent / eventCounter / ending-progress wrap. The caller
+ * (single FUSE_ENTITIES or batched FUSE_BATCH) sets the event + wraps ONCE.
+ * Returns null when the inputs are invalid or unaffordable (which stops a batch).
+ */
+function fuseOnce(
+  state: GameState,
+  inputEntityIds: string[],
+  rolls: FuseRolls,
+): { state: GameState; result: OneFusionResult } | null {
+  const validation = validateFusionInputs(state.inventory, inputEntityIds);
+  if (!validation.ok || !validation.rarity || !validation.stageId) return null;
 
   const currentStageIdForFusion = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
   // Fusion is a fixed per-era price (Overhaul-2 🅠1): anchor × FUSION_FLAT_COST.
   // The player must afford it in full — there is no bank-fraction discount.
   const cost = getFusionQuantaCost(validation.rarity, currentStageIdForFusion);
-  if (state.quanta < cost) return state;
+  if (state.quanta < cost) return null;
   // P2b bonuses: 3-of-the-same-entity lifts the up chance; 3-from-one-codex
   // category amplifies the entropy burst.
   const sameEntity = validation.sameEntity === true;
   const sameSubset = validation.sameSubsetId != null;
   const rarityResult = rollFusionRarity(
-    validation.rarity, action.rarityRoll, currentStageIdForFusion,
+    validation.rarity, rolls.rarityRoll, currentStageIdForFusion,
     sameEntity ? FUSION_SAME_ENTITY_UP_BONUS : 0,
   );
   // Output pool stage follows the same player-stage weighting as drops
   // (Phase 4-1) — input origin stages no longer determine the output pool.
   const outputStageId =
-    action.stageRoll !== undefined
-      ? pickDropStage(currentStageIdForFusion, action.stageRoll, state.almanacCollected)
+    rolls.stageRoll !== undefined
+      ? pickDropStage(currentStageIdForFusion, rolls.stageRoll, state.almanacCollected)
       : currentStageIdForFusion;
-  const output = pickFusionOutput(outputStageId, rarityResult.rarity, action.pickRoll, {
+  const output = pickFusionOutput(outputStageId, rarityResult.rarity, rolls.pickRoll, {
     category: validation.category,
     familyKey: validation.familyKey,
   }, outputStageId !== currentStageIdForFusion);
-  if (!output) return state;
+  if (!output) return null;
 
-  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, action.inputEntityIds);
+  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
   const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
@@ -222,9 +248,8 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     burstCostScale *
     (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);
   const nextEntropy = safeAdd(state.entropy, burst);
-  const eventId = nextEventId(state);
 
-  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+  const nextState: GameState = {
     ...state,
     quanta: Math.max(0, state.quanta - cost + totalRefund),
     entropy: nextEntropy,
@@ -232,16 +257,107 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
     enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
+  };
+  return {
+    state: nextState,
+    result: {
+      outputId: output.id,
+      rarityUp: rarityResult.rarityUp,
+      leveledUp,
+      atCap: capRefund > 0,
+      stonesEarned,
+      burst,
+      refund: totalRefund,
+    },
+  };
+}
+
+/**
+ * FUSE_ENTITIES (Phase 3 / 🅠4): consume FUSION_INPUT_COUNT same-rarity copies +
+ * a fixed quanta cost; roll a same-stage output with pure rarity-up odds, fire an
+ * entropy burst, feed duplicates at max count into level-ups. Randomness arrives
+ * via action rolls so the reducer stays pure.
+ */
+export function handleFuseEntities(state: GameState, action: FuseAction): GameState {
+  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
+    return state;
+  }
+  const r = fuseOnce(state, action.inputEntityIds, action);
+  if (!r) return state;
+  const eventId = nextEventId(r.state);
+  const { result } = r;
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+    ...r.state,
     eventCounter: eventId,
     lastFusionEvent: {
       id: eventId,
-      outputEntityId: output.id,
-      rarityUp: rarityResult.rarityUp,
-      leveledUp,
-      entropyBurst: burst,
+      outputEntityId: result.outputId,
+      rarityUp: result.rarityUp,
+      leveledUp: result.leveledUp,
+      entropyBurst: result.burst,
+      refund: result.refund,
+      atCap: result.atCap,
+      stonesEarned: result.stonesEarned,
+      batchCount: 1,
+      successCount: result.rarityUp ? 1 : 0,
+      failCount: result.rarityUp ? 0 : 1,
+    },
+  }));
+}
+
+/**
+ * FUSE_BATCH (🅠4): fuse up to action.rolls.length trios in one action. The UI
+ * supplies a flat inputEntityIds list (FUSION_INPUT_COUNT × N copies it already
+ * drew from the inventory) plus N roll-sets. Each trio runs through fuseOnce;
+ * the loop stops early on the first invalid/unaffordable trio. A single batch
+ * summary event ("N성공 / M") is emitted with the accumulated totals.
+ */
+export function handleFuseBatch(state: GameState, action: FuseBatchAction): GameState {
+  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
+    return state;
+  }
+  let s = state;
+  let done = 0;
+  let successCount = 0;
+  let failCount = 0;
+  let totalStones = 0;
+  let totalBurst = 0;
+  let totalRefund = 0;
+  let anyLeveled = false;
+  let anyAtCap = false;
+  let lastResult: OneFusionResult | null = null;
+  for (let i = 0; i < action.rolls.length; i++) {
+    const trio = action.inputEntityIds.slice(i * FUSION_INPUT_COUNT, i * FUSION_INPUT_COUNT + FUSION_INPUT_COUNT);
+    if (trio.length < FUSION_INPUT_COUNT) break;
+    const r = fuseOnce(s, trio, action.rolls[i]);
+    if (!r) break; // invalid inputs or out of quanta — stop the batch here.
+    s = r.state;
+    done += 1;
+    if (r.result.rarityUp) successCount += 1; else failCount += 1;
+    totalStones += r.result.stonesEarned;
+    totalBurst += r.result.burst;
+    totalRefund += r.result.refund;
+    anyLeveled = anyLeveled || r.result.leveledUp;
+    anyAtCap = anyAtCap || r.result.atCap;
+    lastResult = r.result;
+  }
+  if (!lastResult) return state;
+  const eventId = nextEventId(s);
+  return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+    ...s,
+    eventCounter: eventId,
+    lastFusionEvent: {
+      id: eventId,
+      outputEntityId: lastResult.outputId,
+      rarityUp: successCount > 0,
+      leveledUp: anyLeveled,
+      entropyBurst: totalBurst,
       refund: totalRefund,
-      atCap: capRefund > 0,
-      stonesEarned,
+      atCap: anyAtCap,
+      stonesEarned: totalStones,
+      batchCount: done,
+      successCount,
+      failCount,
     },
   }));
 }

@@ -324,6 +324,8 @@ export const DROP_CURRENT_STAGE_WEIGHT = 0.6;
 
 /** Copies consumed per fusion (all inputs must share one rarity). */
 export const FUSION_INPUT_COUNT = 3;
+/** 🅠4: max trios a single batch-fuse consumes in one action. */
+export const FUSION_BATCH_MAX_TRIOS = 30;
 // P2: rarity-up odds DECREASE per input tier — the higher you climb, the rarer
 // the jump (the gamble's tension). Keyed by the INPUT rarity. legendary→mythic
 // is set in P2b (the Mythic tier); 0 here keeps legendary inputs no-up for now.

@@ -809,6 +809,19 @@ export function GameScreen({
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random() });
               soundManager?.playEntityLevelUp();
             }}
+            onFuseBatch={(inputEntityIds) => {
+              // 🅠4: one roll-set per trio the panel drew (3 copies each).
+              const trioCount = Math.floor(inputEntityIds.length / 3);
+              if (trioCount < 1) return;
+              dispatch({
+                type: 'FUSE_BATCH',
+                inputEntityIds,
+                rolls: Array.from({ length: trioCount }, () => ({
+                  rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(),
+                })),
+              });
+              soundManager?.playEntityLevelUp();
+            }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
             onClearEnhanceEvent={(id) => dispatch({ type: 'CLEAR_ENHANCE_EVENT', id })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
