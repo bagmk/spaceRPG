@@ -2,7 +2,7 @@ import type { GameState } from '../game/types';
 import { t, type Lang } from '../i18n';
 import { ENTITY_COST_ANCHORS } from '../game/balance';
 import { STAGES } from '../game/stages';
-import { formatEntropyAmount } from '../game/formulas';
+import { formatGameNumberShort } from '../game/formulas';
 import {
   getQuest,
   getQuestProgress,
@@ -64,7 +64,7 @@ export function QuestPanel({ state, language, onClaim, onClose }: QuestPanelProp
                   </div>
                   <div className="quest-card__side">
                     <div className="quest-card__reward">
-                      {matter > 0 ? <span className="quest-card__matter">{`+⚛${formatEntropyAmount(matter)}`}</span> : null}
+                      {matter > 0 ? <span className="quest-card__matter">{`+⚛${formatGameNumberShort(matter)}`}</span> : null}
                       {stones > 0 ? <span className="quest-card__stones">{`+💎${stones}`}</span> : null}
                     </div>
                     <button

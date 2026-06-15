@@ -4,7 +4,6 @@ import type { EntityInstance, FusionEvent, EnhanceEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
-  CODEX_MASS_BONUS,
   CODEX_REWARD_MULT,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
@@ -22,9 +21,8 @@ import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKe
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
-import { getBaseRarityDropShare, getEntityDropShare } from '../game/entities/drops';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexCompletionFraction, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
@@ -566,24 +564,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // span all eras; chips are an opt-in filter (default = all).
           const collectedSet = collectedIdSet(almanacCollected);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
-          const dropShare = getBaseRarityDropShare();
-
-          // HERO meter — global completion + the prestige-mass factor it grants.
+          // 🅠6 codex cleanup: the completion meter, prestige-mass factor,
+          // "closest set" nudge and per-rarity drop-rate legend are gone — the
+          // set/subset dividers carry the only signal (the set-completion benefit).
           const totalAll = STAGE_ENTITIES.length;
           const collectedAll = STAGE_ENTITIES.filter(isCollected).length;
-          const codexPct = totalAll > 0 ? Math.round((collectedAll / totalAll) * 100) : 0;
-          const massFactor = 1 + getCodexCompletionFraction(almanacCollected) * CODEX_MASS_BONUS;
-
-          // Closest-to-completion nudge — the cheapest next reward (fewest missing).
-          let closest: { label: string; remaining: number } | null = null;
-          for (const cs of CODEX_SETS) {
-            for (const sub of cs.subsets) {
-              const rem = getSubsetMembers(sub, STAGE_ENTITIES).filter((m) => !isCollected(m)).length;
-              if (rem > 0 && (closest === null || rem < closest.remaining)) {
-                closest = { label: codexSubsetLabel(sub, language), remaining: rem };
-              }
-            }
-          }
 
           const shortReward = (r: CodexReward) => `+${Math.round(r.value * CODEX_REWARD_MULT)}%`;
           const setsToRender = selectedSetId === 'all'
@@ -592,45 +577,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
           return (
             <>
-              {/* HERO completion meter */}
-              <div className="codex-hero">
-                <div className="codex-hero__row">
-                  <span className="codex-hero__count">
-                    {collectedAll}
-                    <span className="codex-hero__total">{` / ${totalAll} ${t(language, 'codexMeterFound')} · ${codexPct}%`}</span>
-                  </span>
-                  <span className="codex-hero__mass">
-                    {t(language, 'codexMassFactor')} <b>×{massFactor.toFixed(2)}</b>
-                  </span>
-                </div>
-                <div className="codex-hero__bar">
-                  <div className="codex-hero__fill" style={{ width: `${codexPct}%` }} />
-                </div>
-                {hintShow['codex'] ? <div className="codex-hero__caption">{t(language, 'codexPurpose')}</div> : null}
-                {closest ? (
-                  <div className="codex-hero__nudge">
-                    {`▸ ${t(language, 'codexClosest').replace('{name}', closest.label).replace('{n}', String(closest.remaining))}`}
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Per-rarity drop rates (R6) — the headline "how rare is each tier". */}
-              <div className="codex-droprates">
-                <span className="codex-droprates__label">{t(language, 'codexDropRates')}</span>
-                {RARITY_ORDER.map((r) => {
-                  const share = dropShare[r];
-                  const text = r === 'mythic'
-                    ? t(language, 'codexDropFusionOnly')
-                    : `${share * 100 >= 10 ? Math.round(share * 100) : (share * 100).toFixed(1)}%`;
-                  return (
-                    <span key={r} className="codex-droprate-chip" style={{ '--rarity-color': RARITY_COLORS[r] } as CSSProperties}>
-                      <span className="codex-droprate-chip__name">{t(language, RARITY_LABEL_KEY[r])}</span>
-                      <span className="codex-droprate-chip__pct">{text}</span>
-                    </span>
-                  );
-                })}
-              </div>
-
               {/* Set filter chips (default 전체) + missing-only toggle. No mini-bar. */}
               <div className="codex-sets">
                 <button
@@ -710,10 +656,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             {visible.map((entity, idx) => {
                               const collected = isCollected(entity);
                               const rarityColor = RARITY_COLORS[entity.rarity];
-                              const dropPct = getEntityDropShare(entity) * 100;
-                              const dropText = entity.rarity === 'mythic'
-                                ? t(language, 'codexDropFusionOnly')
-                                : `${dropPct >= 1 ? dropPct.toFixed(1) : dropPct.toFixed(2)}%`;
                               // Signature specialty (P4) — the item's one varied identity stat.
                               const signature = getSecondaryStats(entity)[0];
                               return (
@@ -743,7 +685,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                   {entity.stageId <= 16 ? (
                                     <span className="almanac-card__era">{`S${entity.stageId}`}</span>
                                   ) : null}
-                                  <span className="almanac-card__drop" title={t(language, 'codexCardDropTitle')}>{dropText}</span>
                                 </button>
                               );
                             })}

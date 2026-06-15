@@ -21,9 +21,11 @@ interface AlmanacOverlayProps {
   language: Lang;
   onClose: () => void;
   onUITap?: () => void;
+  /** 🅠6 (req ⑪): navigate the game's viewed stage (canvas scene) when a pill is tapped. */
+  onStageSelect?: (id: number) => void;
 }
 
-export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose, onUITap }: AlmanacOverlayProps) {
+export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose, onUITap, onStageSelect }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
   const [activeLoreId, setActiveLoreId] = useState<string | null>(null);
   const pillsRef = useRef<HTMLDivElement | null>(null);
@@ -83,7 +85,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
                 data-stage-id={s.id}
                 className={`almanac-pill almanac-pill--${state} ${selectedId === s.id ? 'almanac-pill--active' : ''}`}
                 style={{ '--pill-accent': s.accent } as React.CSSProperties}
-                onClick={() => { setSelectedId(s.id); onUITap?.(); }}
+                onClick={() => { setSelectedId(s.id); if (!isFuture(s.id)) onStageSelect?.(s.id); onUITap?.(); }}
               >
                 <span className="almanac-pill-num">{String(s.id).padStart(2, '0')}</span>
                 {isFuture(s.id) ? <span className="almanac-pill-lock">🔒</span> : null}

@@ -722,7 +722,6 @@ export function GameScreen({
           riftSlots={state.riftSlots}
           clickSlots={state.equippedSlots}
           riftPower={modifiers.autoFlatMult}
-          onRiftClick={() => openEntityPanel('equip', 'rift')}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -1098,6 +1097,7 @@ export function GameScreen({
           language={language}
           onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
           onUITap={() => soundManager?.playUITap()}
+          onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
         />
       ) : null}
 
