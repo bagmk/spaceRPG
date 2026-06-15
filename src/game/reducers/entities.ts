@@ -41,6 +41,7 @@ import { getPrestigeMultiplier } from '../prestige';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 import { getAdjustedClickPower, getCurrentModifiers, nextEventId } from './helpers';
+import { advanceQuestTracks } from '../quests';
 
 type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
 type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
@@ -289,6 +290,7 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...r.state,
     eventCounter: eventId,
+    questProgress: advanceQuestTracks(r.state, 'fuse', 1), // 🅠5
     lastFusionEvent: {
       id: eventId,
       outputEntityId: result.outputId,
@@ -346,6 +348,7 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...s,
     eventCounter: eventId,
+    questProgress: advanceQuestTracks(s, 'fuse', done), // 🅠5
     lastFusionEvent: {
       id: eventId,
       outputEntityId: lastResult.outputId,

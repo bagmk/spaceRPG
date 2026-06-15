@@ -268,6 +268,8 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     codexSeenIds: [],
     seenPanelHints: [],
     enhanceStones: 0,
+    activeQuests: [],
+    completedQuestIds: [],
     ...convertEntityModelV14(record),
   };
 }
@@ -398,6 +400,9 @@ export function validateV5(
     seenPanelHints: isStringArray((parsed as any).seenPanelHints) ? (parsed as any).seenPanelHints : [],
     // v19 강화석 — preserved if present; finalizeV17 seeds 0 for pre-v19 saves.
     enhanceStones: isFiniteNumber((parsed as any).enhanceStones) ? Math.max(0, (parsed as any).enhanceStones) : 0,
+    // v20 quests — preserved if present; finalizeV17 seeds a fresh set for pre-v20.
+    activeQuests: isStringArray((parsed as any).activeQuests) ? (parsed as any).activeQuests : [],
+    completedQuestIds: isStringArray((parsed as any).completedQuestIds) ? (parsed as any).completedQuestIds : [],
     ...convertEntityModelV14(parsed),
   };
 }

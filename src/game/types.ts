@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 19;
+  version: 20;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -287,6 +287,10 @@ export interface SaveState {
   seenPanelHints: string[];
   /** 강화석 (enhance stones) balance — Lv5+ enhancement currency, minted by fusion fails (v19). */
   enhanceStones: number;
+  /** 🅠5 (v20): quest ids currently offered (refilled as stages unlock + quests claim). */
+  activeQuests: string[];
+  /** 🅠5 (v20): claimed quest ids — survive prestige so quests are once-only. */
+  completedQuestIds: string[];
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
@@ -301,6 +305,8 @@ export interface GameState extends PersistentGameState {
   lastClickEvent: FloatingClickEvent | null;
   /** 🅠3: transient periodic auto-income float (not persisted). */
   lastAutoIncomeEvent: FloatingAutoIncomeEvent | null;
+  /** 🅠5: transient per-quest action counters (fuse/combo); reset on reload. */
+  questProgress: Record<string, number>;
   lastCollisionEvent: FloatingCollisionEvent | null;
   lastEncounterEvent: EncounterEvent | null;
   lastFusionEvent: FusionEvent | null;

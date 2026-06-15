@@ -53,6 +53,8 @@ import { EndingCredits } from './endings/EndingCredits';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
+import { QuestPanel } from './QuestPanel';
+import { isQuestClaimable, getQuest } from '../game/quests';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
@@ -161,6 +163,12 @@ export function GameScreen({
   const [panelView, setPanelView] = useState<null | { page: 'lab' | 'equip' | 'fuse'; category: 'click' | 'rift' }>(null);
   const entityPanelOpen = panelView !== null;
   const [almanacOpen, setAlmanacOpen] = useState(false);
+  const [questOpen, setQuestOpen] = useState(false);
+  // 🅠5: badge the quest button when any active quest is claimable.
+  const hasClaimableQuest = state.activeQuests.some((id) => {
+    const q = getQuest(id);
+    return q ? isQuestClaimable(q, state) : false;
+  });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
@@ -986,6 +994,16 @@ export function GameScreen({
           </button>
           <button
             type="button"
+            className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
+            onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
+            aria-label={t(language, 'questTitle')}
+          >
+            <span className="hud-action-icon" aria-hidden="true">✦</span>
+            <span className="hud-action-label">{t(language, 'questTitle')}</span>
+            {hasClaimableQuest ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
+          </button>
+          <button
+            type="button"
             className="mini-button settings-gear-btn bottom-settings-button"
             onClick={() => { setSettingsOpen(true); soundManager?.playUIOpen(); }}
             title={t(language, 'hudSettings')}
@@ -1080,6 +1098,15 @@ export function GameScreen({
           language={language}
           onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
           onUITap={() => soundManager?.playUITap()}
+        />
+      ) : null}
+
+      {questOpen ? (
+        <QuestPanel
+          state={state}
+          language={language}
+          onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playEntityLevelUp(); }}
+          onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}
 

@@ -31,6 +31,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     eventCounter: 0,
     lastClickEvent: null,
     lastAutoIncomeEvent: null,
+    questProgress: {},
     lastCollisionEvent: null,
     lastEncounterEvent: null,
     lastFusionEvent: null,

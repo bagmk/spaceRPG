@@ -18,6 +18,7 @@ import {
   withCurrentUniverseEndingProgress,
 } from '../multiverse';
 import { createInitialGameState } from '../defaults';
+import { pickActiveQuests, refillActiveQuests } from '../quests';
 import { findEntityById } from '../entities/stageItems';
 import { getEquipCategory, type EntityInstance, type EntityRarity } from '../entities/types';
 import { PRESTIGE_CARRY_COUNT_CAP } from '../balance';
@@ -157,6 +158,8 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     stageStartedAt: action.now,
     clickRateLog: nextClickRateLog,
     stageClicksAtStageStart: progressedState.totalClicks,
+    // 🅠5: top up the active quest set with any quests newly eligible at this stage.
+    activeQuests: refillActiveQuests(progressedState.activeQuests, progressedState.completedQuestIds, nextStageId),
   };
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({ ...nextState, ...resetMechanicState(nextState) }));
 }
@@ -236,6 +239,10 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     // (power stripped to the player's stage). Equip slots stay empty.
     almanacCollected: state.almanacCollected,
     inventory: computeCarriedInventory(state.inventory),
+    // 🅠5: completed quests are once-only (survive prestige); active quests reset
+    // to a fresh stage-1 set (excluding the carried completed ones).
+    completedQuestIds: state.completedQuestIds,
+    activeQuests: pickActiveQuests(state.completedQuestIds, 1),
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     hasOfflineStorageUpgrade: state.hasOfflineStorageUpgrade,

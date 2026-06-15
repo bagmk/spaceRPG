@@ -33,6 +33,7 @@ import {
   handlePrestige,
 } from './reducers/stage';
 import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
+import { handleClaimQuest } from './reducers/quests';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
 import {
   handleAdminNextStage,
@@ -133,6 +134,7 @@ export type GameAction =
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
   | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number }[] }
   | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; destroyRoll?: number; protect?: boolean }
+  | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
@@ -195,6 +197,8 @@ export function toPersistentState(state: GameState): PersistentGameState {
     codexSeenIds: state.codexSeenIds,
     seenPanelHints: state.seenPanelHints,
     enhanceStones: state.enhanceStones,
+    activeQuests: state.activeQuests,
+    completedQuestIds: state.completedQuestIds,
   };
 }
 
@@ -238,6 +242,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'UNEQUIP_ENTITY':        return handleUnequipEntity(state, action);
     case 'FUSE_ENTITIES':         return handleFuseEntities(state, action);
     case 'FUSE_BATCH':            return handleFuseBatch(state, action);
+    case 'CLAIM_QUEST':           return handleClaimQuest(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);

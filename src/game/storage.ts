@@ -17,6 +17,7 @@ import {
 } from './storage/migrate';
 import { getStageStartCosmicTime } from './timeFlow';
 import { STAGES } from './stages';
+import { pickActiveQuests, refillActiveQuests } from './quests';
 
 /** Repairs saves corrupted by past bugs (e.g. Infinity cosmicClockSec → null in JSON, or runaway accumulation). */
 function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
@@ -50,7 +51,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 19;
+export const SAVE_SCHEMA_VERSION = 20;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -173,6 +174,8 @@ export function createSaveSnapshot(state: GameState): SaveState {
     codexSeenIds: state.codexSeenIds,
     seenPanelHints: state.seenPanelHints,
     enhanceStones: state.enhanceStones,
+    activeQuests: state.activeQuests,
+    completedQuestIds: state.completedQuestIds,
   };
 }
 
@@ -343,6 +346,14 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
   // v19: 강화석 — veterans start at 0 (their existing levels were all matter-
   // bought; the stone phase did not exist, so no stone debt is owed).
   const enhanceStones = sourceVersion < 19 ? 0 : (state.enhanceStones ?? 0);
+  // v20 quests: veterans (sourceVersion < 20) start with a fresh active set for
+  // their current stage + no completed quests; v20+ saves keep their stored ids
+  // (refilled/validated). completedQuestIds always survive (once-only quests).
+  const stageIdForQuests = STAGES[Math.min(Math.max(0, state.stageIdx ?? 0), STAGES.length - 1)].id;
+  const completedQuestIds = sourceVersion < 20 ? [] : (state.completedQuestIds ?? []);
+  const activeQuests = sourceVersion < 20 || !(state.activeQuests?.length)
+    ? pickActiveQuests(completedQuestIds, stageIdForQuests)
+    : refillActiveQuests(state.activeQuests, completedQuestIds, stageIdForQuests);
 
   return {
     ...state,
@@ -352,6 +363,8 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
     codexSeenIds,
     seenPanelHints,
     enhanceStones,
+    activeQuests,
+    completedQuestIds,
     endingProgressFlags: {
       ...state.endingProgressFlags,
       criticalUpgradedThisUniverse,
@@ -458,10 +471,11 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19) {
-      // v14..v19 share a field schema (v17 dropped the legacy skill fields;
-      // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones — all
-      // optional in validateV5; finalizeV17 seeds veteran defaults for pre-N).
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20) {
+      // v14..v20 share a field schema (v17 dropped the legacy skill fields;
+      // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
+      // activeQuests/completedQuestIds — all optional in validateV5; finalizeV17
+      // seeds veteran defaults for pre-N).
       // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
       // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
       // and seeds the v18 codex/hint fields for pre-v18 saves).
