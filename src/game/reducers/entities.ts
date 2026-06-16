@@ -1,4 +1,4 @@
-import type { GameState } from '../types';
+import type { GameState, FusionResultCard } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
@@ -302,6 +302,13 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       batchCount: 1,
       successCount: result.rarityUp ? 1 : 0,
       failCount: result.rarityUp ? 0 : 1,
+      cards: [{
+        outputEntityId: result.outputId,
+        rarityUp: result.rarityUp,
+        leveledUp: result.leveledUp,
+        atCap: result.atCap,
+        stonesEarned: result.stonesEarned,
+      }],
     },
   }));
 }
@@ -327,6 +334,7 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
   let anyLeveled = false;
   let anyAtCap = false;
   let lastResult: OneFusionResult | null = null;
+  const cards: FusionResultCard[] = [];
   for (let i = 0; i < action.rolls.length; i++) {
     const trio = action.inputEntityIds.slice(i * FUSION_INPUT_COUNT, i * FUSION_INPUT_COUNT + FUSION_INPUT_COUNT);
     if (trio.length < FUSION_INPUT_COUNT) break;
@@ -341,6 +349,13 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
     anyLeveled = anyLeveled || r.result.leveledUp;
     anyAtCap = anyAtCap || r.result.atCap;
     lastResult = r.result;
+    cards.push({
+      outputEntityId: r.result.outputId,
+      rarityUp: r.result.rarityUp,
+      leveledUp: r.result.leveledUp,
+      atCap: r.result.atCap,
+      stonesEarned: r.result.stonesEarned,
+    });
   }
   if (!lastResult) return state;
   const eventId = nextEventId(s);
@@ -360,6 +375,7 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
       batchCount: done,
       successCount,
       failCount,
+      cards,
     },
   }));
 }

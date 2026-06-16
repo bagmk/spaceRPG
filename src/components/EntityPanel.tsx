@@ -290,8 +290,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // Gacha suspense: brief "charging" beat before the result is committed.
   const [fusing, setFusing] = useState(false);
   // 🅠4: remember the last fuse so the result reveal's 재시도 can repeat it.
-  const [lastFuse, setLastFuse] = useState<{ rarity: EntityRarity; batch: boolean } | null>(null);
+  const [lastFuse, setLastFuse] = useState<{ rarity: EntityRarity; batch: boolean; all?: boolean } | null>(null);
   const fuseTimerRef = useRef<number | null>(null);
+  const pendingFuseRef = useRef<string[] | null>(null);
+  // Gacha reveal: how many result cards have flipped face-up so far.
+  const [revealedCount, setRevealedCount] = useState(0);
+  // Fuse-All exclude: stacks the player locked out of the batch.
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
   const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
@@ -301,19 +306,25 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // Gacha "tempt fate" beat: spin for a moment, THEN commit the fusion so the
   // result lands as a reveal (suspense, not an instant swap).
   const FUSE_CHARGE_MS = 720;
+  // Commit the pending single fuse now (called by the charge timer OR by Skip).
+  const commitFuse = () => {
+    if (fuseTimerRef.current !== null) { window.clearTimeout(fuseTimerRef.current); fuseTimerRef.current = null; }
+    const inputs = pendingFuseRef.current;
+    pendingFuseRef.current = null;
+    setFusing(false);
+    if (!inputs) return;
+    onFuse(inputs);
+    setFuseInputs([]);
+  };
   const triggerFuse = (inputsArg?: string[]) => {
     const inputs = inputsArg ?? fuseInputs;
     if (fusing || inputs.length !== FUSION_INPUT_COUNT) return;
     const rarity = findEntityById(inputs[0])?.rarity;
     setFusing(true);
     if (rarity) setLastFuse({ rarity, batch: false });
+    pendingFuseRef.current = inputs;
     onUITap?.();
-    fuseTimerRef.current = window.setTimeout(() => {
-      onFuse(inputs);
-      setFuseInputs([]);
-      setFusing(false);
-      fuseTimerRef.current = null;
-    }, FUSE_CHARGE_MS);
+    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
   };
 
   // 🅠4: draw a flat list of FUSION_INPUT_COUNT × N owned copies of one rarity
@@ -340,11 +351,54 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onFuseBatch(ids);
   };
 
+  // Fuse-All (no insertion): gather every fusable trio across ALL rarities,
+  // skipping locked (excluded) stacks. Each contiguous run of 3 stays one
+  // rarity (the reducer validates per-trio), so each bucket is padded to ×3.
+  const drawAllTrios = (): string[] => {
+    const out: string[] = [];
+    let trioBudget = FUSION_BATCH_MAX_TRIOS;
+    for (const r of RARITY_ORDER) {
+      if (trioBudget <= 0) break;
+      const ids: string[] = [];
+      for (const e of inventory) {
+        if (e.count <= 0 || excludedIds.has(e.entityId)) continue;
+        const ent = findEntityById(e.entityId);
+        if (!ent || ent.rarity !== r) continue;
+        for (let k = 0; k < e.count; k++) ids.push(e.entityId);
+      }
+      const trios = Math.min(trioBudget, Math.floor(ids.length / FUSION_INPUT_COUNT));
+      for (let i = 0; i < trios * FUSION_INPUT_COUNT; i++) out.push(ids[i]);
+      trioBudget -= trios;
+    }
+    return out;
+  };
+  const allTriosCount = (): number => Math.floor(drawAllTrios().length / FUSION_INPUT_COUNT);
+  const triggerFuseAll = () => {
+    if (fusing) return;
+    const ids = drawAllTrios();
+    if (ids.length < FUSION_INPUT_COUNT) return;
+    const firstRarity = findEntityById(ids[0])?.rarity ?? 'common';
+    setLastFuse({ rarity: firstRarity, batch: true, all: true });
+    setFuseInputs([]);
+    onUITap?.();
+    onFuseBatch(ids);
+  };
+  const toggleExclude = (id: string) => {
+    setExcludedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+    onUITap?.();
+  };
+
   // 🅠4: repeat the last fuse (single or batch) with freshly-drawn copies.
   const retryFuse = () => {
     if (!lastFuse || !lastFusionEvent) return;
     onClearFusionEvent(lastFusionEvent.id);
-    if (lastFuse.batch) {
+    if (lastFuse.all) {
+      triggerFuseAll();
+    } else if (lastFuse.batch) {
       triggerBatch(lastFuse.rarity);
     } else {
       const ids = drawTriosOfRarity(lastFuse.rarity, 1);
@@ -352,10 +406,23 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     }
   };
   const canRetry =
-    lastFuse !== null && drawTriosOfRarity(lastFuse.rarity, 1).length === FUSION_INPUT_COUNT;
+    lastFuse !== null && (lastFuse.all ? allTriosCount() > 0 : drawTriosOfRarity(lastFuse.rarity, 1).length === FUSION_INPUT_COUNT);
   useEffect(() => () => {
     if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
   }, []);
+  // Sequential gacha flip — reveal result cards one-by-one (skippable).
+  useEffect(() => {
+    if (!lastFusionEvent) { setRevealedCount(0); return undefined; }
+    if (lastFusionEvent.cards.length <= 1) { setRevealedCount(lastFusionEvent.cards.length); return undefined; }
+    setRevealedCount(0);
+    let n = 0;
+    const id = window.setInterval(() => {
+      n += 1;
+      setRevealedCount(n);
+      if (n >= lastFusionEvent.cards.length) window.clearInterval(id);
+    }, 180);
+    return () => window.clearInterval(id);
+  }, [lastFusionEvent]);
 
   // Auto-dismiss the 강화 result flash (break lingers a touch longer).
   useEffect(() => {
@@ -895,6 +962,23 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="fuse-page">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
+              {/* Fuse-All — always available (no insertion needed); fuses every
+                  trio across all rarities except locked (🔒) stacks. */}
+              {(() => {
+                const allTrios = allTriosCount();
+                return (
+                  <button
+                    type="button"
+                    className="gacha-fuse-all-btn"
+                    disabled={fusing || allTrios < 1}
+                    onClick={triggerFuseAll}
+                  >
+                    {allTrios > 0
+                      ? t(language, 'fuseAll').replace('{n}', String(allTrios))
+                      : t(language, 'fuseAllNone')}
+                  </button>
+                );
+              })()}
               {/* The altar — the whole bet (stake / cost / odds) on one lever */}
               <div className={`gacha-altar ${ready ? 'gacha-altar--ready' : ''}`}>
                 <div className="gacha-altar__slots">
@@ -993,19 +1077,33 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         fuseInputs.length >= FUSION_INPUT_COUNT ||
                         entry.count <= usedCopies ||
                         (trayRarity !== undefined && entity.rarity !== trayRarity);
+                      const locked = excludedIds.has(entity.id);
                       return (
-                        <button
+                        <div
                           key={entity.id}
-                          type="button"
-                          className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
+                          className={`owned-card-wrap ${locked ? 'owned-card-wrap--locked' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
-                          disabled={blocked}
-                          onClick={() => addFuseInput(entity)}
                         >
-                          <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
-                          <span className="owned-card__name">{entityName(entity, language)}</span>
-                          <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
-                        </button>
+                          <button
+                            type="button"
+                            className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
+                            disabled={blocked}
+                            onClick={() => addFuseInput(entity)}
+                          >
+                            <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
+                            <span className="owned-card__name">{entityName(entity, language)}</span>
+                            <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`owned-card__lock ${locked ? 'owned-card__lock--on' : ''}`}
+                            aria-label={t(language, 'fuseExcludeToggle')}
+                            title={t(language, 'fuseExcludeToggle')}
+                            onClick={() => toggleExclude(entity.id)}
+                          >
+                            {locked ? '🔒' : '🔓'}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1016,21 +1114,80 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         })() : null}
         </div>
       </section>
-      {/* Charging beat — suspense before the reveal lands */}
+      {/* Charging beat — suspense before the reveal lands (tap Skip to fast-forward) */}
       {fusing ? (
-        <div className="fusion-charge" role="status" aria-live="polite">
+        <div className="fusion-charge" role="status" aria-live="polite" onClick={commitFuse}>
           <div className="fusion-charge__core">
             {fuseInputs[0] ? (
               <EntityGlyph entity={findEntityById(fuseInputs[0])!} color={RARITY_COLORS[trayRarity ?? 'common']} />
             ) : null}
           </div>
           <div className="fusion-charge__label">{t(language, 'fuseChanting')}</div>
+          <button type="button" className="fusion-charge__skip" onClick={(e) => { e.stopPropagation(); commitFuse(); }}>
+            {t(language, 'fuseSkip')}
+          </button>
         </div>
       ) : null}
       {/* Fusion result reveal */}
       {lastFusionEvent ? (() => {
         const output = findEntityById(lastFusionEvent.outputEntityId);
         if (!output) return null;
+        // Batch → gacha card-pull grid: flip each result one-by-one (skippable).
+        const ev = lastFusionEvent;
+        if (ev.cards.length > 1) {
+          const total = ev.cards.length;
+          const allRevealed = revealedCount >= total;
+          return (
+            <div className="fusion-result fusion-result--grid" role="status">
+              <div className="fusion-reveal__head">
+                <span className="fusion-reveal__tag">
+                  {t(language, 'fuseBatchSummary').replace('{s}', String(ev.successCount)).replace('{n}', String(ev.batchCount))}
+                </span>
+                {!allRevealed ? (
+                  <button type="button" className="fusion-reveal__skip" onClick={() => setRevealedCount(total)}>
+                    {t(language, 'fuseSkip')}
+                  </button>
+                ) : null}
+              </div>
+              <div className="fusion-reveal-grid">
+                {ev.cards.map((card, i) => {
+                  const ent = findEntityById(card.outputEntityId);
+                  const flipped = i < revealedCount;
+                  return (
+                    <div
+                      key={i}
+                      className={`fusion-reveal-card ${flipped ? 'is-flipped' : ''} ${flipped ? (card.rarityUp ? 'fusion-reveal-card--up' : 'fusion-reveal-card--fail') : ''}`}
+                      style={ent ? ({ '--rarity-color': RARITY_COLORS[ent.rarity] } as CSSProperties) : undefined}
+                    >
+                      <div className="fusion-reveal-card__inner">
+                        <span className="fusion-reveal-card__back" aria-hidden="true">◈</span>
+                        <span className="fusion-reveal-card__face">
+                          {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[ent.rarity]} /> : null}
+                          <span className="fusion-reveal-card__badge">
+                            {card.rarityUp ? '⬆' : card.stonesEarned > 0 ? `💎${card.stonesEarned}` : '·'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="fusion-reveal__totals">
+                <span>{`+${formatEntropyAmount(ev.entropyBurst)} ${t(language, 'hudEntropy')}`}</span>
+                {ev.stonesEarned > 0 ? <span>{`💎 ${ev.stonesEarned}`}</span> : null}
+                {ev.refund > 0 ? <span>{`+⚛${formatEntityCost(ev.refund)}`}</span> : null}
+              </div>
+              <div className="fusion-result__actions">
+                <button type="button" className="fusion-result__retry" disabled={!canRetry} onClick={(e) => { e.stopPropagation(); retryFuse(); }}>
+                  {t(language, 'fuseRetry')}
+                </button>
+                <button type="button" className="fusion-result__close" onClick={(e) => { e.stopPropagation(); onClearFusionEvent(ev.id); }}>
+                  {t(language, 'fuseClose')}
+                </button>
+              </div>
+            </div>
+          );
+        }
         return (
           <div
             className={`fusion-result ${lastFusionEvent.rarityUp ? 'fusion-result--boom' : 'fusion-result--fail'}`}

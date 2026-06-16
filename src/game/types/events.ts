@@ -50,6 +50,15 @@ export interface EncounterEvent {
   color: string;
 }
 
+/** One fused trio's outcome — drives the per-card gacha reveal grid. */
+export interface FusionResultCard {
+  outputEntityId: string;
+  rarityUp: boolean;
+  leveledUp: boolean;
+  atCap: boolean;
+  stonesEarned: number;
+}
+
 /** Result of a FUSE_ENTITIES action — drives the forge reveal UI. */
 export interface FusionEvent {
   id: number;
@@ -71,6 +80,8 @@ export interface FusionEvent {
   successCount: number;
   /** 🅠4: non-rarity-up failures in the batch (0/1 for a single fuse). */
   failCount: number;
+  /** Per-trio outcomes for the gacha reveal grid (1 entry for a single fuse). */
+  cards: FusionResultCard[];
 }
 
 /** Outcome of a 강화 attempt — drives the reveal flash (P1). */
