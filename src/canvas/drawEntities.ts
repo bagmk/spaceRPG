@@ -254,21 +254,47 @@ function drawBlackHoleLens(
   now: number,
   strength: number,
 ): void {
+  // 🅠8: Interstellar-style accretion disk — a temperature-gradient multi-ring
+  // disk (white-hot inner → amber → deep red outer), a crisp photon ring at the
+  // photon sphere, and a sharp event-horizon void. `color` only tints the faint
+  // outer halo so every stage's black hole reads as the iconic object.
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(now * 0.00008);
+  const tilt = 0.34;                                  // edge-on disk squash
+  const horizon = radius * (0.15 + strength * 0.05);  // event-horizon radius
+  // Temperature ramp, hot (inner) → cool (outer).
+  const RAMP = ['#ffffff', '#dcebff', '#ffe9b0', '#ffc163', '#ff8a3d', '#e2542a', '#9c3016'];
   ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 5; i += 1) {
-    const phase = now * 0.001 + i * 1.4;
-    const r = radius * (0.58 + i * 0.18 + Math.sin(phase) * 0.015);
-    ctx.strokeStyle = hexToRgba(color, (0.035 + strength * 0.055) / (i * 0.45 + 1));
-    ctx.lineWidth = 0.7 + strength * 0.8;
+  ctx.rotate(now * 0.00006);
+  // Faint colour-tinted outer halo (ties the disk to the stage accent).
+  ctx.strokeStyle = hexToRgba(color, 0.04 + strength * 0.05);
+  ctx.lineWidth = 2 + strength * 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, radius * 1.32, radius * 1.32 * tilt, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let i = 0; i < RAMP.length; i += 1) {
+    const t = i / (RAMP.length - 1);
+    const wob = Math.sin(now * 0.001 + i * 0.9) * 0.012;
+    const r = radius * (0.30 + t * 0.95 + wob);
+    const a = (0.13 + strength * 0.16) * (1 - t * 0.5);
+    ctx.strokeStyle = hexToRgba(RAMP[i], a);
+    ctx.lineWidth = (1.1 + strength * 1.7) * (1 - t * 0.35);
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * (1.18 + Math.sin(phase) * 0.04), r * (0.42 + Math.cos(phase) * 0.02), Math.sin(phase) * 0.18, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, r, r * tilt, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.fillStyle = hexToRgba('#02030a', 0.08 + strength * 0.08);
-  fillCircle(ctx, 0, 0, radius * (0.12 + strength * 0.06));
+  // Crisp photon ring at the photon sphere (just outside the horizon).
+  const photonR = horizon * 1.55;
+  ctx.lineWidth = (1.2 + strength * 0.7) * 3;
+  ctx.strokeStyle = hexToRgba('#ffe6c0', 0.16 + strength * 0.18);
+  ctx.beginPath(); ctx.arc(0, 0, photonR, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 1.1 + strength * 0.6;
+  ctx.strokeStyle = hexToRgba('#ffffff', 0.55 + strength * 0.35);
+  ctx.beginPath(); ctx.arc(0, 0, photonR, 0, Math.PI * 2); ctx.stroke();
+  // Event horizon: a sharp dark void.
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#010206';
+  fillCircle(ctx, 0, 0, horizon);
   ctx.restore();
 }
 
