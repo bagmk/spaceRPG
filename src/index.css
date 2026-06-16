@@ -1401,7 +1401,9 @@ button.hud-stage-title--clickable:hover {
   animation: cc-pop-in 0.4s ease-out;
 }
 .enhance-flash__tag { font-size: 13px; letter-spacing: 0.12em; color: var(--flash-color, #bb8cff); }
+.enhance-flash__name { font-size: 14px; font-weight: 700; color: #f3f6ff; }
 .enhance-flash__lv { font-family: var(--mono); font-size: 13px; color: #e8ecf4; }
+.enhance-flash__effect { font-family: var(--mono); font-size: 12px; font-weight: 600; }
 @keyframes cc-pop-in { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes enhance-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 
