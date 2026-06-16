@@ -1,6 +1,7 @@
 import type { GameState, ShopBoost, ShopBoostCategory } from '../types';
+import { SHOP_UNLOCK_STAGE_ID } from '../balance';
 
-export const CASH_SHOP_UNLOCK_STAGE_ID = 3;
+export const CASH_SHOP_UNLOCK_STAGE_ID = SHOP_UNLOCK_STAGE_ID;
 export const DEFAULT_OFFLINE_REWARD_CAP_SEC = 60 * 60;
 export const UPGRADED_OFFLINE_REWARD_CAP_SEC = 8 * 60 * 60;
 

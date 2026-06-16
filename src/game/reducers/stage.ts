@@ -249,5 +249,10 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
     prestigeUpgrades: state.prestigeUpgrades,
+    // Daily shop is a real-calendar-day construct, not run-scoped — carry it so
+    // prestige can't be used to re-roll/re-buy the day's offers.
+    dailyShopDateKey: state.dailyShopDateKey,
+    dailyShopRefreshCount: state.dailyShopRefreshCount,
+    dailyShopPurchased: state.dailyShopPurchased,
   };
 }

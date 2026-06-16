@@ -270,6 +270,9 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     enhanceStones: 0,
     activeQuests: [],
     completedQuestIds: [],
+    dailyShopDateKey: '',
+    dailyShopRefreshCount: 0,
+    dailyShopPurchased: [],
     ...convertEntityModelV14(record),
   };
 }
@@ -403,6 +406,12 @@ export function validateV5(
     // v20 quests — preserved if present; finalizeV17 seeds a fresh set for pre-v20.
     activeQuests: isStringArray((parsed as any).activeQuests) ? (parsed as any).activeQuests : [],
     completedQuestIds: isStringArray((parsed as any).completedQuestIds) ? (parsed as any).completedQuestIds : [],
+    // v21 daily shop — preserved if present; the roster regenerates on the next
+    // shop open (date rollover). WHITELIST: omit a field here and it's silently
+    // dropped on every load + cloud pull.
+    dailyShopDateKey: typeof (parsed as any).dailyShopDateKey === 'string' ? (parsed as any).dailyShopDateKey : '',
+    dailyShopRefreshCount: isFiniteNumber((parsed as any).dailyShopRefreshCount) ? Math.max(0, Math.floor((parsed as any).dailyShopRefreshCount)) : 0,
+    dailyShopPurchased: Array.isArray((parsed as any).dailyShopPurchased) ? (parsed as any).dailyShopPurchased.filter((n: unknown) => typeof n === 'number') : [],
     ...convertEntityModelV14(parsed),
   };
 }

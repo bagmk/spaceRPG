@@ -552,7 +552,41 @@ export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
 export const EQUIP_UNLOCK_STAGE_ID = 2;
 export const FUSION_UNLOCK_STAGE_ID = 2;
 export const ENHANCE_UNLOCK_STAGE_ID = 3;
-// (Shop unlock lives in shop/boosts.ts as CASH_SHOP_UNLOCK_STAGE_ID = 3.)
+/** Stage at which the shop unlocks (1-based). boosts.ts re-exports the predicate. */
+export const SHOP_UNLOCK_STAGE_ID = 3;
+
+// ── Shop economy (Overhaul-2 cash-shop rework) ──────────────────────────────
+/**
+ * Matter packs (USD IAP): each grants matter scaled to the player's CURRENT
+ * output so a pack stays relevant at every stage. Payout = (clickPower +
+ * autoRate) × payoutMult; bigger packs cost more USD but give more matter per
+ * dollar (bulk discount). Priced/credited in the reducer from a state snapshot.
+ */
+export interface MatterPackSpec { id: string; priceUSD: number; payoutMult: number; }
+export const MATTER_PACKS: MatterPackSpec[] = [
+  { id: 'pack_1', priceUSD: 0.99,  payoutMult: 10_000 },
+  { id: 'pack_2', priceUSD: 1.99,  payoutMult: 22_000 },
+  { id: 'pack_3', priceUSD: 4.99,  payoutMult: 60_000 },
+  { id: 'pack_4', priceUSD: 9.99,  payoutMult: 130_000 },
+  { id: 'pack_5', priceUSD: 19.99, payoutMult: 280_000 },
+  { id: 'pack_6', priceUSD: 49.99, payoutMult: 750_000 },
+];
+/** Matter price of one 강화석 = (clickPower + autoRate) × this (≈ seconds of income). */
+export const STONE_MATTER_COST_SECONDS = 300;
+/** 강화석 bundles offered for matter. */
+export const STONE_BUNDLES: number[] = [1, 10, 100];
+
+/** Daily shop: 8 entity offers/day, rarity by weighted odds, matter-priced. */
+export const DAILY_SHOP_SLOTS = 8;
+export const DAILY_SHOP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
+  common: 52, rare: 30, epic: 14, legendary: 4, mythic: 0,
+};
+/** Matter price of a daily offer = (clickPower + autoRate) × this, by rarity. */
+export const DAILY_SHOP_PRICE_SECONDS: Record<EntityRarity, number> = {
+  common: 60, rare: 240, epic: 900, legendary: 3000, mythic: 9000,
+};
+/** Daily refresh costs (clickPower+autoRate) × this, escalating per refresh that day. */
+export const DAILY_SHOP_REFRESH_SECONDS: number[] = [120, 360, 900, 2400];
 
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 

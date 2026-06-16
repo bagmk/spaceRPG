@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
-import { formatWhole } from '../game/formulas';
+import { formatGameNumberShort, getClickPower, getAutoRate } from '../game/formulas';
+import { getCurrentModifiers } from '../game/reducers/helpers';
 import type { GameAction } from '../game/reducer';
 import {
-  PAID_SHOP_PRODUCTS,
+  MATTER_PACK_PRODUCTS,
+  DEEP_SPACE_STORAGE,
   REWARDED_AD_PRODUCTS,
   findPaidShopProduct,
   type PaidShopProduct,
   type RewardedAdProduct,
-  type ShopCatalogEntry,
 } from '../game/shop/items';
 import { completePurchase, restorePurchases } from '../game/shop/purchase';
 import { recordPurchaseEvent } from '../cloud/purchases';
@@ -20,24 +21,30 @@ import {
   isCashShopUnlocked,
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
+import { generateDailyShop, dailyRefreshCostSeconds, toDateKey } from '../game/shop/daily';
+import { STONE_BUNDLES, STONE_MATTER_COST_SECONDS } from '../game/balance';
+import { STAGES } from '../game/stages';
+import { findEntityById, entityName } from '../game/entities/stageItems';
+import type { EntityRarity } from '../game/entities/types';
+import { EntityGlyph } from './EntityGlyph';
 import type { GameState, ShopBoostCategory } from '../game/types';
 import { t, type Lang } from '../i18n';
 
-const SECTION_COPY: Record<'free' | 'boosts' | 'permanent', Record<Lang, string>> = {
-  free: { en: 'Free Boosts', ko: '무료 부스트' },
-  boosts: { en: 'Boosts', ko: '부스트' },
-  permanent: { en: 'Permanent Upgrades', ko: '영구 업그레이드' },
+const RARITY_COLORS: Record<EntityRarity, string> = {
+  common: '#6db86d',
+  rare: '#4a8fff',
+  epic: '#b060f0',
+  legendary: '#ffa500',
+  mythic: '#ff5db5',
 };
+
+type ShopTab = 'matter' | 'daily' | 'boosts';
 
 function formatRemainingMs(ms: number): string | null {
   if (ms <= 0) return null;
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
@@ -67,181 +74,90 @@ export function ShopButton({
       onClick={onClick}
       aria-label={disabled ? 'Cosmic shop locked' : 'Open cosmic shop'}
     >
-      <span className="hud-action-icon" aria-hidden="true">🛒</span>
+      <span className="hud-action-icon" aria-hidden="true">{disabled ? '🔒' : '🛒'}</span>
       <span className="hud-action-label">{label}</span>
       {highlighted && !disabled ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
     </button>
   );
 }
 
-function ActiveSummary({
-  boosts,
-  now,
-  language,
-}: {
-  boosts: GameState['shopBoosts'];
-  now: number;
-  language: Lang;
-}) {
+function ActiveSummary({ boosts, now, language }: { boosts: GameState['shopBoosts']; now: number; language: Lang }) {
   const summaries = (['time', 'matter'] as ShopBoostCategory[])
     .map((category) => getActiveBoostSummary(boosts, category, now))
     .filter((summary): summary is ActiveBoostSummary => summary !== null);
-
   if (summaries.length === 0) return null;
-
   return (
-    <div className="shop-panel2__status">
-      <div className="shop-panel2__status-title">{t(language, 'shopActiveBoosts')}</div>
+    <div className="shop-fs__status">
       {summaries.map((summary) => {
         const label = summary.category === 'time' ? t(language, 'hudTime') : t(language, 'hudQuanta');
-        const color = summary.category === 'time' ? '#4df0cc' : '#ffd766';
         const remaining = formatRemainingMs(summary.expiresAt - now);
         return (
-          <div
-            key={summary.category}
-            className="shop-panel2__status-row"
-            style={{ '--boost-color': color } as CSSProperties}
-          >
-            <span className="shop-panel2__status-label">
-              {language === 'ko'
-                ? `${label} x${formatWhole(summary.factor)} 활성화`
-                : `${label} x${formatWhole(summary.factor)} active`}
-            </span>
-            {remaining ? <span className="shop-panel2__status-timer">{`${remaining} ${t(language, 'shopLeft')}`}</span> : null}
-          </div>
+          <span key={summary.category} className="shop-fs__status-chip">
+            {`${label} ×${summary.factor}`}{remaining ? ` · ${remaining}` : ''}
+          </span>
         );
       })}
     </div>
   );
 }
 
-function ShopCard({
-  entry,
-  language,
-  now,
-  state,
-  pending,
-  animDelay,
-  onPaid,
-  onRewardedAd,
-}: {
-  entry: ShopCatalogEntry;
-  language: Lang;
-  now: number;
-  state: GameState;
-  pending: boolean;
-  animDelay: number;
-  onPaid: (product: PaidShopProduct) => void;
-  onRewardedAd: (product: RewardedAdProduct) => void;
-}) {
-  const isPermanentOwned = entry.id === 'deep_space_storage' && state.hasOfflineStorageUpgrade;
-  const remaining = entry.effect.type === 'timed_boost'
-    ? formatRemainingMs(getBoostRemainingMs(state.shopBoosts, entry.id, now))
-    : null;
-  const isActive = Boolean(remaining) || isPermanentOwned;
-  const isReward = entry.kind === 'rewarded_ad';
-  const buttonLabel =
-    isPermanentOwned
-      ? (language === 'ko' ? '보유중' : 'Owned')
-      : isReward
-        ? entry.button[language]
-        : t(language, 'shopBuy');
-
-  return (
-    <article
-      className={[
-        'shop-boost-card',
-        isReward ? 'shop-boost-card--free' : '',
-        isActive ? 'shop-boost-card--active' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{ '--boost-color': entry.color, '--anim-delay': `${animDelay}ms` } as CSSProperties}
-    >
-      <div className="shop-boost-card__icon">{entry.icon}</div>
-      <div className="shop-boost-card__body">
-        <div className="shop-boost-card__name">{entry.name[language]}</div>
-        <div className="shop-boost-card__desc">{entry.description[language]}</div>
-        {remaining ? (
-          <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div>
-        ) : null}
-        {isPermanentOwned ? (
-          <div className="shop-boost-card__timer">{language === 'ko' ? '영구 업그레이드 보유중' : 'Permanent upgrade owned'}</div>
-        ) : null}
-      </div>
-      <div className="shop-boost-card__right">
-        <button
-          type="button"
-          className={`shop-boost-card__buy${isReward ? ' shop-boost-card__buy--free' : ''}`}
-          disabled={pending || isPermanentOwned}
-          onClick={() => {
-            if (entry.kind === 'rewarded_ad') {
-              onRewardedAd(entry);
-            } else {
-              onPaid(entry);
-            }
-          }}
-        >
-          {entry.kind === 'paid' && !isPermanentOwned ? (
-            <>
-              <span className="shop-boost-card__buy-price">{`$${entry.priceUSD.toFixed(2)}`}</span>
-              <span className="shop-boost-card__buy-label">{t(language, 'shopBuy')}</span>
-            </>
-          ) : (
-            buttonLabel
-          )}
-        </button>
-      </div>
-    </article>
-  );
-}
-
 export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
+  const [tab, setTab] = useState<ShopTab>('matter');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const unlocked = isCashShopUnlocked(state);
+  // Local calendar day that drives the daily roster (changes once/day as now ticks).
+  const todayKey = toDateKey(now);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
-
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+  // Commit the date-rollover on open AND whenever the local day flips while the
+  // shop stays open, so the persisted roster matches what's displayed/charged.
+  // (syncDailyShop returns the same state ref when the day is unchanged, so the
+  // todayKey-gated re-fire is a no-op until midnight.)
+  useEffect(() => { dispatch({ type: 'SYNC_DAILY_SHOP', now }); }, [dispatch, todayKey, now]);
 
   if (!unlocked) return null;
+
+  const mods = getCurrentModifiers(state);
+  const outputRate = Math.max(1, getClickPower(mods) + getAutoRate(mods));
+  const quanta = state.quanta;
+  const playerStageId = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
+
+  // Effective daily roster — mirrors the reducer's date-rollover so display
+  // matches what a buy will charge (SYNC above persists it; buys use the same
+  // `now` clock as this display).
+  const fresh = state.dailyShopDateKey !== todayKey;
+  const refreshCount = fresh ? 0 : state.dailyShopRefreshCount;
+  const purchased = fresh ? [] : state.dailyShopPurchased;
+  const roster = generateDailyShop(todayKey, refreshCount, playerStageId);
+  const refreshCost = Math.ceil(outputRate * dailyRefreshCostSeconds(refreshCount));
 
   const handlePaid = async (product: PaidShopProduct) => {
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
     const result = await completePurchase(product);
-    // Native (RevenueCat): success === true means the store charged the user, so
-    // grant the product client-side here. Web (Stripe) returns success: false
-    // because it redirects the page; fulfillment happens server-side there.
     if (result.success) {
       dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: product.id, now: Date.now() });
-      // Track native purchase in Firestore (web Stripe is tracked server-side).
       void recordPurchaseEvent({ type: 'purchase', productId: product.id, priceUSD: product.priceUSD });
     }
     setPendingId(null);
   };
-
   const handleRewardedAd = async (product: RewardedAdProduct) => {
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
     const completed = await completeRewardedAd(product.id);
-    if (completed) {
-      dispatch({ type: 'CLAIM_AD_REWARD', rewardId: product.id, now: Date.now() });
-    }
+    if (completed) dispatch({ type: 'CLAIM_AD_REWARD', rewardId: product.id, now: Date.now() });
     setPendingId(null);
   };
-
   const handleRestore = async () => {
     if (pendingId) return;
     setPendingId('__restore__');
@@ -249,8 +165,12 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
     const ownedIds = await restorePurchases();
     let restored = 0;
     for (const id of ownedIds) {
-      if (findPaidShopProduct(id)) {
-        dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: id, now: Date.now() });
+      const product = findPaidShopProduct(id);
+      // Restore only NON-consumable products (Deep Space Storage). Matter packs
+      // are repeatable consumables and would otherwise be re-granted for free on
+      // every restore tap (they surface in the store's owned list).
+      if (product && product.repeatable === false) {
+        dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: id, now: Date.now(), viaRestore: true });
         void recordPurchaseEvent({ type: 'restore', productId: id });
         restored += 1;
       }
@@ -259,98 +179,173 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
     setPendingId(null);
   };
 
-  let globalCardIdx = 0;
-  const renderSection = (
-    section: 'free' | 'boosts' | 'permanent',
-    entries: ShopCatalogEntry[],
-  ) => {
-    const sectionCards = entries.map((entry) => {
-      const delay = globalCardIdx * 50;
-      globalCardIdx += 1;
-      return (
-        <ShopCard
-          key={entry.id}
-          entry={entry}
-          language={language}
-          now={now}
-          state={state}
-          pending={pendingId === entry.id}
-          animDelay={delay}
-          onPaid={handlePaid}
-          onRewardedAd={handleRewardedAd}
-        />
-      );
-    });
-    return (
-      <section className="shop-panel2__section" key={section}>
-        <div className="shop-panel2__section-title">{SECTION_COPY[section][language]}</div>
-        <div className="shop-panel2__section-items">
-          {sectionCards}
-        </div>
-      </section>
-    );
-  };
+  const TABS: { id: ShopTab; label: string }[] = [
+    { id: 'matter', label: t(language, 'shopTabMatter') },
+    { id: 'daily', label: t(language, 'shopTabDaily') },
+    { id: 'boosts', label: t(language, 'shopTabBoosts') },
+  ];
 
+  const accent = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].accent ?? '#8090b0';
   return (
-    <div className="shop-overlay" onClick={onClose} role="presentation">
-      <aside
-        className="shop-panel2"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="shop-panel2__header">
-          <div>
-            <div className="shop-panel2__title">{t(language, 'shopEyebrow')}</div>
-          </div>
+    <div className="entity-fs shop-fs" onClick={onClose}>
+      <section className="entity-fs__panel" onClick={(e) => e.stopPropagation()} style={{ '--stage-accent': accent } as CSSProperties}>
+      <header className="entity-fs__topbar">
+        <h2 className="entity-fs__screen-title">{t(language, 'hudShop')}</h2>
+        <span className="shop-fs__balance">⚛{formatGameNumberShort(quanta)} · 💎{formatGameNumberShort(state.enhanceStones)}</span>
+        <button className="entity-fs__close" aria-label={t(language, 'shopClose')} onClick={onClose}>✕</button>
+      </header>
+
+      <div className="shop-fs__tabs">
+        {TABS.map((tb) => (
           <button
+            key={tb.id}
             type="button"
-            className="entity-panel__close"
-            onClick={onClose}
-            aria-label={t(language, 'shopClose')}
+            className={`shop-fs__tab ${tab === tb.id ? 'shop-fs__tab--active' : ''}`}
+            onClick={() => setTab(tb.id)}
           >
-            x
+            {tb.label}
           </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="shop-panel2__items">
-          {renderSection('free', REWARDED_AD_PRODUCTS)}
-          {renderSection('boosts', PAID_SHOP_PRODUCTS.filter((item) => item.section === 'boosts'))}
-          {renderSection('permanent', PAID_SHOP_PRODUCTS.filter((item) => item.section === 'permanent'))}
-        </div>
+      <div className="shop-fs__body">
+        {tab === 'matter' ? (
+          <>
+            {/* 강화석 with matter */}
+            <div className="shop-fs__section-title">{t(language, 'shopStonesTitle')}</div>
+            <div className="shop-fs__stones">
+              {STONE_BUNDLES.map((count) => {
+                const cost = Math.ceil(outputRate * STONE_MATTER_COST_SECONDS * count);
+                const afford = quanta >= cost;
+                return (
+                  <button
+                    key={count}
+                    type="button"
+                    className="shop-stone-card"
+                    disabled={!afford}
+                    onClick={() => dispatch({ type: 'BUY_ENHANCE_STONES', count })}
+                  >
+                    <span className="shop-stone-card__amount">💎 {count}</span>
+                    <span className="shop-stone-card__cost">⚛{formatGameNumberShort(cost)}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-        <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
+            {/* Matter packs (USD) */}
+            <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
+            <div className="shop-fs__packs">
+              {MATTER_PACK_PRODUCTS.map((p) => {
+                const payout = Math.ceil(outputRate * p.effect.payoutMult);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="shop-pack-card"
+                    style={{ '--boost-color': p.color } as CSSProperties}
+                    disabled={pendingId !== null}
+                    onClick={() => handlePaid(p)}
+                  >
+                    <span className="shop-pack-card__icon">{p.icon}</span>
+                    <span className="shop-pack-card__amount">+{formatGameNumberShort(payout)}</span>
+                    <span className="shop-pack-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
 
-        <div className="shop-panel2__footer">
-          {`${t(language, 'shopTotalSpent')}: $${state.totalShopSpentUSD.toFixed(2)} (${t(language, 'shopTestMode')})`}
-        </div>
+        {tab === 'daily' ? (
+          <>
+            <div className="shop-fs__daily-head">
+              <span className="shop-fs__section-title">{t(language, 'shopDailyTitle')}</span>
+              <button
+                type="button"
+                className="shop-fs__refresh"
+                disabled={quanta < refreshCost}
+                onClick={() => dispatch({ type: 'REFRESH_DAILY_SHOP', now })}
+              >
+                {`↻ ${t(language, 'shopDailyRefresh')} · ⚛${formatGameNumberShort(refreshCost)}`}
+              </button>
+            </div>
+            <div className="shop-fs__daily-grid">
+              {roster.map((offer) => {
+                const ent = findEntityById(offer.entityId);
+                const cost = Math.ceil(outputRate * offer.priceSeconds);
+                const sold = purchased.includes(offer.slot);
+                const afford = quanta >= cost;
+                return (
+                  <button
+                    key={offer.slot}
+                    type="button"
+                    className={`shop-daily-card ${sold ? 'shop-daily-card--sold' : ''}`}
+                    style={{ '--rarity-color': RARITY_COLORS[offer.rarity] } as CSSProperties}
+                    disabled={sold || !afford}
+                    onClick={() => dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now })}
+                  >
+                    {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[offer.rarity]} /> : null}
+                    <span className="shop-daily-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
+                    <span className="shop-daily-card__cost">
+                      {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="shop-fs__daily-hint">{t(language, 'shopDailyHint')}</div>
+          </>
+        ) : null}
 
-        {Capacitor.isNativePlatform() && (
-          <div style={{ textAlign: 'center', padding: '2px 0 10px' }}>
-            <button
-              type="button"
-              onClick={handleRestore}
-              disabled={pendingId !== null}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'rgba(255,255,255,0.55)',
-                font: 'inherit',
-                fontSize: '12px',
-                textDecoration: 'underline',
-                cursor: pendingId !== null ? 'default' : 'pointer',
-              }}
-            >
-              {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
-            </button>
-            {restoreMsg && (
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>
-                {restoreMsg}
+        {tab === 'boosts' ? (
+          <>
+            <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
+            <div className="shop-fs__boosts">
+              {REWARDED_AD_PRODUCTS.map((ad) => {
+                const remaining = formatRemainingMs(getBoostRemainingMs(state.shopBoosts, ad.id, now));
+                return (
+                  <article key={ad.id} className="shop-boost-card shop-boost-card--free" style={{ '--boost-color': ad.color } as CSSProperties}>
+                    <div className="shop-boost-card__icon">{ad.icon}</div>
+                    <div className="shop-boost-card__body">
+                      <div className="shop-boost-card__name">{ad.name[language]}</div>
+                      <div className="shop-boost-card__desc">{ad.description[language]}</div>
+                      {remaining ? <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div> : null}
+                    </div>
+                    <button type="button" className="shop-boost-card__buy shop-boost-card__buy--free" disabled={pendingId !== null} onClick={() => handleRewardedAd(ad)}>
+                      {ad.button[language]}
+                    </button>
+                  </article>
+                );
+              })}
+              {(() => {
+                const owned = state.hasOfflineStorageUpgrade;
+                const p = DEEP_SPACE_STORAGE;
+                return (
+                  <article className="shop-boost-card" style={{ '--boost-color': p.color } as CSSProperties}>
+                    <div className="shop-boost-card__icon">{p.icon}</div>
+                    <div className="shop-boost-card__body">
+                      <div className="shop-boost-card__name">{p.name[language]}</div>
+                      <div className="shop-boost-card__desc">{p.description[language]}</div>
+                    </div>
+                    <button type="button" className="shop-boost-card__buy" disabled={owned || pendingId !== null} onClick={() => handlePaid(p)}>
+                      {owned ? (language === 'ko' ? '보유중' : 'Owned') : (pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`)}
+                    </button>
+                  </article>
+                );
+              })()}
+            </div>
+            {Capacitor.isNativePlatform() ? (
+              <div className="shop-fs__restore">
+                <button type="button" onClick={handleRestore} disabled={pendingId !== null}>
+                  {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
+                </button>
+                {restoreMsg ? <div className="shop-fs__restore-msg">{restoreMsg}</div> : null}
               </div>
-            )}
-          </div>
-        )}
-      </aside>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+      </section>
     </div>
   );
 }

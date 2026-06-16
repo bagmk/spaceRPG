@@ -135,6 +135,9 @@ export function createInitialGameState(now: number): GameState {
     // 🅠5: fresh game starts at stage 1 — offer the stage-1-eligible quests.
     activeQuests: pickActiveQuests([], 1),
     completedQuestIds: [],
+    dailyShopDateKey: '',
+    dailyShopRefreshCount: 0,
+    dailyShopPurchased: [],
     questProgress: {},
     lastEnhanceEvent: null,
   };

@@ -21,12 +21,21 @@ import { db } from './firebase';
 // Price ID mapping (game item ID → Stripe price ID)
 // ---------------------------------------------------------------------------
 
+// Overhaul-2: the time-boost IAPs were removed; matter packs (pack_1..6) replace
+// them. NATIVE purchases use RevenueCat (product ids directly), so they work
+// without this map. WEB Stripe checkout needs a real Stripe price id per item —
+// the placeholders below MUST be replaced with the real ids created in Stripe
+// (and server-side fulfillment must credit the matter_pack payout) before web
+// checkout works. Until then, web pack purchases no-op (logged 'Unknown item').
 export const STRIPE_PRICE_MAP: Record<string, string> = {
-  temporal_drive: 'price_1TXuwN0YrtIQqiezrknwjTnN',
-  matter_surge: 'price_1TXuwq0YrtIQqiezcYBDvfMF',
-  deep_time_engine: 'price_1TXux90YrtIQqiez9u0deiYV',
-  matter_storm: 'price_1TXuxJ0YrtIQqiezoAmdJZK7',
   deep_space_storage: 'price_1TXuxU0YrtIQqiezkkNkGwpV',
+  // TODO(stripe): set real price ids for the matter packs.
+  pack_1: 'price_TODO_pack_1',
+  pack_2: 'price_TODO_pack_2',
+  pack_3: 'price_TODO_pack_3',
+  pack_4: 'price_TODO_pack_4',
+  pack_5: 'price_TODO_pack_5',
+  pack_6: 'price_TODO_pack_6',
 };
 
 // ---------------------------------------------------------------------------

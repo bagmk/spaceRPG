@@ -34,7 +34,7 @@ import {
 } from './reducers/stage';
 import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
-import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts } from './reducers/shop';
+import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop } from './reducers/shop';
 import {
   handleAdminNextStage,
   handleAdminPrevStage,
@@ -118,7 +118,7 @@ export type GameAction =
   | { type: 'CLEAR_ENCOUNTER_EVENT'; id: number }
   | { type: 'SET_TUTORIAL_DONE' }
   | { type: 'PRESTIGE'; now: number }
-  | { type: 'COMPLETE_SHOP_PURCHASE'; itemId: string; now: number }
+  | { type: 'COMPLETE_SHOP_PURCHASE'; itemId: string; now: number; viaRestore?: boolean }
   | { type: 'CLAIM_AD_REWARD'; rewardId: string; now: number }
   | { type: 'RESUME_BOOSTS'; hiddenMs: number }
   | { type: 'MARK_TUTORIAL_STAGE_SEEN'; stageId: number }
@@ -138,7 +138,11 @@ export type GameAction =
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
-  | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId };
+  | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
+  | { type: 'BUY_ENHANCE_STONES'; count: number }
+  | { type: 'BUY_DAILY_ITEM'; slot: number; now: number }
+  | { type: 'REFRESH_DAILY_SHOP'; now: number }
+  | { type: 'SYNC_DAILY_SHOP'; now: number };
 
 // ---------------------------------------------------------------------------
 // Serialization helpers
@@ -199,6 +203,9 @@ export function toPersistentState(state: GameState): PersistentGameState {
     enhanceStones: state.enhanceStones,
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
+    dailyShopDateKey: state.dailyShopDateKey,
+    dailyShopRefreshCount: state.dailyShopRefreshCount,
+    dailyShopPurchased: state.dailyShopPurchased,
   };
 }
 
@@ -219,6 +226,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'COMPLETE_SHOP_PURCHASE': return handleCompleteShopPurchase(state, action);
     case 'CLAIM_AD_REWARD':       return handleClaimAdReward(state, action);
     case 'RESUME_BOOSTS':         return handleResumeBoosts(state, action);
+    case 'BUY_ENHANCE_STONES':    return handleBuyEnhanceStones(state, action);
+    case 'BUY_DAILY_ITEM':        return handleBuyDailyItem(state, action);
+    case 'REFRESH_DAILY_SHOP':    return handleRefreshDailyShop(state, action);
+    case 'SYNC_DAILY_SHOP':       return handleSyncDailyShop(state, action);
     case 'ADMIN_NEXT_STAGE':      return handleAdminNextStage(state, action);
     case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
     case 'ADMIN_SET_PROGRESS':    return handleAdminSetProgress(state, action);

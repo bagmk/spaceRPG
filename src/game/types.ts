@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 20;
+  version: 21;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -291,6 +291,12 @@ export interface SaveState {
   activeQuests: string[];
   /** 🅠5 (v20): claimed quest ids — survive prestige so quests are once-only. */
   completedQuestIds: string[];
+  /** Daily shop (v21): local date-key (yyyy-mm-dd) of the current roster; ''=fresh. */
+  dailyShopDateKey: string;
+  /** Daily shop (v21): re-rolls done today — folds into the roster seed + refresh cost. */
+  dailyShopRefreshCount: number;
+  /** Daily shop (v21): slot indices already bought today (cleared on date rollover). */
+  dailyShopPurchased: number[];
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;
