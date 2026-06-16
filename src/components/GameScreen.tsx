@@ -33,6 +33,7 @@ import {
   getOfflineRewardCapSec,
   isCashShopUnlocked,
 } from '../game/shop/boosts';
+import { EQUIP_UNLOCK_STAGE_ID, FUSION_UNLOCK_STAGE_ID } from '../game/balance';
 import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
@@ -258,6 +259,9 @@ export function GameScreen({
   void lastToastStageIdRef; // suppress unused-variable lint
   const entropyPreviewReadout = formatEntropyParts(entropyPreview);
   const canShowShop = isCashShopUnlocked(state);
+  // 🅠7: staged onboarding — equip/auto + fusion unlock at S2 (codex/quests are S1).
+  const equipUnlocked = stage.id >= EQUIP_UNLOCK_STAGE_ID;
+  const fusionUnlocked = stage.id >= FUSION_UNLOCK_STAGE_ID;
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > wallNow);
   const hasShopNotification = canShowShop && !state.hasSeenCashShopTutorial;
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
@@ -299,7 +303,9 @@ export function GameScreen({
         autoCloseMs: 7000,
       };
     }
-    if (ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-intro']) {
+    // 🅠7: only prompt the equip/fusion lab once it's actually unlocked (S2);
+    // S1 keeps the player on click/entropy/item-collection/codex + quests.
+    if (equipUnlocked && ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-intro']) {
       return {
         flagId: 'entity-lab-intro',
         anchor: 'entity',
@@ -354,6 +360,7 @@ export function GameScreen({
   }, [
     canCondense,
     canShowShop,
+    equipUnlocked,
     entityPanelOpen,
     hasActiveBoost,
     language,
@@ -972,20 +979,24 @@ export function GameScreen({
           </button>
           <button
             type="button"
-            className="entity-lab-button"
+            className={`entity-lab-button ${equipUnlocked ? '' : 'entity-lab-button--locked'}`}
+            disabled={!equipUnlocked}
             onClick={() => openEntityPanel('equip', 'click')}
             aria-label={t(language, 'equipClickTitle')}
+            title={equipUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(EQUIP_UNLOCK_STAGE_ID))}
           >
-            <span className="hud-action-icon" aria-hidden="true">⌖</span>
+            <span className="hud-action-icon" aria-hidden="true">{equipUnlocked ? '⌖' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'entityEquip')}</span>
           </button>
           <button
             type="button"
-            className="entity-lab-button"
+            className={`entity-lab-button ${fusionUnlocked ? '' : 'entity-lab-button--locked'}`}
+            disabled={!fusionUnlocked}
             onClick={() => openEntityPanel('fuse')}
             aria-label={t(language, 'fuseTitle')}
+            title={fusionUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(FUSION_UNLOCK_STAGE_ID))}
           >
-            <span className="hud-action-icon" aria-hidden="true">⚛</span>
+            <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '⚛' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
           </button>
           <div ref={shopAnchorRef}>

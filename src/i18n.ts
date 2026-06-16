@@ -98,6 +98,7 @@ export const STRINGS = {
   questClaim:       { en: 'Claim', ko: '수령' },
   questCompleted:   { en: '{n} done', ko: '{n} 완료' },
   questAllDone:     { en: 'All quests complete!', ko: '모든 퀘스트 완료!' },
+  lockUntilStage:   { en: 'Unlocks at Stage {n}', ko: '스테이지 {n}에서 해제' },
   fuseLoopHint:     { en: 'Feed 3 of the same rarity to forge a stronger one — get lucky and the rarity climbs', ko: '같은 등급 3개를 넣으면 더 강한 하나로 — 운이 좋으면 등급 상승' },
   hudStones:        { en: 'Stones', ko: '강화석' },
   enhanceFailLabel: { en: 'fail {n}%', ko: '실패 {n}%' },

@@ -6194,6 +6194,13 @@ button.stat-header-item {
   background: rgba(127, 233, 255, 0.16);
   box-shadow: 0 0 18px rgba(127, 233, 255, 0.22);
 }
+/* 🅠7: locked rail button (feature not yet unlocked for this stage). */
+.entity-lab-button--locked {
+  opacity: 0.4;
+  cursor: default;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
 .entity-lab-button__dot {
   position: absolute;
   top: 3px;

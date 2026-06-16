@@ -5,6 +5,7 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   CODEX_REWARD_MULT,
+  ENHANCE_UNLOCK_STAGE_ID,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_BATCH_MAX_TRIOS,
@@ -284,6 +285,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [protectEnhance, setProtectEnhance] = useState(false);
+  // 🅠7: enhancement unlocks at S3 (S1 = collect/codex, S2 = equip/fuse).
+  const enhanceUnlocked = currentStageId >= ENHANCE_UNLOCK_STAGE_ID;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
   const [fuseInputs, setFuseInputs] = useState<string[]>([]);
   // Gacha suspense: brief "charging" beat before the result is committed.
@@ -796,9 +799,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 <button
                   type="button"
                   className="equip-enhance-all"
+                  disabled={!enhanceUnlocked}
+                  title={enhanceUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}
                   onClick={() => { [...equippedSlots, ...riftSlots].forEach((id) => { if (id) onEnhance(id); }); }}
                 >
-                  {t(language, 'enhanceAll')}
+                  {enhanceUnlocked ? t(language, 'enhanceAll') : `🔒 ${t(language, 'enhanceAll')}`}
                 </button>
               </div>
 
@@ -1195,15 +1200,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
-                style={affordable ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-                disabled={!affordable}
+                style={affordable && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+                disabled={!affordable || !enhanceUnlocked}
                 onClick={() => onEnhance(ent.id, stonePhase ? protectEnhance : false)}
               >
-                {atCap
-                  ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
-                  : stonePhase
-                    ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
-                    : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)}`}
+                {!enhanceUnlocked
+                  ? `🔒 ${t(language, 'enhanceLabel')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`
+                  : atCap
+                    ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
+                    : stonePhase
+                      ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
+                      : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)}`}
               </button>
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip" style={{ borderColor: rc, color: rc }} onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>

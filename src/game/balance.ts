@@ -527,6 +527,14 @@ export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
   mythic: 3.0,
 };
 
+// ── Feature unlock gating (Overhaul-2 🅠7 — staged onboarding) ───────────────
+// S1 teaches click/entropy/item/codex + quests; S2 unlocks equip/auto/fusion;
+// S3 unlocks the shop + enhancement. Stage ids are 1-based (state.stageIdx + 1).
+export const EQUIP_UNLOCK_STAGE_ID = 2;
+export const FUSION_UNLOCK_STAGE_ID = 2;
+export const ENHANCE_UNLOCK_STAGE_ID = 3;
+// (Shop unlock lives in shop/boosts.ts as CASH_SHOP_UNLOCK_STAGE_ID = 3.)
+
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 
 /** Click-gear slot unlock conditions. Slot 1 is always available. */
