@@ -264,7 +264,7 @@ interface Props {
 export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
-  const [tab, setTab] = useState<PanelPage>(page);
+  const [tab] = useState<PanelPage>(page);
   const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
   const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
   // Stage browsing is gone — items show across all eras at once. The prop stays
@@ -295,14 +295,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
   const accent = playerStage?.accent ?? '#8090b0';
 
-  const switchTab = (next: PanelPage) => {
-    if (next === tab) return;
-    setTab(next);
-    setInspectedEntityId(null);
-    setInspectedSlot(null);
-    setPickingSlot(null);
-    onUITap?.();
-  };
   const switchEquipCat = (next: EquipCategory) => {
     if (next === equipCat) return;
     setEquipCat(next);
@@ -496,12 +488,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  const TABS: { id: PanelPage; key: Parameters<typeof t>[1] }[] = [
-    { id: 'lab', key: 'tabCodex' },
-    { id: 'equip', key: 'tabEquip' },
-    { id: 'fuse', key: 'tabFuse' },
-  ];
-
   // Shared rarity-filter chip row (equip + fusion grids).
   const rarityFilterBar = (
     <div className="rarity-filter">
@@ -526,21 +512,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         onClick={(e) => e.stopPropagation()}
         style={{ '--stage-accent': accent } as CSSProperties}
       >
-        {/* Top bar — tabs / wallet / close (one overlay hosts all three pages) */}
+        {/* 🅠6: de-tabbed — each rail button opens its own screen (no tab switcher). */}
         <header className="entity-fs__topbar">
-          <nav className="entity-fs__tabs" aria-label={t(language, 'tabCodex')}>
-            {TABS.map((tabDef) => (
-              <button
-                key={tabDef.id}
-                type="button"
-                className={`entity-fs__tab ${tab === tabDef.id ? 'entity-fs__tab--active' : ''}`}
-                aria-pressed={tab === tabDef.id}
-                onClick={() => switchTab(tabDef.id)}
-              >
-                {t(language, tabDef.key)}
-              </button>
-            ))}
-          </nav>
+          <h2 className="entity-fs__screen-title">
+            {tab === 'lab'
+              ? t(language, 'collectionTitle')
+              : tab === 'equip'
+                ? t(language, 'entityEquip')
+                : t(language, 'fuseTitle')}
+          </h2>
           {tab !== 'lab' ? (
             <div className="entity-fs__wallet">
               <span>{t(language, 'hudQuanta')}</span>

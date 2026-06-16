@@ -948,21 +948,8 @@ export function GameScreen({
             );
           })()}
         </div>
-        <div className={`bottom-buttons ${focusMode ? 'focus-hidden' : ''}`}>
-          <div ref={shopAnchorRef}>
-            <ShopButton
-              highlighted={hasShopNotification}
-              disabled={!canShowShop}
-              onClick={() => {
-                setShopOpen(true);
-                soundManager?.playUIOpen();
-                if (!state.hasSeenCashShopTutorial) {
-                  dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
-                }
-              }}
-              label={t(language, 'hudShop')}
-            />
-          </div>
+        {/* 🅠6 (req ⑦): right-side vertical rail — 도감·퀘스트·장착·융합소·상점 + settings. */}
+        <div className={`side-rail ${focusMode ? 'focus-hidden' : ''}`}>
           <button
             ref={entityAnchorRef}
             type="button"
@@ -972,6 +959,16 @@ export function GameScreen({
           >
             <span className="hud-action-icon" aria-hidden="true">📖</span>
             <span className="hud-action-label">{t(language, 'collectionTitle')}</span>
+          </button>
+          <button
+            type="button"
+            className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
+            onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
+            aria-label={t(language, 'questTitle')}
+          >
+            <span className="hud-action-icon" aria-hidden="true">✦</span>
+            <span className="hud-action-label">{t(language, 'questTitle')}</span>
+            {hasClaimableQuest ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
             type="button"
@@ -991,16 +988,20 @@ export function GameScreen({
             <span className="hud-action-icon" aria-hidden="true">⚛</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
           </button>
-          <button
-            type="button"
-            className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
-            onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
-            aria-label={t(language, 'questTitle')}
-          >
-            <span className="hud-action-icon" aria-hidden="true">✦</span>
-            <span className="hud-action-label">{t(language, 'questTitle')}</span>
-            {hasClaimableQuest ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
-          </button>
+          <div ref={shopAnchorRef}>
+            <ShopButton
+              highlighted={hasShopNotification}
+              disabled={!canShowShop}
+              onClick={() => {
+                setShopOpen(true);
+                soundManager?.playUIOpen();
+                if (!state.hasSeenCashShopTutorial) {
+                  dispatch({ type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' });
+                }
+              }}
+              label={t(language, 'hudShop')}
+            />
+          </div>
           <button
             type="button"
             className="mini-button settings-gear-btn bottom-settings-button"

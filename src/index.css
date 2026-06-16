@@ -929,6 +929,15 @@ button.hud-stage-title--clickable:hover {
 }
 
 .entity-fs__tabs { display: flex; gap: 6px; margin-right: auto; }
+/* 🅠6: de-tabbed screen title (replaces the tab switcher). */
+.entity-fs__screen-title {
+  margin: 0 auto 0 4px;
+  margin-right: auto;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #eaf1ff;
+  letter-spacing: 0.02em;
+}
 
 .entity-fs__tab {
   padding: 9px 22px;
@@ -1590,6 +1599,27 @@ button.stat-header-item {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* 🅠6 (req ⑦): right-side vertical action rail (replaces the bottom bar). */
+.side-rail {
+  position: fixed;
+  right: max(10px, env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+/* Smaller overall scale than the old bottom bar. */
+.side-rail .entity-lab-button,
+.side-rail .shop-button,
+.side-rail .bottom-settings-button {
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
 }
 
 .stage-transition-wash {
