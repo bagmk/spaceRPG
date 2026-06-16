@@ -13858,6 +13858,10 @@ button.stat-header-item {
 .side-rail .bottom-settings-button {
   --rail-accent: var(--core, #ffaa66);
   position: relative;
+  /* flex:none — the column rail sizes buttons by height; a legacy
+     @media(max-width:760px) sets flex:1 1 0 (for the old horizontal bar),
+     which would collapse them to ~2px in a column container. */
+  flex: 0 0 auto;
   width: 60px;
   height: 56px;
   min-width: 0;
