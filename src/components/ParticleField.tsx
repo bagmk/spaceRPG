@@ -65,14 +65,13 @@ import type { EntityInstance, StageEntity } from '../game/entities/types';
 import { findEntityById } from '../game/entities/stageItems';
 
 // ── Spatial rift (entity redesign): bottom-left crack that visualizes auto
-// income. Emits motes shaped like the equipped entities; clicks also puff
-// equipped symbols. Purely cosmetic — capped and cheap to draw.
+// income. Emits glowing particles tinted by the equipped entities; clicks
+// also burst particles. Purely cosmetic — capped and cheap to draw.
 interface RiftMote {
   x: number;
   y: number;
   vx: number;
   vy: number;
-  symbol: string;
   color: string;
   born: number;
   lifeMs: number;
@@ -121,7 +120,6 @@ function updateAndDrawRift(
           y: ry + (Math.random() - 0.5) * 6,
           vx: Math.cos(ang) * speed,
           vy: Math.sin(ang) * speed,
-          symbol: source?.visual.symbol ?? '✦',
           color: source?.visual.color ?? accent,
           born: now,
           lifeMs: 6500,
@@ -218,13 +216,38 @@ function updateAndDrawRift(
     if (fade <= 0) continue;
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, fade));
+    const r = 2.1 * m.scale;
+    // Motion trail in the travel direction — sells "energy streaking" toward
+    // the core (auto motes) or bursting outward (click motes).
+    const sp = Math.hypot(m.vx, m.vy);
+    if (sp > 1) {
+      const tlen = Math.min(16, sp * 0.09) * m.scale;
+      const tx = m.x - (m.vx / sp) * tlen;
+      const ty = m.y - (m.vy / sp) * tlen;
+      const trail = ctx.createLinearGradient(m.x, m.y, tx, ty);
+      trail.addColorStop(0, m.color);
+      trail.addColorStop(1, 'transparent');
+      ctx.strokeStyle = trail;
+      ctx.lineWidth = r * 1.1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+    }
+    // Glowing particle: a colored halo with a hot white core, instead of the
+    // entity's text symbol — the entity is read by its color, not its glyph.
     ctx.shadowColor = m.color;
     ctx.shadowBlur = 9 * m.scale;
     ctx.fillStyle = m.color;
-    ctx.font = `${(10 * m.scale).toFixed(1)}px ui-monospace, SFMono-Regular, monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(m.symbol, m.x, m.y);
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 3 * m.scale;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, r * 0.42, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 }
@@ -1144,7 +1167,6 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           y: lastClickEvent.y,
           vx: Math.cos(a) * (lastClickEvent.isCrit ? 64 : 44),
           vy: Math.sin(a) * (lastClickEvent.isCrit ? 64 : 44) - 20,
-          symbol: gear.visual.symbol,
           color: gear.visual.color,
           born: puffNow,
           lifeMs: lastClickEvent.isCrit ? 1400 : 950,
