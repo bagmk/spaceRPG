@@ -986,7 +986,7 @@ export function GameScreen({
                 <div className="hud-pips-left">
                   {prestigeActive.map((id) => {
                     const mult = getPrestigeMultiplier(pu![id] ?? 0);
-                    const label = id === 'time_warp' ? 'T' : id === 'matter_forge' ? 'M' : id === 'critical_core' ? 'C' : id === 'auto_engine' ? 'A' : 'E';
+                    const label = id === 'time_warp' ? 'N' : id === 'matter_forge' ? 'M' : id === 'critical_core' ? 'C' : id === 'auto_engine' ? 'A' : 'E';
                     return <span key={id} className={`prestige-pip prestige-pip--${id}`} title={PRESTIGE_UPGRADES.find((u) => u.id === id)?.name[language]}><span className="prestige-pip__label">{label}</span>{mult.toFixed(1)}</span>;
                   })}
                 </div>
