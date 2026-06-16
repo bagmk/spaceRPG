@@ -81,7 +81,10 @@ describe('Phase 4-1: economy re-anchors', () => {
       Math.floor(ENTITY_COST_ANCHORS[16] * ENTITY_BASE_COST_FACTOR[s1Legendary.rarity]),
     );
     expect(getEntityCost(s1Legendary, 0, 16)).toBeGreaterThanOrEqual(rePriced);
-    expect(getEnhanceCost(s1Legendary, 1, 16)).toBeGreaterThan(getEnhanceCost(s1Legendary, 1, 1));
+    // Enhance cost is STAGE-INDEPENDENT (Overhaul-2 follow-up): the SHOP buy
+    // price (getEntityCost) still re-anchors to the player stage, but enhancing
+    // a given item costs the same regardless of the player's stage.
+    expect(getEnhanceCost(s1Legendary, 1, 16)).toBe(getEnhanceCost(s1Legendary, 1, 1));
   });
 
   it('auto anchor is fixed across player stages (P0: per-stage scaling removed)', () => {

@@ -5,7 +5,7 @@ import { rollFusionRarity, validateFusionInputs, getFusionQuantaCost } from '../
 import { applyEntityModifiers, applySetBonuses, getDerivedUnlockedSlotCount, getEquipSetKey } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import {
-  ENTITY_COST_ANCHORS,
+  FUSION_ENHANCE_COST_BASE,
   FUSION_FLAT_COST,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
@@ -104,14 +104,15 @@ describe('fusion (Phase 3)', () => {
     expect(rollFusionRarity('legendary', 0.0, 11).rarity).toBe('legendary');
   });
 
-  it('🅠1: fusion cost is a fixed fraction of the player-stage anchor (common cheap, legendary steep)', () => {
-    // cost = ENTITY_COST_ANCHORS[playerStage] × FUSION_FLAT_COST[rarity] — no bank dependence.
-    expect(getFusionQuantaCost('common', 3)).toBeCloseTo(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.common, 5);
-    expect(getFusionQuantaCost('legendary', 3)).toBeCloseTo(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.legendary, 5);
-    // legendary costs far more than common at the same stage…
+  it('fusion cost is stage-INDEPENDENT: fixed base × per-rarity factor (common cheap, legendary steep)', () => {
+    // cost = FUSION_ENHANCE_COST_BASE × FUSION_FLAT_COST[rarity] — same at every stage.
+    expect(getFusionQuantaCost('common', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.common));
+    expect(getFusionQuantaCost('legendary', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.legendary));
+    // legendary costs far more than common…
     expect(getFusionQuantaCost('legendary', 3)).toBeGreaterThan(getFusionQuantaCost('common', 3) * 10);
-    // …and the absolute cost rises with the player's stage anchor.
-    expect(getFusionQuantaCost('common', 10)).toBeGreaterThan(getFusionQuantaCost('common', 3));
+    // …and the cost does NOT change with the player's stage (Overhaul-2 follow-up).
+    expect(getFusionQuantaCost('common', 10)).toBe(getFusionQuantaCost('common', 3));
+    expect(getFusionQuantaCost('common', 16)).toBe(getFusionQuantaCost('common', 1));
   });
 
   it('P2b: validateFusionInputs flags same-entity and same-codex-subset', () => {

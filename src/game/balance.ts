@@ -40,6 +40,17 @@ export const ENTITY_COST_ANCHORS = {
   17: 1.2e22,
 } as const;
 
+/**
+ * Fixed, STAGE-INDEPENDENT base for FUSION pricing (Overhaul-2 follow-up).
+ * Fusing a given rarity costs the SAME at stage 1 and stage 16 — fusion is a
+ * minor, availability-gated sink, so a flat cheap price is fine and removes the
+ * per-stage inflation. Anchored to the stage-1 value. (Enhance pricing is
+ * handled separately: it anchors to the ITEM's own baseCost — see getEnhanceCost
+ * — which is likewise player-stage-invariant but keeps late-game pacing intact,
+ * since a flat enhance base would trivialise late upgrades.)
+ */
+export const FUSION_ENHANCE_COST_BASE: number = ENTITY_COST_ANCHORS[1];
+
 // Color accent per stage — used to tint each stage's entity icons.
 export const ENTITY_STAGE_ACCENT: Record<number, string> = {
   1: '#ff6b3d',

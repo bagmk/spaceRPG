@@ -13,7 +13,8 @@
 import {
   ENHANCE_REFUND_RATE,
   ENHANCE_STONE_REFUND_RATE,
-  ENTITY_COST_ANCHORS,
+  ENTITY_BASE_COST_FACTOR,
+  FUSION_ENHANCE_COST_BASE,
   ENTROPY_FUSION_VALUE_SEC,
   ENTROPY_W_AUTO,
   ENTROPY_W_CLICK,
@@ -32,7 +33,7 @@ import { getCodexSubsetIdForEntity } from './codexSets';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
 import { getEnhanceLevelCap } from './enhance';
-import { getEquipCategory, getPlayerAnchoredBaseCost, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
+import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 
@@ -204,15 +205,14 @@ export function pickFusionOutput(
 }
 
 /**
- * Quanta consumed by one fusion — a FIXED fraction of the player-stage cost
- * anchor (Overhaul-2 🅠1), cheap for common and steep from rare up. No longer a
- * fraction of the (growing) bank, so chained fusions cost the same per era. The
- * fusion reducer requires the player to afford this in full.
+ * Quanta consumed by one fusion — STAGE-INDEPENDENT (Overhaul-2 follow-up): a
+ * fixed base × per-rarity factor, cheap for common and steep from rare up. The
+ * cost is the SAME at stage 1 and stage 16 (it never inflates as the player
+ * advances). The fusion reducer requires the player to afford this in full.
+ * `_playerStageId` is kept for call-site compatibility but no longer used.
  */
-export function getFusionQuantaCost(rarity: EntityRarity, playerStageId: number): number {
-  const anchor =
-    ENTITY_COST_ANCHORS[playerStageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
-  return anchor * (FUSION_FLAT_COST[rarity] ?? 0.1);
+export function getFusionQuantaCost(rarity: EntityRarity, _playerStageId?: number): number {
+  return Math.ceil(FUSION_ENHANCE_COST_BASE * (FUSION_FLAT_COST[rarity] ?? 0.1));
 }
 
 /**
@@ -296,19 +296,20 @@ export interface FusionOutputResult {
 export function applyFusionOutput(
   inventory: EntityInstance[],
   output: StageEntity,
-  playerStageId: number,
+  _playerStageId?: number,
 ): FusionOutputResult {
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
     // Duplicate sink levels up — but never past the rarity's enhance cap.
     // Fully capped duplicates pay out quanta instead of vanishing (스펙 §10).
-    // Refund anchors to the player's stage (matching re-anchored enhance
-    // costs) so past-stage outputs can't pay out more than they ever cost.
+    // Refund uses the same stage-independent base as fusion/enhance costs, so a
+    // fully-capped duplicate can never pay out more than fusing it ever costs
+    // (which would otherwise be an exploit now that fusion cost is flat).
     if (existing.level >= getEnhanceLevelCap(output)) {
       return {
         inventory,
         leveledUp: false,
-        capRefund: getPlayerAnchoredBaseCost(output, playerStageId) * FUSION_CAP_DUP_REFUND_FRAC,
+        capRefund: Math.ceil(FUSION_ENHANCE_COST_BASE * ENTITY_BASE_COST_FACTOR[output.rarity] * FUSION_CAP_DUP_REFUND_FRAC),
       };
     }
     return {

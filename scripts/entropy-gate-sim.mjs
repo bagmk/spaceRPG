@@ -158,6 +158,10 @@ function maturity(stageId, p) {
  */
 function derivedLevel(stageId, rarity, stoneBudget = 0) {
   const budget = ENTITY_COST_ANCHORS[stageId] * ENHANCE_BUDGET_FRAC;
+  // Enhance cost is anchored to the ITEM's own baseCost (= current-stage anchor
+  // for current gear), NOT the player stage — so for the gear you actually
+  // enhance (current stage) the budget/cost ratio is unchanged vs the old
+  // model. Only held PAST-stage gear got cheaper. Pacing-neutral here.
   const base = ENTITY_COST_ANCHORS[stageId] * RARITY_FACTOR[rarity] * ENHANCE_COST_FACTOR;
   let total = 0;
   let level = 1;
@@ -269,8 +273,10 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
     if (profile.fusionIntervalSec && activeClock >= nextFusionAt) {
       // Fixed per-era price (anchor × FUSION_FLAT_COST[rarity]); the game gates
       // on affordability, the sim caps at the bank (partial burst when short).
-      const costPaid = Math.min(quanta, ENTITY_COST_ANCHORS[stage.id] * (FUSION_FLAT_COST[bestRarity(stage.id)] ?? 0.1));
-      const refCost = ENTITY_COST_ANCHORS[stage.id] * ENTROPY_CFG.burstRefCostFrac;
+      // Stage-independent flat cost + flat burst reference (mirrors the game):
+      // the burst scale stays a fixed per-rarity fraction at every stage.
+      const costPaid = Math.min(quanta, ANCHOR1 * (FUSION_FLAT_COST[bestRarity(stage.id)] ?? 0.1));
+      const refCost = ANCHOR1 * ENTROPY_CFG.burstRefCostFrac;
       const scale = refCost > 0 ? Math.min(1, costPaid / refCost) : 1;
       const burst = ENTROPY_CFG.fusionValueSec * Math.max(eRate, 1e-9) * scale;
       entropy += burst; src.fusion += burst;

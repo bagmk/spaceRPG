@@ -18,7 +18,7 @@ import {
   ENHANCE_DESTROY_WINDOW_FROM_CAP,
   ENHANCE_PROTECT_STONE_MULT,
 } from '../balance';
-import { getPlayerAnchoredBaseCost, type StageEntity } from './types';
+import { type StageEntity } from './types';
 
 export function getEnhanceLevelCap(entity: StageEntity): number {
   return ENHANCE_LEVEL_CAPS[entity.rarity] ?? 10;
@@ -57,14 +57,14 @@ export function isEnhanceDestroyEligible(entity: StageEntity, level: number): bo
 }
 
 /**
- * Quanta cost to go from `level` to `level + 1` — anchored to the player's
- * stage (Phase 4-1): under the player-stage power curve the resulting power
- * is identical regardless of origin stage, so origin pricing would make
- * enhancing old-stage gear ~15 orders of magnitude cheaper for the same gain.
+ * Quanta cost to go from `level` to `level + 1` — anchored to the ITEM's own
+ * baseCost, NOT the player's stage (Overhaul-2 follow-up). So a given item's
+ * enhance cost never changes as the PLAYER advances stages (it no longer
+ * re-prices old gear up to the current anchor); it ramps only with item LEVEL
+ * (ENHANCE_COST_GROWTH). `_playerStageId` is kept for call-site compatibility
+ * but no longer used.
  */
-export function getEnhanceCost(entity: StageEntity, level: number, playerStageId: number): number {
+export function getEnhanceCost(entity: StageEntity, level: number, _playerStageId?: number): number {
   const safeLevel = Math.max(1, Math.floor(level));
-  return Math.ceil(
-    getPlayerAnchoredBaseCost(entity, playerStageId) * ENHANCE_COST_FACTOR * Math.pow(ENHANCE_COST_GROWTH, safeLevel - 1),
-  );
+  return Math.ceil(entity.baseCost * ENHANCE_COST_FACTOR * Math.pow(ENHANCE_COST_GROWTH, safeLevel - 1));
 }

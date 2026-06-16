@@ -24,7 +24,7 @@ import {
 } from '../entities/enhance';
 import { getSecondaryStats } from '../entities/substats';
 import {
-  ENTITY_COST_ANCHORS,
+  FUSION_ENHANCE_COST_BASE,
   FUSION_BURST_REF_COST_FRAC,
   FUSION_INPUT_COUNT,
   RARITY_STAGE_GATES,
@@ -235,12 +235,11 @@ function fuseOnce(
 
   const fusionModifiers = getCurrentModifiers(state);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
-  // Burst scales by what the fusion cost against a flat player-stage reference
-  // price. Overhaul-2 🅠1: cost is itself anchor-fixed now, so this resolves to
-  // a fixed per-rarity burst fraction (no longer bank-dependent).
-  const burstRefCost =
-    (ENTITY_COST_ANCHORS[currentStageIdForFusion as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16]) *
-    FUSION_BURST_REF_COST_FRAC;
+  // Burst scales by fusion cost vs a reference price. Overhaul-2 follow-up:
+  // both the cost and this reference now use the stage-independent flat base, so
+  // burstCostScale resolves to a fixed per-rarity fraction at EVERY stage (the
+  // burst no longer collapses late-game when costs were flattened).
+  const burstRefCost = FUSION_ENHANCE_COST_BASE * FUSION_BURST_REF_COST_FRAC;
   const burstCostScale = burstRefCost > 0 ? Math.min(1, cost / burstRefCost) : 1;
   const burst =
     getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
