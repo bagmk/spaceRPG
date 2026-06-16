@@ -122,13 +122,14 @@ export function getActiveModifiers(
     applyCollectionRewards(mods, almanacCollected);
   }
 
-  // Apply permanent prestige multipliers
+  // Apply permanent prestige multipliers. Ids are legacy save keys; their levers
+  // were retargeted in Overhaul-2 (see PRESTIGE_UPGRADES in ../prestige).
+  // entropy_echo is applied at the reducer level (it scales entropy income).
   if (prestigeUpgrades) {
-    mods.timeMultMult *= getPrestigeMultiplier(prestigeUpgrades.time_warp);
-    mods.clickPowerMult *= getPrestigeMultiplier(prestigeUpgrades.matter_forge);
-    mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.matter_forge);
-    mods.critMultMult *= getPrestigeMultiplier(prestigeUpgrades.critical_core);
-    mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.auto_engine);
+    mods.clickPowerMult *= getPrestigeMultiplier(prestigeUpgrades.matter_forge);   // Matter Forge → click power
+    mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.auto_engine);      // Auto Engine → auto production
+    mods.critMultMult *= getPrestigeMultiplier(prestigeUpgrades.critical_core);    // Critical Core → crit multiplier
+    mods.dropChanceMult *= getPrestigeMultiplier(prestigeUpgrades.time_warp);      // Nucleation Seed → drop rate
   }
 
   return mods;

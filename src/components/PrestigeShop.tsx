@@ -10,19 +10,20 @@ import type { PrestigeUpgradeId, PrestigeUpgradeLevels } from '../game/prestige'
 import { formatEntropyParts } from '../game/formulas';
 import type { Lang } from '../i18n';
 
+// Keyed by legacy save id (see PRESTIGE_UPGRADES) — time_warp now = drop rate.
 const ICONS: Record<PrestigeUpgradeId, string> = {
-  time_warp: '⏳',
   matter_forge: '⚛',
-  critical_core: '◆',
   auto_engine: '⚡',
+  critical_core: '◆',
+  time_warp: '❖',
   entropy_echo: '∞',
 };
 
 const ACCENT_COLORS: Record<PrestigeUpgradeId, string> = {
-  time_warp: '#7ec8ff',
   matter_forge: '#a0f0a0',
-  critical_core: '#ffb347',
   auto_engine: '#c9a0ff',
+  critical_core: '#ffb347',
+  time_warp: '#5fe0c8',
   entropy_echo: '#ff8ea0',
 };
 

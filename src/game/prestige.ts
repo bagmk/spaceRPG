@@ -71,45 +71,53 @@ interface PrestigeUpgradeDefinition {
   description: { en: string; ko: string };
 }
 
+// NOTE: the upgrade `id`s are legacy save keys (PrestigeUpgradeLevels). Their
+// EFFECTS were retargeted in Overhaul-2 after the time mechanic was removed, so
+// some ids no longer match their lever — the mapping is owned by
+// getActiveModifiers (skills/effects.ts) and the entropy reducers:
+//   matter_forge  → click power     auto_engine   → auto production
+//   critical_core → crit multiplier entropy_echo  → entropy gain
+//   time_warp     → entity DROP rate (was time flow; "Nucleation Seed")
+// Keeping the keys avoids a save migration; players' purchased levels carry over.
 export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
-  {
-    id: 'time_warp',
-    name: { en: 'Time Warp', ko: '시간 왜곡' },
-    description: {
-      en: '1.5x time flow in future universes.',
-      ko: '다음 우주에서 시간 흐름이 1.5배가 됩니다.',
-    },
-  },
   {
     id: 'matter_forge',
     name: { en: 'Matter Forge', ko: '물질 응축' },
     description: {
-      en: '1.5x matter gain in future universes.',
-      ko: '다음 우주에서 물질 획득량이 1.5배가 됩니다.',
-    },
-  },
-  {
-    id: 'critical_core',
-    name: { en: 'Critical Core', ko: '크리티컬 코어' },
-    description: {
-      en: '1.5x critical effect in future universes.',
-      ko: '다음 우주에서 크리티컬 효과가 1.5배가 됩니다.',
+      en: 'Click matter ×1.5 per level.',
+      ko: '레벨당 클릭 물질 획득량 ×1.5.',
     },
   },
   {
     id: 'auto_engine',
-    name: { en: 'Auto Engine', ko: '자동 구동' },
+    name: { en: 'Auto Engine', ko: '자동 엔진' },
     description: {
-      en: '1.5x auto production speed in future universes.',
-      ko: '다음 우주에서 자동 생산 속도가 1.5배가 됩니다.',
+      en: 'Auto production ×1.5 per level.',
+      ko: '레벨당 자동 생산량 ×1.5.',
+    },
+  },
+  {
+    id: 'critical_core',
+    name: { en: 'Critical Core', ko: '임계 코어' },
+    description: {
+      en: 'Critical multiplier ×1.5 per level.',
+      ko: '레벨당 크리티컬 배수 ×1.5.',
+    },
+  },
+  {
+    id: 'time_warp',
+    name: { en: 'Nucleation Seed', ko: '응결핵' },
+    description: {
+      en: 'Entity drop chance ×1.5 per level.',
+      ko: '레벨당 엔티티 획득 확률 ×1.5.',
     },
   },
   {
     id: 'entropy_echo',
     name: { en: 'Entropy Echo', ko: '엔트로피 메아리' },
     description: {
-      en: '1.5x entropy gain in future universes.',
-      ko: '다음 우주에서 엔트로피 획득량이 1.5배가 됩니다.',
+      en: 'Entropy gain ×1.5 per level.',
+      ko: '레벨당 엔트로피 획득량 ×1.5.',
     },
   },
 ];
