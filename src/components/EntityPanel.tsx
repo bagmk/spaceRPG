@@ -877,7 +877,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           ) : null}
                           <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                           <span className="owned-card__name">{entityName(entity, language)}</span>
-                          <span className="owned-card__count">{`×${entry.count}${entry.level > 1 ? ` · Lv.${entry.level}` : ''}`}</span>
+                          {/* 🅠6 (req ⑫) card format: Lv.N · count/threshold · ⬆ (when below cap). */}
+                          <span className="owned-card__count">
+                            {`Lv.${entry.level} · ${entry.count}/${entity.maxCount}`}
+                            {entry.level < getEnhanceLevelCap(entity) ? <span className="owned-card__up"> ⬆</span> : null}
+                          </span>
                         </button>
                       );
                     })}

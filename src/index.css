@@ -745,6 +745,8 @@ button.hud-stage-title--clickable:hover {
   font-size: 9px;
   opacity: 0.7;
 }
+/* 🅠6 (req ⑫): upgradeable hint on the owned-card level/count line. */
+.owned-card__up { color: #7fe9ff; font-weight: 700; }
 
 /* ── Fusion page ── */
 .fuse-page {
