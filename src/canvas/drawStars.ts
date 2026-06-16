@@ -72,6 +72,12 @@ function drawDistantElements(
   ctx.translate(offsetX, offsetY);
   ctx.globalCompositeOperation = 'screen';
 
+  // Ambient nebula depth — a soft, slowly breathing/drifting glow in the
+  // stage's accent so the field reads as cosmic space rather than flat black,
+  // even where the distant elements are sparse. Drawn under the specific
+  // elements; scaled by nebulaIntensity so 'void'-ish stages stay dim.
+  drawAmbientNebula(ctx, width, height, t, bg.distantElementColor, intensity);
+
   switch (bg.distantElements) {
     case 'expansion_burst':
       drawRadialBurst(ctx, width, height, t, bg.distantElementColor, intensity);
@@ -121,6 +127,39 @@ function drawDistantElements(
   }
 
   ctx.restore();
+}
+
+/**
+ * Two soft, slowly drifting radial glows that give the field cosmic depth.
+ * Cheap (two gradients/frame), tasteful (low alpha on 'screen'), and scaled
+ * by the stage's nebulaIntensity so atmospheric stages bloom while voids stay
+ * near-black.
+ */
+function drawAmbientNebula(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  t: number,
+  color: string,
+  intensity: number,
+): void {
+  const maxDim = Math.max(width, height);
+  const lobes = [
+    { px: 0.42, py: 0.40, sp: 0.05, ph: 0, scale: 0.66, alpha: 0.30 },
+    { px: 0.62, py: 0.58, sp: 0.07, ph: 2.1, scale: 0.5, alpha: 0.20 },
+  ];
+  for (const l of lobes) {
+    const cx = width * (l.px + Math.sin(t * l.sp + l.ph) * 0.05);
+    const cy = height * (l.py + Math.cos(t * l.sp * 1.3 + l.ph) * 0.04);
+    const r = maxDim * l.scale;
+    const breathe = 0.82 + 0.18 * Math.sin(t * 0.28 + l.ph);
+    const g = ctx.createRadialGradient(cx, cy, r * 0.04, cx, cy, r);
+    g.addColorStop(0, hexToRgba(color, intensity * l.alpha * breathe));
+    g.addColorStop(0.45, hexToRgba(color, intensity * l.alpha * 0.35 * breathe));
+    g.addColorStop(1, hexToRgba(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(-120, -120, width + 240, height + 240);
+  }
 }
 
 function drawRadialBurst(
