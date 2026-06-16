@@ -152,6 +152,14 @@ export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
  */
 export const CLICK_OUTPUT_MULTIPLIER = 15;
 export const AUTO_OUTPUT_MULTIPLIER = 1;
+/**
+ * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
+ * upgrades always have a base to scale and the early game isn't dead before the
+ * first rift item drops. Tiny vs every stage threshold, so pacing is unaffected.
+ * Seeded into getAutoRate's autoRateAdd term so autoRateMult (Auto Engine /
+ * auto-speed) multiplies it.
+ */
+export const AUTO_RATE_BASE = 1;
 /** Fully upgraded Stage 4+ time gauges should settle around 3-4 minutes. */
 export const TIME_MAXED_STAGE_SECONDS = 210;
 /** Fastest a fresh Stage 4+ can feel before buying that stage's time entities. */

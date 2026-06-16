@@ -26,7 +26,7 @@ import {
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, BIG_RIP_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
-import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS, COMBO_CAP_BASE, COMBO_CAP_CEIL } from '../balance';
+import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS, COMBO_CAP_BASE, COMBO_CAP_CEIL, AUTO_RATE_BASE } from '../balance';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
@@ -174,7 +174,7 @@ describe('scaling formulas', () => {
   it('keeps auto rate strictly increasing by level', () => {
     const none = defaultModifiers();
     const scaled = { ...defaultModifiers(), autoRateAdd: 10, autoRateMult: 3 };
-    expect(getAutoRate(none)).toBe(0);
+    expect(getAutoRate(none)).toBe(AUTO_RATE_BASE); // gearless floor (base auto income)
     expect(getAutoRate(scaled)).toBeGreaterThan(getAutoRate(none));
   });
 
@@ -194,9 +194,9 @@ describe('scaling formulas', () => {
       stagesCleared: 4,
       progress01: 0,
     });
-    // Gear-only baseline: no gear equipped → unit power, zero auto.
+    // Gear-only baseline: no gear equipped → unit click power, base auto floor.
     expect(getClickPower(modifiers)).toBe(1);
-    expect(getAutoRate(modifiers)).toBe(0);
+    expect(getAutoRate(modifiers)).toBe(AUTO_RATE_BASE);
     expect(getTimeMultiplier(modifiers)).toBe(1);
     // Click re-anchor: a 2× gear mult is amplified by the output multiplier.
     expect(getClickPower({ ...modifiers, clickPowerMult: 2 })).toBe(1 + CLICK_OUTPUT_MULTIPLIER);

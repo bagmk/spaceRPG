@@ -122,18 +122,18 @@ export function handleTick(state: GameState, action: TickAction): GameState {
       entropyEchoMult * modifiers.entropyGainMult
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
-  // 🅠3: throttled (~1/sec) passive auto-income floating text for the primary
-  // equipped rift entity. Transient — driven off action.now, never persisted.
+  // 🅠3: throttled (~1/sec) passive auto-income floating text. Now also fires
+  // gearless (base auto income) — entityId '' renders as a plain "+N/s" float.
+  // Transient — driven off action.now, never persisted.
   const primaryRiftId = state.riftSlots[0];
   const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost;
   const emitAutoIncome =
     canAccrue &&
-    primaryRiftId !== undefined &&
     perSecAuto > 0 &&
     action.now - (state.lastAutoIncomeEvent?.t ?? 0) >= TUNING.AUTO_INCOME_EVENT_INTERVAL_MS;
   const autoIncomeEventId = emitAutoIncome ? nextEventId(state) : state.eventCounter;
   const lastAutoIncomeEvent = emitAutoIncome
-    ? { id: autoIncomeEventId, gained: perSecAuto, entityId: primaryRiftId, t: action.now }
+    ? { id: autoIncomeEventId, gained: perSecAuto, entityId: primaryRiftId ?? '', t: action.now }
     : state.lastAutoIncomeEvent;
   return withCurrentUniverseEndingProgress({
     ...state,

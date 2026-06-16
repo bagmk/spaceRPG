@@ -2,6 +2,7 @@ import { TUNING } from './constants';
 import { STAGES } from './stages';
 import {
   AUTO_OUTPUT_MULTIPLIER,
+  AUTO_RATE_BASE,
   CLICK_OUTPUT_MULTIPLIER,
   COMBO_CAP_BASE,
   COMBO_CAP_CEIL,
@@ -298,7 +299,9 @@ export function formatCosmicTimeSigFigs(seconds: number, sigFigs = 6): string {
 }
 
 export function getAutoRate(mods: Modifiers): number {
-  return Math.max(0, (mods.autoRateAdd * mods.autoRateMult + mods.autoRateFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
+  // AUTO_RATE_BASE is the gearless passive floor; folded into the autoRateAdd
+  // term so auto-speed (autoRateMult) scales the base too.
+  return Math.max(0, ((AUTO_RATE_BASE + mods.autoRateAdd) * mods.autoRateMult + mods.autoRateFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
 }
 
 export function getCritMultiplier(mods: Modifiers): number {

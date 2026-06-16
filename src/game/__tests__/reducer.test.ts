@@ -184,10 +184,14 @@ describe('gameReducer', () => {
     expect(t3.lastAutoIncomeEvent!.id).not.toBe(t1.lastAutoIncomeEvent!.id);
   });
 
-  it('🅠3: no auto-income float when no rift entity is equipped', () => {
+  it('base auto income: auto-income float fires even with no rift entity (gearless, entityId "")', () => {
+    // Overhaul-2 follow-up: base auto income (AUTO_RATE_BASE) flows with no gear,
+    // so the float now emits with an empty entityId (renders as a plain "+N/s").
     const base = { ...createInitialGameState(0), lastAutoIncomeEvent: null };
     const ticked = gameReducer(base, { type: 'TICK', now: 1000, dt: 1000 });
-    expect(ticked.lastAutoIncomeEvent).toBeNull();
+    expect(ticked.lastAutoIncomeEvent).not.toBeNull();
+    expect(ticked.lastAutoIncomeEvent?.entityId).toBe('');
+    expect(ticked.lastAutoIncomeEvent?.gained ?? 0).toBeGreaterThan(0);
   });
 
   it('applies equipped click entities to click gains (and not unequipped ones)', () => {

@@ -299,6 +299,16 @@ export function GameScreen({
         autoCloseMs: beforeFirstClick ? 0 : 9000,
       };
     }
+    // Stage 1, after the matter intro: teach the new base auto income + the
+    // collect → equip → enhance growth loop.
+    if (stage.id === 1 && state.tutorialFlags['matter-time-intro'] && !state.tutorialFlags['auto-income-intro']) {
+      return {
+        flagId: 'auto-income-intro',
+        anchor: 'field',
+        message: t(language, 'tutAutoIncome'),
+        autoCloseMs: 9000,
+      };
+    }
     if (state.tutorialFlags.allDismissed) {
       return null;
     }
@@ -587,8 +597,10 @@ export function GameScreen({
     const name = entity ? entityName(entity, language) : '';
     const text = `+${formatFloatingGain(event.gained)}/s${name ? ` · ${name}` : ''}`;
     const height = fieldRef.current?.clientHeight ?? 600;
-    const x = 64 + Math.random() * 28;
-    const y = height - 96 - Math.random() * 16;
+    // Anchor the float just above the bottom-left crack (rx≈46, ry≈height-84)
+    // so auto income reads as flowing from the rift, not floating far above it.
+    const x = 46 + (Math.random() - 0.5) * 18;
+    const y = (height - 84) + 40 - Math.random() * 10;
     setFloatingEntries((current) => [
       ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + 1),
       { id: event.id, x, y, text, variant: 'auto' },
