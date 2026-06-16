@@ -143,19 +143,21 @@ export function SettingsPanel({
           {t(language, 'settingsReset')}
         </button>
 
-        {status !== 'anonymous' && status !== 'signedOut' ? (
+        {status !== 'loading' && status !== 'signedOut' ? (
           <>
             <div className="settings-divider" />
-            <div className="settings-account">
-              <span className="settings-account-email">{profile?.email ?? profile?.displayName ?? ''}</span>
-              <button
-                type="button"
-                className="settings-logout-btn"
-                onClick={signOut}
-              >
-                {language === 'ko' ? '로그아웃' : 'Log Out'}
-              </button>
-            </div>
+            {status !== 'anonymous' ? (
+              <div className="settings-account">
+                <span className="settings-account-email">{profile?.email ?? profile?.displayName ?? ''}</span>
+                <button
+                  type="button"
+                  className="settings-logout-btn"
+                  onClick={signOut}
+                >
+                  {language === 'ko' ? '로그아웃' : 'Log Out'}
+                </button>
+              </div>
+            ) : null}
 
             {!confirmingDelete ? (
               <button
@@ -163,7 +165,7 @@ export function SettingsPanel({
                 className="settings-delete-btn"
                 onClick={() => { setDeleteError(null); setConfirmingDelete(true); }}
               >
-                {ko ? '계정 삭제' : 'Delete Account'}
+                {status === 'anonymous' ? (ko ? '데이터 삭제' : 'Delete Data') : (ko ? '계정 삭제' : 'Delete Account')}
               </button>
             ) : (
               <div className="settings-delete-confirm">

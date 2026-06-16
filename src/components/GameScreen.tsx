@@ -1041,7 +1041,7 @@ export function GameScreen({
             aria-label={t(language, 'fuseTitle')}
             title={fusionUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(FUSION_UNLOCK_STAGE_ID))}
           >
-            <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '⚛' : '🔒'}</span>
+            <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '🔨' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
           </button>
           <div ref={shopAnchorRef} className="side-rail__shop-slot" style={{ '--rail-accent': '#ff9f6b' } as React.CSSProperties}>

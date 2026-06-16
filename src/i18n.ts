@@ -77,6 +77,7 @@ export const STRINGS = {
   codexMassFactor:  { en: 'Condensed mass', ko: '응축 질량' },
   codexPurpose:     { en: 'Collect discovered particles — complete sets for bonuses', ko: '발견한 입자를 모으세요 — 세트를 완성하면 보너스' },
   codexShowMissing: { en: 'Missing only', ko: '빈칸만' },
+  codexBonusHelp:   { en: 'Complete a sub-collection (100%) to earn its bonus. Complete every sub-collection in a set to also unlock the set bonus — they stack.', ko: '하위 컬렉션을 100% 모으면 그 보너스를 얻습니다. 한 세트의 모든 하위 컬렉션을 완성하면 세트 보너스가 추가로 더해집니다 — 둘 다 중첩 적용됩니다.' },
   codexClosest:     { en: '{name} — {n} to go!', ko: '{name} — {n}개 남음!' },
   equipCatClick:    { en: 'Click power', ko: '클릭 강화' },
   equipCatRift:     { en: 'Auto income', ko: '자동 수익 강화' },

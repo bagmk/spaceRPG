@@ -1060,30 +1060,6 @@ button.hud-stage-title--clickable:hover {
 .entity-inv__hint { font-size: 11px; color: color-mix(in srgb, var(--stage-accent, #8090b0) 70%, #fff); }
 
 /* ── Equip: click vs rift toggle + picking highlight ── */
-.equip-cat-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.02);
-}
-.equip-cat-toggle__btn {
-  padding: 9px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: rgba(232, 236, 244, 0.62);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.equip-cat-toggle__btn--active {
-  background: color-mix(in srgb, var(--stage-accent, #8090b0) 22%, rgba(255, 255, 255, 0.08));
-  color: #fff;
-}
 .equip-slot-card--picking {
   border-color: #fff;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
@@ -14052,4 +14028,37 @@ button.stat-header-item {
 }
 @media (prefers-reduced-motion: reduce) {
   .hud-gauge-fill.hud-entropy-gate-fill::after { animation: none; opacity: 0; }
+}
+
+/* Codex: one-line explainer for set vs sub-collection bonuses. */
+.codex-bonus-help {
+  margin: 4px 2px 12px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: rgba(245, 247, 250, 0.5);
+  letter-spacing: 0.01em;
+}
+
+/* Mobile rail — shrink the 60x56 desktop buttons to a compact touch target.
+   Scoped under .side-rail + appended last so it wins; keep flex:0 0 auto. */
+@media (max-width: 560px) {
+  .side-rail { gap: 9px; }
+  .side-rail .entity-lab-button,
+  .side-rail .shop-button,
+  .side-rail .bottom-settings-button {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    gap: 0;
+  }
+  .side-rail .entity-lab-button .hud-action-icon,
+  .side-rail .shop-button .hud-action-icon,
+  .side-rail .bottom-settings-button .hud-action-icon {
+    font-size: 19px;
+  }
+  .side-rail .entity-lab-button .hud-action-label,
+  .side-rail .shop-button .hud-action-label,
+  .side-rail .bottom-settings-button .hud-action-label {
+    display: none;
+  }
 }

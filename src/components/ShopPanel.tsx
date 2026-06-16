@@ -67,7 +67,7 @@ export function ShopButton({
       onClick={onClick}
       aria-label={disabled ? 'Cosmic shop locked' : 'Open cosmic shop'}
     >
-      <span className="hud-action-icon" aria-hidden="true">$</span>
+      <span className="hud-action-icon" aria-hidden="true">🛒</span>
       <span className="hud-action-label">{label}</span>
       {highlighted && !disabled ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
     </button>

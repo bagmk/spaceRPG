@@ -4,7 +4,6 @@ import type { EntityInstance, FusionEvent, EnhanceEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
-  CODEX_REWARD_MULT,
   ENHANCE_UNLOCK_STAGE_ID,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
@@ -23,7 +22,7 @@ import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fus
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete, type CodexReward } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
@@ -268,7 +267,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [tab] = useState<PanelPage>(page);
   const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
   // 🅠6 (req ⑫): 전체/클릭/오토 filter — 'all' shows both slot groups (6 slots) at once.
-  const [equipFilter, setEquipFilter] = useState<'all' | EquipCategory>('all');
   const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
   // Stage browsing is gone — items show across all eras at once. The prop stays
   // for API compatibility but is no longer driven from here.
@@ -394,9 +392,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // Equip grid: while picking a slot, show only that slot's category; otherwise
   // honour the 전체/클릭/오토 filter (🅠6 — 전체 shows both categories' gear).
   const pickerEntities = useMemo(() => {
-    const cat: EquipCategory | null = pickingSlot !== null ? equipCat : (equipFilter === 'all' ? null : equipFilter);
+    const cat: EquipCategory | null = pickingSlot !== null ? equipCat : null;
     return cat === null ? rarityFiltered : rarityFiltered.filter(({ entity }) => getEquipCategory(entity) === cat);
-  }, [rarityFiltered, equipCat, equipFilter, pickingSlot]);
+  }, [rarityFiltered, equipCat, pickingSlot]);
 
   // Active set bonus spans both gear categories (largest glyph family counts).
   const equippedEntities = useMemo(
@@ -547,7 +545,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const totalAll = STAGE_ENTITIES.length;
           const collectedAll = STAGE_ENTITIES.filter(isCollected).length;
 
-          const shortReward = (r: CodexReward) => `+${Math.round(r.value * CODEX_REWARD_MULT)}%`;
           const setsToRender = selectedSetId === 'all'
             ? CODEX_SETS
             : CODEX_SETS.filter((cs) => cs.id === selectedSetId);
@@ -595,6 +592,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <span className="codex-set-chip__label">{t(language, 'codexShowMissing')}</span>
                 </button>
               </div>
+              <p className="codex-bonus-help">{t(language, 'codexBonusHelp')}</p>
 
               {/* The glyph wall — thin set/subset dividers, dense cards. */}
               {setsToRender.map((cs) => {
@@ -607,7 +605,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         <span className="codex-divider__label">{codexSetLabel(cs, language)}</span>
                         <span className={`codex-reward ${setDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(cs.reward, language)}>
                           <span className="codex-reward__star">{setDone ? '★' : '☆'}</span>
-                          <span className="codex-reward__text">{shortReward(cs.reward)}</span>
+                          <span className="codex-reward__text">{codexRewardLabel(cs.reward, language)}</span>
                         </span>
                       </div>
                     ) : null}
@@ -625,7 +623,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             <span className="codex-divider__count">{`${subGot}/${members.length}`}</span>
                             <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(sub.reward, language)}>
                               <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
-                              <span className="codex-reward__text">{shortReward(sub.reward)}</span>
+                              <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>
                             </span>
                             <span className="codex-divider__rule" />
                           </div>
@@ -761,26 +759,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               </div>
             );
           };
-          const shownCats: EquipCategory[] = equipFilter === 'all' ? ['click', 'rift'] : [equipFilter];
+          const shownCats: EquipCategory[] = ['click', 'rift'];
           return (
             <div className="equip-page">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
-              {/* 🅠6 (req ⑫): 전체 / 클릭 / 오토 filter — 전체 shows both groups (6 slots). */}
-              <div className="equip-cat-toggle">
-                {(['all', 'click', 'rift'] as const).map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    className={`equip-cat-toggle__btn ${equipFilter === f ? 'equip-cat-toggle__btn--active' : ''}`}
-                    aria-pressed={equipFilter === f}
-                    onClick={() => { setEquipFilter(f); if (f !== 'all') setEquipCat(f); setPickingSlot(null); setInspectedSlot(null); onUITap?.(); }}
-                  >
-                    {t(language, f === 'all' ? 'rarityAll' : f === 'rift' ? 'equipCatRift' : 'equipCatClick')}
-                  </button>
-                ))}
-              </div>
 
-              {/* Loadout — both category groups when 전체; tap a slot for detail / pick. */}
+              {/* Loadout — both category groups (click + auto/rift); tap a slot for detail / pick. */}
               {shownCats.map((cat) => renderSlotGroup(cat))}
 
               {/* Active set magnitude (compact) + batch enhance */}
@@ -844,12 +828,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
                           disabled={alreadyAt >= 0}
                           onClick={() => {
-                            let target = pickingSlot;
-                            if (target === null) {
-                              for (let s = 0; s < gearSlotCount; s++) { if (!gearSlots[s]) { target = s; break; } }
+                            if (pickingSlot !== null) {
+                              onEquip(entity.id, pickingSlot);
+                            } else {
+                              // At rest: equip into this item's own category — first empty slot,
+                              // else replace the occupant. Instant swap, no unequip-first.
+                              onEquip(entity.id);
                             }
-                            if (target === null) return;
-                            onEquip(entity.id, target);
                             setPickingSlot(null);
                           }}
                         >
