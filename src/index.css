@@ -5883,6 +5883,40 @@ button.stat-header-item {
   margin-bottom: 16px;
 }
 
+/* Quest milestones (completed quests) at the top of the almanac. */
+.almanac-quests {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.almanac-quests__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9be7ff;
+  margin-bottom: 8px;
+}
+.almanac-quests__empty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+.almanac-quest-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 0;
+}
+.almanac-quest-row__check {
+  color: #7fe9ff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.almanac-quest-row__text { display: flex; flex-direction: column; }
+.almanac-quest-row__title { font-size: 13px; font-weight: 600; color: #f3f7ff; }
+.almanac-quest-row__desc { font-size: 11px; color: #aebed6; }
+
 .almanac-milestones {
   display: flex;
   flex-direction: column;
@@ -6335,6 +6369,41 @@ button.stat-header-item {
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   color: #8ea4c2;
+}
+
+/* Quest-milestone notification toast — top-center achievement banner. */
+.quest-milestone-toast {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(127, 233, 255, 0.5);
+  background: linear-gradient(180deg, rgba(24, 40, 60, 0.96), rgba(14, 22, 38, 0.96));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 22px rgba(127, 233, 255, 0.25);
+  cursor: pointer;
+  font: inherit;
+  color: #eaf6ff;
+  animation: questToastIn 0.35s ease-out;
+}
+.quest-milestone-toast__tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffd766;
+}
+.quest-milestone-toast__title { font-size: 15px; font-weight: 700; }
+.quest-milestone-toast__cta { font-size: 11px; color: #9be7ff; }
+@keyframes questToastIn {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* ============================================================

@@ -55,7 +55,7 @@ import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
-import { isQuestClaimable, getQuest } from '../game/quests';
+import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
@@ -91,7 +91,7 @@ interface ComboDisplay {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field' | 'focus';
+  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
@@ -166,15 +166,22 @@ export function GameScreen({
   const [almanacOpen, setAlmanacOpen] = useState(false);
   const [questOpen, setQuestOpen] = useState(false);
   // 🅠5: badge the quest button when any active quest is claimable.
-  const hasClaimableQuest = state.activeQuests.some((id) => {
+  const claimableQuestIds = state.activeQuests.filter((id) => {
     const q = getQuest(id);
     return q ? isQuestClaimable(q, state) : false;
   });
+  const hasClaimableQuest = claimableQuestIds.length > 0;
+  const questMilestoneSeen = Boolean(state.tutorialFlags['quest-milestone-intro']);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const focusAnchorRef = useRef<HTMLButtonElement | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const questAnchorRef = useRef<HTMLButtonElement | null>(null);
+  // Quest-milestone notification toast (fires when a quest's condition is met).
+  const [questToast, setQuestToast] = useState<{ id: string; title: string } | null>(null);
+  const prevClaimableRef = useRef<Set<string>>(new Set());
+  const questToastTimerRef = useRef<number | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
   const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
@@ -295,6 +302,16 @@ export function GameScreen({
     if (state.tutorialFlags.allDismissed) {
       return null;
     }
+    // First time a quest milestone is reached: teach the claim→almanac loop.
+    if (hasClaimableQuest && !state.tutorialFlags['quest-milestone-intro']) {
+      return {
+        flagId: 'quest-milestone-intro',
+        anchor: 'quest',
+        message: t(language, 'tutQuestMilestone'),
+        ctaLabel: t(language, 'tutQuestMilestoneOpen'),
+        onCta: () => { setQuestOpen(true); soundManager?.playUIOpen(); },
+      };
+    }
     if (stage.id >= 2 && !state.tutorialFlags['time-gauge-visible']) {
       return {
         flagId: 'time-gauge-visible',
@@ -361,6 +378,7 @@ export function GameScreen({
     canCondense,
     canShowShop,
     equipUnlocked,
+    hasClaimableQuest,
     entityPanelOpen,
     hasActiveBoost,
     language,
@@ -580,6 +598,28 @@ export function GameScreen({
     }, TUNING.FLOAT_AUTO_MS);
     return () => window.clearTimeout(timeoutId);
   }, [language, state.lastAutoIncomeEvent]);
+
+  // Quest milestone reached: when a quest newly meets its condition, pop a toast
+  // ("Milestone! Tap ✦ to claim"). The very FIRST time is handled by the
+  // one-shot tutorial bubble instead, so we don't double-notify.
+  const claimableKey = claimableQuestIds.join(',');
+  useEffect(() => {
+    const prev = prevClaimableRef.current;
+    const newlyReady = claimableQuestIds.find((id) => !prev.has(id));
+    prevClaimableRef.current = new Set(claimableQuestIds);
+    if (newlyReady && questMilestoneSeen) {
+      const q = getQuest(newlyReady);
+      if (q) {
+        setQuestToast({ id: newlyReady, title: questTitle(q, language) });
+        soundManager?.playUIOpen();
+        if (questToastTimerRef.current) window.clearTimeout(questToastTimerRef.current);
+        questToastTimerRef.current = window.setTimeout(() => setQuestToast(null), 5200);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimableKey, questMilestoneSeen, language]);
+
+  useEffect(() => () => { if (questToastTimerRef.current) window.clearTimeout(questToastTimerRef.current); }, []);
 
   useEffect(() => {
     if (state.lastEncounterEvent) {
@@ -968,6 +1008,7 @@ export function GameScreen({
             <span className="hud-action-label">{t(language, 'collectionTitle')}</span>
           </button>
           <button
+            ref={questAnchorRef}
             type="button"
             className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
             onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
@@ -1110,6 +1151,7 @@ export function GameScreen({
           onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
           onUITap={() => soundManager?.playUITap()}
           onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
+          completedQuestIds={state.completedQuestIds}
         />
       ) : null}
 
@@ -1120,6 +1162,19 @@ export function GameScreen({
           onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playEntityLevelUp(); }}
           onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
+      ) : null}
+
+      {/* Quest-milestone notification — tap to open the quest panel and claim. */}
+      {questToast && !questOpen ? (
+        <button
+          type="button"
+          className="quest-milestone-toast"
+          onClick={() => { setQuestOpen(true); setQuestToast(null); soundManager?.playUIOpen(); }}
+        >
+          <span className="quest-milestone-toast__tag">{t(language, 'questMilestoneToast')}</span>
+          <span className="quest-milestone-toast__title">✦ {questToast.title}</span>
+          <span className="quest-milestone-toast__cta">{t(language, 'questMilestoneToastCta')}</span>
+        </button>
       ) : null}
 
       {settingsOpen ? (
@@ -1145,15 +1200,17 @@ export function GameScreen({
           anchorRef={
             activeTutorialBubble.anchor === 'entity'
               ? entityAnchorRef
-              : activeTutorialBubble.anchor === 'shop'
-                ? shopAnchorRef
-                : activeTutorialBubble.anchor === 'boost'
-                  ? boostAnchorRef
-                  : activeTutorialBubble.anchor === 'focus'
-                    ? focusAnchorRef
-                    : activeTutorialBubble.anchor === 'field'
-                      ? fieldCenterAnchorRef
-                      : resourceAnchorRef
+              : activeTutorialBubble.anchor === 'quest'
+                ? questAnchorRef
+                : activeTutorialBubble.anchor === 'shop'
+                  ? shopAnchorRef
+                  : activeTutorialBubble.anchor === 'boost'
+                    ? boostAnchorRef
+                    : activeTutorialBubble.anchor === 'focus'
+                      ? focusAnchorRef
+                      : activeTutorialBubble.anchor === 'field'
+                        ? fieldCenterAnchorRef
+                        : resourceAnchorRef
           }
           position={
             activeTutorialBubble.anchor === 'resource'

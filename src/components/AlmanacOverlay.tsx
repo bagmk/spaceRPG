@@ -4,6 +4,7 @@ import { STAGE_LOGS, getLogsForStage, pickLogText } from '../game/stageLogs';
 import { STAGES } from '../game/stages';
 import { t, stageName, type Lang } from '../i18n';
 import { milestoneLoreId } from '../game/loreLinks';
+import { getQuest, questTitle, questDesc } from '../game/quests';
 import { LoreModal } from './LoreModal';
 
 /** Remove filler words like "roughly", "about", "near", "approximately" from era values */
@@ -23,9 +24,11 @@ interface AlmanacOverlayProps {
   onUITap?: () => void;
   /** 🅠6 (req ⑪): navigate the game's viewed stage (canvas scene) when a pill is tapped. */
   onStageSelect?: (id: number) => void;
+  /** Claimed quest ids — shown here as the player's "past milestones". */
+  completedQuestIds?: string[];
 }
 
-export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose, onUITap, onStageSelect }: AlmanacOverlayProps) {
+export function AlmanacOverlay({ currentStageId, progressPercent, language, onClose, onUITap, onStageSelect, completedQuestIds = [] }: AlmanacOverlayProps) {
   const [selectedId, setSelectedId] = useState(currentStageId);
   const [activeLoreId, setActiveLoreId] = useState<string | null>(null);
   const pillsRef = useRef<HTMLDivElement | null>(null);
@@ -95,6 +98,30 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
         </div>
 
         <div className="almanac-scroll" ref={contentRef} style={{ '--stage-accent': stageMeta?.accent ?? '#8090b0' } as React.CSSProperties}>
+          {/* Quest milestones — the player's own achievements, recorded on claim. */}
+          <div className="almanac-quests">
+            <div className="almanac-quests__title">
+              {t(language, 'almanacQuestMilestones')} ({completedQuestIds.length})
+            </div>
+            {completedQuestIds.length === 0 ? (
+              <p className="almanac-quests__empty">{t(language, 'almanacQuestEmpty')}</p>
+            ) : (
+              completedQuestIds.map((id) => {
+                const q = getQuest(id);
+                if (!q) return null;
+                return (
+                  <div key={id} className="almanac-quest-row">
+                    <span className="almanac-quest-row__check">✓</span>
+                    <span className="almanac-quest-row__text">
+                      <span className="almanac-quest-row__title">{questTitle(q, language)}</span>
+                      <span className="almanac-quest-row__desc">{questDesc(q, language)}</span>
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
           {/* Description — always visible at top */}
           <div className="almanac-desc">
             <h2 className="almanac-stage-name">
