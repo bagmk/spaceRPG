@@ -615,6 +615,26 @@ button.hud-stage-title--clickable:hover {
   gap: 8px;
 }
 
+/* 🅠6 (req ⑫): per-category slot group (both shown at once under 전체). */
+.equip-group { margin-bottom: 12px; }
+.equip-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 2px 6px;
+}
+.equip-group__label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fb4d0;
+}
+.equip-group__value {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: #f3f7ff;
+}
+
 .equip-slot-card {
   position: relative;
   display: flex;

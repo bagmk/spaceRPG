@@ -266,6 +266,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
   const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
+  // 🅠6 (req ⑫): 전체/클릭/오토 filter — 'all' shows both slot groups (6 slots) at once.
+  const [equipFilter, setEquipFilter] = useState<'all' | EquipCategory>('all');
   const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
   // Stage browsing is gone — items show across all eras at once. The prop stays
   // for API compatibility but is no longer driven from here.
@@ -279,7 +281,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [hintShow, setHintShow] = useState<Record<string, boolean>>({});
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   // Equip: hero-stat breakdown expand, slot-detail inspector, on-demand filter.
-  const [statsExpanded, setStatsExpanded] = useState(false);
   const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [protectEnhance, setProtectEnhance] = useState(false);
@@ -295,13 +296,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
   const accent = playerStage?.accent ?? '#8090b0';
 
-  const switchEquipCat = (next: EquipCategory) => {
-    if (next === equipCat) return;
-    setEquipCat(next);
-    setInspectedSlot(null);
-    setPickingSlot(null);
-    onUITap?.();
-  };
 
   // Gacha "tempt fate" beat: spin for a moment, THEN commit the fusion so the
   // result lands as a reveal (suspense, not an instant swap).
@@ -373,7 +367,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // The gear array this equip page edits.
   const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
   const gearSlotCount = equipCat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
-  const gearRules = equipCat === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
 
   // Every owned stack, across ALL eras — sorted best-first (rarity desc → era asc).
   const ownedEntities = useMemo(() => {
@@ -395,11 +388,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     [ownedEntities, rarityFilter],
   );
 
-  // Equip grid shows only the matching gear category (click vs rift).
-  const pickerEntities = useMemo(
-    () => rarityFiltered.filter(({ entity }) => getEquipCategory(entity) === equipCat),
-    [rarityFiltered, equipCat],
-  );
+  // Equip grid: while picking a slot, show only that slot's category; otherwise
+  // honour the 전체/클릭/오토 filter (🅠6 — 전체 shows both categories' gear).
+  const pickerEntities = useMemo(() => {
+    const cat: EquipCategory | null = pickingSlot !== null ? equipCat : (equipFilter === 'all' ? null : equipFilter);
+    return cat === null ? rarityFiltered : rarityFiltered.filter(({ entity }) => getEquipCategory(entity) === cat);
+  }, [rarityFiltered, equipCat, equipFilter, pickingSlot]);
 
   // Active set bonus spans both gear categories (largest glyph family counts).
   const equippedEntities = useMemo(
@@ -681,21 +675,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
         {/* ── Equip page ── */}
         {tab === 'equip' ? (() => {
-          const heroValue = equipCat === 'click'
-            ? `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}`
-            : `${formatAutoRateValue(stats.autoRate)}/s`;
-          const heroLabel = equipCat === 'click' ? t(language, 'effectClickPower') : t(language, 'hudAuto');
-          const breakdown: [string, string][] = equipCat === 'click'
-            ? [
-                [t(language, 'effectCritChance'), `${(stats.critChance * 100).toFixed(1)}%`],
-                [t(language, 'effectCritMult'), `×${stats.critMult.toFixed(2)}`],
-                [t(language, 'statComboCapMax'), `×${stats.comboCapMult.toFixed(1)}`],
-              ]
-            : [
-                [t(language, 'effectAutoPower'), `×${stats.autoFlatMult.toFixed(2)}`],
-                [t(language, 'statEmission'), `${(stats.emissionIntervalMs / 1000).toFixed(1)}s`],
-                [t(language, 'statOffline'), `${Math.round(stats.offlineEff * 100)}%`],
-              ];
           // Strength score proportional to applied multiplicative contribution —
           // used only for relative deltas while picking (ratio is meaningful).
           const gearStrength = (entity: StageEntity, entry?: EntityInstance) => {
@@ -707,100 +686,99 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const pickEquipped = pickingSlot !== null ? equippedEntities[pickingSlot] : undefined;
           const pickBase = pickEquipped ? gearStrength(pickEquipped, ownedEntryOf(pickEquipped)) : 0;
           const dominantKey = setInfo?.key;
+          const heroFor = (cat: EquipCategory) => cat === 'click'
+            ? { label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)} ${t(language, 'hudPerClick')}` }
+            : { label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}/s` };
+          // 🅠6 (req ⑫): one category's hero value + its 3 slots. Tapping a slot makes
+          // that category active (drives the picker + slot-detail / inline enhance).
+          const renderSlotGroup = (cat: EquipCategory) => {
+            const slots = cat === 'rift' ? riftSlots : equippedSlots;
+            const count = cat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
+            const rules = cat === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
+            const hero = heroFor(cat);
+            return (
+              <div className="equip-group" key={cat}>
+                <div className="equip-group__head">
+                  <span className="equip-group__label">{hero.label}</span>
+                  <strong className="equip-group__value">{hero.value}</strong>
+                </div>
+                <div className="equip-page__slots">
+                  {Array.from({ length: 3 }, (_, i) => {
+                    if (i >= count) {
+                      const rule = rules.find((r) => r.slot === i + 1);
+                      const hint = rule?.minStageId !== undefined
+                        ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
+                        : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
+                      return (
+                        <div key={i} className="equip-slot-card equip-slot-card--locked">
+                          <span className="equip-slot-card__lock">🔒</span>
+                          <span className="equip-slot-card__hint">{hint}</span>
+                        </div>
+                      );
+                    }
+                    const slotId = slots[i];
+                    const slotEntity = slotId ? findEntityById(slotId) : undefined;
+                    const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+                    const linked = Boolean(slotEntity && dominantKey && getEquipSetKey(slotEntity) === dominantKey);
+                    const isPicking = equipCat === cat && pickingSlot === i;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${linked ? 'equip-slot-card--linked' : ''}`}
+                        style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                        onClick={() => {
+                          setEquipCat(cat);
+                          if (slotEntity) { setInspectedSlot(i); }
+                          else { setPickingSlot(isPicking ? null : i); }
+                          onUITap?.();
+                        }}
+                      >
+                        {slotEntity ? (
+                          <>
+                            {linked ? <span className="equip-slot-card__set">⬡</span> : null}
+                            <div className="equip-slot-card__glyph">
+                              <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
+                            </div>
+                            <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
+                            <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                              {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className="equip-slot-card__plus">＋</span>
+                            <span className="equip-slot-card__hint">{t(language, 'equipSlotTapFill')}</span>
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          };
+          const shownCats: EquipCategory[] = equipFilter === 'all' ? ['click', 'rift'] : [equipFilter];
           return (
             <div className="equip-page">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
-              {/* Click vs Rift(auto) gear toggle — plain-outcome labels */}
+              {/* 🅠6 (req ⑫): 전체 / 클릭 / 오토 filter — 전체 shows both groups (6 slots). */}
               <div className="equip-cat-toggle">
-                {(['click', 'rift'] as EquipCategory[]).map((cat) => (
+                {(['all', 'click', 'rift'] as const).map((f) => (
                   <button
-                    key={cat}
+                    key={f}
                     type="button"
-                    className={`equip-cat-toggle__btn ${equipCat === cat ? 'equip-cat-toggle__btn--active' : ''}`}
-                    aria-pressed={equipCat === cat}
-                    onClick={() => switchEquipCat(cat)}
+                    className={`equip-cat-toggle__btn ${equipFilter === f ? 'equip-cat-toggle__btn--active' : ''}`}
+                    aria-pressed={equipFilter === f}
+                    onClick={() => { setEquipFilter(f); if (f !== 'all') setEquipCat(f); setPickingSlot(null); setInspectedSlot(null); onUITap?.(); }}
                   >
-                    {t(language, cat === 'rift' ? 'equipCatRift' : 'equipCatClick')}
+                    {t(language, f === 'all' ? 'rarityAll' : f === 'rift' ? 'equipCatRift' : 'equipCatClick')}
                   </button>
                 ))}
               </div>
 
-              {/* HERO — the one number you grow (4-stat detail behind ⌄) */}
-              <div className="equip-hero">
-                <div className="equip-hero__label">{heroLabel}</div>
-                <div className="equip-hero__value-row">
-                  <span className="equip-hero__value" key={heroValue}>{heroValue}</span>
-                  <button
-                    type="button"
-                    className={`equip-hero__toggle ${statsExpanded ? 'equip-hero__toggle--open' : ''}`}
-                    aria-label={t(language, 'equipStatDetails')}
-                    aria-expanded={statsExpanded}
-                    onClick={() => { setStatsExpanded((v) => !v); onUITap?.(); }}
-                  >⌄</button>
-                </div>
-                {statsExpanded ? (
-                  <div className="equip-hero__breakdown">
-                    {breakdown.map(([label, value]) => (
-                      <div key={label} className="equip-hero__stat">
-                        <span className="equip-hero__stat-label">{label}</span>
-                        <span className="equip-hero__stat-value">{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Loadout — slots show identity + strength only; tap for detail */}
-              <div className="equip-page__slots">
-                {Array.from({ length: 3 }, (_, i) => {
-                  if (i >= gearSlotCount) {
-                    const rule = gearRules.find((r) => r.slot === i + 1);
-                    const hint = rule?.minStageId !== undefined
-                      ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
-                      : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
-                    return (
-                      <div key={i} className="equip-slot-card equip-slot-card--locked">
-                        <span className="equip-slot-card__lock">🔒</span>
-                        <span className="equip-slot-card__hint">{hint}</span>
-                      </div>
-                    );
-                  }
-                  const slotEntity = equippedEntities[i];
-                  const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
-                  const linked = Boolean(slotEntity && dominantKey && getEquipSetKey(slotEntity) === dominantKey);
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${pickingSlot === i ? 'equip-slot-card--picking' : ''} ${linked ? 'equip-slot-card--linked' : ''}`}
-                      style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
-                      onClick={() => {
-                        if (slotEntity) { setInspectedSlot(i); }
-                        else { setPickingSlot(pickingSlot === i ? null : i); }
-                        onUITap?.();
-                      }}
-                    >
-                      {slotEntity ? (
-                        <>
-                          {linked ? <span className="equip-slot-card__set">⬡</span> : null}
-                          <div className="equip-slot-card__glyph">
-                            <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
-                          </div>
-                          <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
-                          <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                            {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <span className="equip-slot-card__plus">＋</span>
-                          <span className="equip-slot-card__hint">{t(language, 'equipSlotTapFill')}</span>
-                        </>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Loadout — both category groups when 전체; tap a slot for detail / pick. */}
+              {shownCats.map((cat) => renderSlotGroup(cat))}
 
               {/* Active set magnitude (compact) + batch enhance */}
               <div className="equip-actions">
@@ -818,7 +796,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 <button
                   type="button"
                   className="equip-enhance-all"
-                  onClick={() => { equippedEntities.forEach((e) => { if (e) onEnhance(e.id); }); }}
+                  onClick={() => { [...equippedSlots, ...riftSlots].forEach((id) => { if (id) onEnhance(id); }); }}
                 >
                   {t(language, 'enhanceAll')}
                 </button>
