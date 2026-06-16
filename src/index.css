@@ -13840,3 +13840,164 @@ button.stat-header-item {
 .codex-subset__head .codex-reward {
   margin-left: auto;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Cosmic side rail — Overhaul-2 UI polish (custom buttons)
+   Appended last + scoped under .side-rail so it wins over every accreted
+   .entity-lab-button rule at all breakpoints. Each button carries a
+   per-action accent via the inline --rail-accent custom property.
+   ════════════════════════════════════════════════════════════════════ */
+.side-rail {
+  gap: 12px;
+}
+.side-rail__shop-slot {
+  display: flex;
+}
+.side-rail .entity-lab-button,
+.side-rail .shop-button,
+.side-rail .bottom-settings-button {
+  --rail-accent: var(--core, #ffaa66);
+  position: relative;
+  width: 60px;
+  height: 56px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+  border-radius: 17px;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--rail-accent) 34%, rgba(255, 255, 255, 0.1));
+  background:
+    radial-gradient(125% 92% at 50% -8%, color-mix(in srgb, var(--rail-accent) 26%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012)),
+    rgba(11, 13, 21, 0.66);
+  backdrop-filter: blur(13px) saturate(1.25);
+  -webkit-backdrop-filter: blur(13px) saturate(1.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 0 16px color-mix(in srgb, var(--rail-accent) 9%, transparent),
+    0 8px 22px rgba(0, 0, 0, 0.42);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1.35),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+.side-rail .entity-lab-button .hud-action-icon,
+.side-rail .shop-button .hud-action-icon,
+.side-rail .bottom-settings-button .hud-action-icon {
+  font-size: 21px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rail-accent) 78%, #ffffff);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--rail-accent) 55%, transparent));
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1.35);
+}
+.side-rail .entity-lab-button .hud-action-label,
+.side-rail .shop-button .hud-action-label,
+.side-rail .bottom-settings-button .hud-action-label {
+  max-width: 100%;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--rail-accent) 48%, rgba(245, 247, 250, 0.72));
+}
+@media (hover: hover) {
+  .side-rail .entity-lab-button:hover,
+  .side-rail .shop-button:hover:not(:disabled),
+  .side-rail .bottom-settings-button:hover {
+    transform: translateY(-2px) scale(1.045);
+    border-color: color-mix(in srgb, var(--rail-accent) 64%, rgba(255, 255, 255, 0.22));
+    background:
+      radial-gradient(125% 95% at 50% -8%, color-mix(in srgb, var(--rail-accent) 38%, transparent), transparent 72%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      rgba(13, 15, 23, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 0 20px color-mix(in srgb, var(--rail-accent) 16%, transparent),
+      0 10px 26px rgba(0, 0, 0, 0.5),
+      0 0 24px color-mix(in srgb, var(--rail-accent) 34%, transparent);
+  }
+  .side-rail .entity-lab-button:hover .hud-action-icon,
+  .side-rail .shop-button:hover:not(:disabled) .hud-action-icon,
+  .side-rail .bottom-settings-button:hover .hud-action-icon {
+    transform: scale(1.12);
+  }
+  .side-rail .entity-lab-button:hover .hud-action-label,
+  .side-rail .shop-button:hover:not(:disabled) .hud-action-label,
+  .side-rail .bottom-settings-button:hover .hud-action-label {
+    color: color-mix(in srgb, var(--rail-accent) 72%, #ffffff);
+  }
+}
+.side-rail .entity-lab-button:active,
+.side-rail .shop-button:active:not(:disabled),
+.side-rail .bottom-settings-button:active {
+  transform: translateY(0) scale(0.95);
+}
+/* Affordable / has-action: gentle accent breathing */
+.side-rail .entity-lab-button.affordable,
+.side-rail .shop-button.affordable {
+  animation: rail-breathe 2.1s ease-in-out infinite;
+}
+@keyframes rail-breathe {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      0 8px 22px rgba(0, 0, 0, 0.42),
+      0 0 14px color-mix(in srgb, var(--rail-accent) 22%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 8px 22px rgba(0, 0, 0, 0.42),
+      0 0 26px color-mix(in srgb, var(--rail-accent) 48%, transparent);
+  }
+}
+/* Locked: desaturated, no accent, lock glyph dimmed */
+.side-rail .entity-lab-button--locked,
+.side-rail .entity-lab-button--locked:hover {
+  --rail-accent: #6b7280;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.5;
+  filter: saturate(0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+}
+.side-rail .entity-lab-button--locked .hud-action-icon {
+  filter: none;
+}
+.side-rail .shop-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: saturate(0.45);
+}
+/* Notify dot — quest ready / shop deal */
+.side-rail .entity-lab-button__dot,
+.side-rail .hud-notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgba(9, 10, 16, 0.95);
+  background: color-mix(in srgb, var(--rail-accent) 70%, #ffffff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rail-accent) 80%, transparent);
+  animation: rail-dot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rail-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.22); opacity: 0.78; }
+}

@@ -1001,6 +1001,7 @@ export function GameScreen({
             ref={entityAnchorRef}
             type="button"
             className="entity-lab-button"
+            style={{ '--rail-accent': '#7ec8ff' } as React.CSSProperties}
             onClick={() => openEntityPanel('lab')}
             aria-label={t(language, 'collectionTitle')}
           >
@@ -1011,6 +1012,7 @@ export function GameScreen({
             ref={questAnchorRef}
             type="button"
             className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
+            style={{ '--rail-accent': '#ffcf6b' } as React.CSSProperties}
             onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
             aria-label={t(language, 'questTitle')}
           >
@@ -1021,6 +1023,7 @@ export function GameScreen({
           <button
             type="button"
             className={`entity-lab-button ${equipUnlocked ? '' : 'entity-lab-button--locked'}`}
+            style={{ '--rail-accent': '#8ef0c0' } as React.CSSProperties}
             disabled={!equipUnlocked}
             onClick={() => openEntityPanel('equip', 'click')}
             aria-label={t(language, 'equipClickTitle')}
@@ -1032,6 +1035,7 @@ export function GameScreen({
           <button
             type="button"
             className={`entity-lab-button ${fusionUnlocked ? '' : 'entity-lab-button--locked'}`}
+            style={{ '--rail-accent': '#c79bff' } as React.CSSProperties}
             disabled={!fusionUnlocked}
             onClick={() => openEntityPanel('fuse')}
             aria-label={t(language, 'fuseTitle')}
@@ -1040,7 +1044,7 @@ export function GameScreen({
             <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '⚛' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
           </button>
-          <div ref={shopAnchorRef}>
+          <div ref={shopAnchorRef} className="side-rail__shop-slot" style={{ '--rail-accent': '#ff9f6b' } as React.CSSProperties}>
             <ShopButton
               highlighted={hasShopNotification}
               disabled={!canShowShop}
@@ -1057,6 +1061,7 @@ export function GameScreen({
           <button
             type="button"
             className="mini-button settings-gear-btn bottom-settings-button"
+            style={{ '--rail-accent': '#9fb2c8' } as React.CSSProperties}
             onClick={() => { setSettingsOpen(true); soundManager?.playUIOpen(); }}
             title={t(language, 'hudSettings')}
             aria-label={t(language, 'hudSettings')}
