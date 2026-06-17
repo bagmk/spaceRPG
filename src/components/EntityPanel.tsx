@@ -15,6 +15,8 @@ import {
   RARITY_STAGE_GATES,
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
+  EFFECT_TRAIT,
+  SUBSTAT_TRAIT,
   type SecondaryStatType,
 } from '../game/balance';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
@@ -198,6 +200,93 @@ function formatEntityEffectTotal(
   if (type === 'multiplier') return `+${formatPct(curvedTotal)} ${t(lang, 'effectAllSources')}`;
   if (type === 'entropy') return `+${formatPct(curvedTotal)} ${t(lang, 'effectEncounter')}`;
   return `+${formatPct(value * effCount * lvl)} ${type}`;
+}
+
+/**
+ * Structured (value, label) parts of an entity's primary effect — feeds the
+ * spec-chip so the icon, number, and term render as three distinct pieces
+ * instead of one dense string. Mirrors formatEntityEffect / *Total math.
+ */
+function effectValueLabel(
+  entity: StageEntity,
+  lang: Lang,
+  power: GearPower,
+  count: number,
+  level: number,
+  carried: boolean,
+  total: boolean,
+): { value: string; label: string } {
+  const { type, value, isFlat } = entity.effect;
+  const lvl = getLevelMult(level);
+  const effCount = total ? getEffectiveCount(count, entity.maxCount, type === 'time') : 1;
+  const curve = getGearPowerMult(power, entity.stageId, carried);
+  const pct = (v: number) => `+${formatPct(v)}`;
+  switch (type) {
+    case 'click':
+      return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectClickPower') };
+    case 'auto':
+      return {
+        value: `+${formatAutoRateValue(getEntityAutoRate(entity, power, total ? count : 1, level, carried))}${t(lang, 'effectAutoRateUnit')}`,
+        label: t(lang, 'hudAuto'),
+      };
+    case 'crit':
+      return isFlat
+        ? { value: pct(value * effCount * lvl), label: t(lang, 'effectCritChance') }
+        : { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectCritMult') };
+    case 'auto_mult':
+      return { value: pct(value * effCount * lvl), label: t(lang, 'effectAutoPower') };
+    case 'time':
+      return {
+        value: pct(total ? getTotalTimeRatePct(entity, count, level, power.stageId) : getNextTimeRatePct(entity, count, level, power.stageId)),
+        label: t(lang, 'effectTimeRate'),
+      };
+    case 'multiplier':
+      return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectAllSources') };
+    case 'entropy':
+      return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectEncounter') };
+    case 'combo_cap':
+      return { value: `+${(value * effCount * lvl).toFixed(1)}`, label: t(lang, 'substatComboCap') };
+    default:
+      return { value: pct(value * effCount * lvl), label: String(type) };
+  }
+}
+
+/** Structured substat parts (icon + value + label) for the spec-chip rows. */
+function substatValueLabel(
+  sub: SecondaryStat,
+  lang: Lang,
+  level: number,
+  gearPower: number,
+): { icon: string; value: string; label: string } {
+  const v = sub.value * getLevelMult(level) * (sub.scales ? gearPower : 1);
+  const value = sub.type === 'comboCap' ? `+${v.toFixed(1)}` : `+${v.toFixed(1)}%`;
+  return { icon: SUBSTAT_TRAIT[sub.type], value, label: t(lang, SUBSTAT_LABEL_KEY[sub.type]) };
+}
+
+/** Corner trait badge — at-a-glance "what does this item do" on any item card. */
+function TraitBadge({ entity, className = '' }: { entity: StageEntity; className?: string }) {
+  const trait = EFFECT_TRAIT[entity.effect.type];
+  if (!trait) return null;
+  return (
+    <span
+      className={`trait-badge ${className}`}
+      style={{ color: trait.accent, borderColor: trait.accent } as CSSProperties}
+      aria-hidden="true"
+    >
+      {trait.icon}
+    </span>
+  );
+}
+
+/** Icon + value + label chip — the readable spec line inside an expanded card. */
+function SpecChip({ icon, value, label, accent, primary = false }: { icon: string; value: string; label: string; accent: string; primary?: boolean }) {
+  return (
+    <span className={`spec-chip ${primary ? 'spec-chip--primary' : ''}`} style={{ '--chip-accent': accent } as CSSProperties}>
+      <span className="spec-chip__icon">{icon}</span>
+      <span className="spec-chip__value">{value}</span>
+      <span className="spec-chip__label">{label}</span>
+    </span>
+  );
 }
 
 /** Live combat stats shown on the equip page (computed by GameScreen). */
@@ -723,6 +812,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                   {collected && codexNew.has(entity.id) ? (
                                     <span className="almanac-card__new">NEW</span>
                                   ) : null}
+                                  {collected ? <TraitBadge entity={entity} className="trait-badge--card" /> : null}
                                   <div className="almanac-card__glyph">
                                     {collected
                                       ? <EntityGlyph entity={entity} color={rarityColor} />
@@ -829,6 +919,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             >
                               ✕
                             </span>
+                            <TraitBadge entity={slotEntity} className="trait-badge--card" />
                             <div className="equip-slot-card__glyph">
                               <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
                             </div>
@@ -934,6 +1025,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                               {delta > 0 ? `+${delta}%` : `${delta}%`}
                             </span>
                           ) : null}
+                          <TraitBadge entity={entity} className="trait-badge--card" />
                           <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                           <span className="owned-card__name">{entityName(entity, language)}</span>
                           {/* 🅠6 (req ⑫) card format: Lv.N · count/threshold · ⬆ (when below cap). */}
@@ -1116,6 +1208,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             disabled={blocked}
                             onClick={() => addFuseInput(entity)}
                           >
+                            <TraitBadge entity={entity} className="trait-badge--card" />
                             <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                             <span className="owned-card__name">{entityName(entity, language)}</span>
                             <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
@@ -1343,17 +1436,19 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
               <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
               <div className="entity-detail-card__stats">
-                <span style={{ color: rc }}>{formatEntityEffectTotal(ent, entry?.count ?? 1, language, power, lvl, entry?.carried)}</span>
-                <span>{`Lv.${lvl} · ×${entry?.count ?? 1}`}</span>
+                {(() => {
+                  const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true);
+                  const tr = EFFECT_TRAIT[ent.effect.type];
+                  return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+                })()}
+                <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${entry?.count ?? 1}`}</span>
               </div>
               {getSecondaryStats(ent).length > 0 ? (
-                <div className="entity-detail-card__substats">
-                  {getSecondaryStats(ent).map((sub, si) => (
-                    <span key={sub.type} className={si === 0 ? 'substat substat--specialty' : 'substat'} style={{ color: rc }}>
-                      {si === 0 ? <span className="substat__tag">{t(language, 'substatSpecialty')}</span> : null}
-                      {formatSubstat(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried))}
-                    </span>
-                  ))}
+                <div className="entity-detail-card__substats spec-chip-row">
+                  {getSecondaryStats(ent).map((sub) => {
+                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried));
+                    return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
+                  })}
                 </div>
               ) : null}
               {stonePhase && !atCap ? (
@@ -1420,8 +1515,6 @@ function EntityDetailCard({
   ownedLevel,
   onClose,
 }: DetailCardProps) {
-  const effectLabel = formatEntityEffect(entity, language, power, count, ownedLevel);
-
   return (
     <div
       className="entity-detail-layer"
@@ -1459,21 +1552,24 @@ function EntityDetailCard({
           </span>
           <span className="entity-detail-card__family-role">{familyRole(entity.visual.glyph, language)}</span>
         </div>
-        <p className="entity-detail-card__description">{entityDescription(entity, language)}</p>
         <div className="entity-detail-card__stats">
-          <span style={{ color: rarityColor }}>{effectLabel}</span>
-          <span>{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
+          {(() => {
+            const p = effectValueLabel(entity, language, power, count, ownedLevel, false, false);
+            const tr = EFFECT_TRAIT[entity.effect.type];
+            return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+          })()}
+          <span className="entity-detail-card__lvl">{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
         </div>
         {getSecondaryStats(entity).length > 0 ? (
-          <div className="entity-detail-card__substats">
-            {getSecondaryStats(entity).map((sub, si) => (
-              <span key={sub.type} className={si === 0 ? 'substat substat--specialty' : 'substat'} style={{ color: rarityColor }}>
-                {si === 0 ? <span className="substat__tag">{t(language, 'substatSpecialty')}</span> : null}
-                {formatSubstat(sub, language, ownedLevel, getGearPowerMult(power, entity.stageId))}
-              </span>
-            ))}
+          <div className="entity-detail-card__substats spec-chip-row">
+            {getSecondaryStats(entity).map((sub) => {
+              const s = substatValueLabel(sub, language, ownedLevel, getGearPowerMult(power, entity.stageId));
+              return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
+            })}
           </div>
         ) : null}
+        {/* Flavor demoted below the mechanical specs — what it DOES reads first. */}
+        <p className="entity-detail-card__description entity-detail-card__description--flavor">{entityDescription(entity, language)}</p>
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
       </article>
     </div>

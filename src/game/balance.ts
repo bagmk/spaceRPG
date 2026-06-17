@@ -11,7 +11,7 @@
  * Tweak this file and the change applies everywhere.
  */
 
-import type { EntityRarity, EntityVisual } from './entities/types';
+import type { EntityRarity, EntityVisual, EntityEffectType } from './entities/types';
 
 // ── Entity / shop tuning ──────────────────────────────────────────────────────
 
@@ -511,6 +511,36 @@ export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scal
   autoPct: { base: 4, scales: true },       // +% auto rate
   clickPct: { base: 3, scales: true },      // +% click power
   offlineEff: { base: 5, scales: false },   // +% offline income efficiency
+};
+
+/**
+ * Trait icon + accent per effect type (readability: at-a-glance "what does this
+ * item DO"). Shown as a corner badge on every item card and as the leading
+ * glyph of the spec-chip in the expanded card. Icons are intentionally distinct
+ * so click/auto/crit/etc. read instantly without parsing the description.
+ */
+export const EFFECT_TRAIT: Record<EntityEffectType, { icon: string; accent: string }> = {
+  click:      { icon: '🖱', accent: '#7fd8ff' }, // click power %
+  crit:       { icon: '✷',  accent: '#ff9a5b' }, // crit chance / crit mult
+  auto:       { icon: '⚙',  accent: '#6ee7a0' }, // flat auto rate (/s)
+  auto_mult:  { icon: '⚡',  accent: '#9be86e' }, // auto power %
+  multiplier: { icon: '✦',  accent: '#c79bff' }, // all-source %
+  time:       { icon: '⏱',  accent: '#8fb6ff' }, // (legacy) time rate
+  combo_cap:  { icon: '🔗', accent: '#7fe0d8' }, // combo cap +
+  entropy:    { icon: '🌀', accent: '#b388ff' }, // (legacy) encounter bonus
+};
+
+/** Trait icon per secondary (substat) type — same vocabulary as EFFECT_TRAIT. */
+export const SUBSTAT_TRAIT: Record<SecondaryStatType, string> = {
+  critChance:  '✷',
+  critMult:    '✶',
+  comboCap:    '🔗',
+  entropyGain: '🌀',
+  dropRate:    '🎁',
+  fusionBurst: '⚗',
+  autoPct:     '⚙',
+  clickPct:    '🖱',
+  offlineEff:  '🌙',
 };
 
 /**

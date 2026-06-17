@@ -8145,7 +8145,8 @@ button.stat-header-item {
 
 .entity-detail-card__stats {
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  justify-items: center;
   margin-top: 16px;
   padding: 12px;
   border-radius: 9px;
@@ -8156,6 +8157,49 @@ button.stat-header-item {
   letter-spacing: 0.04em;
   text-align: center;
 }
+
+/* ── Readability (#38): trait badge + spec chips ── */
+.trait-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+/* Corner badge on item cards — at-a-glance "what does this do". */
+.trait-badge--card {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: rgba(8, 12, 22, 0.7);
+  border: 1px solid currentColor;
+  font-size: 9px;
+  pointer-events: none;
+  z-index: 2;
+}
+.spec-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-accent, #8da0c0) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-accent, #8da0c0) 38%, transparent);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.spec-chip__icon { font-size: 12px; line-height: 1; }
+.spec-chip__value { color: var(--chip-accent, #cfe0ff); font-weight: 900; font-family: var(--mono); }
+.spec-chip__label { color: #aeb9d0; font-weight: 600; }
+.spec-chip--primary { padding: 6px 13px; font-size: 13px; }
+.spec-chip--primary .spec-chip__icon { font-size: 15px; }
+.spec-chip-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.entity-detail-card__lvl { color: #7483a2; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; }
+.entity-detail-card__description--flavor { margin-top: 10px; font-size: 12px; font-style: italic; opacity: 0.7; }
 
 .entity-detail-card__buy {
   width: 100%;
