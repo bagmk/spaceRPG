@@ -5,6 +5,7 @@ import type { EntityInstance, StageEntity } from './types';
 import {
   AUTO_STAGE_POWER_BASE,
   CODEX_REWARD_MULT,
+  CLICK_GEAR_MATTER_BOOST,
   ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
@@ -104,6 +105,9 @@ export function applyEntityModifiers(
         break;
       case 'click':
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
+        // Matter-only explosive layer (#39): the satisfying click number multiplies
+        // hard per equipped click item, WITHOUT touching entropy (gate untouched).
+        mods.clickMatterMult *= 1 + (total * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
         break;
       case 'crit':
         if (isFlat) {
@@ -131,6 +135,7 @@ export function applyEntityModifiers(
         // Click-gear "all sources": click + crit only. Auto belongs to rift
         // gear — click gear must never leak into the auto calculation (스펙 §10).
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
+        mods.clickMatterMult *= 1 + (total * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
         mods.critMultMult *= 1 + (total * gearPower) / 200;
         break;
     }

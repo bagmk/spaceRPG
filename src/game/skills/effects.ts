@@ -21,6 +21,15 @@ export interface ModifierContext {
 export interface Modifiers {
   clickPowerMult: number;
   clickPowerAdd: number;
+  /**
+   * MATTER-ONLY explosive click multiplier (Overhaul-3 #39). Equipped click
+   * gear stacks into this multiplicatively so a full loadout feels like
+   * 500×500 — but it is applied ONLY to matter gained from a click, NEVER to
+   * the entropy income (which keeps riding the tame clickPowerMult). This
+   * decouples the satisfying click number from the entropy gate, so pacing
+   * across all 16 stages is untouched (no re-sim needed).
+   */
+  clickMatterMult: number;
   clickEmissionCount: number;
   clickVfxScale: number;
   autoRateMult: number;
@@ -64,6 +73,7 @@ export function defaultModifiers(): Modifiers {
   return {
     clickPowerMult: 1,
     clickPowerAdd: 0,
+    clickMatterMult: 1,
     clickEmissionCount: 1,
     clickVfxScale: 1,
     autoRateMult: 1,

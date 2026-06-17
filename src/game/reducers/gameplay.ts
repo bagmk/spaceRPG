@@ -186,11 +186,17 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   );
   const boostedMechanicQuanta = (action.quantaDelta ?? 0) * matterBoost;
   const gained = baseGained * matterBoost;
+  // #39 decoupling: the explosive click-gear multiplier scales ONLY the matter
+  // the player banks (the satisfying number) — NOT the entropy income below, so
+  // the entropy gate stays exactly as calibrated. `gained` remains the tame
+  // value that feeds entropy; `matterGained` is what hits the wallet.
+  const matterGained = gained * modifiers.clickMatterMult;
   const eventId = nextEventId(state);
-  const nextQuanta = safeAdd(state.quanta, gained + boostedMechanicQuanta);
+  const nextQuanta = safeAdd(state.quanta, matterGained + boostedMechanicQuanta);
   const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
   const particleName = pickParticleName(stage.id, nextProgress);
   const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
+  // Entropy rides the TAME `gained` (no clickMatterMult) — gate pacing unchanged.
   const clickEntropy = (gained + boostedMechanicQuanta) * ENTROPY_W_CLICK;
   const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
   // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
@@ -219,7 +225,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
       ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
       : state.almanacCollected,
     lastClickEvent: createClickEvent(
-      eventId, action.x, action.y, gained, isCrit, combo, comboMult, particleName, entropyGained,
+      eventId, action.x, action.y, matterGained, isCrit, combo, comboMult, particleName, entropyGained,
       droppedEntity?.id,
     ),
     mechanicCharge: Math.max(0, state.mechanicCharge + (action.mechanicChargeDelta ?? 0)),

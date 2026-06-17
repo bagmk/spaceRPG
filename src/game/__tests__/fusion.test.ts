@@ -195,24 +195,26 @@ describe('set bonuses + slot unlocks (Phase 3)', () => {
     }
   });
 
-  it('derives slot unlocks from stage and almanac progress', () => {
+  it('derives slot unlocks from stage progress (stage-gated, #39 pacing)', () => {
     expect(getDerivedUnlockedSlotCount(1, {})).toBe(1);
-    expect(getDerivedUnlockedSlotCount(4, {})).toBe(2);
+    expect(getDerivedUnlockedSlotCount(4, {})).toBe(1); // slot 2 not until stage 5
+    expect(getDerivedUnlockedSlotCount(5, {})).toBe(2);
+    expect(getDerivedUnlockedSlotCount(9, {})).toBe(3);
+    // Almanac size no longer unlocks slots — slot pacing is stage-gated now.
     const bigAlmanac: Record<number, string[]> = {
-      1: Array.from({ length: 30 }, (_, i) => `id_${i}`),
+      1: Array.from({ length: 60 }, (_, i) => `id_${i}`),
     };
-    expect(getDerivedUnlockedSlotCount(1, bigAlmanac)).toBe(3);
-    expect(getDerivedUnlockedSlotCount(4, bigAlmanac)).toBe(3);
+    expect(getDerivedUnlockedSlotCount(1, bigAlmanac)).toBe(1);
   });
 
-  it('ADVANCE_STAGE syncs unlocked slots (stage 4 → 2 slots)', () => {
+  it('ADVANCE_STAGE syncs unlocked slots (stage 5 → 2 slots)', () => {
     const state: GameState = {
       ...createInitialGameState(0),
-      stageIdx: 2, // stage 3 → advancing enters stage 4
-      pendingCondenseStageIdx: 2,
+      stageIdx: 3, // stage 4 → advancing enters stage 5
+      pendingCondenseStageIdx: 3,
     };
     const next = gameReducer(state, { type: 'ADVANCE_STAGE', now: 1000 });
-    expect(next.stageIdx).toBe(3);
+    expect(next.stageIdx).toBe(4);
     expect(next.unlockedSlotCount).toBe(2);
   });
 

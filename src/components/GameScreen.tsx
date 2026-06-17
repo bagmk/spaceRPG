@@ -874,7 +874,9 @@ export function GameScreen({
             enhanceStones={state.enhanceStones}
             lastEnhanceEvent={state.lastEnhanceEvent}
             stats={{
-              clickPower: getClickPower(modifiers),
+              // Show the explosive per-click matter (decoupled from entropy): the
+              // tame base click power × the matter-only gear multiplier (#39).
+              clickPower: getClickPower(modifiers) * modifiers.clickMatterMult,
               autoRate: displayedAutoRate,
               critChance: getCritChance(0, modifiers),
               critMult: getCritMultiplier(modifiers),

@@ -153,6 +153,16 @@ export const LEGACY_TIME_ENTITY_EFFECT_FACTOR = 0.4;
 export const CLICK_OUTPUT_MULTIPLIER = 15;
 export const AUTO_OUTPUT_MULTIPLIER = 1;
 /**
+ * MATTER-ONLY explosive click multiplier strength (Overhaul-3 #39). Each
+ * equipped click item folds `1 + (value·count·level · gearPower · this)/100`
+ * into Modifiers.clickMatterMult, which scales ONLY the matter a click awards —
+ * never the entropy income. So a full click loadout feels like 500×500 (a fresh
+ * common ≈ ×1.9, a maxed one ≈ ×30, three maxed ≈ ×30k+) while the entropy gate
+ * stays exactly as calibrated — NO re-sim, no pacing change. Tune freely: this
+ * is pure power fantasy / matter abundance, decoupled from progression pacing.
+ */
+export const CLICK_GEAR_MATTER_BOOST = 6;
+/**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the
  * first rift item drops. Tiny vs every stage threshold, so pacing is unaffected.
@@ -417,7 +427,9 @@ export const ENTITY_LEVEL_EFFECT_BONUS = 0.85;
 // An item's effect is now exactly its printed base% — it does NOT grow with the
 // player's stage. base^E collapses to 1 at every stage, so label == applied.
 // Per-era growth is re-supplied by enhancement levels, higher-rarity drops,
-// codex-keyed sets, fusion and combo — never by silent stage scaling.
+// codex-keyed sets, fusion and combo — never by silent stage scaling. Click
+// gear additionally drives the matter-only CLICK_GEAR_MATTER_BOOST multiplier
+// (#39), which is decoupled from this curve and from the entropy gate.
 export const STAGE_POWER_BASE = 1.0;
 /** Rift/auto anchor growth — also neutralised to 1.0 (see STAGE_POWER_BASE). */
 export const AUTO_STAGE_POWER_BASE = 1.0;
@@ -666,15 +678,19 @@ export const MILESTONE_MAX_SCALE = 6;
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 
 /** Click-gear slot unlock conditions. Slot 1 is always available. */
+// Slots unlock by STAGE, spread out (#39): with multiplicative click matter, each
+// extra click slot multiplies hard, so the 2nd/3rd slots are real milestones —
+// not handed out by mid-stage-3 (the old minAlmanacCount:30 gate). (Reworked by
+// the hexagon model in a later phase; kept stage-gated until then.)
 export const EQUIP_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
-  { slot: 2, minStageId: 4 },
-  { slot: 3, minAlmanacCount: 30 },
+  { slot: 2, minStageId: 5 },
+  { slot: 3, minStageId: 9 },
 ];
 
 /** Rift (auto-gear) slot unlock conditions. Slot 1 is always available. */
 export const RIFT_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
-  { slot: 2, minStageId: 6 },
-  { slot: 3, minAlmanacCount: 60 },
+  { slot: 2, minStageId: 7 },
+  { slot: 3, minStageId: 12 },
 ];
 
 /** Set bonus by number of equipped entities sharing a codex CATEGORY (P5/R8). */
