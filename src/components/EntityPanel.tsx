@@ -381,7 +381,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // 🅠4: remember the last fuse so the result reveal's 재시도 can repeat it.
   const [lastFuse, setLastFuse] = useState<{ rarity: EntityRarity; batch: boolean; all?: boolean } | null>(null);
   const fuseTimerRef = useRef<number | null>(null);
-  const pendingFuseRef = useRef<string[] | null>(null);
+  const pendingFuseRef = useRef<{ batch: boolean; ids: string[] } | null>(null);
   // Gacha reveal: how many result cards have flipped face-up so far.
   const [revealedCount, setRevealedCount] = useState(0);
   // Fuse-All exclude: stacks the player locked out of the batch.
@@ -394,15 +394,19 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
   // Gacha "tempt fate" beat: spin for a moment, THEN commit the fusion so the
   // result lands as a reveal (suspense, not an instant swap).
-  const FUSE_CHARGE_MS = 720;
-  // Commit the pending single fuse now (called by the charge timer OR by Skip).
+  // #41: longer "융합 중" suspense (was 720ms) — ~3s of charging before the
+  // reveal lands. Single AND batch/Fuse-All all run through this beat; the Skip
+  // button fast-forwards for impatient/bulk fusing.
+  const FUSE_CHARGE_MS = 2800;
+  // Commit the pending fuse now (called by the charge timer OR by Skip). Handles
+  // single (onFuse) and batch/Fuse-All (onFuseBatch) — both charge first.
   const commitFuse = () => {
     if (fuseTimerRef.current !== null) { window.clearTimeout(fuseTimerRef.current); fuseTimerRef.current = null; }
-    const inputs = pendingFuseRef.current;
+    const pending = pendingFuseRef.current;
     pendingFuseRef.current = null;
     setFusing(false);
-    if (!inputs) return;
-    onFuse(inputs);
+    if (!pending) return;
+    if (pending.batch) onFuseBatch(pending.ids); else onFuse(pending.ids);
     setFuseInputs([]);
   };
   const triggerFuse = (inputsArg?: string[]) => {
@@ -411,7 +415,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     const rarity = findEntityById(inputs[0])?.rarity;
     setFusing(true);
     if (rarity) setLastFuse({ rarity, batch: false });
-    pendingFuseRef.current = inputs;
+    pendingFuseRef.current = { batch: false, ids: inputs };
     onUITap?.();
     fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
   };
@@ -437,8 +441,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     if (ids.length < FUSION_INPUT_COUNT) return;
     setLastFuse({ rarity, batch: true });
     setFuseInputs([]);
+    setFusing(true);
+    pendingFuseRef.current = { batch: true, ids }; // charge first (#41), then reveal
     onUITap?.();
-    onFuseBatch(ids);
+    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
   };
 
   // Fuse-All (no insertion): gather every fusable trio across ALL rarities,
@@ -471,8 +477,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     const firstRarity = findEntityById(ids[0])?.rarity ?? 'common';
     setLastFuse({ rarity: firstRarity, batch: true, all: true });
     setFuseInputs([]);
+    setFusing(true);
+    pendingFuseRef.current = { batch: true, ids }; // charge first (#41), then reveal
     onUITap?.();
-    onFuseBatch(ids);
+    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
   };
   const toggleExclude = (id: string) => {
     setExcludedIds((cur) => {
@@ -1078,8 +1086,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="fuse-page">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
-              {/* Fuse-All — always available (no insertion needed); fuses every
-                  trio across all rarities except locked (🔒) stacks. */}
+              {/* Fuse-All — compact box (#41): label + a small trio-count chip
+                  (no more "(N조)" in the label). Fuses every trio across all
+                  rarities except ✕-excluded stacks. */}
               {(() => {
                 const allTrios = allTriosCount();
                 return (
@@ -1089,9 +1098,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     disabled={fusing || allTrios < 1}
                     onClick={triggerFuseAll}
                   >
-                    {allTrios > 0
-                      ? t(language, 'fuseAll').replace('{n}', String(allTrios))
-                      : t(language, 'fuseAllNone')}
+                    <span className="gacha-fuse-all-btn__label">
+                      {allTrios > 0 ? t(language, 'fuseAll') : t(language, 'fuseAllNone')}
+                    </span>
+                    {allTrios > 0 ? (
+                      <span className="gacha-fuse-all-btn__count">{t(language, 'fuseTrios').replace('{n}', String(allTrios))}</span>
+                    ) : null}
                   </button>
                 );
               })()}
@@ -1213,15 +1225,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             <span className="owned-card__name">{entityName(entity, language)}</span>
                             <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
                             {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
+                            {locked ? <span className="owned-card__excluded">{t(language, 'fuseExcludeBadge')}</span> : null}
                           </button>
+                          {/* #41: ✕ corner toggle to exclude from Fuse-All (was a confusing 🔒/🔓 padlock). */}
                           <button
                             type="button"
-                            className={`owned-card__lock ${locked ? 'owned-card__lock--on' : ''}`}
+                            className={`owned-card__exclude ${locked ? 'owned-card__exclude--on' : ''}`}
                             aria-label={t(language, 'fuseExcludeToggle')}
                             title={t(language, 'fuseExcludeToggle')}
                             onClick={() => toggleExclude(entity.id)}
                           >
-                            {locked ? '🔒' : '🔓'}
+                            ✕
                           </button>
                         </div>
                       );
