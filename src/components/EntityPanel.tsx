@@ -408,6 +408,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const pendingFuseRef = useRef<{ batch: boolean; ids: string[] } | null>(null);
   // Gacha reveal: how many result cards have flipped face-up so far.
   const [revealedCount, setRevealedCount] = useState(0);
+  // #42-fix: brief "강화 중…" beat before an enhance commits (parity with fusion;
+  // the result success/fail then shows via the inline enhance toast). Holds the
+  // id being enhanced so the charge core can show its glyph.
+  const [enhancing, setEnhancing] = useState<string | null>(null);
+  const enhanceTimerRef = useRef<number | null>(null);
   // Fuse-All exclude: stacks the player locked out of the batch.
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
@@ -418,10 +423,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
   // Gacha "tempt fate" beat: spin for a moment, THEN commit the fusion so the
   // result lands as a reveal (suspense, not an instant swap).
-  // #41: longer "융합 중" suspense (was 720ms) — ~3s of charging before the
-  // reveal lands. Single AND batch/Fuse-All all run through this beat; the Skip
-  // button fast-forwards for impatient/bulk fusing.
-  const FUSE_CHARGE_MS = 2800;
+  // "융합 중" suspense before the reveal. #42-fix: shorter + slightly RANDOM
+  // (was a fixed 2800ms — too long). ~1.2–2.4s so it feels alive (sometimes
+  // snappy, sometimes a beat longer) without dragging. Single AND batch/Fuse-All
+  // run through this beat; Skip fast-forwards.
+  const fuseChargeMs = () => 1200 + Math.random() * 1200;
   // Commit the pending fuse now (called by the charge timer OR by Skip). Handles
   // single (onFuse) and batch/Fuse-All (onFuseBatch) — both charge first.
   const commitFuse = () => {
@@ -441,7 +447,19 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     if (rarity) setLastFuse({ rarity, batch: false });
     pendingFuseRef.current = { batch: false, ids: inputs };
     onUITap?.();
-    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
+    fuseTimerRef.current = window.setTimeout(commitFuse, fuseChargeMs());
+  };
+
+  // #42-fix: enhance through a brief "강화 중…" beat (parity with fusion). The
+  // outcome (성공/실패/파괴) then surfaces via the inline enhance toast.
+  const triggerEnhance = (id: string, protect: boolean) => {
+    if (enhancing) return;
+    setEnhancing(id);
+    onUITap?.();
+    enhanceTimerRef.current = window.setTimeout(() => {
+      setEnhancing(null);
+      onEnhance(id, protect);
+    }, 550 + Math.random() * 450); // ~0.55–1.0s, slightly random
   };
 
   // Ids currently occupying an equip/rift slot. RESERVED from fusion: the player
@@ -478,7 +496,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     setFusing(true);
     pendingFuseRef.current = { batch: true, ids }; // charge first (#41), then reveal
     onUITap?.();
-    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
+    fuseTimerRef.current = window.setTimeout(commitFuse, fuseChargeMs());
   };
 
   // Fuse-All (no insertion): gather every fusable trio across ALL rarities,
@@ -514,7 +532,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     setFusing(true);
     pendingFuseRef.current = { batch: true, ids }; // charge first (#41), then reveal
     onUITap?.();
-    fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
+    fuseTimerRef.current = window.setTimeout(commitFuse, fuseChargeMs());
   };
   const toggleExclude = (id: string) => {
     setExcludedIds((cur) => {
@@ -542,6 +560,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     lastFuse !== null && (lastFuse.all ? allTriosCount() > 0 : drawTriosOfRarity(lastFuse.rarity, 1).length === FUSION_INPUT_COUNT);
   useEffect(() => () => {
     if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
+    if (enhanceTimerRef.current !== null) window.clearTimeout(enhanceTimerRef.current);
   }, []);
   // Sequential gacha flip — reveal result cards one-by-one (skippable).
   useEffect(() => {
@@ -1279,14 +1298,28 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       {fusing ? (
         <div className="fusion-charge" role="status" aria-live="polite" onClick={commitFuse}>
           <div className="fusion-charge__core">
-            {fuseInputs[0] ? (
-              <EntityGlyph entity={findEntityById(fuseInputs[0])!} color={RARITY_COLORS[trayRarity ?? 'common']} />
-            ) : null}
+            {/* #42-fix: Fuse-All/batch clears fuseInputs, so fall back to the
+                pending batch's first id — otherwise the charge core was empty and
+                "융합 중" looked like it had no animation. */}
+            {(() => {
+              const gid = fuseInputs[0] ?? pendingFuseRef.current?.ids[0];
+              const gent = gid ? findEntityById(gid) : undefined;
+              return gent ? <EntityGlyph entity={gent} color={RARITY_COLORS[gent.rarity]} /> : null;
+            })()}
           </div>
           <div className="fusion-charge__label">{t(language, 'fuseChanting')}</div>
           <button type="button" className="fusion-charge__skip" onClick={(e) => { e.stopPropagation(); commitFuse(); }}>
             {t(language, 'fuseSkip')}
           </button>
+        </div>
+      ) : null}
+      {/* #42-fix: "강화 중…" beat (no Skip — it's short). Result shows via the toast. */}
+      {enhancing ? (
+        <div className="fusion-charge fusion-charge--enhance" role="status" aria-live="polite">
+          <div className="fusion-charge__core">
+            {(() => { const e = findEntityById(enhancing); return e ? <EntityGlyph entity={e} color={RARITY_COLORS[e.rarity]} /> : null; })()}
+          </div>
+          <div className="fusion-charge__label">{t(language, 'enhanceCharging')}</div>
         </div>
       ) : null}
       {/* Fusion result reveal */}
@@ -1500,8 +1533,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
                 style={affordable && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-                disabled={!affordable || !enhanceUnlocked}
-                onClick={() => onEnhance(ent.id, stonePhase ? protectEnhance : false)}
+                disabled={!affordable || !enhanceUnlocked || enhancing !== null}
+                onClick={() => triggerEnhance(ent.id, stonePhase ? protectEnhance : false)}
               >
                 {!enhanceUnlocked
                   ? `🔒 ${t(language, 'enhanceLabel')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`

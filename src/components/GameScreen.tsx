@@ -273,7 +273,17 @@ export function GameScreen({
   const hasShopNotification = canShowShop && !state.hasSeenCashShopTutorial;
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
   const displayStageNumber = String(displayStage.id).padStart(2, '0');
+  // #42-fix: notification dots on 장착/융합 when NEW items arrived since the panel
+  // was last opened (drops/fusion outputs you haven't checked/equipped). Refs
+  // record the inventory size at last open; the dot clears when you go in.
+  const invTotal = state.inventory.reduce((sum, e) => sum + Math.max(0, e.count), 0);
+  const equipSeenInvRef = useRef(invTotal);
+  const fuseSeenInvRef = useRef(invTotal);
+  const equipHasNew = equipUnlocked && invTotal > equipSeenInvRef.current;
+  const fuseHasNew = fusionUnlocked && invTotal > fuseSeenInvRef.current;
   const openEntityPanel = (page: 'lab' | 'equip' | 'fuse' = 'lab', category: 'click' | 'rift' = 'click') => {
+    if (page === 'equip') equipSeenInvRef.current = invTotal;
+    if (page === 'fuse' || page === 'lab') fuseSeenInvRef.current = invTotal;
     setViewingStageId(null);
     setPanelView({ page, category });
     soundManager?.playUIOpen();
@@ -1059,7 +1069,7 @@ export function GameScreen({
           </button>
           <button
             type="button"
-            className={`entity-lab-button ${equipUnlocked ? '' : 'entity-lab-button--locked'}`}
+            className={`entity-lab-button ${equipUnlocked ? '' : 'entity-lab-button--locked'} ${equipHasNew ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#8ef0c0' } as React.CSSProperties}
             disabled={!equipUnlocked}
             onClick={() => openEntityPanel('equip', 'click')}
@@ -1068,10 +1078,11 @@ export function GameScreen({
           >
             <span className="hud-action-icon" aria-hidden="true">{equipUnlocked ? '⌖' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'entityEquip')}</span>
+            {equipHasNew ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
             type="button"
-            className={`entity-lab-button ${fusionUnlocked ? '' : 'entity-lab-button--locked'}`}
+            className={`entity-lab-button ${fusionUnlocked ? '' : 'entity-lab-button--locked'} ${fuseHasNew ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#c79bff' } as React.CSSProperties}
             disabled={!fusionUnlocked}
             onClick={() => openEntityPanel('fuse')}
@@ -1080,6 +1091,7 @@ export function GameScreen({
           >
             <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '🔨' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
+            {fuseHasNew ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <div ref={shopAnchorRef} className="side-rail__shop-slot" style={{ '--rail-accent': '#ff9f6b' } as React.CSSProperties}>
             <ShopButton

@@ -71,6 +71,7 @@ export const STRINGS = {
   fuseAltarReady: { en: 'Same rarity ×3 — the outcome is up to fate', ko: '같은 등급 ×3 — 결과는 운에 달렸다' },
   fuseAltarEmpty: { en: 'Feed 3 entities into the forge', ko: '용광로에 엔티티 3개를 넣으세요' },
   fuseChanting:   { en: 'Fusing…', ko: '융합 중…' },
+  enhanceCharging:{ en: 'Enhancing…', ko: '강화 중…' },
   panelClose:     { en: 'Close', ko: '닫기' },
   codexMeterFound:  { en: 'found', ko: '발견' },
   codexMassFactor:  { en: 'Condensed mass', ko: '응축 질량' },
