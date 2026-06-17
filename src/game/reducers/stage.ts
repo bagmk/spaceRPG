@@ -158,6 +158,9 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     stageStartedAt: action.now,
     clickRateLog: nextClickRateLog,
     stageClicksAtStageStart: progressedState.totalClicks,
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
     // 🅠5: top up the active quest set with any quests newly eligible at this stage.
     activeQuests: refillActiveQuests(progressedState.activeQuests, progressedState.completedQuestIds, nextStageId),
   };

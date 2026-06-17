@@ -55,6 +55,9 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     cosmicClockSec: getStageStartCosmicTime(nextStageIdx),
     tutorialDone: true,
     stageClicksAtStageStart: state.totalClicks,
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
   };
   return { ...nextState, ...resetMechanicState(nextState) };
 }
@@ -80,6 +83,9 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
     stageStartedAt: action.now,
     cosmicClockSec: getStageStartCosmicTime(prevStageIdx),
     stageClicksAtStageStart: state.totalClicks,
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
   };
   return { ...prevState, ...resetMechanicState(prevState) };
 }
@@ -129,6 +135,9 @@ export function handleAdminRestartRun(state: GameState, action: AdminRestartRunA
     universeAtlas: state.universeAtlas,
     currentUniverseSeed: state.currentUniverseSeed,
     stageClicksAtStageStart: 0,
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     shopBoosts: state.shopBoosts,

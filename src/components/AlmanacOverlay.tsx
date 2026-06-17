@@ -5,6 +5,7 @@ import { STAGES } from '../game/stages';
 import { t, stageName, type Lang } from '../i18n';
 import { milestoneLoreId } from '../game/loreLinks';
 import { getQuest, questTitle, questDesc } from '../game/quests';
+import { milestoneStageId } from '../game/milestones';
 import { LoreModal } from './LoreModal';
 
 /** Remove filler words like "roughly", "about", "near", "approximately" from era values */
@@ -67,6 +68,26 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
   }).length;
   const totalCount = STAGE_LOGS.length;
 
+  // Claimed quests, grouped by era (stage). Eras run in cosmic order; within an
+  // era, entries keep claim order (the user's "시대별 구분 + claim순"). Legacy
+  // (non-milestone) claimed quests with no era fall into a trailing group.
+  const claimedEras = (() => {
+    const byEra = new Map<number, string[]>();
+    const legacy: string[] = [];
+    for (const id of completedQuestIds) {
+      if (!getQuest(id)) continue;
+      const sid = milestoneStageId(id);
+      if (Number.isFinite(sid)) {
+        (byEra.get(sid) ?? byEra.set(sid, []).get(sid)!).push(id);
+      } else {
+        legacy.push(id);
+      }
+    }
+    const eras = [...byEra.keys()].sort((a, b) => a - b).map((sid) => ({ sid, ids: byEra.get(sid)! }));
+    if (legacy.length) eras.push({ sid: NaN, ids: legacy });
+    return eras;
+  })();
+
   return (
     <div className="overlay-backdrop" role="dialog" aria-modal="true" aria-label={t(language, 'almanacTitle')}>
       <div className="overlay-card almanac-overlay">
@@ -103,19 +124,35 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
             <div className="almanac-quests__title">
               {t(language, 'almanacQuestMilestones')} ({completedQuestIds.length})
             </div>
-            {completedQuestIds.length === 0 ? (
+            {claimedEras.length === 0 ? (
               <p className="almanac-quests__empty">{t(language, 'almanacQuestEmpty')}</p>
             ) : (
-              completedQuestIds.map((id) => {
-                const q = getQuest(id);
-                if (!q) return null;
+              claimedEras.map((era) => {
+                const eraMeta = Number.isFinite(era.sid) ? STAGES.find((s) => s.id === era.sid) : undefined;
+                const eraLabel = Number.isFinite(era.sid)
+                  ? stageName(language, era.sid, eraMeta?.name ?? '')
+                  : t(language, 'almanacUnknown');
                 return (
-                  <div key={id} className="almanac-quest-row">
-                    <span className="almanac-quest-row__check">✓</span>
-                    <span className="almanac-quest-row__text">
-                      <span className="almanac-quest-row__title">{questTitle(q, language)}</span>
-                      <span className="almanac-quest-row__desc">{questDesc(q, language)}</span>
-                    </span>
+                  <div key={Number.isFinite(era.sid) ? era.sid : 'legacy'} className="almanac-quest-era">
+                    <div
+                      className="almanac-quest-era__head"
+                      style={{ '--era-accent': eraMeta?.accent ?? '#8090b0' } as React.CSSProperties}
+                    >
+                      <span className="almanac-quest-era__name">{eraLabel}</span>
+                      <span className="almanac-quest-era__count">{era.ids.length}</span>
+                    </div>
+                    {era.ids.map((id) => {
+                      const q = getQuest(id)!;
+                      return (
+                        <div key={id} className="almanac-quest-row">
+                          <span className="almanac-quest-row__check">✓</span>
+                          <span className="almanac-quest-row__text">
+                            <span className="almanac-quest-row__title">{questTitle(q, language)}</span>
+                            <span className="almanac-quest-row__desc">{questDesc(q, language)}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })

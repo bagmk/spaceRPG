@@ -5893,6 +5893,31 @@ button.stat-header-item {
 .almanac-quest-row__title { font-size: 13px; font-weight: 600; color: #f3f7ff; }
 .almanac-quest-row__desc { font-size: 11px; color: #aebed6; }
 
+/* Era divider inside the claimed-quest log (시대별 구분). */
+.almanac-quest-era { margin-bottom: 10px; }
+.almanac-quest-era__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--era-accent, #8090b0);
+}
+.almanac-quest-era__name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--era-accent, #cdd9ee);
+}
+.almanac-quest-era__count {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1px 7px;
+}
+
 .almanac-milestones {
   display: flex;
   flex-direction: column;

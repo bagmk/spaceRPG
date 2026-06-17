@@ -206,6 +206,9 @@ export function toPersistentState(state: GameState): PersistentGameState {
     dailyShopDateKey: state.dailyShopDateKey,
     dailyShopRefreshCount: state.dailyShopRefreshCount,
     dailyShopPurchased: state.dailyShopPurchased,
+    fusionsThisStage: state.fusionsThisStage,
+    cometsThisStage: state.cometsThisStage,
+    comboThisStage: state.comboThisStage,
   };
 }
 

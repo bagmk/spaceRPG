@@ -22,7 +22,6 @@ import { getStageStartCosmicTime } from '../timeFlow';
 import { getActiveModifiers } from '../skills/effects';
 import { getPrestigeMultiplier } from '../prestige';
 import { getMechanic } from '../mechanics';
-import { advanceQuestTracks } from '../quests';
 import { pickParticleName, getParticleEntropyBonus } from '../particles';
 import {
   addToAlmanac,
@@ -212,7 +211,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     totalClicks: state.totalClicks + 1,
     combo,
     // 🅠5: combo-track quests watch the running max combo reached.
-    questProgress: advanceQuestTracks(state, 'combo', combo),
+    comboThisStage: Math.max(state.comboThisStage, combo), // milestones: per-stage peak combo
     lastClick: action.now,
     eventCounter: eventId,
     inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
@@ -281,6 +280,7 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
     quanta: safeAdd(state.quanta, boostedBonus),
     entropy: safeAdd(state.entropy, entropyGained),
     collisions: state.collisions + 1,
+    cometsThisStage: state.cometsThisStage + 1, // milestones: per-stage comet counter
     eventCounter: eventId,
     inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
     almanacCollected: droppedEntity

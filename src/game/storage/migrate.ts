@@ -273,6 +273,9 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     dailyShopDateKey: '',
     dailyShopRefreshCount: 0,
     dailyShopPurchased: [],
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
     ...convertEntityModelV14(record),
   };
 }
@@ -412,6 +415,11 @@ export function validateV5(
     dailyShopDateKey: typeof (parsed as any).dailyShopDateKey === 'string' ? (parsed as any).dailyShopDateKey : '',
     dailyShopRefreshCount: isFiniteNumber((parsed as any).dailyShopRefreshCount) ? Math.max(0, Math.floor((parsed as any).dailyShopRefreshCount)) : 0,
     dailyShopPurchased: Array.isArray((parsed as any).dailyShopPurchased) ? (parsed as any).dailyShopPurchased.filter((n: unknown) => typeof n === 'number') : [],
+    // v22 per-stage milestone counters — preserved if present, else 0 (a returning
+    // player simply re-earns the current stage's milestones from where they are).
+    fusionsThisStage: isFiniteNumber((parsed as any).fusionsThisStage) ? Math.max(0, (parsed as any).fusionsThisStage) : 0,
+    cometsThisStage: isFiniteNumber((parsed as any).cometsThisStage) ? Math.max(0, (parsed as any).cometsThisStage) : 0,
+    comboThisStage: isFiniteNumber((parsed as any).comboThisStage) ? Math.max(0, (parsed as any).comboThisStage) : 0,
     ...convertEntityModelV14(parsed),
   };
 }

@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 21;
+  version: 22;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -297,6 +297,12 @@ export interface SaveState {
   dailyShopRefreshCount: number;
   /** Daily shop (v21): slot indices already bought today (cleared on date rollover). */
   dailyShopPurchased: number[];
+  /** Milestones (v22): fusions done in the current stage (reset on stage entry). */
+  fusionsThisStage: number;
+  /** Milestones (v22): comets absorbed in the current stage (reset on stage entry). */
+  cometsThisStage: number;
+  /** Milestones (v22): peak combo reached in the current stage (reset on stage entry). */
+  comboThisStage: number;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

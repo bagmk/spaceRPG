@@ -588,6 +588,51 @@ export const DAILY_SHOP_PRICE_SECONDS: Record<EntityRarity, number> = {
 /** Daily refresh costs (clickPower+autoRate) × this, escalating per refresh that day. */
 export const DAILY_SHOP_REFRESH_SECONDS: number[] = [120, 360, 900, 2400];
 
+// ── Stage milestones (Overhaul-2: per-stage "Achievement Tracks") ───────────
+/**
+ * Each stage offers ~10 claimable milestone STEPS across parallel TRACKS; each
+ * track is an ascending tier ladder (I/II/III). Steps are derived from
+ * per-stage state (see milestones.ts) and feed the existing quest pipeline.
+ * Count tracks scale their thresholds with stage length (realPlayTargetSec);
+ * gate/collect/combo tracks use fixed thresholds (already stage-appropriate).
+ */
+export type MilestoneMetric =
+  | 'clicksThisStage' | 'fusionsThisStage' | 'collectThisStage'
+  | 'gateProgress01' | 'cometsThisStage' | 'comboThisStage';
+export type MilestoneTrack = 'pulse' | 'forge' | 'archive' | 'expanse' | 'comet' | 'combo';
+export interface MilestoneTrackSpec {
+  track: MilestoneTrack;
+  metric: MilestoneMetric;
+  /** Per-tier thresholds at the BASE stage (stage 1). */
+  baseTiers: number[];
+  /** Matter reward per tier = ENTITY_COST_ANCHORS[playerStage] × frac. */
+  rewardFrac: number[];
+  /** Optional 강화석 per tier. */
+  stoneTiers?: number[];
+  /** Earliest stage id this track appears (fusion is locked in stage 1). */
+  minStageId?: number;
+  /** Count tracks scale thresholds with stage length; fixed tracks do not. */
+  scaled: boolean;
+}
+export const MILESTONE_TRACKS: MilestoneTrackSpec[] = [
+  { track: 'pulse',   metric: 'clicksThisStage',  baseTiers: [120, 450, 1200], rewardFrac: [0.15, 0.3, 0.6], scaled: true },
+  { track: 'forge',   metric: 'fusionsThisStage', baseTiers: [3, 12],          rewardFrac: [0.3, 0.7], stoneTiers: [2, 6], minStageId: 2, scaled: true },
+  { track: 'archive', metric: 'collectThisStage', baseTiers: [4, 9],           rewardFrac: [0.25, 0.55], stoneTiers: [0, 4], scaled: false },
+  // expanse thresholds are gate-fill PERCENTAGES (gateProgress01 ∈ [0,100]).
+  { track: 'expanse', metric: 'gateProgress01',   baseTiers: [40, 85],         rewardFrac: [0.35, 0.8], stoneTiers: [0, 5], scaled: false },
+  { track: 'comet',   metric: 'cometsThisStage',  baseTiers: [15],             rewardFrac: [0.4], scaled: true },
+  { track: 'combo',   metric: 'comboThisStage',   baseTiers: [120],            rewardFrac: [0.4], scaled: false },
+];
+/** Count-track stage scaling = min(MAX, (realPlayTargetSec[stage]/realPlayTargetSec[1]) ^ SOFTENING). */
+export const MILESTONE_COUNT_SOFTENING = 0.45;
+/**
+ * Cap on the count-track scale multiplier. Late eras run 30s→117450s of target
+ * time (~3915×); even softened that is ~95×, which would make a "click N times"
+ * milestone demand >100k clicks. Clamp so the hardest stages plateau at a
+ * stretch-but-sane multiple of the stage-1 base instead of exploding.
+ */
+export const MILESTONE_MAX_SCALE = 6;
+
 // ── Equip slots + set bonuses (entity redesign Phase 3) ─────────────────────
 
 /** Click-gear slot unlock conditions. Slot 1 is always available. */

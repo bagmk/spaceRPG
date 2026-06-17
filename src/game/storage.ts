@@ -51,7 +51,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 21;
+export const SAVE_SCHEMA_VERSION = 22;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -179,6 +179,9 @@ export function createSaveSnapshot(state: GameState): SaveState {
     dailyShopDateKey: state.dailyShopDateKey,
     dailyShopRefreshCount: state.dailyShopRefreshCount,
     dailyShopPurchased: state.dailyShopPurchased,
+    fusionsThisStage: state.fusionsThisStage,
+    cometsThisStage: state.cometsThisStage,
+    comboThisStage: state.comboThisStage,
   };
 }
 
@@ -474,11 +477,12 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21) {
-      // v14..v21 share a field schema (v17 dropped the legacy skill fields;
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22) {
+      // v14..v22 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
-      // activeQuests/completedQuestIds; v21 added the daily-shop fields — all
-      // optional in validateV5, which seeds defaults for pre-N saves).
+      // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added
+      // the per-stage milestone counters — all optional in validateV5, which
+      // seeds defaults for pre-N saves).
       // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
       // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
       // and seeds the v18 codex/hint fields for pre-v18 saves).

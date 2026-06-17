@@ -22,6 +22,7 @@ import type { Lang } from '../i18n';
 import { ENTITY_COST_ANCHORS } from './balance';
 import { findEntityById, STAGE_ENTITIES } from './entities/stageItems';
 import { CODEX_SETS, collectedIdSet, getSubsetMembers, isSetComplete } from './entities/codexSets';
+import { buildMilestone, getStageMilestoneActiveIds, isMilestoneId } from './milestones';
 
 interface L { en: string; ko: string; }
 
@@ -204,6 +205,9 @@ export const QUESTS: QuestDef[] = [
 const QUEST_BY_ID = new Map(QUESTS.map((q) => [q.id, q]));
 
 export function getQuest(id: string): QuestDef | undefined {
+  // Overhaul-2: `m.*` ids are per-stage milestone steps (generated); the legacy
+  // map still resolves any pre-existing claimed quest ids in old saves.
+  if (isMilestoneId(id)) return buildMilestone(id);
   return QUEST_BY_ID.get(id);
 }
 
@@ -230,23 +234,14 @@ export function isQuestClaimable(quest: QuestDef, state: GameState): boolean {
  * quests in definition order, up to QUEST_ACTIVE_COUNT.
  */
 export function refillActiveQuests(
-  activeQuests: string[],
+  _activeQuests: string[],
   completedQuestIds: string[],
   stageId: number,
-  count = QUEST_ACTIVE_COUNT,
 ): string[] {
-  const completed = new Set(completedQuestIds);
-  // Drop any active id that is invalid or already completed.
-  const next = activeQuests.filter((id) => QUEST_BY_ID.has(id) && !completed.has(id));
-  const active = new Set(next);
-  for (const q of QUESTS) {
-    if (next.length >= count) break;
-    if (q.minStageId > stageId) continue;
-    if (completed.has(q.id) || active.has(q.id)) continue;
-    next.push(q.id);
-    active.add(q.id);
-  }
-  return next;
+  // Overhaul-2: the active set is the CURRENT stage's open milestone steps (one
+  // per track, the lowest unclaimed tier) — fully derived from (stage, claimed),
+  // so any prior active ids are recomputed rather than kept.
+  return getStageMilestoneActiveIds(stageId, completedQuestIds);
 }
 
 /** Fresh active set for a new game / prestige (no current quests to keep). */

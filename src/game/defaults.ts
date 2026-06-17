@@ -138,6 +138,9 @@ export function createInitialGameState(now: number): GameState {
     dailyShopDateKey: '',
     dailyShopRefreshCount: 0,
     dailyShopPurchased: [],
+    fusionsThisStage: 0,
+    cometsThisStage: 0,
+    comboThisStage: 0,
     questProgress: {},
     lastEnhanceEvent: null,
   };
