@@ -330,6 +330,26 @@ export function GameScreen({
         autoCloseMs: 7000,
       };
     }
+    // Onboarding: after the first guaranteed fusion (click item), explain it.
+    if (state.tutorialFlags['first-fuse-done'] && !state.tutorialFlags['first-fuse-equip'] && equipUnlocked) {
+      return {
+        flagId: 'first-fuse-equip',
+        anchor: 'entity',
+        message: t(language, 'tutFirstFuseEquip'),
+        ctaLabel: t(language, 'tutEntityLabOpen'),
+        onCta: () => openEntityPanel('equip', 'click'),
+      };
+    }
+    // Onboarding: after the second guaranteed fusion (auto item), explain equipping + auto income.
+    if (state.tutorialFlags['second-fuse-done'] && !state.tutorialFlags['second-fuse-equip'] && equipUnlocked) {
+      return {
+        flagId: 'second-fuse-equip',
+        anchor: 'entity',
+        message: t(language, 'tutSecondFuseEquip'),
+        ctaLabel: t(language, 'tutEntityLabOpen'),
+        onCta: () => openEntityPanel('equip', 'click'),
+      };
+    }
     // 🅠7: only prompt the equip/fusion lab once it's actually unlocked (S2);
     // S1 keeps the player on click/entropy/item-collection/codex + quests.
     if (equipUnlocked && ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-intro']) {

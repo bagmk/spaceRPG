@@ -1,6 +1,6 @@
 import type { GameState, FusionResultCard } from '../types';
 import type { GameAction } from '../reducer';
-import { entityMatchesId, findEntityById } from '../entities/stageItems';
+import { entityMatchesId, findEntityById, getEntitiesForStage } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
 import { addToAlmanac, pickDropStage } from '../entities/drops';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
@@ -207,20 +207,44 @@ function fuseOnce(
   // category amplifies the entropy burst.
   const sameEntity = validation.sameEntity === true;
   const sameSubset = validation.sameSubsetId != null;
-  const rarityResult = rollFusionRarity(
-    validation.rarity, rolls.rarityRoll, currentStageIdForFusion,
-    sameEntity ? FUSION_SAME_ENTITY_UP_BONUS : 0,
-  );
-  // Output pool stage follows the same player-stage weighting as drops
-  // (Phase 4-1) — input origin stages no longer determine the output pool.
-  const outputStageId =
-    rolls.stageRoll !== undefined
-      ? pickDropStage(currentStageIdForFusion, rolls.stageRoll, state.almanacCollected)
-      : currentStageIdForFusion;
-  const output = pickFusionOutput(outputStageId, rarityResult.rarity, rolls.pickRoll, {
-    category: validation.category,
-    familyKey: validation.familyKey,
-  }, outputStageId !== currentStageIdForFusion);
+
+  // Onboarding: first two fusions at stage 2 (stageIdx 1) yield guaranteed types
+  // so new players immediately see both click and auto items to equip. Guards
+  // against re-triggering after prestige via the tutorialFlag.
+  const stageEntities = getEntitiesForStage(currentStageIdForFusion);
+  const isFirstFusion =
+    state.stageIdx === 1 &&
+    (state.fusionsThisStage ?? 0) === 0 &&
+    !state.tutorialFlags['first-fuse-done'];
+  const isSecondFusion =
+    state.stageIdx === 1 &&
+    (state.fusionsThisStage ?? 0) === 1 &&
+    !state.tutorialFlags['second-fuse-done'];
+
+  let output =
+    isFirstFusion
+      ? (stageEntities.find(e => e.rarity === 'common' && e.effect.type === 'click') ?? null)
+      : isSecondFusion
+        ? (stageEntities.find(e => e.rarity === 'common' && e.effect.type === 'auto') ?? null)
+        : null;
+
+  let rarityResult = { rarity: validation.rarity, rarityUp: false as boolean };
+  if (!output) {
+    rarityResult = rollFusionRarity(
+      validation.rarity, rolls.rarityRoll, currentStageIdForFusion,
+      sameEntity ? FUSION_SAME_ENTITY_UP_BONUS : 0,
+    );
+    // Output pool stage follows the same player-stage weighting as drops
+    // (Phase 4-1) — input origin stages no longer determine the output pool.
+    const outputStageId =
+      rolls.stageRoll !== undefined
+        ? pickDropStage(currentStageIdForFusion, rolls.stageRoll, state.almanacCollected)
+        : currentStageIdForFusion;
+    output = pickFusionOutput(outputStageId, rarityResult.rarity, rolls.pickRoll, {
+      category: validation.category,
+      familyKey: validation.familyKey,
+    }, outputStageId !== currentStageIdForFusion);
+  }
   if (!output) return null;
 
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
@@ -248,6 +272,12 @@ function fuseOnce(
     (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);
   const nextEntropy = safeAdd(state.entropy, burst);
 
+  const nextTutorialFlags = isFirstFusion
+    ? { ...state.tutorialFlags, 'first-fuse-done': true }
+    : isSecondFusion
+      ? { ...state.tutorialFlags, 'second-fuse-done': true }
+      : state.tutorialFlags;
+
   const nextState: GameState = {
     ...state,
     quanta: Math.max(0, state.quanta - cost + totalRefund),
@@ -256,6 +286,7 @@ function fuseOnce(
     enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
+    tutorialFlags: nextTutorialFlags,
   };
   return {
     state: nextState,
