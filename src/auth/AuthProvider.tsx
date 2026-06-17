@@ -202,7 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(firebaseUser);
           const providers = firebaseUser.providerData.map((pd) => pd.providerId);
           const p = await getProfile(firebaseUser.uid);
-          createOrUpdateProfile(firebaseUser.uid, {
+          // Fire-and-forget upsert — guard so a write error can't surface as an
+          // unhandled rejection (createOrUpdateProfile is also fail-soft inside).
+          void createOrUpdateProfile(firebaseUser.uid, {
             email: firebaseUser.email ?? null,
             photoURL: firebaseUser.photoURL ?? null,
             providers,
@@ -212,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...((!p?.consentVersion || p.consentVersion < CONSENT_VERSION)
               ? { consentVersion: CONSENT_VERSION, consentAcceptedAt: Date.now() }
               : {}),
-          });
+          }).catch((e) => console.warn('[Auth] profile upsert failed (fail-soft):', e));
           setProfile(p);
 
           if (!p?.displayName) {
@@ -230,7 +232,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error('[Auth] onAuthStateChanged error:', e);
-        setStatus('signedOut');
+        // Fail-soft: a valid Firebase auth token plus a transient Firestore
+        // error must NOT sign the user out (signedOut also wipes the in-memory
+        // game via HYDRATE). Keep the session; fall back to needsName so the
+        // app proceeds and the profile resolves on the next successful read.
+        if (firebaseUser && !firebaseUser.isAnonymous) {
+          setUser(firebaseUser);
+          setStatus('needsName');
+        } else {
+          setUser(null);
+          setProfile(null);
+          setStatus('signedOut');
+        }
         initialAuthDone.current = true;
       }
     });
@@ -251,20 +264,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         result = await signInWithPopup(auth, new GoogleAuthProvider());
       }
       setUser(result.user);
-      const p = await getProfile(result.user.uid);
-      const providers = result.user.providerData.map((pd) => pd.providerId);
-      await createOrUpdateProfile(result.user.uid, {
-        email: result.user.email ?? null,
-        photoURL: result.user.photoURL ?? null,
-        providers,
-        createdAt: p?.createdAt ?? Date.now(),
-        // Consent accepted by tapping "Continue with Google" — record in Firestore.
-        consentVersion: CONSENT_VERSION,
-        consentAcceptedAt: Date.now(),
-      });
-      const updatedProfile = await getProfile(result.user.uid);
-      setProfile(updatedProfile);
-      setStatus(!updatedProfile?.displayName ? 'needsName' : 'authed');
+      // Auth has succeeded at this point. A Firestore profile read/write hiccup
+      // must not abort the login — complete it and let the profile resolve
+      // (needsName is the safe fallback if we couldn't read a displayName).
+      try {
+        const p = await getProfile(result.user.uid);
+        const providers = result.user.providerData.map((pd) => pd.providerId);
+        await createOrUpdateProfile(result.user.uid, {
+          email: result.user.email ?? null,
+          photoURL: result.user.photoURL ?? null,
+          providers,
+          createdAt: p?.createdAt ?? Date.now(),
+          // Consent accepted by tapping "Continue with Google" — record in Firestore.
+          consentVersion: CONSENT_VERSION,
+          consentAcceptedAt: Date.now(),
+        });
+        const updatedProfile = await getProfile(result.user.uid);
+        setProfile(updatedProfile);
+        setStatus(!updatedProfile?.displayName ? 'needsName' : 'authed');
+      } catch (profileErr) {
+        console.warn('[Auth] post-sign-in profile step failed (fail-soft):', profileErr);
+        setStatus('needsName');
+      }
     } catch (e: any) {
       if (e?.code !== 'auth/popup-closed-by-user') {
         console.error('[Auth] Google sign-in error:', JSON.stringify(e), e?.message, e?.code, e?.stack);

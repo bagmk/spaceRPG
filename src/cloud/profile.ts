@@ -62,8 +62,16 @@ export function validateDisplayName(name: string): { ok: true } | { ok: false; r
 
 export async function getProfile(uid: string): Promise<UserProfile | null> {
   if (!db) return null;
-  const snap = await getDoc(doc(db, 'users', uid, 'profile', 'main'));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
+  // Fail-soft: a transient Firestore read error (permission/network blip) must
+  // never bubble up and tear down the auth session — return null and let the
+  // caller treat it as "profile unknown" instead of logging the user out.
+  try {
+    const snap = await getDoc(doc(db, 'users', uid, 'profile', 'main'));
+    return snap.exists() ? (snap.data() as UserProfile) : null;
+  } catch (e) {
+    console.warn('[profile] getProfile failed (fail-soft, returning null):', e);
+    return null;
+  }
 }
 
 export async function createOrUpdateProfile(
@@ -72,7 +80,13 @@ export async function createOrUpdateProfile(
 ): Promise<void> {
   if (!db) return;
   const ref = doc(db, 'users', uid, 'profile', 'main');
-  await setDoc(ref, { ...data, lastLoginAt: Date.now() }, { merge: true });
+  // Fail-soft: a write hiccup must not become an unhandled rejection or abort
+  // an otherwise-successful sign-in. The profile is re-upserted on next login.
+  try {
+    await setDoc(ref, { ...data, lastLoginAt: Date.now() }, { merge: true });
+  } catch (e) {
+    console.warn('[profile] createOrUpdateProfile failed (fail-soft):', e);
+  }
 }
 
 // ---------------------------------------------------------------------------
