@@ -420,6 +420,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     fuseTimerRef.current = window.setTimeout(commitFuse, FUSE_CHARGE_MS);
   };
 
+  // Ids currently occupying an equip/rift slot. RESERVED from fusion: the player
+  // can fuse spare copies but never the one they're actively using (장착된 건 조합
+  // 불가). Defined HERE (before the draw fns + canRetry) so it's initialized before
+  // any render-time call — a closure TDZ here crashed the panel on fuse (#42 fix).
+  const equippedIdSet = useMemo(
+    () => new Set([...equippedSlots, ...riftSlots].filter(Boolean) as string[]),
+    [equippedSlots, riftSlots],
+  );
+  const reservedOf = (id: string) => (equippedIdSet.has(id) ? 1 : 0);
+
   // 🅠4: draw a flat list of FUSION_INPUT_COUNT × N owned copies of one rarity
   // (N = up to maxTrios) for a batch fuse. The reducer caps at what's affordable.
   const drawTriosOfRarity = (rarity: EntityRarity, maxTrios: number): string[] => {
@@ -534,15 +544,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // The gear array this equip page edits.
   const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
   const gearSlotCount = equipCat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
-
-  // Ids currently occupying an equip/rift slot. They are RESERVED from fusion:
-  // the player can fuse spare copies but never the one they are actively using
-  // (장착된 건 조합 불가). An item is equipped at most once, so reserve is 0 or 1.
-  const equippedIdSet = useMemo(
-    () => new Set([...equippedSlots, ...riftSlots].filter(Boolean) as string[]),
-    [equippedSlots, riftSlots],
-  );
-  const reservedOf = (id: string) => (equippedIdSet.has(id) ? 1 : 0);
 
   // Every owned stack, across ALL eras — sorted best-first (rarity desc → era asc).
   const ownedEntities = useMemo(() => {
