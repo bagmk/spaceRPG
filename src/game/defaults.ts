@@ -143,5 +143,6 @@ export function createInitialGameState(now: number): GameState {
     comboThisStage: 0,
     questProgress: {},
     lastEnhanceEvent: null,
+    lastQuestClaimEvent: null,
   };
 }

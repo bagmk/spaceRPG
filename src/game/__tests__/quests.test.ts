@@ -35,9 +35,10 @@ describe('🅠5 quests', () => {
   });
 
   it('claiming a not-yet-met quest is a no-op', () => {
-    const state = { ...createInitialGameState(0), almanacCollected: {} };
-    expect(getQuestProgress(getQuest('absorb_10')!, state)).toBeLessThan(10);
-    const after = gameReducer(state, { type: 'CLAIM_QUEST', questId: 'absorb_10' });
+    const m = getQuest('m.1.pulse.0')!; // active stage-1 click milestone
+    const state = { ...createInitialGameState(0), totalClicks: 0, stageClicksAtStageStart: 0 };
+    expect(getQuestProgress(m, state)).toBeLessThan(m.target);
+    const after = gameReducer(state, { type: 'CLAIM_QUEST', questId: 'm.1.pulse.0' });
     expect(after).toBe(state);
   });
 

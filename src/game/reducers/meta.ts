@@ -36,6 +36,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastEncounterEvent: null,
     lastFusionEvent: null,
     lastEnhanceEvent: null,
+    lastQuestClaimEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -140,6 +141,11 @@ export function handleClearFusionEvent(state: GameState, action: ClearFusionEven
 type ClearEnhanceEventAction = Extract<GameAction, { type: 'CLEAR_ENHANCE_EVENT' }>;
 export function handleClearEnhanceEvent(state: GameState, action: ClearEnhanceEventAction): GameState {
   return state.lastEnhanceEvent?.id === action.id ? { ...state, lastEnhanceEvent: null } : state;
+}
+
+type ClearQuestClaimEventAction = Extract<GameAction, { type: 'CLEAR_QUEST_CLAIM_EVENT' }>;
+export function handleClearQuestClaimEvent(state: GameState, action: ClearQuestClaimEventAction): GameState {
+  return state.lastQuestClaimEvent?.id === action.id ? { ...state, lastQuestClaimEvent: null } : state;
 }
 
 export function handleClearCollisionEvent(

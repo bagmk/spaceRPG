@@ -23,6 +23,7 @@ import {
 import { STAGES } from './stages';
 import { getEntropyGateProgress } from './formulas';
 import { getEntitiesForStage } from './entities/stageItems';
+import { getLogsForStage, type StageLog } from './stageLogs';
 import type { GameState } from './types';
 import type { QuestDef } from './quests';
 
@@ -87,6 +88,54 @@ export function milestoneStageId(id: string): number {
   return parts[0] === 'm' ? Number(parts[1]) : NaN;
 }
 
+// ── #42: 1:1 milestone ↔ era-record (StageLog) mapping ──────────────────────
+// Every milestone unlocks one era-record. The milestone is TITLED after that
+// record, and claiming it reveals the record in the almanac timeline — so
+// completing quests literally unfolds the era's history. Milestones per stage
+// (~9-11) usually outnumber the logs (~7-13), so the deterministic order is
+// mapped evenly across the logs (adjacent milestones may share a record).
+
+/** Deterministic ordered milestone ids for a stage (track order × step order). */
+function orderedStageMilestoneIds(stageId: number): string[] {
+  const ids: string[] = [];
+  for (const spec of MILESTONE_TRACKS) {
+    if ((spec.minStageId ?? 1) > stageId) continue;
+    for (let step = 0; step < spec.baseTiers.length; step++) ids.push(`m.${stageId}.${spec.track}.${step}`);
+  }
+  return ids;
+}
+
+/** The log index (within getLogsForStage order) a milestone at ordered-index k maps to. */
+function logIndexForOrdinal(k: number, total: number, logCount: number): number {
+  if (logCount <= 1 || total <= 1) return 0;
+  return Math.min(logCount - 1, Math.round((k * (logCount - 1)) / (total - 1)));
+}
+
+/** The era-record (StageLog) a milestone id unlocks — undefined if not a milestone. */
+export function milestoneEraLog(id: string): StageLog | undefined {
+  const stageId = milestoneStageId(id);
+  if (!Number.isFinite(stageId)) return undefined;
+  const logs = getLogsForStage(stageId);
+  if (logs.length === 0) return undefined;
+  const ordered = orderedStageMilestoneIds(stageId);
+  const k = ordered.indexOf(id);
+  if (k < 0) return undefined;
+  return logs[logIndexForOrdinal(k, ordered.length, logs.length)];
+}
+
+/** Is the era-record at `logIndex` of `stageId` unlocked? (any milestone mapped
+ *  to it has been claimed). Drives the almanac timeline reveal. */
+export function isEraRecordUnlocked(stageId: number, logIndex: number, completedQuestIds: readonly string[]): boolean {
+  const logs = getLogsForStage(stageId);
+  if (logs.length === 0) return false;
+  const completed = new Set(completedQuestIds);
+  const ordered = orderedStageMilestoneIds(stageId);
+  for (let k = 0; k < ordered.length; k++) {
+    if (logIndexForOrdinal(k, ordered.length, logs.length) === logIndex && completed.has(ordered[k])) return true;
+  }
+  return false;
+}
+
 /** Build the QuestDef for an `m.{stage}.{track}.{step}` id (undefined if invalid). */
 export function buildMilestone(id: string): QuestDef | undefined {
   const parts = id.split('.');
@@ -99,11 +148,15 @@ export function buildMilestone(id: string): QuestDef | undefined {
     return undefined;
   }
   const target = tierThreshold(spec, stageId, step);
+  // #42: the milestone is NAMED after the era-record it unlocks; the track label
+  // is the fallback when no log exists for the stage.
+  const eraLog = milestoneEraLog(id);
   const tierSuffix = spec.baseTiers.length > 1 ? ` ${TIER_LABEL[step] ?? String(step + 1)}` : '';
   const trackL = TRACK_LABEL[track];
+  const title = eraLog ? eraLog.title : { en: `${trackL.en}${tierSuffix}`, ko: `${trackL.ko}${tierSuffix}` };
   return {
     id,
-    title: { en: `${trackL.en}${tierSuffix}`, ko: `${trackL.ko}${tierSuffix}` },
+    title,
     desc: descFor(spec.metric, target),
     target,
     progress: (s) => metricValue(spec.metric, s, stageId),

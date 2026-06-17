@@ -55,6 +55,7 @@ import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
+import { QuestClaimRollup } from './QuestClaimRollup';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
@@ -1198,22 +1199,34 @@ export function GameScreen({
         <QuestPanel
           state={state}
           language={language}
-          onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playEntityLevelUp(); }}
+          onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playQuestClaim(); }}
           onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}
 
-      {/* Quest-milestone notification — tap to open the quest panel and claim. */}
+      {/* #42: era-record alarm — tapping CLAIMS IN PLACE (no need to open the panel).
+          The slot-machine rollup then plays from lastQuestClaimEvent. */}
       {questToast && !questOpen ? (
         <button
           type="button"
           className="quest-milestone-toast"
-          onClick={() => { setQuestOpen(true); setQuestToast(null); soundManager?.playUIOpen(); }}
+          onClick={() => { dispatch({ type: 'CLAIM_QUEST', questId: questToast.id }); soundManager?.playQuestClaim(); setQuestToast(null); }}
         >
           <span className="quest-milestone-toast__tag">{t(language, 'questMilestoneToast')}</span>
           <span className="quest-milestone-toast__title">✦ {questToast.title}</span>
           <span className="quest-milestone-toast__cta">{t(language, 'questMilestoneToastCta')}</span>
         </button>
+      ) : null}
+
+      {/* #42: slot-machine matter rollup when a milestone/era-record is claimed. */}
+      {state.lastQuestClaimEvent ? (
+        <QuestClaimRollup
+          matter={state.lastQuestClaimEvent.matter}
+          stones={state.lastQuestClaimEvent.stones}
+          title={(() => { const q = getQuest(state.lastQuestClaimEvent.questId); return q ? questTitle(q, language) : '✦'; })()}
+          language={language}
+          onDone={() => dispatch({ type: 'CLEAR_QUEST_CLAIM_EVENT', id: state.lastQuestClaimEvent!.id })}
+        />
       ) : null}
 
       {settingsOpen ? (

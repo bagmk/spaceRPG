@@ -1435,6 +1435,34 @@ button.hud-stage-title--clickable:hover {
 .enhance-toast__lv { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #eef2fa; }
 .enhance-toast__payout { font-family: var(--mono); font-size: 11px; font-weight: 700; color: #ffd98a; }
 @keyframes enhance-toast-in { 0% { transform: translate(-50%, -10px); opacity: 0; } 100% { transform: translate(-50%, 0); opacity: 1; } }
+
+/* #42: slot-machine matter rollup on era-record/milestone claim. */
+.quest-claim-rollup {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  background: radial-gradient(circle at center, rgba(255, 207, 107, 0.1), transparent 60%);
+}
+.quest-claim-rollup__card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 207, 107, 0.55);
+  background: linear-gradient(180deg, rgba(40, 32, 16, 0.95), rgba(14, 12, 18, 0.95));
+  box-shadow: 0 0 36px rgba(255, 207, 107, 0.35);
+  animation: quest-claim-pop 0.32s ease-out;
+}
+.quest-claim-rollup__tag { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; color: #ffcf6b; text-transform: uppercase; }
+.quest-claim-rollup__title { font-size: 15px; font-weight: 800; color: #fff6e6; }
+.quest-claim-rollup__matter { font-family: var(--mono); font-size: 26px; font-weight: 900; color: #ffe6a8; letter-spacing: 0.02em; }
+.quest-claim-rollup__stones { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #9fd0ff; }
+@keyframes quest-claim-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes enhance-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 
 /* ════ Fusion lever curation: cost on the lever, reveal fork ════ */

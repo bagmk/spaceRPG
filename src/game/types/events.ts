@@ -93,3 +93,13 @@ export interface EnhanceEvent {
   /** Matter handed back this attempt (#40 payout) — shown on the inline indicator. */
   payout?: number;
 }
+
+/** A claimed milestone/era-record (#42) — drives the slot-machine matter rollup. */
+export interface QuestClaimEvent {
+  id: number;
+  questId: string;
+  /** Matter granted (the number that rolls up like a slot machine). */
+  matter: number;
+  /** 강화석 granted (flat). */
+  stones: number;
+}

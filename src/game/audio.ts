@@ -354,6 +354,21 @@ export class SoundManager {
     } catch (err) { this.logAudioError(err); }
   }
 
+  /** #42: triumphant "claim" flourish for an era-record/milestone (slot-machine
+   *  rollup) — a brighter, longer 4-note arpeggio than the level-up ding. */
+  playQuestClaim(): void {
+    const ctx = this.ensureContext();
+    if (!this.isUsable() || !ctx || !this.unlocked || this.sfxMuted) return;
+    try {
+      const vol = dbToGain(TUNING.CLICK_VOLUME_DB - 1);
+      // Ascending E6 → G#6 → B6 → E7, resolving up like a payout.
+      this.playTonedBurst(1318, 0.14, vol);
+      window.setTimeout(() => this.playTonedBurst(1661, 0.13, vol * 0.82), 70);
+      window.setTimeout(() => this.playTonedBurst(1976, 0.13, vol * 0.7), 150);
+      window.setTimeout(() => this.playTonedBurst(2637, 0.24, vol * 0.6), 240);
+    } catch (err) { this.logAudioError(err); }
+  }
+
   // ── Chapter music API ──────────────────────────────────────────────────
   // Lazy-load + cross-fade audio files (mp3/ogg/m4a) by chapter id.
   // playChapter('stellar') is idempotent — calling it again with the same id

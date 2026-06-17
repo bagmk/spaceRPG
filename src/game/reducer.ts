@@ -56,6 +56,7 @@ import {
   handleClearClickEvent,
   handleClearFusionEvent,
   handleClearEnhanceEvent,
+  handleClearQuestClaimEvent,
   handleClearCollisionEvent,
   handleClearEncounterEvent,
 } from './reducers/meta';
@@ -137,6 +138,7 @@ export type GameAction =
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
+  | { type: 'CLEAR_QUEST_CLAIM_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
   | { type: 'BUY_ENHANCE_STONES'; count: number }
@@ -260,6 +262,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);
+    case 'CLEAR_QUEST_CLAIM_EVENT': return handleClearQuestClaimEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;

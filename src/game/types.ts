@@ -11,7 +11,7 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent } from './types/events';
+import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent } from './types/events';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
@@ -323,6 +323,7 @@ export interface GameState extends PersistentGameState {
   lastEncounterEvent: EncounterEvent | null;
   lastFusionEvent: FusionEvent | null;
   lastEnhanceEvent: EnhanceEvent | null;
+  lastQuestClaimEvent: QuestClaimEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
   offlineEntropyGained: number;

@@ -31,6 +31,7 @@ export function handleClaimQuest(state: GameState, action: ClaimQuestAction): Ga
   const activeQuests = refillActiveQuests(remaining, completedQuestIds, stageId);
   const { [action.questId]: _dropped, ...questProgress } = state.questProgress;
   void _dropped;
+  const eventId = state.eventCounter + 1;
 
   return {
     ...state,
@@ -39,5 +40,8 @@ export function handleClaimQuest(state: GameState, action: ClaimQuestAction): Ga
     completedQuestIds,
     activeQuests,
     questProgress,
+    eventCounter: eventId,
+    // #42: drives the slot-machine matter rollup + sound in GameScreen.
+    lastQuestClaimEvent: { id: eventId, questId: action.questId, matter, stones },
   };
 }
