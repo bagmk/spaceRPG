@@ -332,10 +332,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const drawTriosOfRarity = (rarity: EntityRarity, maxTrios: number): string[] => {
     const ids: string[] = [];
     for (const e of inventory) {
-      if (e.count <= 0) continue;
+      const usable = e.count - reservedOf(e.entityId); // never fuse the equipped copy
+      if (usable <= 0) continue;
       const ent = findEntityById(e.entityId);
       if (!ent || ent.rarity !== rarity) continue;
-      for (let k = 0; k < e.count; k++) ids.push(e.entityId);
+      for (let k = 0; k < usable; k++) ids.push(e.entityId);
     }
     const trios = Math.min(maxTrios, Math.floor(ids.length / FUSION_INPUT_COUNT));
     return ids.slice(0, trios * FUSION_INPUT_COUNT);
@@ -361,10 +362,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       if (trioBudget <= 0) break;
       const ids: string[] = [];
       for (const e of inventory) {
-        if (e.count <= 0 || excludedIds.has(e.entityId)) continue;
+        const usable = e.count - reservedOf(e.entityId); // never fuse the equipped copy
+        if (usable <= 0 || excludedIds.has(e.entityId)) continue;
         const ent = findEntityById(e.entityId);
         if (!ent || ent.rarity !== r) continue;
-        for (let k = 0; k < e.count; k++) ids.push(e.entityId);
+        for (let k = 0; k < usable; k++) ids.push(e.entityId);
       }
       const trios = Math.min(trioBudget, Math.floor(ids.length / FUSION_INPUT_COUNT));
       for (let i = 0; i < trios * FUSION_INPUT_COUNT; i++) out.push(ids[i]);
@@ -436,6 +438,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
   const gearSlotCount = equipCat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
 
+  // Ids currently occupying an equip/rift slot. They are RESERVED from fusion:
+  // the player can fuse spare copies but never the one they are actively using
+  // (장착된 건 조합 불가). An item is equipped at most once, so reserve is 0 or 1.
+  const equippedIdSet = useMemo(
+    () => new Set([...equippedSlots, ...riftSlots].filter(Boolean) as string[]),
+    [equippedSlots, riftSlots],
+  );
+  const reservedOf = (id: string) => (equippedIdSet.has(id) ? 1 : 0);
+
   // Every owned stack, across ALL eras — sorted best-first (rarity desc → era asc).
   const ownedEntities = useMemo(() => {
     return inventory
@@ -494,7 +505,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     if (fuseInputs.length >= FUSION_INPUT_COUNT) return;
     const owned = inventory.find((e) => e.entityId === entity.id);
     const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
-    if (!owned || owned.count <= usedCopies) return;
+    // Reserve the equipped copy — a spare can be fused, the worn one cannot.
+    if (!owned || owned.count - reservedOf(entity.id) <= usedCopies) return;
     if (trayRarity && entity.rarity !== trayRarity) return;
     setFuseInputs((current) => [...current, entity.id]);
     onUITap?.();
@@ -1073,9 +1085,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <div className="owned-grid">
                     {rarityFiltered.map(({ entry, entity }) => {
                       const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
+                      const reserved = reservedOf(entity.id); // equipped copy held back
+                      const usable = entry.count - reserved;
                       const blocked =
                         fuseInputs.length >= FUSION_INPUT_COUNT ||
-                        entry.count <= usedCopies ||
+                        usable <= usedCopies ||
                         (trayRarity !== undefined && entity.rarity !== trayRarity);
                       const locked = excludedIds.has(entity.id);
                       return (
@@ -1092,7 +1106,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           >
                             <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                             <span className="owned-card__name">{entityName(entity, language)}</span>
-                            <span className="owned-card__count">{`×${entry.count - usedCopies}`}</span>
+                            <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
+                            {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
                           </button>
                           <button
                             type="button"
@@ -1220,9 +1235,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <div className="fusion-result__sub">
                 {lastFusionEvent.atCap
                   ? t(language, 'fuseResultRefund')
-                  : lastFusionEvent.leveledUp
-                    ? t(language, 'fuseResultLevel')
-                    : t(language, 'fuseResultNew')}
+                  : t(language, 'fuseResultNew')}
               </div>
               <div className="fusion-result__burst">
                 {`+${formatEntropyAmount(lastFusionEvent.entropyBurst)} ${t(language, 'hudEntropy')}`}

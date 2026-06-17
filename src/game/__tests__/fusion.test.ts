@@ -135,31 +135,25 @@ describe('fusion (Phase 3)', () => {
     expect(rollFusionRarity('epic', 0.20, 16).rarityUp).toBe(false);
   });
 
-  it('feeds duplicate outputs at max count into level-ups (dup sink)', () => {
-    // Force a same-rarity output and aim the pick at a known entity by
-    // saturating the inventory with that entity at maxCount.
+  it('never levels up an item via fusion — fusion is rarity-up or break only', () => {
+    // Saturate the inventory with one common at maxCount so the output pick can
+    // land on it. Fusion must NEVER raise that item's level (level-up is the
+    // 강화 system's job; the old dup-sink level-up confused players).
     const target = commons[0];
     const state: GameState = {
       ...createInitialGameState(0),
       quanta: 1000,
       inventory: [{ entityId: target.id, count: Math.max(target.maxCount, 3), level: 1 }],
     };
-    // Fuse repeatedly until the output happens to be the saturated entity.
     let current = state;
-    let leveled = false;
-    for (let i = 0; i < 40 && !leveled; i++) {
+    for (let i = 0; i < 40; i++) {
       const before = current.inventory.find((e) => e.entityId === target.id)!;
       if (before.count < 3) break;
       current = fuse(current, 0.99, (i * 0.137) % 1);
-      const event = current.lastFusionEvent!;
-      if (event.outputEntityId === target.id && event.leveledUp) leveled = true;
+      const entry = current.inventory.find((e) => e.entityId === target.id);
+      if (entry) expect(entry.level).toBe(1); // fusion never enhances
     }
-    if (leveled) {
-      const entry = current.inventory.find((e) => e.entityId === target.id)!;
-      expect(entry.level).toBeGreaterThan(1);
-    }
-    // The loop is probabilistic across a fixed roll grid; the core invariant
-    // is that no fusion ever crashes and counts never go negative.
+    // No fusion ever crashes and counts never go negative.
     for (const entry of current.inventory) expect(entry.count).toBeGreaterThanOrEqual(0);
   });
 });

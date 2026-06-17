@@ -176,7 +176,6 @@ interface FuseRolls {
 interface OneFusionResult {
   outputId: string;
   rarityUp: boolean;
-  leveledUp: boolean;
   atCap: boolean;
   stonesEarned: number;
   burst: number;
@@ -195,7 +194,8 @@ function fuseOnce(
   inputEntityIds: string[],
   rolls: FuseRolls,
 ): { state: GameState; result: OneFusionResult } | null {
-  const validation = validateFusionInputs(state.inventory, inputEntityIds);
+  const equippedIds = new Set([...state.equippedSlots, ...state.riftSlots].filter(Boolean) as string[]);
+  const validation = validateFusionInputs(state.inventory, inputEntityIds, equippedIds);
   if (!validation.ok || !validation.rarity || !validation.stageId) return null;
 
   const currentStageIdForFusion = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
@@ -248,7 +248,7 @@ function fuseOnce(
   if (!output) return null;
 
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
-  const { inventory, leveledUp, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
+  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
   // Lv5+ enhancement (R1). Stones scale with the input tier; +bonus for same-entity.
@@ -293,7 +293,6 @@ function fuseOnce(
     result: {
       outputId: output.id,
       rarityUp: rarityResult.rarityUp,
-      leveledUp,
       atCap: capRefund > 0,
       stonesEarned,
       burst,
@@ -324,7 +323,6 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       id: eventId,
       outputEntityId: result.outputId,
       rarityUp: result.rarityUp,
-      leveledUp: result.leveledUp,
       entropyBurst: result.burst,
       refund: result.refund,
       atCap: result.atCap,
@@ -335,7 +333,6 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
       cards: [{
         outputEntityId: result.outputId,
         rarityUp: result.rarityUp,
-        leveledUp: result.leveledUp,
         atCap: result.atCap,
         stonesEarned: result.stonesEarned,
       }],
@@ -361,7 +358,6 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
   let totalStones = 0;
   let totalBurst = 0;
   let totalRefund = 0;
-  let anyLeveled = false;
   let anyAtCap = false;
   let lastResult: OneFusionResult | null = null;
   const cards: FusionResultCard[] = [];
@@ -376,13 +372,11 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
     totalStones += r.result.stonesEarned;
     totalBurst += r.result.burst;
     totalRefund += r.result.refund;
-    anyLeveled = anyLeveled || r.result.leveledUp;
     anyAtCap = anyAtCap || r.result.atCap;
     lastResult = r.result;
     cards.push({
       outputEntityId: r.result.outputId,
       rarityUp: r.result.rarityUp,
-      leveledUp: r.result.leveledUp,
       atCap: r.result.atCap,
       stonesEarned: r.result.stonesEarned,
     });
@@ -397,7 +391,6 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
       id: eventId,
       outputEntityId: lastResult.outputId,
       rarityUp: successCount > 0,
-      leveledUp: anyLeveled,
       entropyBurst: totalBurst,
       refund: totalRefund,
       atCap: anyAtCap,

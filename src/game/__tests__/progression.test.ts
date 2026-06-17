@@ -260,8 +260,10 @@ describe('gear system (category purity + refunds)', () => {
       target,
       1,
     );
-    expect(result.leveledUp).toBe(false);
+    // Fusion never levels up — the at-cap duplicate pays a refund and the
+    // existing stack is returned untouched (still at the cap level).
     expect(result.capRefund).toBeGreaterThan(0);
+    expect(result.inventory[0].level).toBe(ENHANCE_LEVEL_CAPS.common);
   });
 
   it('same-category inputs guarantee a same-category fusion output', () => {

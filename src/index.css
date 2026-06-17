@@ -767,6 +767,20 @@ button.hud-stage-title--clickable:hover {
 }
 /* 🅠6 (req ⑫): upgradeable hint on the owned-card level/count line. */
 .owned-card__up { color: #7fe9ff; font-weight: 700; }
+/* Reserved badge — the equipped copy is held back from fusion (장착 = 조합 불가). */
+.owned-card__reserved {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 5px;
+  color: #cfe3ff;
+  background: rgba(60, 110, 190, 0.55);
+  pointer-events: none;
+}
 
 /* ── Fusion page ── */
 .fuse-page {
@@ -14189,13 +14203,17 @@ button.stat-header-item {
 .fusion-reveal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  /* Give rows a definite height. Without this, the cards' absolutely-positioned
+     faces have zero intrinsic height and aspect-ratio can't resolve, so rows
+     collapse to ~0 and cards overlap/clip ("두 개 겹쳐서 나온다"). */
+  grid-auto-rows: minmax(76px, auto);
   gap: 8px;
   width: min(540px, 88vw);
   max-height: 52vh;
   overflow-y: auto;
   padding: 2px;
 }
-.fusion-reveal-card { perspective: 600px; aspect-ratio: 3 / 4; }
+.fusion-reveal-card { perspective: 600px; aspect-ratio: 3 / 4; min-height: 76px; }
 .fusion-reveal-card__inner {
   position: relative;
   width: 100%;

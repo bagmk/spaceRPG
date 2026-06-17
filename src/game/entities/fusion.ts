@@ -32,7 +32,6 @@ import { getSetKey } from './effects';
 import { getCodexSubsetIdForEntity } from './codexSets';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
-import { getEnhanceLevelCap } from './enhance';
 import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -63,6 +62,7 @@ export interface FusionValidation {
 export function validateFusionInputs(
   inventory: EntityInstance[],
   inputEntityIds: string[],
+  equippedIds: ReadonlySet<string> = new Set(),
 ): FusionValidation {
   if (inputEntityIds.length !== FUSION_INPUT_COUNT) return { ok: false };
 
@@ -79,7 +79,10 @@ export function validateFusionInputs(
     const entity = findEntityById(id);
     if (!entity) return { ok: false };
     const owned = inventory.find((e) => e.entityId === id);
-    if (!owned || owned.count < count) return { ok: false };
+    // The equipped copy is reserved — only spare copies can be fused, so the
+    // worn item can never be consumed out from under its slot (장착 = 조합 불가).
+    const reserved = equippedIds.has(id) ? 1 : 0;
+    if (!owned || owned.count - reserved < count) return { ok: false };
     if (rarity === undefined) rarity = entity.rarity;
     else if (entity.rarity !== rarity) return { ok: false };
     stageId = Math.max(stageId, entity.stageId);
@@ -286,13 +289,19 @@ export function consumeFusionInputs(
 
 export interface FusionOutputResult {
   inventory: EntityInstance[];
-  /** True when the output hit max count and fed a level-up instead (dup sink). */
-  leveledUp: boolean;
-  /** Quanta refunded when the output was at max count AND max level (nothing to gain). */
+  /** Quanta refunded when the output is already at max count. Fusion NEVER
+   *  levels/enhances an item — a duplicate at the cap pays out quanta instead. */
   capRefund: number;
 }
 
-/** Add the fusion output: stack a copy, or level up when already at max count. */
+/**
+ * Add the fusion output: stack a copy, or refund quanta when already at max
+ * count. Fusion is rarity-up OR break only — it must NEVER level up / enhance an
+ * item (that is the 강화 system's job; mixing them confused players who saw a
+ * common "등급업" that was actually a hidden level-up). So an over-cap duplicate
+ * always pays capRefund. The refund uses the same stage-independent base as
+ * fusion/enhance costs, so it can never exceed what fusing the item ever costs.
+ */
 export function applyFusionOutput(
   inventory: EntityInstance[],
   output: StageEntity,
@@ -300,24 +309,9 @@ export function applyFusionOutput(
 ): FusionOutputResult {
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
-    // Duplicate sink levels up — but never past the rarity's enhance cap.
-    // Fully capped duplicates pay out quanta instead of vanishing (스펙 §10).
-    // Refund uses the same stage-independent base as fusion/enhance costs, so a
-    // fully-capped duplicate can never pay out more than fusing it ever costs
-    // (which would otherwise be an exploit now that fusion cost is flat).
-    if (existing.level >= getEnhanceLevelCap(output)) {
-      return {
-        inventory,
-        leveledUp: false,
-        capRefund: Math.ceil(FUSION_ENHANCE_COST_BASE * ENTITY_BASE_COST_FACTOR[output.rarity] * FUSION_CAP_DUP_REFUND_FRAC),
-      };
-    }
     return {
-      inventory: inventory.map((e) =>
-        e.entityId === output.id ? { ...e, level: e.level + 1 } : e,
-      ),
-      leveledUp: true,
-      capRefund: 0,
+      inventory,
+      capRefund: Math.ceil(FUSION_ENHANCE_COST_BASE * ENTITY_BASE_COST_FACTOR[output.rarity] * FUSION_CAP_DUP_REFUND_FRAC),
     };
   }
   if (existing) {
@@ -325,13 +319,11 @@ export function applyFusionOutput(
       inventory: inventory.map((e) =>
         e.entityId === output.id ? { ...e, count: e.count + 1 } : e,
       ),
-      leveledUp: false,
       capRefund: 0,
     };
   }
   return {
     inventory: [...inventory, { entityId: output.id, count: 1, level: 1 }],
-    leveledUp: false,
     capRefund: 0,
   };
 }

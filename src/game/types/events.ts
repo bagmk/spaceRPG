@@ -54,7 +54,6 @@ export interface EncounterEvent {
 export interface FusionResultCard {
   outputEntityId: string;
   rarityUp: boolean;
-  leveledUp: boolean;
   atCap: boolean;
   stonesEarned: number;
 }
@@ -64,8 +63,6 @@ export interface FusionEvent {
   id: number;
   outputEntityId: string;
   rarityUp: boolean;
-  /** Output hit max count and fed a level-up instead (duplicate sink). */
-  leveledUp: boolean;
   entropyBurst: number;
   /** Quanta returned: enhance-investment refund + at-cap duplicate payout. */
   refund: number;
