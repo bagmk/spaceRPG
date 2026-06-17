@@ -252,9 +252,15 @@ function fuseOnce(
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
   const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
   const totalRefund = enhanceRefund + capRefund;
+  // RARITY-UP IS THE ACTUAL OUTPUT vs INPUT (#42-fix): rollFusionRarity can roll
+  // "up" but pickFusionOutput falls back to a lower rarity when the rolled output
+  // stage lacks that tier — so a common→common fusion was wrongly flagged "등급
+  // 상승". Judge by the real output rarity instead.
+  const FUSION_RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+  const rarityUp = (FUSION_RARITY_RANK[output.rarity] ?? 0) > (FUSION_RARITY_RANK[validation.rarity] ?? 0);
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
   // Lv5+ enhancement (R1). Stones scale with the input tier; +bonus for same-entity.
-  const stonesEarned = rarityResult.rarityUp
+  const stonesEarned = rarityUp
     ? 0
     : (FUSION_FAIL_STONES_BY_TIER[validation.rarity] ?? 1) + (sameEntity ? FUSION_SAME_ENTITY_FAIL_STONE_BONUS : 0);
 
@@ -294,7 +300,7 @@ function fuseOnce(
     state: nextState,
     result: {
       outputId: output.id,
-      rarityUp: rarityResult.rarityUp,
+      rarityUp,
       atCap: capRefund > 0,
       stonesEarned,
       burst,

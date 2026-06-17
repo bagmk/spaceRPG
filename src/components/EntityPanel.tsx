@@ -562,6 +562,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     if (fuseTimerRef.current !== null) window.clearTimeout(fuseTimerRef.current);
     if (enhanceTimerRef.current !== null) window.clearTimeout(enhanceTimerRef.current);
   }, []);
+  // #42-fix: leaving the fuse page clears a lingering reveal so an old result
+  // card doesn't "pop back out" when the player returns to the forge.
+  useEffect(() => {
+    if (page !== 'fuse' && lastFusionEvent) onClearFusionEvent(lastFusionEvent.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
   // Sequential gacha flip — reveal result cards one-by-one (skippable).
   useEffect(() => {
     if (!lastFusionEvent) { setRevealedCount(0); return undefined; }
@@ -1404,6 +1410,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               </div>
               <EntityGlyph entity={output} color={RARITY_COLORS[output.rarity]} />
               <div className="fusion-result__name">{entityName(output, language)}</div>
+              {/* #42-fix: show the item's spec right in the reveal. */}
+              {(() => {
+                const p = effectValueLabel(output, language, power, 1, 1, false, false);
+                const tr = EFFECT_TRAIT[output.effect.type];
+                return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+              })()}
               {/* On a failed upgrade the 강화석 ARE the payout — show them prominently. */}
               {!lastFusionEvent.rarityUp && lastFusionEvent.stonesEarned > 0 ? (
                 <div className="fusion-result__stones fusion-result__stones--big">

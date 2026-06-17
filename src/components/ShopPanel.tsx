@@ -11,7 +11,7 @@ import {
   type PaidShopProduct,
   type RewardedAdProduct,
 } from '../game/shop/items';
-import { completePurchase, restorePurchases } from '../game/shop/purchase';
+import { completeMockPurchase, restorePurchases } from '../game/shop/purchase';
 import { recordPurchaseEvent } from '../cloud/purchases';
 import { Capacitor } from '@capacitor/core';
 import { completeRewardedAd } from '../game/shop/adRewards';
@@ -53,6 +53,8 @@ interface ShopPanelProps {
   dispatch: Dispatch<GameAction>;
   language: Lang;
   onClose: () => void;
+  /** Plays a purchase chime (wired to the sound manager in GameScreen). */
+  onSfx?: () => void;
 }
 
 export function ShopButton({
@@ -101,7 +103,7 @@ function ActiveSummary({ boosts, now, language }: { boosts: GameState['shopBoost
   );
 }
 
-export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps) {
+export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
   const [tab, setTab] = useState<ShopTab>('matter');
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -142,12 +144,15 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
   const refreshCost = Math.ceil(outputRate * dailyRefreshCostSeconds(refreshCount));
 
   const handlePaid = async (product: PaidShopProduct) => {
+    // #43: cash-shop payment is OFF — everything is FREE for now (the user wants
+    // all paid items grantable without a payment backend). completeMockPurchase
+    // always succeeds; no purchase event is recorded.
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
-    const result = await completePurchase(product);
+    const result = await completeMockPurchase(product);
     if (result.success) {
       dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: product.id, now: Date.now() });
-      void recordPurchaseEvent({ type: 'purchase', productId: product.id, priceUSD: product.priceUSD });
+      onSfx?.();
     }
     setPendingId(null);
   };
@@ -223,7 +228,7 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
                     type="button"
                     className="shop-stone-card"
                     disabled={!afford}
-                    onClick={() => dispatch({ type: 'BUY_ENHANCE_STONES', count })}
+                    onClick={() => { dispatch({ type: 'BUY_ENHANCE_STONES', count }); onSfx?.(); }}
                   >
                     <span className="shop-stone-card__amount">💎 {count}</span>
                     <span className="shop-stone-card__cost">⚛{formatGameNumberShort(cost)}</span>
@@ -282,7 +287,7 @@ export function ShopPanel({ state, dispatch, language, onClose }: ShopPanelProps
                     className={`shop-daily-card ${sold ? 'shop-daily-card--sold' : ''}`}
                     style={{ '--rarity-color': RARITY_COLORS[offer.rarity] } as CSSProperties}
                     disabled={sold || !afford}
-                    onClick={() => dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now })}
+                    onClick={() => { dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now }); onSfx?.(); }}
                   >
                     {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[offer.rarity]} /> : null}
                     <span className="shop-daily-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>

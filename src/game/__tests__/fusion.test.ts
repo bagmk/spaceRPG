@@ -67,9 +67,20 @@ describe('fusion (Phase 3)', () => {
   });
 
   it('upgrades rarity when the roll lands in the up window', () => {
-    const state = fusionReadyState();
-    // roll just inside the common up1 window (after the up2 slice)
-    const next = fuse(state, FUSION_UP2_CHANCE_BY_TIER.common + FUSION_UP1_CHANCE_BY_TIER.common / 2, 0.3);
+    // #42-fix: rarityUp reflects the ACTUAL output rarity, so this must fuse at a
+    // stage whose pool actually HAS the up-rarity (stage 1 has only commons, so a
+    // stage-1 "up" can only fall back to a common — correctly NOT a rarity-up).
+    const s3common = getEntitiesForStage(3).filter((e) => e.rarity === 'common')[0].id;
+    const state: GameState = {
+      ...createInitialGameState(0), stageIdx: 2, quanta: 1e9,
+      inventory: [{ entityId: s3common, count: 3, level: 1 }],
+    };
+    // roll just inside the common up1 window (after the up2 slice); no stageRoll
+    // so the output pool is the current stage (3), which has rares.
+    const next = gameReducer(state, {
+      type: 'FUSE_ENTITIES', inputEntityIds: [s3common, s3common, s3common],
+      rarityRoll: FUSION_UP2_CHANCE_BY_TIER.common + FUSION_UP1_CHANCE_BY_TIER.common / 2, pickRoll: 0.3,
+    });
     expect(next.lastFusionEvent!.rarityUp).toBe(true);
     // A successful upgrade mints NO stones — stones are the failure consolation.
     expect(next.lastFusionEvent!.stonesEarned).toBe(0);
@@ -262,12 +273,15 @@ describe('P6: mythic is fusion-only + tier-accurate fusion stones', () => {
   });
 
   it('🅠4: FUSE_BATCH fuses each trio, accumulating success/fail counts + stones', () => {
-    const c = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
-    const state = { ...createInitialGameState(0), quanta: 1e9, inventory: [{ entityId: c.id, count: 9, level: 1 }] };
+    // #42-fix: fuse at stage 3 (its pool has rares) so a rolled "up" can actually
+    // produce a higher rarity — stage 1 has only commons, so an up there isn't real.
+    // stageRoll 0.1 at stage 3 → output pool stage 3 (verified to have rares).
+    const c = getEntitiesForStage(3).filter((e) => e.rarity === 'common')[0];
+    const state = { ...createInitialGameState(0), stageIdx: 2, quanta: 1e9, inventory: [{ entityId: c.id, count: 9, level: 1 }] };
     const inputEntityIds = Array.from({ length: 9 }, () => c.id); // 3 trios
     const rolls = [
       { rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }, // fail
-      { rarityRoll: 0.0, pickRoll: 0.1, stageRoll: 0.1 },  // rarity-up
+      { rarityRoll: 0.0, pickRoll: 0.1, stageRoll: 0.1 },  // rarity-up (→ rare in stage 3)
       { rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.1 }, // fail
     ];
     const next = gameReducer(state, { type: 'FUSE_BATCH', inputEntityIds, rolls });

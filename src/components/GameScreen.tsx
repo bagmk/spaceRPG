@@ -56,6 +56,8 @@ import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
+import { milestoneEraLog } from '../game/milestones';
+import { pickLogText } from '../game/stageLogs';
 import { SettingsPanel } from './SettingsPanel';
 import { t, stageName } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
@@ -866,7 +868,7 @@ export function GameScreen({
           }
         />
         {shopOpen && canShowShop ? (
-          <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => { setShopOpen(false); soundManager?.playUIClose(); }} />
+          <ShopPanel state={state} dispatch={dispatch} language={language} onClose={() => { setShopOpen(false); soundManager?.playUIClose(); }} onSfx={() => soundManager?.playEntityLevelUp()} />
         ) : null}
         {panelView ? (
           <EntityPanel
@@ -927,7 +929,13 @@ export function GameScreen({
             onClearEnhanceEvent={(id) => dispatch({ type: 'CLEAR_ENHANCE_EVENT', id })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
-            onClose={() => { setPanelView(null); soundManager?.playUIClose(); }}
+            onClose={() => {
+              // #42-fix: clear any open fusion/enhance reveal so it doesn't "pop
+              // back out" when the panel is reopened.
+              if (state.lastFusionEvent) dispatch({ type: 'CLEAR_FUSION_EVENT', id: state.lastFusionEvent.id });
+              if (state.lastEnhanceEvent) dispatch({ type: 'CLEAR_ENHANCE_EVENT', id: state.lastEnhanceEvent.id });
+              setPanelView(null); soundManager?.playUIClose();
+            }}
             onStageSelect={(id) => { setViewingStageId(id === stage.id ? null : id); soundManager?.playUITap(); }}
             onUITap={() => soundManager?.playUITap()}
           />
@@ -1228,6 +1236,8 @@ export function GameScreen({
         >
           <span className="quest-milestone-toast__tag">{t(language, 'questMilestoneToast')}</span>
           <span className="quest-milestone-toast__title">✦ {questToast.title}</span>
+          {/* #42-fix: show the pretty era-record lore line (the old milestone message). */}
+          {(() => { const log = milestoneEraLog(questToast.id); return log ? <span className="quest-milestone-toast__lore">{pickLogText(log.message, language)}</span> : null; })()}
           <span className="quest-milestone-toast__cta">{t(language, 'questMilestoneToastCta')}</span>
         </button>
       ) : null}

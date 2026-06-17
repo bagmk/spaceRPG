@@ -6455,6 +6455,8 @@ button.stat-header-item {
   cursor: pointer;
   font: inherit;
   color: #eaf6ff;
+  text-align: center;
+  max-width: min(440px, 90vw);
   animation: questToastIn 0.35s ease-out;
 }
 .quest-milestone-toast__tag {
@@ -6465,6 +6467,7 @@ button.stat-header-item {
   color: #ffd766;
 }
 .quest-milestone-toast__title { font-size: 15px; font-weight: 700; }
+.quest-milestone-toast__lore { font-size: 11px; color: #b9c8e0; line-height: 1.4; margin: 2px 0; }
 .quest-milestone-toast__cta { font-size: 11px; color: #9be7ff; }
 @keyframes questToastIn {
   from { opacity: 0; transform: translate(-50%, -14px); }
@@ -13739,6 +13742,7 @@ button.stat-header-item {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  white-space: nowrap; /* #42-fix: "재시도" was wrapping to two lines in the narrow card */
 }
 .fusion-result__retry {
   background: rgba(127, 233, 255, 0.16);
@@ -14345,18 +14349,23 @@ button.stat-header-item {
 .fusion-reveal__skip:hover { background: rgba(255, 255, 255, 0.16); }
 .fusion-reveal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  /* #42-fix: smaller cards so a full batch fits without an ugly scrollbar. */
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
   /* Give rows a definite height. Without this, the cards' absolutely-positioned
      faces have zero intrinsic height and aspect-ratio can't resolve, so rows
      collapse to ~0 and cards overlap/clip ("두 개 겹쳐서 나온다"). */
-  grid-auto-rows: minmax(76px, auto);
-  gap: 8px;
+  grid-auto-rows: minmax(60px, auto);
+  gap: 7px;
   width: min(540px, 88vw);
-  max-height: 52vh;
+  max-height: 56vh;
   overflow-y: auto;
   padding: 2px;
+  /* Hide the scrollbar — it looked broken poking through the reveal. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.fusion-reveal-card { perspective: 600px; aspect-ratio: 3 / 4; min-height: 76px; }
+.fusion-reveal-grid::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.fusion-reveal-card { perspective: 600px; aspect-ratio: 3 / 4; min-height: 60px; }
 .fusion-reveal-card__inner {
   position: relative;
   width: 100%;
