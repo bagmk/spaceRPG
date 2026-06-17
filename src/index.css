@@ -6437,10 +6437,12 @@ button.stat-header-item {
 /* Quest-milestone notification toast — top-center achievement banner. */
 .quest-milestone-toast {
   position: fixed;
-  top: max(14px, env(safe-area-inset-top));
+  /* #42-fix: single alarm, anchored at the BOTTOM (was top — the user saw two
+     alarms; the top one is removed and this is the one, claimable-synced). */
+  bottom: 72px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 70;
+  z-index: 80;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8226,6 +8228,21 @@ button.stat-header-item {
 .spec-chip--primary { padding: 6px 13px; font-size: 13px; }
 .spec-chip--primary .spec-chip__icon { font-size: 15px; }
 .spec-chip-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+/* #42-fix: trait-shape legend strip (explains ●/■/★/◆/✚ in equip + fusion). */
+.trait-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: center;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.trait-legend__item { display: inline-flex; align-items: center; gap: 4px; }
+.trait-legend__icon { font-size: 12px; line-height: 1; }
+.trait-legend__label { font-size: 10px; font-weight: 600; color: #aeb9d0; letter-spacing: 0.02em; }
 .entity-detail-card__lvl { color: #7483a2; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; }
 .entity-detail-card__description--flavor { margin-top: 10px; font-size: 12px; font-style: italic; opacity: 0.7; }
 

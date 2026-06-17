@@ -548,15 +548,18 @@ export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scal
  * glyph of the spec-chip in the expanded card. Icons are intentionally distinct
  * so click/auto/crit/etc. read instantly without parsing the description.
  */
+// Clean, intuitive GEOMETRIC shapes (the user asked for 동그라미/별표/세모 over busy
+// emoji) — each effect type is one colored shape, explained by the trait legend
+// in the equip/fusion screens. Distinct shape AND color so they read at a glance.
 export const EFFECT_TRAIT: Record<EntityEffectType, { icon: string; accent: string }> = {
-  click:      { icon: '🖱', accent: '#7fd8ff' }, // click power %
-  crit:       { icon: '✷',  accent: '#ff9a5b' }, // crit chance / crit mult
-  auto:       { icon: '⚙',  accent: '#6ee7a0' }, // flat auto rate (/s)
-  auto_mult:  { icon: '⚡',  accent: '#9be86e' }, // auto power %
-  multiplier: { icon: '✦',  accent: '#c79bff' }, // all-source %
-  time:       { icon: '⏱',  accent: '#8fb6ff' }, // (legacy) time rate
-  combo_cap:  { icon: '🔗', accent: '#7fe0d8' }, // combo cap +
-  entropy:    { icon: '🌀', accent: '#b388ff' }, // (legacy) encounter bonus
+  click:      { icon: '●', accent: '#7fd8ff' }, // circle — click power %
+  auto:       { icon: '■', accent: '#6ee7a0' }, // square — flat auto rate (/s)
+  crit:       { icon: '★', accent: '#ff9a5b' }, // star — crit chance / crit mult
+  auto_mult:  { icon: '◆', accent: '#9be86e' }, // diamond — auto power %
+  multiplier: { icon: '✚', accent: '#c79bff' }, // plus — all-source %
+  combo_cap:  { icon: '▲', accent: '#7fe0d8' }, // triangle — combo cap +
+  time:       { icon: '◇', accent: '#8fb6ff' }, // (legacy) time rate
+  entropy:    { icon: '✶', accent: '#b388ff' }, // (legacy) encounter bonus
 };
 
 /** Trait icon per secondary (substat) type — same vocabulary as EFFECT_TRAIT. */

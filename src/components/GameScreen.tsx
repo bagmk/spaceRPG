@@ -52,7 +52,6 @@ import { OfflineProgressModal } from './OfflineProgressModal';
 import { EndingChooser } from './EndingChooser';
 import { EndingCredits } from './endings/EndingCredits';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
-import { StageLogToast } from './StageLogToast';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
@@ -644,7 +643,10 @@ export function GameScreen({
       const q = getQuest(newlyReady);
       if (q) {
         setQuestToast({ id: newlyReady, title: questTitle(q, language) });
-        soundManager?.playUIOpen();
+        soundManager?.playUIOpen(); // #42-fix: the (single, bottom) alarm chimes on appear
+        // The era-record alarm replaces the old progress-based lore toast, so mark
+        // milestone-seen here to keep the info-hint tutorial chain alive.
+        if (!state.tutorialFlags['milestone-seen']) dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' });
         if (questToastTimerRef.current) window.clearTimeout(questToastTimerRef.current);
         questToastTimerRef.current = window.setTimeout(() => setQuestToast(null), 5200);
       }
@@ -1127,9 +1129,9 @@ export function GameScreen({
           document.body,
         )}
         <ScaleIndicator stageId={displayStage.id} language={language} className={focusMode ? 'focus-hidden' : ''} />
-        {state.totalClicks > 0 || import.meta.env.DEV ? (
-          <StageLogToast stageId={stage.id} progressPercent={Math.floor(progress01 * 100)} language={language} onFirstDismiss={() => dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'milestone-seen' })} />
-        ) : null}
+        {/* #42-fix: the progress-based lore toast is gone — era-records now unfold
+            via the claimable quest alarm below (one alarm, claimable-synced) and
+            in the almanac on claim. */}
         {stage.id === 1 && state.totalClicks === 0 && !interactionLocked ? (
           <div className="click-tutorial-hint">{t(language, 'clickToGather')}</div>
         ) : null}

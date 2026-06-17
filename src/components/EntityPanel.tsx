@@ -289,6 +289,30 @@ function SpecChip({ icon, value, label, accent, primary = false }: { icon: strin
   );
 }
 
+// The trait shapes the player actually meets, with a short label — shown as a
+// legend strip in the equip/fusion screens so ●/■/★/◆/✚ are self-explanatory.
+const TRAIT_LEGEND: { type: keyof typeof EFFECT_TRAIT; labelKey: Parameters<typeof t>[1] }[] = [
+  { type: 'click', labelKey: 'effectClickPower' },
+  { type: 'auto', labelKey: 'hudAuto' },
+  { type: 'crit', labelKey: 'effectCritChance' },
+  { type: 'auto_mult', labelKey: 'effectAutoPower' },
+  { type: 'multiplier', labelKey: 'effectAllSources' },
+];
+
+/** Legend explaining what each trait shape means (#42-fix: 도형 직관화). */
+function TraitLegend({ language }: { language: Lang }) {
+  return (
+    <div className="trait-legend">
+      {TRAIT_LEGEND.map(({ type, labelKey }) => (
+        <span key={type} className="trait-legend__item">
+          <span className="trait-legend__icon" style={{ color: EFFECT_TRAIT[type].accent }}>{EFFECT_TRAIT[type].icon}</span>
+          <span className="trait-legend__label">{t(language, labelKey)}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Live combat stats shown on the equip page (computed by GameScreen). */
 export interface PanelStats {
   clickPower: number;
@@ -954,6 +978,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="equip-page">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
+              <TraitLegend language={language} />
 
               {/* Loadout — both category groups (click + auto/rift); tap a slot for detail / pick. */}
               {shownCats.map((cat) => renderSlotGroup(cat))}
@@ -1087,6 +1112,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="fuse-page">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
+              <TraitLegend language={language} />
               {/* Fuse-All — compact box (#41): label + a small trio-count chip
                   (no more "(N조)" in the label). Fuses every trio across all
                   rarities except ✕-excluded stacks. */}
