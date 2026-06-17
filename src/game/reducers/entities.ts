@@ -440,12 +440,15 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     });
   }
 
-  // ── Stone phase (Lv ≥ 5): pay 강화석, can fail. ──
+  // ── Stone phase (Lv ≥ 5): pay 강화석 AND matter, can fail. ──
+  // 강화석만 쓰던 버그 수정 — stone-phase enhancement also costs matter (the same
+  // stage-independent quanta cost as the matter phase), so 강화 always spends both.
   const protect = action.protect === true;
+  const matterCost = getEnhanceCost(entity, level, stageId);
   const stoneCost = getEnhanceStoneCost(entity, level);
   const protectCost = protect ? getEnhanceProtectStoneCost(entity, level) : 0;
   const totalStones = stoneCost + protectCost;
-  if (state.enhanceStones < totalStones) return state;
+  if (state.enhanceStones < totalStones || state.quanta < matterCost) return state;
 
   const failChance = getEnhanceFailChance(level);
   const succeeded = (action.failRoll ?? 1) >= failChance;
@@ -477,7 +480,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     }
     return { ...e, level: nextLevel, investedStones };
   });
-  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones) };
+  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones), quanta: state.quanta - matterCost };
   if (destroyed && (nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
     nextInventory = nextInventory.filter((e) => e.entityId !== owned.entityId);
     nextState = {

@@ -817,6 +817,18 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         {slotEntity ? (
                           <>
                             {linked ? <span className="equip-slot-card__set">⬡</span> : null}
+                            {/* Inline unequip — a span (not button) since this card is itself a button. */}
+                            <span
+                              className="equip-slot-card__remove"
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t(language, 'entityUnequip')}
+                              title={t(language, 'entityUnequip')}
+                              onClick={(e) => { e.stopPropagation(); onUnequip(i, cat); onUITap?.(); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onUnequip(i, cat); onUITap?.(); } }}
+                            >
+                              ✕
+                            </span>
                             <div className="equip-slot-card__glyph">
                               <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
                             </div>
@@ -1320,7 +1332,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const protectCost = getEnhanceProtectStoneCost(ent, lvl);
         const totalStones = stoneCost + (protectEnhance ? protectCost : 0);
         const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
-        const affordable = !atCap && (stonePhase ? enhanceStones >= totalStones : quanta >= matterCost);
+        // Stone phase now spends BOTH matter and stones — must afford both.
+        const affordable = !atCap && (stonePhase ? (enhanceStones >= totalStones && quanta >= matterCost) : quanta >= matterCost);
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
@@ -1364,7 +1377,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   : atCap
                     ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
                     : stonePhase
-                      ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
+                      ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)} ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
                       : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)}`}
               </button>
               <div className="slot-detail__actions">
