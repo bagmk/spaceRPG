@@ -11,6 +11,7 @@ import { defaultModifiers } from '../skills/effects';
 import {
   ENHANCE_LEVEL_CAPS,
   ENHANCE_REFUND_RATE,
+  ENHANCE_MATTER_PAYOUT_SUCCESS,
   RARITY_STAGE_GATES,
   SECONDARY_RARITY_COUNT,
   SECONDARY_STAT_POOLS,
@@ -159,7 +160,9 @@ describe('enhancement (강화소)', () => {
     };
     const next = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
     expect(next.inventory[0].level).toBe(2);
-    expect(next.quanta).toBeCloseTo(state.quanta - cost, 5);
+    // #40: a successful enhance now also pays back a small matter fraction.
+    const payout = Math.ceil(cost * ENHANCE_MATTER_PAYOUT_SUCCESS);
+    expect(next.quanta).toBeCloseTo(state.quanta - cost + payout, 5);
   });
 
   it('rejects when poor or at the rarity level cap', () => {

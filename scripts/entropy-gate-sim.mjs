@@ -71,7 +71,7 @@ const ENHANCE_COST_FACTOR = 1.5;
 const ENHANCE_COST_GROWTH = 1.0;
 // P1 강화석: Lv1→5 matter, Lv5+ stones (minted by failed fusions). The stone
 // budget per stage = expected fusions × fail rate × stones-per-fail(best rarity).
-const ENHANCE_STONE_THRESHOLD = 5;
+const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 (was 5) — lockstep with balance.ts.
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.0; // Overhaul-2 🅠1: 1.5 → 1.0 (FLAT) — lockstep with balance.ts.
 // Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
@@ -129,9 +129,9 @@ function bestRarity(stageId) {
   if (stageId >= RARITY_GATES.rare + GATE_RAMP - 1) return 'rare';
   return 'common';
 }
-// Slot 2 at stage 4 (EQUIP_SLOT_UNLOCKS); slot 3 at 30 almanac entries ≈ stage 6.
-const clickSlots = (s) => 1 + (s >= 4 ? 1 : 0) + (s >= 6 ? 1 : 0);
-const riftSlots = (s) => 1 + (s >= 6 ? 1 : 0) + (s >= 11 ? 1 : 0);
+// Slot pacing (#39, stage-gated): click slot2@S5 / slot3@S9; rift slot2@S7 / slot3@S12.
+const clickSlots = (s) => 1 + (s >= 5 ? 1 : 0) + (s >= 9 ? 1 : 0);
+const riftSlots = (s) => 1 + (s >= 7 ? 1 : 0) + (s >= 12 ? 1 : 0);
 
 /**
  * Stage-aware gear maturity (cold-start honest):

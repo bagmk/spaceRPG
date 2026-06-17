@@ -1373,30 +1373,25 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         );
       })() : null}
       {/* 강화 result flash (P1) */}
+      {/* #40: compact inline outcome toast — NOT a full-screen center card (that
+          read like "a new item appeared" and the live effect-total recompute made
+          click power flicker). A small chip near the top: outcome + new level + payout. */}
       {lastEnhanceEvent ? (() => {
-        const ent = findEntityById(lastEnhanceEvent.entityId);
-        const entry = ent ? ownedEntryOf(ent) : undefined;
         const palette: Record<string, string> = { up: '#bb8cff', down: '#d8a24a', break: '#e2554a', protected: '#4a8fff' };
         const col = palette[lastEnhanceEvent.outcome];
         const labelKey = ({ up: 'enhanceOutcomeUp', down: 'enhanceOutcomeDown', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[lastEnhanceEvent.outcome];
         return (
           <div
-            className={`enhance-flash enhance-flash--${lastEnhanceEvent.outcome}`}
+            className={`enhance-toast enhance-toast--${lastEnhanceEvent.outcome}`}
             role="status"
+            style={{ '--flash-color': col } as CSSProperties}
             onClick={() => onClearEnhanceEvent?.(lastEnhanceEvent.id)}
           >
-            {/* 🅠6 (req ⑫): reveal detailed item info — name + effect at the new level. */}
-            <div className="enhance-flash__card" style={{ '--flash-color': col } as CSSProperties}>
-              <div className="enhance-flash__tag">{t(language, labelKey)}</div>
-              {ent ? <EntityGlyph entity={ent} color={col} /> : null}
-              {ent ? <div className="enhance-flash__name">{entityName(ent, language)}</div> : null}
-              <div className="enhance-flash__lv">{`Lv.${lastEnhanceEvent.level}`}</div>
-              {ent ? (
-                <div className="enhance-flash__effect" style={{ color: col }}>
-                  {formatEntityEffectTotal(ent, entry?.count ?? 1, language, power, lastEnhanceEvent.level, entry?.carried)}
-                </div>
-              ) : null}
-            </div>
+            <span className="enhance-toast__tag">{t(language, labelKey)}</span>
+            {lastEnhanceEvent.outcome !== 'break' ? <span className="enhance-toast__lv">{`Lv.${lastEnhanceEvent.level}`}</span> : null}
+            {lastEnhanceEvent.payout && lastEnhanceEvent.payout > 0 ? (
+              <span className="enhance-toast__payout">{`+⚛${formatEntityCost(lastEnhanceEvent.payout)}`}</span>
+            ) : null}
           </div>
         );
       })() : null}

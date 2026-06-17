@@ -90,4 +90,6 @@ export interface EnhanceEvent {
   outcome: EnhanceOutcome;
   /** The stack's level AFTER the attempt. */
   level: number;
+  /** Matter handed back this attempt (#40 payout) — shown on the inline indicator. */
+  payout?: number;
 }

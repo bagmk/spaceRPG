@@ -8,6 +8,7 @@ import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -310,8 +311,12 @@ describe('gameReducer', () => {
       name: 'test',
     });
     expect(massive.quanta).toBe(100);
-    // 100 × W_CLICK(0.6) + tier floor 200 = 260
-    expect(massive.entropy).toBe(260);
+    // Raw gain = 100 × W_CLICK(0.6) + tier floor 200 = 260, BUT a comet's entropy
+    // is capped to a fraction of the CURRENT stage's gate span. After the #39/#40
+    // recalibration the stage-1 gate shrank, so the span cap now binds below 260.
+    const span = ENTROPY_THRESHOLDS[1];
+    const expected = Math.min(260, span * COLLISION_ENTROPY_SPAN_CAP.massive);
+    expect(massive.entropy).toBeCloseTo(expected, 2);
   });
 
   it('condense never decreases entropy', () => {

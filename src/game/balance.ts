@@ -207,28 +207,30 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  // Overhaul-2 (🅠1) recalibration: stronger per-level effect (0.85) + FLAT
-  // enhance/stone/fusion costs let players power up faster, so the ladder is
-  // re-derived (scripts/entropy-gate-sim.mjs, reference pinned to target) and
-  // rises — most in the early-mid stages where cheap levelling bites hardest.
-  // Re-run the sim after touching the gear curve / costs / level bonus and
+  // Overhaul-3 recalibration (scripts/entropy-gate-sim.mjs, reference pinned to
+  // realPlayTargetSec, ALL INVARIANTS PASS): reflects #39 stage-gated slot
+  // pacing (click slot2@S5/slot3@S9, rift slot2@S7/slot3@S12) and #40 Lv3 stone
+  // threshold. The old ladder's stage-4 spike (slot-2-at-stage-4) moved later as
+  // slots now open slower. The explosive click MATTER multiplier (#39) is
+  // decoupled from entropy and does NOT enter this calibration. Re-run the sim
+  // after touching the gear curve / slot pacing / costs / level bonus and
   // re-paste; the v16 ladder stays FROZEN in storage/migrate.ts for the remap.
-  1: 4.430e3,
-  2: 2.867e4,
-  3: 1.212e5,
-  4: 9.332e5,
-  5: 1.146e6,
-  6: 2.692e6,
-  7: 5.778e6,
-  8: 1.225e7,
-  9: 1.744e7,
-  10: 2.625e7,
-  11: 4.100e7,
-  12: 6.312e7,
-  13: 8.810e7,
-  14: 1.535e8,
-  15: 3.355e8,
-  16: 4.090e8,
+  1: 3.291e3,
+  2: 2.152e4,
+  3: 8.479e4,
+  4: 1.931e5,
+  5: 4.153e5,
+  6: 1.176e6,
+  7: 2.694e6,
+  8: 5.875e6,
+  9: 1.192e7,
+  10: 2.216e7,
+  11: 3.915e7,
+  12: 6.496e7,
+  13: 9.412e7,
+  14: 1.704e8,
+  15: 3.827e8,
+  16: 4.686e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -467,8 +469,9 @@ export const ENHANCE_REFUND_RATE = 0.6;
 // ── 강화석 (enhance stones, P1) — the Lv5+ enhancement currency, minted by
 //    failed fusions. Levels 1→5 still cost matter; 5→cap cost stones + carry
 //    failure risk (운빨 존망: mostly level-down, destroy only near the cap). ──
-/** Enhancing FROM this level and up costs 강화석 instead of matter (1→5 are matter). */
-export const ENHANCE_STONE_THRESHOLD = 5;
+/** Enhancing FROM this level and up costs 강화석 (+matter) AND can FAIL — #40
+ *  lowered 5→3 so risk/breakage bites early (Lv1→3 are safe matter levels). */
+export const ENHANCE_STONE_THRESHOLD = 3;
 /** Stones for the first stone-phase level (the 5→6 step), by rarity. */
 export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8, mythic: 12 };
 /** Each further stone-phase level multiplies the stone cost by this. Overhaul-2
@@ -478,10 +481,11 @@ export const ENHANCE_STONE_GROWTH = 1.0;
 export const ENHANCE_STONE_REFUND_RATE = 0.5;
 /** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */
 export const FUSION_FAIL_STONES_BY_TIER: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 4, legendary: 7, mythic: 10 };
-/** Enhance fail chance at the threshold level (stone phase only). */
-export const ENHANCE_FAIL_BASE = 0.15;
-/** Fail chance added per level above the threshold. */
-export const ENHANCE_FAIL_PER_LEVEL = 0.04;
+/** Enhance fail chance at the threshold level (stone phase only). #40: 0.15→0.25
+ *  so "강화가 안 터진다" stops being true — failure is a real, felt risk. */
+export const ENHANCE_FAIL_BASE = 0.25;
+/** Fail chance added per level above the threshold. #40: 0.04→0.06 (steeper ramp). */
+export const ENHANCE_FAIL_PER_LEVEL = 0.06;
 /** Fail chance ceiling. */
 export const ENHANCE_FAIL_MAX = 0.55;
 /** Destruction is only possible within this many levels of the rarity cap. */
@@ -491,6 +495,19 @@ export const ENHANCE_DESTROY_CHANCE_ON_FAIL = 0.25;
 /** Protection ("보호 강화") costs this × the level's stone cost EXTRA; a failed
  *  protected attempt loses no level and destroys nothing (stones still spent). */
 export const ENHANCE_PROTECT_STONE_MULT = 1.0;
+/**
+ * Geometric per-level growth for the MATTER-ONLY click multiplier (#40). Each
+ * click-gear level multiplies its clickMatterMult contribution by this — so
+ * enhancing a click item "진짜 세진다" (geometric, not the tame linear curve).
+ * Applied ONLY in the decoupled matter channel (effects.ts), so it never feeds
+ * entropy and needs no re-sim. The entropy-side level term stays linear.
+ */
+export const ENHANCE_MATTER_LEVEL_GROWTH = 1.3;
+/** Matter handed back on a successful enhance, as a fraction of the matter cost
+ *  (#40 — every attempt should feel rewarding, not purely a sink). */
+export const ENHANCE_MATTER_PAYOUT_SUCCESS = 0.25;
+/** Consolation matter on a FAILED enhance, as a fraction of the matter cost. */
+export const ENHANCE_MATTER_PAYOUT_FAIL = 0.5;
 /** At-cap duplicate fusion output refunds this fraction of the output's base cost. */
 export const FUSION_CAP_DUP_REFUND_FRAC = 0.5;
 /** When all fusion inputs share a glyph family, the output stays in that family this often. */

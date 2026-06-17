@@ -6,6 +6,7 @@ import {
   AUTO_STAGE_POWER_BASE,
   CODEX_REWARD_MULT,
   CLICK_GEAR_MATTER_BOOST,
+  ENHANCE_MATTER_LEVEL_GROWTH,
   ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
@@ -93,6 +94,10 @@ export function applyEntityModifiers(
     const carried = entry.carried === true;
     const gearPower = getGearPowerMult(power, entity.stageId, carried);
     const total = value * count * levelMult;
+    // Matter-only channel (#40): levels grow GEOMETRICALLY here so enhancing a
+    // click item feels explosive — decoupled from `total` (which stays linear and
+    // feeds the entropy gate). Equal to `total` at Lv1.
+    const matterTotal = value * count * Math.pow(ENHANCE_MATTER_LEVEL_GROWTH, Math.max(0, (entry.level ?? 1) - 1));
 
     switch (type) {
       case 'auto':
@@ -105,9 +110,10 @@ export function applyEntityModifiers(
         break;
       case 'click':
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
-        // Matter-only explosive layer (#39): the satisfying click number multiplies
-        // hard per equipped click item, WITHOUT touching entropy (gate untouched).
-        mods.clickMatterMult *= 1 + (total * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
+        // Matter-only explosive layer (#39 + #40 geometric levels): the satisfying
+        // click number multiplies hard per equipped click item + per level, WITHOUT
+        // touching entropy (gate untouched).
+        mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
         break;
       case 'crit':
         if (isFlat) {
@@ -135,7 +141,7 @@ export function applyEntityModifiers(
         // Click-gear "all sources": click + crit only. Auto belongs to rift
         // gear — click gear must never leak into the auto calculation (스펙 §10).
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
-        mods.clickMatterMult *= 1 + (total * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
+        mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
         mods.critMultMult *= 1 + (total * gearPower) / 200;
         break;
     }

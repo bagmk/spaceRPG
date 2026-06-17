@@ -30,6 +30,8 @@ import {
   RARITY_STAGE_GATES,
   ENHANCE_DESTROY_CHANCE_ON_FAIL,
   ENHANCE_STONE_THRESHOLD,
+  ENHANCE_MATTER_PAYOUT_SUCCESS,
+  ENHANCE_MATTER_PAYOUT_FAIL,
   FUSION_FAIL_STONES_BY_TIER,
   FUSION_SAME_ENTITY_UP_BONUS,
   FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
@@ -423,15 +425,16 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   const eventId = nextEventId(state);
   const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
 
-  // ── Matter phase (Lv < 5): pay quanta, always succeeds. ──
+  // ── Matter phase (Lv < 3): pay quanta, always succeeds. ──
   if (!isEnhanceStonePhase(level)) {
     const cost = getEnhanceCost(entity, level, stageId);
     if (state.quanta < cost) return state;
+    const payout = Math.ceil(cost * ENHANCE_MATTER_PAYOUT_SUCCESS); // #40: every attempt pays a little back
     return withCurrentUniverseEndingProgress({
       ...state,
-      quanta: state.quanta - cost,
+      quanta: state.quanta - cost + payout,
       eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1 },
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
       inventory: state.inventory.map((e) =>
         e.entityId === owned.entityId
           ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
@@ -480,7 +483,11 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     }
     return { ...e, level: nextLevel, investedStones };
   });
-  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones), quanta: state.quanta - matterCost };
+  // #40: matter payout — a small reward on success, a larger consolation on a
+  // failed attempt (so a fail still hands back some matter). Matter-only, so it
+  // never touches the entropy gate.
+  const payout = Math.ceil(matterCost * (succeeded ? ENHANCE_MATTER_PAYOUT_SUCCESS : ENHANCE_MATTER_PAYOUT_FAIL));
+  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones), quanta: state.quanta - matterCost + payout };
   if (destroyed && (nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
     nextInventory = nextInventory.filter((e) => e.entityId !== owned.entityId);
     nextState = {
@@ -494,6 +501,6 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     ...nextState,
     inventory: nextInventory,
     eventCounter: eventId,
-    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome, level: destroyed ? 1 : nextLevel },
+    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome, level: destroyed ? 1 : nextLevel, payout },
   }));
 }
