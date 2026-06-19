@@ -740,6 +740,27 @@ export const HEX_BINGO_LINES: { slots: [number, number, number]; kind: HexLineKi
   { slots: [2, 3, 4], kind: 'mixedRift' },  // 3,4 rift + 2 click → majority rift
   { slots: [4, 5, 0], kind: 'mixedRift' },  // 4,5 rift + 0 click → majority rift
 ];
+/** Hexagon slot CENTER positions as % of the board box (0-100). Indices 0-5 are
+ *  the outer ring in adjacency order (0,1,2,3,4,5 → ring edges 0-1…5-0), index 6
+ *  is the center/wild. Opposite pairs 0-3 / 1-4 / 2-5 are true diameters through
+ *  the center, so the 3 'center' bingo lines draw straight across. Pointy-top
+ *  hexagon (points at top/bottom), inset so cards fit. Drives BOTH the SVG link
+ *  layer (edges + spokes) and absolute slot placement on the equip board. */
+export const HEX_NODE_XY: [number, number][] = [
+  [80, 32.5], // 0 upper-right  (click)
+  [80, 67.5], // 1 lower-right  (click)
+  [50, 85],   // 2 bottom       (click)
+  [20, 67.5], // 3 lower-left   (rift)
+  [20, 32.5], // 4 upper-left   (rift)
+  [50, 15],   // 5 top          (rift)
+  [50, 50],   // 6 center       (wild)
+];
+/** The 6 hexagon ring edges (outer perimeter) + 6 spokes (center→each vertex),
+ *  as [a,b] node-index pairs — the always-drawn structural links. */
+export const HEX_LINK_EDGES: [number, number][] = [
+  [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], // ring
+  [6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], // spokes
+];
 /** Per completed line, the bonus it adds to its lane's sum (strong / 매콤, off-gate). */
 export const HEX_LINE_BONUS = 0.5;
 /** Pure-lane arcs (all-click or all-rift) count this many line-units (double). */

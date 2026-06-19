@@ -18,6 +18,8 @@ import {
   EFFECT_TRAIT,
   SUBSTAT_TRAIT,
   HEX_BINGO_LINES,
+  HEX_NODE_XY,
+  HEX_LINK_EDGES,
   HEX_WILD_UNLOCK_STAGE,
   type SecondaryStatType,
 } from '../game/balance';
@@ -1112,13 +1114,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             const count = cat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
             const rules = cat === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
             const lit = litSlots.has(idx);
+            const [px, py] = HEX_NODE_XY[idx];
+            const posStyle = { left: `${px}%`, top: `${py}%` } as CSSProperties;
             if (slot >= count) {
               const rule = rules.find((r) => r.slot === slot + 1);
               const hint = rule?.minStageId !== undefined
                 ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
                 : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
               return (
-                <div className={`hex-slot hex-slot--pos${idx} equip-slot-card equip-slot-card--locked`}>
+                <div className={`hex-slot hex-slot--${cat} equip-slot-card equip-slot-card--locked`} style={posStyle}>
                   <span className="equip-slot-card__lock">🔒</span>
                   <span className="equip-slot-card__hint">{hint}</span>
                 </div>
@@ -1131,8 +1135,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             return (
               <button
                 type="button"
-                className={`hex-slot hex-slot--pos${idx} hex-slot--${cat} equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
-                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                className={`hex-slot hex-slot--${cat} equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
+                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity], ...posStyle } as CSSProperties) : posStyle}
                 onClick={() => {
                   setEquipCat(cat);
                   setPickingWild(false);
@@ -1150,9 +1154,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // then accepts ANY gear; tapping opens the wild picker (all categories).
           const renderHexCenter = () => {
             const lit = litSlots.has(6);
+            const [cpx, cpy] = HEX_NODE_XY[6];
+            const centerPos = { left: `${cpx}%`, top: `${cpy}%` } as CSSProperties;
             if (!wildUnlocked) {
               return (
-                <div className="hex-slot hex-slot--center equip-slot-card equip-slot-card--locked">
+                <div className="hex-slot hex-slot--center equip-slot-card equip-slot-card--locked" style={centerPos}>
                   <span className="equip-slot-card__lock">🔒</span>
                   <span className="equip-slot-card__hint">{t(language, 'hexWildLockHint').replace('{n}', String(HEX_WILD_UNLOCK_STAGE))}</span>
                 </div>
@@ -1164,7 +1170,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <button
                 type="button"
                 className={`hex-slot hex-slot--center equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${pickingWild ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
-                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity], ...centerPos } as CSSProperties) : centerPos}
                 onClick={() => {
                   setPickingSlot(null);
                   setPickingWild((v) => !v);
@@ -1209,8 +1215,27 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 })}
               </div>
 
-              {/* #44 HEXAGON loadout — 6 outer (0-2 click / 3-5 rift) + center wild. */}
-              <div className="hex-grid">
+              {/* #44 HEXAGON loadout — a TRUE connected hexagon: an SVG link layer
+                  (6 ring edges + 6 center spokes) sits behind 7 absolutely-placed
+                  slots on regular-hexagon vertices (0-2 click / 3-5 rift / center
+                  wild). Completed bingo lines light their segments. */}
+              <div className="hex-board">
+                <svg className="hex-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  {HEX_LINK_EDGES.map(([a, b], i) => (
+                    <line
+                      key={`e${i}`}
+                      className="hex-links__edge"
+                      x1={HEX_NODE_XY[a][0]} y1={HEX_NODE_XY[a][1]}
+                      x2={HEX_NODE_XY[b][0]} y2={HEX_NODE_XY[b][1]}
+                    />
+                  ))}
+                  {bingo.completedLines.map((li) => {
+                    const pts = HEX_BINGO_LINES[li].slots
+                      .map((s) => `${HEX_NODE_XY[s][0]},${HEX_NODE_XY[s][1]}`)
+                      .join(' ');
+                    return <polyline key={`l${li}`} className="hex-links__lit" points={pts} />;
+                  })}
+                </svg>
                 {[0, 1, 2, 3, 4, 5].map((idx) => <Fragment key={idx}>{renderHexOuter(idx)}</Fragment>)}
                 {renderHexCenter()}
               </div>
