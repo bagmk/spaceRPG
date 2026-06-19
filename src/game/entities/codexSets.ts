@@ -244,7 +244,27 @@ export function getCodexCompletionFraction(almanacCollected: Record<number, stri
   return Math.min(1, collected / total);
 }
 
+// Overhaul-3 P5: precompute each subset's member ids against the full roster
+// once. isSubsetComplete runs in the getActiveModifiers codex loop (~20×/sec ×
+// every subset); the old per-call getSubsetMembers filter over 291 entities was
+// a top idle-jank source. Cache keyed by subset ref; only used on the canonical
+// STAGE_ENTITIES roster (the sole caller — applyCollectionRewards).
+const SUBSET_MEMBER_IDS: WeakMap<CodexSubset, string[]> = (() => {
+  const m = new WeakMap<CodexSubset, string[]>();
+  for (const set of CODEX_SETS) {
+    for (const sub of set.subsets) {
+      m.set(sub, STAGE_ENTITIES.filter((e) => subsetMatches(sub, e)).map((e) => e.id));
+    }
+  }
+  return m;
+})();
+
 export function isSubsetComplete(subset: CodexSubset, collected: Set<string>, allEntities: StageEntity[]): boolean {
+  const memberIds = allEntities === STAGE_ENTITIES
+    ? SUBSET_MEMBER_IDS.get(subset)
+    : undefined;
+  if (memberIds) return memberIds.length > 0 && memberIds.every((id) => collected.has(id));
+  // Fallback (non-canonical roster): original filter path.
   const members = getSubsetMembers(subset, allEntities);
   return members.length > 0 && members.every((m) => collected.has(m.id));
 }

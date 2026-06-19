@@ -1612,17 +1612,33 @@ export function entityMatchesId(entity: StageEntity, entityId: string): boolean 
   return entity.id === entityId || entity.aliases?.includes(entityId) === true;
 }
 
+// Overhaul-3 P5: module-load lookup indices. findEntityById is called per
+// inventory entry + per equipped slot inside getActiveModifiers (~20×/sec); the
+// old O(291) scan was the dominant idle-jank source. CANONICAL wins over ALIAS
+// globally (first-seen in array order, matching the prior .find() semantics) so
+// a later entity's canonical id can't be eaten by an earlier entity's alias.
+const CANONICAL_BY_ID: Map<string, StageEntity> = (() => {
+  const m = new Map<string, StageEntity>();
+  for (const e of STAGE_ENTITIES) if (!m.has(e.id)) m.set(e.id, e);
+  return m;
+})();
+const ALIAS_BY_ID: Map<string, StageEntity> = (() => {
+  const m = new Map<string, StageEntity>();
+  for (const e of STAGE_ENTITIES) for (const a of e.aliases ?? []) if (!m.has(a)) m.set(a, e);
+  return m;
+})();
+
 export function findEntityById(entityId: string, stageId?: number): StageEntity | undefined {
-  // Canonical id wins before any alias — otherwise a later entity's canonical
-  // id can collide with an earlier entity's alias list, e.g. Cambrian's id
-  // `s11_07_cambrian_explosion` was being eaten by Moon Formation's old alias
-  // list and the player would see a moon appear when they bought Cambrian.
-  const candidates = stageId !== undefined
-    ? STAGE_ENTITIES.filter((entity) => entity.stageId === stageId)
-    : STAGE_ENTITIES;
-  const canonical = candidates.find((entity) => entity.id === entityId);
-  if (canonical) return canonical;
-  return candidates.find((entity) => entity.aliases?.includes(entityId) === true);
+  // Stage-scoped path (rarer; keeps the canonical-before-alias scan within stage).
+  if (stageId !== undefined) {
+    const candidates = STAGE_ENTITIES.filter((entity) => entity.stageId === stageId);
+    return (
+      candidates.find((entity) => entity.id === entityId) ??
+      candidates.find((entity) => entity.aliases?.includes(entityId) === true)
+    );
+  }
+  // Hot path: O(1) canonical-then-alias lookup.
+  return CANONICAL_BY_ID.get(entityId) ?? ALIAS_BY_ID.get(entityId);
 }
 
 export function getPurchasedEntityCount(
