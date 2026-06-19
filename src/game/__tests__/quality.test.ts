@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rollQualityScore, qualityMult, isTailQuality, bestQuality } from '../entities/quality';
-import { QUALITY_MAX_BONUS, QUALITY_TAIL_THRESHOLD } from '../balance';
+import { QUALITY_TAIL_THRESHOLD } from '../balance';
 import { addToInventory } from '../entities/drops';
 import { STAGE_ENTITIES } from '../entities/stageItems';
 
@@ -28,21 +28,18 @@ describe('#50 item quality (가우시언 테일)', () => {
     expect(tailHits / N).toBeLessThan(0.15);
   });
 
-  it('qualityMult: undefined is neutral, 0→1.0, 1→1+MAX_BONUS, monotonic', () => {
+  it('qualityMult is DISABLED → always 1 (no per-copy power variation)', () => {
     expect(qualityMult(undefined)).toBe(1);
     expect(qualityMult(0)).toBe(1);
-    expect(qualityMult(1)).toBeCloseTo(1 + QUALITY_MAX_BONUS);
-    expect(qualityMult(0.5)).toBeGreaterThan(qualityMult(0.2));
-    // Out-of-range is clamped, never negative or runaway.
-    expect(qualityMult(5)).toBeCloseTo(1 + QUALITY_MAX_BONUS);
-    expect(qualityMult(-3)).toBe(1);
+    expect(qualityMult(1)).toBe(1);
+    expect(qualityMult(0.5)).toBe(1);
   });
 
-  it('isTailQuality only fires at/above the threshold', () => {
+  it('isTailQuality is DISABLED → always false (no gold/명품 distinction)', () => {
     expect(isTailQuality(undefined)).toBe(false);
-    expect(isTailQuality(QUALITY_TAIL_THRESHOLD - 0.01)).toBe(false);
-    expect(isTailQuality(QUALITY_TAIL_THRESHOLD)).toBe(true);
-    expect(isTailQuality(1)).toBe(true);
+    expect(isTailQuality(0.5)).toBe(false);
+    expect(isTailQuality(QUALITY_TAIL_THRESHOLD)).toBe(false);
+    expect(isTailQuality(1)).toBe(false);
   });
 
   it('bestQuality keeps the higher specimen (undefined-safe)', () => {

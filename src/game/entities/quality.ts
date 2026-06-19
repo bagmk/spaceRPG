@@ -12,8 +12,6 @@
  * neutral 0 (× 1.0), so legacy or untagged entries are never silently buffed.
  */
 
-import { QUALITY_MAX_BONUS, QUALITY_TAIL_THRESHOLD } from '../balance';
-
 /**
  * Two uniform [0,1) rolls → a gaussian-distributed quality score in [0,1].
  * Box-Muller for the normal sample, then squashed to [0,1] with sd≈1 (g/6+0.5):
@@ -27,15 +25,20 @@ export function rollQualityScore(r1: number, r2: number): number {
   return Math.min(1, Math.max(0, 0.5 + g / 6));
 }
 
-/** Effect/substat multiplier for a quality score (undefined → neutral 1.0). */
-export function qualityMult(quality: number | undefined): number {
-  if (quality === undefined || !Number.isFinite(quality)) return 1;
-  return 1 + Math.min(1, Math.max(0, quality)) * QUALITY_MAX_BONUS;
+// #50 DISABLED (user request 2026-06-19): once items stack, per-copy quality
+// variation ("명품") is meaningless and made duplicates spike power. Both hooks
+// below are now no-ops, which neutralizes the EFFECT (qualityMult ×1 everywhere
+// it's called) AND the UI (no gold-tail border or 명품 chip — every call site
+// gates on isTailQuality). The roll/field stay as inert dead data (no save
+// migration needed); the `quality` save value is simply ignored.
+/** DISABLED → always 1 (no per-copy power variation). */
+export function qualityMult(_quality: number | undefined): number {
+  return 1;
 }
 
-/** Whether a quality score lands in the gold "tail" (border-worthy). */
-export function isTailQuality(quality: number | undefined): boolean {
-  return quality !== undefined && Number.isFinite(quality) && quality >= QUALITY_TAIL_THRESHOLD;
+/** DISABLED → always false (no gold "tail"/명품 distinction). */
+export function isTailQuality(_quality: number | undefined): boolean {
+  return false;
 }
 
 /**

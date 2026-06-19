@@ -98,12 +98,9 @@ const FUSION_FLAT_COST = { common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
-// #50 item quality (가우시언 테일) — lockstep with balance.ts QUALITY_*. Equipped
-// gear is FARMED (stacks keep their best roll), so the sim models it at the high
-// QUALITY_SIM_EQUIPPED percentile; this multiplies every equipped click/auto item.
-const QUALITY_MAX_BONUS = 0.25;
-const QUALITY_SIM_EQUIPPED = 0.65;
-const QUALITY_FACTOR = 1 + QUALITY_SIM_EQUIPPED * QUALITY_MAX_BONUS;
+// #50 item quality DISABLED (user request 2026-06-19) — qualityMult is now a
+// no-op in-game, so the sim must NOT model any quality bonus: QUALITY_FACTOR = 1.
+const QUALITY_FACTOR = 1;
 
 // Combo cap GROWS with stage (P5/R10) — lockstep with balance.ts COMBO_CAP_*
 // and formulas.ts getComboMult/getComboCapMult. The sim mirrors the BASE+stage
