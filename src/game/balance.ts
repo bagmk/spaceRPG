@@ -210,27 +210,29 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // Overhaul-3 recalibration (scripts/entropy-gate-sim.mjs, reference pinned to
   // realPlayTargetSec, ALL INVARIANTS PASS): reflects #39 stage-gated slot
   // pacing (click slot2@S5/slot3@S9, rift slot2@S7/slot3@S12) and #40 Lv3 stone
-  // threshold. #50 item quality was REMOVED (2026-06-19) — its sim factor is
-  // back to 1, so the ladder returns to the pre-quality values. The explosive
-  // click MATTER multiplier (#39) is decoupled from entropy and does NOT enter
-  // this calibration. Re-run the sim after touching the gear curve / slot pacing
-  // / costs / level bonus and re-paste; v16 ladder stays FROZEN in storage/migrate.ts.
-  1: 3.291e3,
-  2: 2.152e4,
-  3: 8.479e4,
-  4: 1.931e5,
-  5: 4.153e5,
-  6: 1.176e6,
-  7: 2.694e6,
-  8: 5.875e6,
-  9: 1.192e7,
-  10: 2.216e7,
-  11: 3.915e7,
-  12: 6.496e7,
-  13: 9.412e7,
-  14: 1.704e8,
-  15: 3.827e8,
-  16: 4.686e8,
+  // threshold. #50 item quality REMOVED (2026-06-19). STACKING REWORK (2026-06-19):
+  // a gear's power no longer scales with owned duplicate count (getEffectiveCount→1;
+  // sim GEAR eff→1) — power rides rarity + LEVEL + equipped slots only. That dropped
+  // modeled gear power, so the ladder is recalibrated DOWN here. The explosive click
+  // MATTER multiplier (#39) is decoupled from entropy and does NOT enter this
+  // calibration. Re-run the sim after touching gear curve / slots / costs / level /
+  // count and re-paste; the v16 ladder stays FROZEN in storage/migrate.ts.
+  1: 1.467e3,
+  2: 9.446e3,
+  3: 2.944e4,
+  4: 6.367e4,
+  5: 1.196e5,
+  6: 2.840e5,
+  7: 6.186e5,
+  8: 1.319e6,
+  9: 2.440e6,
+  10: 4.073e6,
+  11: 6.781e6,
+  12: 1.088e7,
+  13: 1.550e7,
+  14: 4.943e7,
+  15: 1.381e8,
+  16: 1.729e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────

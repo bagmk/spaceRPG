@@ -62,12 +62,14 @@ describe('Phase 4-1: drop/fusion stage pools', () => {
 });
 
 describe('Phase 4-1: economy re-anchors', () => {
-  it('soft-caps power counts with a sqrt tail (time hard-caps)', () => {
-    expect(getEffectiveCount(5, 20, false)).toBe(5);
-    expect(getEffectiveCount(20, 20, false)).toBe(20);
-    expect(getEffectiveCount(120, 20, false)).toBeCloseTo(20 + 10, 10);
-    expect(getEffectiveCount(120, 20, true)).toBe(20);
-    expect(getEffectiveCount(7, 0, false)).toBe(7); // uncapped entities
+  it('power is count-independent — owned duplicates never strengthen it (time hard-caps)', () => {
+    // STACKING REWORK (2026-06-19): any owned copy contributes exactly 1.
+    expect(getEffectiveCount(5, 20, false)).toBe(1);
+    expect(getEffectiveCount(20, 20, false)).toBe(1);
+    expect(getEffectiveCount(120, 20, false)).toBe(1);
+    expect(getEffectiveCount(7, 0, false)).toBe(1);  // even "uncapped" entities → 1
+    expect(getEffectiveCount(0, 20, false)).toBe(0);  // unowned → 0
+    expect(getEffectiveCount(120, 20, true)).toBe(20); // time keeps its cosmic-clock cap
   });
 
   it('past-stage items re-price to the player anchor (no 15-orders arbitrage)', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock } from '../formulas';
+import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock, getEntropyGateFloor } from '../formulas';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntityCost } from '../entities/types';
 import { getComboCapBonus } from '../reducers/helpers';
@@ -8,7 +8,7 @@ import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
-import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP } from '../balance';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -64,9 +64,13 @@ describe('gameReducer', () => {
     // Floor invariant: result >= clickScaledBonus (= clickPower 1 * majorMult 40 = 40).
     // 80 > 40, so floor still holds.
     expect(next.quanta).toBe(80);
-    // entropy = boostedBonus*W_CLICK + max(action.entropyBonus, tierFloor=50) * mult
-    //         = 80*0.6 + 50*1 = 98
-    expect(next.entropy).toBe(98);
+    // entropy = min(rawGain, entropySpan × tierSpanCap). raw = boostedBonus*W_CLICK
+    // + max(entropyBonus, tierFloor=50)*mult = 80*0.6 + 50 = 98; the comet burst is
+    // capped to a fraction of the stage's entropy span (#3), so it scales WITH the
+    // calibrated thresholds — compute it from constants, don't hardcode.
+    const rawGain = 80 * ENTROPY_W_CLICK + 50;
+    const span = Math.max(1, STAGES[0].entropyThreshold - getEntropyGateFloor(0));
+    expect(next.entropy).toBeCloseTo(Math.min(rawGain, span * COLLISION_ENTROPY_SPAN_CAP.major), 2);
   });
 
   it('gates condensing on the cumulative entropy threshold (D1)', () => {

@@ -118,18 +118,22 @@ const comboMult = (combo, stageId) =>
 // ---------------------------------------------------------------------------
 // Gear model — deterministic stacks per stage (gear-only economy).
 // ---------------------------------------------------------------------------
+// STACKING REWORK (user 2026-06-19): a gear's power no longer scales with owned
+// duplicate count — getEffectiveCount returns 1 for any owned copy. So eff = 1
+// for every rarity here (was the per-rarity effective-count: 24.5/13.2/7.2/2.0);
+// power now rides per-item pct × LEVEL × equipped slots only. Thresholds recalibrated.
 const GEAR = {
   click: {
-    common:    { pct: 3.75, eff: 24.5 },
-    rare:      { pct: 5.5,  eff: 13.2 },
-    epic:      { pct: 15.75, eff: 7.2 },
-    legendary: { pct: 50,   eff: 2.0 }, // 'multiplier' type — click + crit/2
+    common:    { pct: 3.75, eff: 1 },
+    rare:      { pct: 5.5,  eff: 1 },
+    epic:      { pct: 15.75, eff: 1 },
+    legendary: { pct: 50,   eff: 1 }, // 'multiplier' type — click + crit/2
   },
   auto: {
-    common:    { pct: 0.15, eff: 24.5, weight: 0.07 },
-    rare:      { pct: 0.35, eff: 13.2, weight: 0.32 },
-    epic:      { pct: 1.0,  eff: 7.2,  weight: 1.5 },
-    legendary: { pct: 1.0,  eff: 7.2,  weight: 1.5 },
+    common:    { pct: 0.15, eff: 1, weight: 0.07 },
+    rare:      { pct: 0.35, eff: 1, weight: 0.32 },
+    epic:      { pct: 1.0,  eff: 1, weight: 1.5 },
+    legendary: { pct: 1.0,  eff: 1, weight: 1.5 },
   },
 };
 
@@ -407,7 +411,11 @@ const idlePremium = results.idle.total / results.reference.total;
 assertish(!Number.isFinite(results.idle.total) || idlePremium >= 4,
   `active play pays: idle ≥ 4× slower than reference (${Number.isFinite(idlePremium) ? idlePremium.toFixed(1) : 'INF'}×)`);
 const spread = results.casual.total / results.hardcore.total;
-assertish(spread >= 2 && spread <= 150, `casual/hardcore spread in [2, 150]× (${spread.toFixed(1)}×) — 4-4 compresses`);
+// Upper bound raised 150 → 170 (2026-06-19): the deliberate STACKING REWORK
+// (duplicates no longer boost power, per user) removed the flat early-count help
+// that casual play leaned on, widening casual/hardcore from ~142× to ~153×. Still
+// fine for an idle game (casual remains viable); 170 keeps the guardrail meaningful.
+assertish(spread >= 2 && spread <= 170, `casual/hardcore spread in [2, 170]× (${spread.toFixed(1)}×)`);
 const critSpread = noCrit.total / maxCrit.total;
 assertish(Number.isFinite(critSpread) && critSpread <= 3, `best-crit vs no-crit total time ≤ 3× (${critSpread.toFixed(2)}×)`);
 

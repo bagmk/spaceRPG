@@ -56,9 +56,14 @@ export function getEquippedInstances(
  */
 export function getEffectiveCount(count: number, maxCount: number, isTime: boolean): number {
   const n = Math.max(0, count);
-  if (maxCount <= 0) return n;
-  if (isTime) return Math.min(n, maxCount);
-  return Math.min(n, maxCount) + Math.sqrt(Math.max(0, n - maxCount));
+  if (n <= 0) return 0;
+  // Time entities keep the cosmic-clock count cap (separate mechanic, unchanged).
+  if (isTime) return maxCount > 0 ? Math.min(n, maxCount) : n;
+  // STACKING REWORK (user 2026-06-19): a gear's power NO LONGER scales with how
+  // many duplicate copies you own — owning more never strengthens it. Power comes
+  // from rarity + LEVEL (enhance) + equipped slots; duplicates are fusion/level
+  // fodder only. So any owned copy contributes exactly 1.
+  return 1;
 }
 
 /**

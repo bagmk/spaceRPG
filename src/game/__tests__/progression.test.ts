@@ -77,17 +77,15 @@ describe('gear power curve (player-stage anchored — Phase 4-1)', () => {
     expect(at16.critChanceAdd).toBeCloseTo(at1.critChanceAdd, 10);
   });
 
-  it('soft-caps the power contribution of hoarded counts (sqrt tail past maxCount)', () => {
+  it('owned duplicate count does NOT strengthen power (stacking rework 2026-06-19)', () => {
     const item = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'click' && e.maxCount > 1)!;
-    const atCap = defaultModifiers();
+    const one = defaultModifiers();
     const hoarded = defaultModifiers();
-    applyEntityModifiers(atCap, [{ entityId: item.id, count: item.maxCount, level: 1 }], P(1));
+    applyEntityModifiers(one, [{ entityId: item.id, count: 1, level: 1 }], P(1));
     applyEntityModifiers(hoarded, [{ entityId: item.id, count: item.maxCount + 100, level: 1 }], P(1));
-    const capPower = atCap.clickPowerMult - 1;
-    const hoardPower = hoarded.clickPowerMult - 1;
-    // More than the cap, but far less than linear: cap + sqrt(100) = cap + 10.
-    expect(hoardPower).toBeGreaterThan(capPower);
-    expect(hoardPower / capPower).toBeCloseTo((item.maxCount + 10) / item.maxCount, 5);
+    // Power rides rarity + level + slots only — owning 1 or 100 copies is identical.
+    expect(hoarded.clickPowerMult).toBeCloseTo(one.clickPowerMult, 10);
+    expect(one.clickPowerMult).toBeGreaterThan(1); // a single copy still has power
   });
 });
 
