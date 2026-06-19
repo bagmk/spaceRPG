@@ -95,7 +95,7 @@ export function Leaderboard({ language, onClose }: LeaderboardProps) {
         ) : entries.length === 0 ? (
           <p className="leaderboard__empty">{ko ? '아직 등록된 기록이 없습니다.' : 'No entries yet.'}</p>
         ) : (
-          <div className="leaderboard__list">
+          <div className="leaderboard__list cc-scroll">
             {entries.map((entry, idx) => {
               const isMe = user?.uid === entry.uid;
               return (

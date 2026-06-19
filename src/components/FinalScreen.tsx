@@ -115,7 +115,7 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
   const entropyReadout = formatEntropyParts(state.entropy);
 
   return (
-    <section className="final-screen">
+    <section className="final-screen cc-scroll cc-scroll--hidden">
       <div className="final-card">
 
         {/* Header */}

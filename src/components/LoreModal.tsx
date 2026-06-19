@@ -44,7 +44,7 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
     return (
       <div className="lore-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
         <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="lore-modal__body">…</div>
+          <div className="lore-modal__body cc-scroll cc-scroll--colored">…</div>
         </div>
       </div>
     );
@@ -54,7 +54,7 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
       <div className="lore-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
         <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
           <button type="button" className="lore-modal__close" onClick={onClose} aria-label="Close">×</button>
-          <div className="lore-modal__body">
+          <div className="lore-modal__body cc-scroll cc-scroll--colored">
             <p>{internalLang === 'ko' ? '해설을 찾을 수 없습니다.' : 'Lore not available.'}</p>
           </div>
         </div>
@@ -79,7 +79,7 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
       <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="lore-modal__close" onClick={onClose} aria-label="Close">×</button>
         <h2 className="lore-modal__title">{title}</h2>
-        <div className="lore-modal__body" dangerouslySetInnerHTML={{ __html: formatBody(body ?? '') }} />
+        <div className="lore-modal__body cc-scroll cc-scroll--colored" dangerouslySetInnerHTML={{ __html: formatBody(body ?? '') }} />
       </div>
     </div>
   );

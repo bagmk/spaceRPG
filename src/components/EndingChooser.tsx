@@ -26,7 +26,7 @@ export function EndingChooser({ options, onChoose, onClose, language }: EndingCh
           ) : null}
         </div>
         <h2>{t(language, 'endingPrompt')}</h2>
-        <div className="ending-options">
+        <div className="ending-options cc-scroll cc-scroll--hidden">
           {options.map((option) => (
             <button
               key={option.id}

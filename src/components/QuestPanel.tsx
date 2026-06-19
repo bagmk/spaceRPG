@@ -33,7 +33,7 @@ export function QuestPanel({ state, language, onClaim, onClose }: QuestPanelProp
 
   return (
     <div className="quest-overlay" role="dialog" aria-label={t(language, 'questTitle')} onClick={onClose}>
-      <div className="quest-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="quest-panel cc-scroll" onClick={(e) => e.stopPropagation()}>
         <div className="quest-panel__head">
           <h2 className="quest-panel__title">{t(language, 'questTitle')}</h2>
           <span className="quest-panel__done">

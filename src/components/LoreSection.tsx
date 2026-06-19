@@ -28,7 +28,7 @@ export function LoreSection({ loreId, language }: LoreSectionProps) {
   if (state.status === 'idle') return null;
   if (state.status === 'loading') {
     return (
-      <div className="lore-section lore-section--loading">
+      <div className="lore-section lore-section--loading cc-scroll cc-scroll--thin-6">
         <div className="lore-section__body">…</div>
       </div>
     );
@@ -41,7 +41,7 @@ export function LoreSection({ loreId, language }: LoreSectionProps) {
   if (!body) return null;
 
   return (
-    <div className="lore-section">
+    <div className="lore-section cc-scroll cc-scroll--thin-6">
       <div className="lore-section__body" dangerouslySetInnerHTML={{ __html: formatBody(body) }} />
     </div>
   );
