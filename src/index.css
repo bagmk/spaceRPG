@@ -18,6 +18,26 @@
   --mono: 'JetBrains Mono', 'SF Mono', monospace;
   --panel-blur: blur(18px) saturate(1.25);
   --app-height: 100dvh;
+
+  /* Overhaul-3 P4 — one spacing / radius / font / tap-target scale (presentation
+     tokens live here in CSS; game-balance tunables stay in balance.ts). Mobile-
+     game conventions: ≥44px touch targets, ~11px readable body floor. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --fs-micro: 11px; /* hard floor for any standalone label */
+  --fs-cap: 12px;
+  --fs-body: 13px;
+  --fs-h2: 15px;
+  --fs-title: 18px;
+  --tap-min: 44px;  /* minimum hit area for interactive controls */
 }
 
 * {
@@ -732,19 +752,7 @@ button.hud-stage-title--clickable:hover {
   background: rgba(255, 255, 255, 0.02);
   text-align: center;
 }
-.hex-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, auto);
-  grid-template-areas:
-    "s0 .  s1"
-    "s5 s6 s2"
-    "s4 .  s3";
-  gap: 8px;
-  max-width: 460px;
-  margin: 0 auto;
-  width: 100%;
-}
+/* (Overhaul-3 P3/P4: dead .hex-grid removed — replaced by .hex-board below.) */
 /* Connected hexagon (Overhaul-3): a square board with an SVG link layer (6 ring
    edges + 6 center spokes) behind 7 absolutely-placed slots on regular-hexagon
    vertices (HEX_NODE_XY). Replaces the old 3×3 grid of detached boxes. */
@@ -837,9 +845,9 @@ button.hud-stage-title--clickable:hover {
   opacity: 1;
 }
 @media (max-width: 560px) {
-  .hex-grid { gap: 6px; max-width: 100%; }
+  .hex-board { max-width: 100%; }
   .hex-bonus { max-width: 100%; font-size: 10px; }
-  .entity-fs__body .hex-slot { min-height: 86px; }
+  .entity-fs__body .hex-slot { min-height: 80px; }
 }
 
 .equip-picker {
@@ -14809,35 +14817,8 @@ button.stat-header-item {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.shop-daily-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 6px;
-  border-radius: 11px;
-  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 50%, transparent);
-  background: color-mix(in srgb, var(--rarity-color, #8090b0) 9%, rgba(12, 12, 18, 0.7));
-  color: var(--fg);
-  font: inherit;
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.12s;
-}
-.shop-daily-card:not(:disabled):hover { filter: brightness(1.15); }
-.shop-daily-card:not(:disabled):active { transform: scale(0.96); }
-.shop-daily-card:disabled { opacity: 0.45; cursor: not-allowed; }
-.shop-daily-card--sold { opacity: 0.35; filter: grayscale(0.6); }
-.shop-daily-card__name {
-  font-size: 9px;
-  line-height: 1.1;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  color: rgba(247, 241, 232, 0.82);
-}
-.shop-daily-card__cost { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--rarity-color, #cfd6e6); }
+/* (Overhaul-3 P4: dead .shop-daily-card family removed — the live card is
+   .shop-item-card; grep-confirmed unreferenced in markup.) */
 .shop-fs__daily-hint {
   margin-top: 12px;
   font-size: 10px;
@@ -14982,4 +14963,59 @@ button.stat-header-item {
 .cc-scroll--colored::-webkit-scrollbar-thumb {
   background: rgba(180, 150, 255, 0.3);
   border-radius: 3px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Overhaul-3 P4 — mobile UI pass. Authoritative overrides appended last so they
+   win over accreted rules without touching media-query structure. Targets the
+   audited offenders: ≥44px tap targets, ~11px readable label floor, roomier
+   mobile grids. (Tokens defined in :root.)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Tap targets — square icon ✕ buttons → 44×44 hit area. */
+.entity-fs__close,
+.quest-panel__close,
+.settings-audio-btn {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+}
+/* Text/grow controls → 44px hit height, width free to fit the label. */
+.entity-inv__filter,
+.settings-close,
+.trait-legend__toggle {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.focus-toggle-btn { width: 40px; height: 40px; }
+/* Corner remove ✕ stays visually small but gains a 44px tap halo via ::before. */
+.equip-slot-card__remove { width: 26px; height: 26px; font-size: 13px; }
+.equip-slot-card__remove::before { content: ''; position: absolute; inset: -9px; }
+
+/* Readable label floor (~11px) on standalone card / meta / odds text. */
+.shop-item-card__rarity,
+.shop-gacha-card__name,
+.shop-gacha-card__odds,
+.owned-card__name,
+.owned-card__count,
+.almanac-card__name,
+.almanac-card__meta,
+.codex-set-chip__label,
+.codex-set-chip__count,
+.equip-slot-card__effect-label,
+.equip-hero__stat-label,
+.equip-page__stat-label {
+  font-size: var(--fs-micro);
+}
+
+/* Roomier dense grids so tiles + the larger labels aren't cramped on phones. */
+.almanac-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.owned-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
+@media (max-width: 560px) {
+  .almanac-grid { grid-template-columns: repeat(3, 1fr); }
+  .owned-grid { grid-template-columns: repeat(3, 1fr); }
 }
