@@ -401,6 +401,17 @@ export const FUSION_REF_CPS = 3;
  * the bank first used to make chained late bursts nearly free.
  */
 export const FUSION_BURST_REF_COST_FRAC = 0.1;
+/**
+ * Overhaul-3 pacing fix: the fusion entropy burst rides the player's LIVE
+ * (enhancement-inflated) click power and is otherwise uncapped — and batch-fuse
+ * sums up to FUSION_BATCH_MAX_TRIOS bursts in one action. At a leveled late-game
+ * loadout one fuse (or one batch) delivered most of a whole stage's entropy span,
+ * which is why progression "jumped" a full stage per forge action. Mirror the
+ * comet cap (COLLISION_ENTROPY_SPAN_CAP): clamp EACH fuse's burst to this fraction
+ * of the current stage's entropy span, and the WHOLE batch to the aggregate cap.
+ */
+export const FUSION_BURST_SPAN_CAP = 0.02;        // one fuse ≤ 2% of the stage span
+export const FUSION_BATCH_BURST_SPAN_CAP = 0.10;  // a full batch ≤ 10% of the stage span
 
 /**
  * Each entity level above 1 adds this fraction to the entity's effect.

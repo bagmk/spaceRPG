@@ -34,10 +34,12 @@ import {
   FUSION_SAME_ENTITY_UP_BONUS,
   FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
   FUSION_SAME_SUBSET_BURST_MULT,
+  FUSION_BURST_SPAN_CAP,
+  FUSION_BATCH_BURST_SPAN_CAP,
   HEX_WILD_UNLOCK_STAGE,
 } from '../balance';
 import { getEntityCost } from '../entities/types';
-import { getAutoRate, safeAdd } from '../formulas';
+import { getAutoRate, getEntropyGateFloor, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -295,12 +297,20 @@ function fuseOnce(
   // burst no longer collapses late-game when costs were flattened).
   const burstRefCost = FUSION_ENHANCE_COST_BASE * FUSION_BURST_REF_COST_FRAC;
   const burstCostScale = burstRefCost > 0 ? Math.min(1, cost / burstRefCost) : 1;
-  const burst =
+  const rawBurst =
     getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
     fusionModifiers.fusionBurstMult *
     entropyEchoMult *
     burstCostScale *
     (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);
+  // Overhaul-3 pacing fix: clamp the burst to a small fraction of the CURRENT
+  // stage's entropy span (mirrors the comet cap, gameplay.ts handleAbsorbComet)
+  // so a single fuse — even at a heavily-enhanced loadout — can't dump most of a
+  // stage's gate at once. fuseOnce is shared by single AND batch fuses, so this
+  // one clamp bounds both. `burst` (capped) is what hits entropy AND the result.
+  const fuseStage = STAGES[Math.min(state.stageIdx, STAGES.length - 1)];
+  const fuseSpan = Math.max(1, fuseStage.entropyThreshold - getEntropyGateFloor(state.stageIdx));
+  const burst = Math.min(rawBurst, fuseSpan * FUSION_BURST_SPAN_CAP);
   const nextEntropy = safeAdd(state.entropy, burst);
 
   const nextTutorialFlags = isFirstFusion
@@ -413,6 +423,20 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
     });
   }
   if (!lastResult) return state;
+  // Overhaul-3 pacing fix: defense-in-depth aggregate cap. Each constituent burst
+  // is already clamped to FUSION_BURST_SPAN_CAP in fuseOnce, but up to
+  // FUSION_BATCH_MAX_TRIOS of them still sum, so a full batch could otherwise
+  // advance a large slice of a stage. Clamp the batch total to a fraction of the
+  // span and refund the excess back out of entropy.
+  const batchStage = STAGES[Math.min(s.stageIdx, STAGES.length - 1)];
+  const batchSpan = Math.max(1, batchStage.entropyThreshold - getEntropyGateFloor(s.stageIdx));
+  const batchAllowed = batchSpan * FUSION_BATCH_BURST_SPAN_CAP;
+  if (totalBurst > batchAllowed) {
+    const excess = totalBurst - batchAllowed;
+    const floor = getEntropyGateFloor(s.stageIdx);
+    s = { ...s, entropy: Math.max(floor, s.entropy - excess) };
+    totalBurst = batchAllowed;
+  }
   const eventId = nextEventId(s);
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...s,

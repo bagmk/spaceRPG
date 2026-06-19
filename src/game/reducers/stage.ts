@@ -4,6 +4,7 @@ import { STAGES } from '../stages';
 import {
   canCondense,
   getEffectiveThreshold,
+  getEntropyGateFloor,
   getEntropyOnCondense,
   getProgress,
   getTimeGaugeForCosmicClock,
@@ -147,6 +148,15 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
   const nextState = {
     ...progressedState,
     stageIdx: nextStageIdx,
+    // Overhaul-3 pacing fix: park cumulative entropy at the NEW stage's gate floor
+    // (= the stage we just cleared's threshold), exactly as the debug NEXT_STAGE
+    // path does (admin.ts). Previously the condense bonus (getEntropyOnCondense =
+    // quanta × 0.1, wallet-inflated to ~1e13+ late-game) was added at START_CONDENSE
+    // and CARRIED here — overshooting every remaining gate at once, so one condense
+    // chain-jumped to the end. Resetting to the floor means each stage's gate is
+    // filled only by in-stage gameplay income (what the sim calibrates), and the
+    // next gate starts at 0%.
+    entropy: getEntropyGateFloor(nextStageIdx),
     timeGauge: nextTimeGauge,
     cosmicClockSec: nextCosmicClockSec,
     combo: 0,

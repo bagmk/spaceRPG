@@ -8,7 +8,7 @@ import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
-import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -71,6 +71,58 @@ describe('gameReducer', () => {
     const rawGain = 80 * ENTROPY_W_CLICK + 50;
     const span = Math.max(1, STAGES[0].entropyThreshold - getEntropyGateFloor(0));
     expect(next.entropy).toBeCloseTo(Math.min(rawGain, span * COLLISION_ENTROPY_SPAN_CAP.major), 2);
+  });
+
+  it('Overhaul-3: a single fusion burst is capped to a fraction of the stage entropy span', () => {
+    // The burst rides live (enhancement-inflated) click power; without a clamp one
+    // fuse could dump most of a stage's gate. Mirror of the comet cap.
+    const commons = getEntitiesForStage(1).filter((e) => e.rarity === 'common');
+    const input = commons[0];
+    const state = {
+      ...createInitialGameState(0),
+      quanta: 1e9, // far more than the fuse cost — burst must NOT scale with the bank
+      inventory: [{ entityId: input.id, count: 3, level: 1 }],
+    };
+    const next = gameReducer(state, {
+      type: 'FUSE_ENTITIES', inputEntityIds: [input.id, input.id, input.id], rarityRoll: 0.99, pickRoll: 0.1,
+    });
+    const span = Math.max(1, STAGES[0].entropyThreshold - getEntropyGateFloor(0));
+    expect(next.lastFusionEvent!.entropyBurst).toBeGreaterThan(0);
+    expect(next.lastFusionEvent!.entropyBurst).toBeLessThanOrEqual(span * FUSION_BURST_SPAN_CAP + 1e-6);
+  });
+
+  it('Overhaul-3: a fuse batch is capped in aggregate to the batch span fraction', () => {
+    const commons = getEntitiesForStage(1).filter((e) => e.rarity === 'common');
+    const input = commons[0];
+    const trios = 12;
+    const ids: string[] = [];
+    for (let i = 0; i < trios * 3; i++) ids.push(input.id);
+    const rolls = Array.from({ length: trios }, () => ({ rarityRoll: 0.99, pickRoll: 0.1 }));
+    const state = {
+      ...createInitialGameState(0),
+      quanta: 1e12,
+      inventory: [{ entityId: input.id, count: trios * 3, level: 1 }],
+    };
+    const next = gameReducer(state, { type: 'FUSE_BATCH', inputEntityIds: ids, rolls });
+    const span = Math.max(1, STAGES[0].entropyThreshold - getEntropyGateFloor(0));
+    expect(next.lastFusionEvent!.batchCount).toBeGreaterThan(0);
+    expect(next.lastFusionEvent!.entropyBurst).toBeLessThanOrEqual(span * FUSION_BATCH_BURST_SPAN_CAP + 1e-6);
+  });
+
+  it('Overhaul-3: advancing a stage parks entropy at the new gate floor (no condense overshoot carry)', () => {
+    // The condense bonus (quanta × 0.1) is wallet-inflated and used to CARRY past
+    // the next gate, chain-jumping stages. Advancing must reset to the floor.
+    const state = {
+      ...createInitialGameState(0),
+      stageIdx: 4,
+      pendingCondenseStageIdx: 4,
+      entropy: ENTROPY_THRESHOLDS[16] * 1000, // absurd overshoot
+      quanta: STAGES[4].threshold,
+    };
+    const next = gameReducer(state, { type: 'ADVANCE_STAGE', now: 1000 });
+    expect(next.stageIdx).toBe(5);
+    expect(next.entropy).toBe(getEntropyGateFloor(5));
+    expect(canCondense(next)).toBe(false); // cannot immediately re-condense
   });
 
   it('gates condensing on the cumulative entropy threshold (D1)', () => {
