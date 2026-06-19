@@ -14,7 +14,6 @@ import {
   ENHANCE_REFUND_RATE,
   ENHANCE_STONE_REFUND_RATE,
   ENTITY_BASE_COST_FACTOR,
-  ENTITY_COST_ANCHORS,
   FUSION_ENHANCE_COST_BASE,
   ENTROPY_FUSION_VALUE_SEC,
   ENTROPY_W_AUTO,
@@ -214,19 +213,14 @@ export function pickFusionOutput(
  * fixed base × per-rarity factor, cheap for common and steep from rare up. The
  * cost is the SAME at stage 1 and stage 16 (it never inflates as the player
  * advances). The fusion reducer requires the player to afford this in full.
- * Overhaul-3: the cost now RE-ANCHORS to the player's current stage
- * (ENTITY_COST_ANCHORS[playerStage] × FUSION_FLAT_COST[rarity]) instead of the
- * fixed stage-1 base, so a late-game fuse is a meaningful fraction of the era's
- * economy instead of rounding to ~zero against a 1e15 anchor. The entropy BURST
- * reference (burstRefCost in reducers/entities.ts) stays stage-1-anchored on
- * purpose, so this steeper cost does not inflate progression.
+ * Overhaul-3 (user direction 2026-06-19): cost rises with RARITY ONLY — it does
+ * NOT scale with the player's stage. A legendary fuse costs the same fixed
+ * (FUSION_ENHANCE_COST_BASE × geometric FUSION_FLAT_COST[rarity]) at stage 1 or
+ * stage 16; only climbing the rarity ladder (common→…→mythic) makes it pricier.
+ * `_playerStageId` is kept for call-site compatibility but intentionally unused.
  */
-export function getFusionQuantaCost(rarity: EntityRarity, playerStageId?: number): number {
-  const anchorKeys = Object.keys(ENTITY_COST_ANCHORS).map(Number);
-  const maxStage = Math.max(...anchorKeys);
-  const stage = playerStageId ? Math.max(1, Math.min(Math.floor(playerStageId), maxStage)) : 1;
-  const anchor = ENTITY_COST_ANCHORS[stage as keyof typeof ENTITY_COST_ANCHORS] ?? FUSION_ENHANCE_COST_BASE;
-  return Math.ceil(anchor * (FUSION_FLAT_COST[rarity] ?? 0.1));
+export function getFusionQuantaCost(rarity: EntityRarity, _playerStageId?: number): number {
+  return Math.ceil(FUSION_ENHANCE_COST_BASE * (FUSION_FLAT_COST[rarity] ?? 0.1));
 }
 
 /**

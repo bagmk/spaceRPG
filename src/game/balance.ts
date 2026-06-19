@@ -479,8 +479,10 @@ export const ENHANCE_COST_FACTOR = 1.5;
  *  BONUS=0.85) and the matter-power channel ~1.3^level, cost (1.7×) outruns power
  *  → marginal cost-per-power RISES: high levels are a real escalating spend. This
  *  lowers the budget-reachable level, so ENTROPY_THRESHOLDS were re-pinned via the
- *  sim in lockstep (ENHANCE_COST_GROWTH mirrored at scripts/entropy-gate-sim.mjs). */
-export const ENHANCE_COST_GROWTH = 1.7;
+ *  sim in lockstep (ENHANCE_COST_GROWTH mirrored at scripts/entropy-gate-sim.mjs).
+ *  Overhaul-3 (user 2026-06-19): 1.7 felt too steep → 1.35 (gentler ramp; cum-to-
+ *  Lv10 ≈ 27×base, to-Lv20 ≈ 109×base — still escalating but affordable). */
+export const ENHANCE_COST_GROWTH = 1.35;
 /** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
 export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   common: 10,
@@ -507,8 +509,8 @@ export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rar
 /** Each further stone-phase level multiplies the 보호(protect) stone cost by this.
  *  Overhaul-3: 1.0 (flat) → 1.5 (geometric) so insuring the high, risky levels
  *  ramps up too — mirrored in scripts/entropy-gate-sim.mjs (drives the stone-phase
- *  reachable level → income → re-pinned thresholds). */
-export const ENHANCE_STONE_GROWTH = 1.5;
+ *  reachable level → income → re-pinned thresholds). Overhaul-3 (user): 1.5 → 1.3. */
+export const ENHANCE_STONE_GROWTH = 1.3;
 /** Fraction of invested stones refunded when a stack is consumed by fusion. */
 export const ENHANCE_STONE_REFUND_RATE = 0.5;
 /** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */

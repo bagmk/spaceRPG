@@ -116,17 +116,16 @@ describe('fusion (Phase 3)', () => {
     expect(rollFusionRarity('legendary', 0.0, 11).rarity).toBe('legendary');
   });
 
-  it('Overhaul-3: fusion cost re-anchors to the player stage and climbs geometrically by rarity', () => {
-    // cost = ENTITY_COST_ANCHORS[playerStage] × FUSION_FLAT_COST[rarity].
-    expect(getFusionQuantaCost('common', 3)).toBe(Math.ceil(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.common));
-    expect(getFusionQuantaCost('legendary', 3)).toBe(Math.ceil(ENTITY_COST_ANCHORS[3] * FUSION_FLAT_COST.legendary));
-    // Geometric rarity climb (k=3.5): legendary ≈ 43× a common fuse, not the old ~flat ~2.5× step.
+  it('Overhaul-3: fusion cost climbs geometrically by RARITY and is STAGE-INDEPENDENT', () => {
+    // cost = FUSION_ENHANCE_COST_BASE × FUSION_FLAT_COST[rarity] — same at every stage.
+    expect(getFusionQuantaCost('common', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.common));
+    expect(getFusionQuantaCost('legendary', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.legendary));
+    // Geometric rarity climb (k=3.5): legendary ≈ 43× a common fuse, epic/rare ≈ 3.5×.
     expect(getFusionQuantaCost('legendary', 3)).toBeGreaterThan(getFusionQuantaCost('common', 3) * 30);
     expect(getFusionQuantaCost('epic', 3) / getFusionQuantaCost('rare', 3)).toBeCloseTo(3.5, 1);
-    // Cost now SCALES with the player's stage (late fuses are a meaningful sink, not free).
-    expect(getFusionQuantaCost('common', 10)).toBeGreaterThan(getFusionQuantaCost('common', 3) * 10);
-    // Stage 1 still anchors to the base (FUSION_ENHANCE_COST_BASE === ENTITY_COST_ANCHORS[1]).
-    expect(getFusionQuantaCost('common', 1)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.common));
+    // Cost does NOT change with the player's stage (user direction: rarity-only).
+    expect(getFusionQuantaCost('common', 10)).toBe(getFusionQuantaCost('common', 3));
+    expect(getFusionQuantaCost('legendary', 16)).toBe(getFusionQuantaCost('legendary', 1));
   });
 
   it('P2b: validateFusionInputs flags same-entity and same-codex-subset', () => {

@@ -70,7 +70,7 @@ const GATE_RAMP = 3;
 // growth lowers the budget-reachable level (derivedLevel), which lowers gear power /
 // income, so the thresholds below were re-pinned DOWN in this same sim pass.
 const ENHANCE_COST_FACTOR = 1.5;
-const ENHANCE_COST_GROWTH = 1.7;
+const ENHANCE_COST_GROWTH = 1.35; // Overhaul-3 (user): 1.7 → 1.35 (gentler) — lockstep with balance.ts.
 // #47 reinterpretation: enhance is now MATTER-ONLY at every level. 강화석 are spent
 // only to 보호(protect) a risk-phase attempt; an unprotected fail DESTROYS the item.
 // A rational player climbs the risk phase by protecting every attempt, so the
@@ -82,7 +82,7 @@ const ENHANCE_COST_GROWTH = 1.7;
 // (enhance-break refunds add more, ignored here for a conservative lower bound).
 const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 (was 5) — lockstep with balance.ts.
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
-const ENHANCE_STONE_GROWTH = 1.5; // Overhaul-3: 1.0 → 1.5 (geometric protect cost) — lockstep with balance.ts.
+const ENHANCE_STONE_GROWTH = 1.3; // Overhaul-3 (user): 1.5 → 1.3 — lockstep with balance.ts.
 // Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
 // A fusion that does NOT rarity-up mints 강화석, so failRate = 1 − up1 − up2 for
 // the tier being fused. P6 fix: this was a flat 0.55 (a P1 leftover from before
