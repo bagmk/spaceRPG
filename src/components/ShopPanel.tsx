@@ -24,7 +24,7 @@ import { generateDailyShop, toDateKey } from '../game/shop/daily';
 import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost } from '../game/shop/pricing';
 import { STONE_BUNDLES, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
-import { findEntityById, entityName, entityDescription } from '../game/entities/stageItems';
+import { findEntityById, entityName } from '../game/entities/stageItems';
 import { isTailQuality } from '../game/entities/quality';
 import type { EntityRarity } from '../game/entities/types';
 import type { GearPower } from '../game/entities/substats';
@@ -267,7 +267,6 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   {ent ? <EntityGlyph entity={ent} color={rc} /> : null}
                   <span className="shop-item-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
                   {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={tr.accent} /> : null}
-                  {ent ? <span className="shop-item-card__desc">{entityDescription(ent, language)}</span> : null}
                   <span className="shop-item-card__cost">
                     {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
                   </span>

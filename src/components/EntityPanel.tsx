@@ -199,8 +199,10 @@ export function effectValueLabel(
     case 'click':
       return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectClickPower') };
     case 'auto':
+      // The bare "/s" suffix here — NOT effectAutoRateUnit, which already bakes in
+      // "Auto Speed" and would duplicate the label the SpecChip renders separately.
       return {
-        value: `+${formatAutoRateValue(getEntityAutoRate(entity, power, total ? count : 1, level, carried) * q)}${t(lang, 'effectAutoRateUnit')}`,
+        value: `+${formatAutoRateValue(getEntityAutoRate(entity, power, total ? count : 1, level, carried) * q)}${t(lang, 'effectAutoRatePerSec')}`,
         label: t(lang, 'hudAuto'),
       };
     case 'crit':
@@ -283,23 +285,39 @@ const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[]).map((
   labelKey: SUBSTAT_LABEL_KEY[type],
 }));
 
-/** Legend explaining what each trait shape means (#42-fix: 도형 직관화). */
+/** Legend explaining what each trait shape means (#42-fix: 도형 직관화).
+    Collapsed by default — the per-item SpecChips already label each stat, so the
+    full grid is reference-only and was crowding the top of the equip page. */
 function TraitLegend({ language }: { language: Lang }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="trait-legend">
-      {TRAIT_LEGEND.map(({ type, labelKey }) => (
-        <span key={type} className="trait-legend__item">
-          <span className="trait-legend__icon" style={{ color: EFFECT_TRAIT[type].accent }}>{EFFECT_TRAIT[type].icon}</span>
-          <span className="trait-legend__label">{t(language, labelKey)}</span>
-        </span>
-      ))}
-      <span className="trait-legend__divider" aria-hidden="true" />
-      {SUBSTAT_LEGEND.map(({ type, icon, labelKey }) => (
-        <span key={type} className="trait-legend__item trait-legend__item--sub">
-          <span className="trait-legend__icon trait-legend__icon--sub">{icon}</span>
-          <span className="trait-legend__label">{t(language, labelKey)}</span>
-        </span>
-      ))}
+    <div className={`trait-legend ${open ? 'trait-legend--open' : ''}`}>
+      <button
+        type="button"
+        className="trait-legend__toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="trait-legend__toggle-icon" aria-hidden="true">{open ? '▴' : '▾'}</span>
+        {t(language, 'traitLegend')}
+      </button>
+      {open ? (
+        <div className="trait-legend__items">
+          {TRAIT_LEGEND.map(({ type, labelKey }) => (
+            <span key={type} className="trait-legend__item">
+              <span className="trait-legend__icon" style={{ color: EFFECT_TRAIT[type].accent }}>{EFFECT_TRAIT[type].icon}</span>
+              <span className="trait-legend__label">{t(language, labelKey)}</span>
+            </span>
+          ))}
+          <span className="trait-legend__divider" aria-hidden="true" />
+          {SUBSTAT_LEGEND.map(({ type, icon, labelKey }) => (
+            <span key={type} className="trait-legend__item trait-legend__item--sub">
+              <span className="trait-legend__icon trait-legend__icon--sub">{icon}</span>
+              <span className="trait-legend__label">{t(language, labelKey)}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
