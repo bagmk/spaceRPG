@@ -12789,10 +12789,6 @@ button.stat-header-item {
   padding: 4px !important;
 }
 
-.entity-panel__drag-handle {
-  display: none;
-}
-
 @media (min-width: 901px) {
   .active-boost-hud {
     top: max(14px, env(safe-area-inset-top)) !important;
@@ -12869,19 +12865,6 @@ button.stat-header-item {
     width: calc(100vw - 14px) !important;
     height: calc(100dvh - 16px) !important;
     max-height: calc(100dvh - 16px) !important;
-  }
-
-  .entity-panel__drag-handle {
-    grid-column: 1 / -1;
-    display: block;
-    justify-self: center;
-    width: 42px;
-    height: 4px;
-    margin: 0 0 4px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.22);
-    touch-action: none;
-    cursor: ns-resize;
   }
 
   .entity-panel__header {
@@ -13117,10 +13100,6 @@ button.stat-header-item {
     width: min(440px, calc(100vw - 30px)) !important;
     height: min(366px, 49dvh) !important;
     max-height: min(366px, 49dvh) !important;
-  }
-
-  .entity-panel__drag-handle {
-    display: none !important;
   }
 
   .entity-panel__header {
@@ -14892,4 +14871,60 @@ button.stat-header-item {
   .shop-fs__daily-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .shop-gacha-row { gap: 6px; }
   .shop-fs__packs { gap: 6px; }
+}
+
+/* =========================================================================
+   .cc-scroll — standardized scroll-container utility family (#46)
+   Applied ADDITIVELY alongside each container's existing semantic class.
+   Base carries structural-only props (no scrollbar paint); variants
+   replicate the existing scrollbar looks 1:1 so nothing changes visually.
+   ========================================================================= */
+.cc-scroll {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* --hidden: scrollbar fully hidden (matches .fusion-reveal-grid,
+   .ending-credit-scroll, .ending-options, .final-screen). */
+.cc-scroll--hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cc-scroll--hidden::-webkit-scrollbar { display: none; }
+
+/* --thin-4: 4px white thumb (matches .almanac-scroll / .entity-panel__list). */
+.cc-scroll--thin-4 {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.cc-scroll--thin-4::-webkit-scrollbar { width: 4px; }
+.cc-scroll--thin-4::-webkit-scrollbar-track { background: transparent; }
+.cc-scroll--thin-4::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* --thin-6: 6px white thumb with hover (matches .lore-section). */
+.cc-scroll--thin-6 {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.cc-scroll--thin-6::-webkit-scrollbar { width: 6px; }
+.cc-scroll--thin-6::-webkit-scrollbar-track { background: transparent; }
+.cc-scroll--thin-6::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.cc-scroll--thin-6::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* --colored: 6px purple thumb (matches .lore-modal__body). */
+.cc-scroll--colored {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 150, 255, 0.3) transparent;
+}
+.cc-scroll--colored::-webkit-scrollbar { width: 6px; }
+.cc-scroll--colored::-webkit-scrollbar-track { background: transparent; }
+.cc-scroll--colored::-webkit-scrollbar-thumb {
+  background: rgba(180, 150, 255, 0.3);
+  border-radius: 3px;
 }

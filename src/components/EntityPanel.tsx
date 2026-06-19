@@ -1174,7 +1174,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             : t(language, 'hexBonusNone');
 
           return (
-            <div className="equip-page">
+            <div className="equip-page cc-scroll">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
               <TraitLegend language={language} />
 
@@ -1332,7 +1332,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           const batchTrios = trayRarity ? Math.min(FUSION_BATCH_MAX_TRIOS, triosAt(trayRarity)) : 0;
 
           return (
-            <div className="fuse-page">
+            <div className="fuse-page cc-scroll">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
               <TraitLegend language={language} />
               {/* Fuse-All — compact box (#41): label + a small trio-count chip
@@ -1551,7 +1551,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 ) : null}
               </div>
               {upCards.length > 0 ? (
-                <div className="fusion-reveal-grid">
+                <div className="fusion-reveal-grid cc-scroll cc-scroll--hidden">
                   {upCards.map((card, i) => {
                     const ent = findEntityById(card.outputEntityId);
                     const flipped = i < revealedCount;
@@ -1721,7 +1721,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
-            <article className={`entity-detail-card entity-detail-card--${ent.rarity} ${isTailQuality(entry?.quality) ? 'entity-detail-card--tail' : ''}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
+            <article className={`entity-detail-card cc-scroll entity-detail-card--${ent.rarity} ${isTailQuality(entry?.quality) ? 'entity-detail-card--tail' : ''}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
               <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={() => setInspectedSlot(null)}>×</button>
               <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
@@ -1847,7 +1847,7 @@ function EntityDetailCard({
       }}
     >
       <article
-        className={`entity-detail-card entity-detail-card--${entity.rarity}`}
+        className={`entity-detail-card cc-scroll entity-detail-card--${entity.rarity}`}
         style={{ '--rarity-color': rarityColor } as CSSProperties}
         onClick={(event) => event.stopPropagation()}
       >

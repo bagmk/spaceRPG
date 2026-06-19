@@ -129,7 +129,7 @@ export function EndingCredits({ endingId, language, onComplete, soundManager }: 
 
   return (
     <div className="ending-cinematic ending-credits">
-      <div className="ending-credit-scroll">
+      <div className="ending-credit-scroll cc-scroll cc-scroll--hidden">
         {/* Video + overlay title */}
         <div className="ending-credit-hero">
           {videoFailed ? (

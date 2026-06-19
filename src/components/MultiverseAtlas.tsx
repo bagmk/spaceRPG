@@ -33,7 +33,7 @@ export function MultiverseAtlas({
   }
 
   return (
-    <section className="final-screen atlas-screen">
+    <section className="final-screen atlas-screen cc-scroll cc-scroll--hidden">
       <div className="final-card atlas-card">
         <div className="q-stage">{t(language, 'atlasLogTitle')}</div>
         <h1>{t(language, 'atlasHeadline')}</h1>

@@ -228,7 +228,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
         <button className="entity-fs__close" aria-label={t(language, 'shopClose')} onClick={onClose}>✕</button>
       </header>
 
-      <div className="shop-fs__body">
+      <div className="shop-fs__body cc-scroll">
         {/* 1) Today's Shop — the loudest board so daily items read distinct. */}
         <ShopBoard
           title={t(language, 'shopDailyTitle')}
