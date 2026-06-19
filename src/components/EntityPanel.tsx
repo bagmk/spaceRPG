@@ -17,8 +17,11 @@ import {
   SET_BONUS,
   EFFECT_TRAIT,
   SUBSTAT_TRAIT,
+  HEX_BINGO_LINES,
+  HEX_WILD_UNLOCK_STAGE,
   type SecondaryStatType,
 } from '../game/balance';
+import { computeHexBingo } from '../game/entities/hexBingo';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
@@ -333,6 +336,8 @@ interface Props {
   unlockedSlotCount: number;
   riftSlots: string[];
   unlockedRiftSlotCount: number;
+  /** #44 hexagon CENTER (wild) slot — '' when empty. Accepts any gear at stage ≥ HEX_WILD_UNLOCK_STAGE. */
+  wildSlot?: string;
   lastFusionEvent: FusionEvent | null;
   almanacCollected: Record<number, string[]>;
   /** Entity ids already seen in the codex — drives the NEW-discovery badge (v18). */
@@ -346,7 +351,9 @@ interface Props {
   stats: PanelStats;
   language: Lang;
   onEquip: (entityId: string, slot?: number) => void;
-  onUnequip: (slot: number, target: EquipCategory) => void;
+  /** #44: equip into the hexagon CENTER (wild) slot — dispatches EQUIP_ENTITY {wild:true}. */
+  onEquipWild?: (entityId: string) => void;
+  onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
   onEnhance: (entityId: string, protect?: boolean) => void;
   onFuse: (inputEntityIds: string[]) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
@@ -362,7 +369,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -382,6 +389,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   // Equip: hero-stat breakdown expand, slot-detail inspector, on-demand filter.
   const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
+  // #44: the hexagon CENTER (wild) slot has its own picker (any category) since
+  // it isn't tied to the click/rift equipCat+slotIndex addressing of the outer 6.
+  const [pickingWild, setPickingWild] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [protectEnhance, setProtectEnhance] = useState(false);
   // 🅠7: enhancement unlocks at S3 (S1 = collect/codex, S2 = equip/fuse).
@@ -459,8 +469,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // 불가). Defined HERE (before the draw fns + canRetry) so it's initialized before
   // any render-time call — a closure TDZ here crashed the panel on fuse (#42 fix).
   const equippedIdSet = useMemo(
-    () => new Set([...equippedSlots, ...riftSlots].filter(Boolean) as string[]),
-    [equippedSlots, riftSlots],
+    () => new Set([...equippedSlots, ...riftSlots, wildSlot].filter(Boolean) as string[]),
+    [equippedSlots, riftSlots, wildSlot],
   );
   const reservedOf = (id: string) => (equippedIdSet.has(id) ? 1 : 0);
 
@@ -623,8 +633,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     [gearSlots],
   );
   const allEquippedEntities = useMemo(
-    () => [...equippedSlots, ...riftSlots].map((id) => (id ? findEntityById(id) : undefined)),
-    [equippedSlots, riftSlots],
+    // #44: include the wild slot so the displayed set tier matches the applied
+    // bonus (the reducer counts wildSlot in getEquippedInstances for set bonuses).
+    () => [...equippedSlots, ...riftSlots, wildSlot].map((id) => (id ? findEntityById(id) : undefined)),
+    [equippedSlots, riftSlots, wildSlot],
   );
   const setInfo = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1013,13 +1025,178 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             );
           };
           const shownCats: EquipCategory[] = ['click', 'rift'];
+          // The flat per-category groups are kept available but no longer rendered:
+          // the hexagon below is the live loadout view. Retain the reference so the
+          // helper doesn't read as dead code while the hex is the primary layout.
+          void renderSlotGroup;
+
+          // #44 HEXAGON — the 7-slot board (0-2 click, 3-5 rift, 6 wild) read by
+          // computeHexBingo. The wild center unlocks at HEX_WILD_UNLOCK_STAGE.
+          const wildUnlocked = currentStageId >= HEX_WILD_UNLOCK_STAGE;
+          const hexIds: (string | null)[] = [
+            equippedSlots[0] || null, equippedSlots[1] || null, equippedSlots[2] || null,
+            riftSlots[0] || null, riftSlots[1] || null, riftSlots[2] || null,
+            wildSlot || null,
+          ];
+          const bingo = computeHexBingo(hexIds);
+          // Hex slot indices that sit on a completed line → drive the glow.
+          const litSlots = new Set<number>();
+          for (const li of bingo.completedLines) for (const s of HEX_BINGO_LINES[li].slots) litSlots.add(s);
+
+          // Map a hex index (0-5 outer) to its category + per-category slot index.
+          const hexAddr = (idx: number): { cat: EquipCategory; slot: number } =>
+            idx < 3 ? { cat: 'click', slot: idx } : { cat: 'rift', slot: idx - 3 };
+
+          // Shared card BODY (filled vs empty) — reused by every hex slot incl. wild.
+          const renderCardBody = (slotEntity: StageEntity | undefined, entry: EntityInstance | undefined, onRemove: () => void) => {
+            if (!slotEntity) {
+              return (
+                <>
+                  <span className="equip-slot-card__plus">＋</span>
+                  <span className="equip-slot-card__hint">{t(language, 'equipSlotTapFill')}</span>
+                </>
+              );
+            }
+            const linked = Boolean(dominantKey && getEquipSetKey(slotEntity) === dominantKey);
+            const p = effectValueLabel(slotEntity, language, power, entry?.count ?? 1, entry?.level ?? 1, entry?.carried ?? false, true, entry?.quality);
+            return (
+              <>
+                {linked ? <span className="equip-slot-card__set">⬡</span> : null}
+                {enhanceExcludedIds.has(slotEntity.id) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
+                <span
+                  className="equip-slot-card__remove"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t(language, 'entityUnequip')}
+                  title={t(language, 'entityUnequip')}
+                  onClick={(e) => { e.stopPropagation(); onRemove(); onUITap?.(); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onRemove(); onUITap?.(); } }}
+                >
+                  ✕
+                </span>
+                <TraitBadge entity={slotEntity} className="trait-badge--card" />
+                <div className="equip-slot-card__glyph">
+                  <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
+                </div>
+                <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
+                <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                  <span className="equip-slot-card__effect-value">{p.value}</span>
+                  <span className="equip-slot-card__effect-label">{p.label}</span>
+                </div>
+              </>
+            );
+          };
+
+          // One outer hex slot (click/rift) — mirrors renderSlotGroup's per-slot logic.
+          const renderHexOuter = (idx: number) => {
+            const { cat, slot } = hexAddr(idx);
+            const slots = cat === 'rift' ? riftSlots : equippedSlots;
+            const count = cat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
+            const rules = cat === 'rift' ? RIFT_SLOT_UNLOCKS : EQUIP_SLOT_UNLOCKS;
+            const lit = litSlots.has(idx);
+            if (slot >= count) {
+              const rule = rules.find((r) => r.slot === slot + 1);
+              const hint = rule?.minStageId !== undefined
+                ? t(language, 'equipSlotLockedStage').replace('{n}', String(rule.minStageId))
+                : t(language, 'equipSlotLockedAlmanac').replace('{n}', String(rule?.minAlmanacCount ?? 0));
+              return (
+                <div className={`hex-slot hex-slot--pos${idx} equip-slot-card equip-slot-card--locked`}>
+                  <span className="equip-slot-card__lock">🔒</span>
+                  <span className="equip-slot-card__hint">{hint}</span>
+                </div>
+              );
+            }
+            const slotId = slots[slot];
+            const slotEntity = slotId ? findEntityById(slotId) : undefined;
+            const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+            const isPicking = equipCat === cat && pickingSlot === slot && !pickingWild;
+            return (
+              <button
+                type="button"
+                className={`hex-slot hex-slot--pos${idx} hex-slot--${cat} equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
+                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                onClick={() => {
+                  setEquipCat(cat);
+                  setPickingWild(false);
+                  if (slotEntity) { setInspectedSlot(slot); }
+                  else { setPickingSlot(isPicking ? null : slot); }
+                  onUITap?.();
+                }}
+              >
+                {renderCardBody(slotEntity, entry, () => onUnequip(slot, cat))}
+              </button>
+            );
+          };
+
+          // The hexagon CENTER (wild) slot — locked until HEX_WILD_UNLOCK_STAGE,
+          // then accepts ANY gear; tapping opens the wild picker (all categories).
+          const renderHexCenter = () => {
+            const lit = litSlots.has(6);
+            if (!wildUnlocked) {
+              return (
+                <div className="hex-slot hex-slot--center equip-slot-card equip-slot-card--locked">
+                  <span className="equip-slot-card__lock">🔒</span>
+                  <span className="equip-slot-card__hint">{t(language, 'hexWildLockHint').replace('{n}', String(HEX_WILD_UNLOCK_STAGE))}</span>
+                </div>
+              );
+            }
+            const slotEntity = wildSlot ? findEntityById(wildSlot) : undefined;
+            const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+            return (
+              <button
+                type="button"
+                className={`hex-slot hex-slot--center equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${pickingWild ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
+                style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
+                onClick={() => {
+                  setPickingSlot(null);
+                  setPickingWild((v) => !v);
+                  onUITap?.();
+                }}
+              >
+                <span className="hex-slot__wild-tag">{t(language, 'hexWildSlot')}</span>
+                {slotEntity
+                  ? renderCardBody(slotEntity, entry, () => onUnequip(0, 'wild'))
+                  : (
+                    <>
+                      <span className="equip-slot-card__plus">＋</span>
+                      <span className="equip-slot-card__hint">{t(language, 'hexWildTapFill')}</span>
+                    </>
+                  )}
+              </button>
+            );
+          };
+
+          const bonusReadout = bingo.completedLines.length > 0
+            ? t(language, 'hexBonusReadout')
+                .replace('{click}', bingo.clickMult.toFixed(1))
+                .replace('{auto}', bingo.autoMult.toFixed(1))
+                .replace('{lines}', String(bingo.completedLines.length))
+            : t(language, 'hexBonusNone');
+
           return (
             <div className="equip-page">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
               <TraitLegend language={language} />
 
-              {/* Loadout — both category groups (click + auto/rift); tap a slot for detail / pick. */}
-              {shownCats.map((cat) => renderSlotGroup(cat))}
+              {/* Hero values for both lanes (click + auto) — compact, above the hex. */}
+              <div className="hex-heroes">
+                {shownCats.map((cat) => {
+                  const hero = heroFor(cat);
+                  return (
+                    <div className="hex-hero" key={cat}>
+                      <span className="equip-group__label">{hero.label}</span>
+                      <strong className="equip-group__value">{hero.value}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* #44 HEXAGON loadout — 6 outer (0-2 click / 3-5 rift) + center wild. */}
+              <div className="hex-grid">
+                {[0, 1, 2, 3, 4, 5].map((idx) => <Fragment key={idx}>{renderHexOuter(idx)}</Fragment>)}
+                {renderHexCenter()}
+              </div>
+              <div className={`hex-bonus ${bingo.completedLines.length > 0 ? 'hex-bonus--active' : ''}`}>{bonusReadout}</div>
 
               {/* Active set magnitude (compact) + batch enhance */}
               <div className="equip-actions">
@@ -1049,7 +1226,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <div className="entity-inv">
                 <div className="entity-inv__head">
                   <span className="entity-inv__title">
-                    {pickingSlot !== null
+                    {pickingSlot !== null || pickingWild
                       ? t(language, 'equipPickActive')
                       : `${t(language, 'ownedItemsLabel')} (${pickerEntities.length})`}
                   </span>
@@ -1068,7 +1245,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 ) : (
                   <div className="owned-grid">
                     {pickerEntities.map(({ entry, entity }) => {
-                      const alreadyAt = gearSlots.indexOf(entity.id);
+                      // While picking the wild, "already equipped" spans BOTH lanes
+                      // (the reducer rejects a dupe of a click/rift item in the wild).
+                      const alreadyAt = pickingWild
+                        ? [...equippedSlots, ...riftSlots, wildSlot].indexOf(entity.id)
+                        : gearSlots.indexOf(entity.id);
                       let delta: number | null = null;
                       if (pickingSlot !== null && pickBase > 0 && alreadyAt < 0) {
                         const d = Math.round((gearStrength(entity, entry) / pickBase - 1) * 100);
@@ -1082,7 +1263,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
                           disabled={alreadyAt >= 0}
                           onClick={() => {
-                            if (pickingSlot !== null) {
+                            if (pickingWild) {
+                              onEquipWild?.(entity.id);
+                              setPickingWild(false);
+                            } else if (pickingSlot !== null) {
                               onEquip(entity.id, pickingSlot);
                             } else {
                               // At rest: equip into this item's own category — first empty slot,
