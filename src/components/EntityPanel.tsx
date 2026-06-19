@@ -21,8 +21,9 @@ import {
 } from '../game/balance';
 import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
-import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
+import { getEnhanceCost, getEnhanceLevelCap, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
+import { qualityMult, isTailQuality } from '../game/entities/quality';
 import { familyLabel, familyRole } from '../game/entities/families';
 import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
@@ -169,45 +170,12 @@ function formatEntityEffect(
   return `+${formatPct(value * lvl)} ${type}`;
 }
 
-/** Returns the cumulative effect label across all owned levels. */
-function formatEntityEffectTotal(
-  entity: StageEntity,
-  count: number,
-  lang: Lang,
-  power: GearPower,
-  level = 1,
-  carried = false,
-): string {
-  if (count === 0) return '';
-  const { type, value, isFlat } = entity.effect;
-  // Soft-capped count + player-power curve — matches applyEntityModifiers exactly.
-  const effCount = getEffectiveCount(count, entity.maxCount, type === 'time');
-  const lvl = getLevelMult(level);
-  const curvedTotal = value * effCount * lvl * getGearPowerMult(power, entity.stageId, carried);
-  if (type === 'click') {
-    return `+${formatPct(curvedTotal)} ${t(lang, 'effectTotal')}`;
-  }
-  if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, count, level, carried))}${t(lang, 'effectAutoRateUnit')} ${t(lang, 'effectTotal')}`;
-  }
-  if (type === 'crit') {
-    return isFlat
-      ? `+${formatPct(value * effCount * lvl)} ${t(lang, 'effectCritChance')}`
-      : `+${formatPct(curvedTotal)} ${t(lang, 'effectCritMult')}`;
-  }
-  if (type === 'auto_mult') return `+${formatPct(value * effCount * lvl)} ${t(lang, 'effectAutoPower')}`;
-  if (type === 'time') return `+${formatPct(getTotalTimeRatePct(entity, count, level, power.stageId))} ${t(lang, 'effectTimeRate')}`;
-  if (type === 'multiplier') return `+${formatPct(curvedTotal)} ${t(lang, 'effectAllSources')}`;
-  if (type === 'entropy') return `+${formatPct(curvedTotal)} ${t(lang, 'effectEncounter')}`;
-  return `+${formatPct(value * effCount * lvl)} ${type}`;
-}
-
 /**
  * Structured (value, label) parts of an entity's primary effect — feeds the
  * spec-chip so the icon, number, and term render as three distinct pieces
  * instead of one dense string. Mirrors formatEntityEffect / *Total math.
  */
-function effectValueLabel(
+export function effectValueLabel(
   entity: StageEntity,
   lang: Lang,
   power: GearPower,
@@ -215,18 +183,21 @@ function effectValueLabel(
   level: number,
   carried: boolean,
   total: boolean,
+  quality?: number,
 ): { value: string; label: string } {
   const { type, value, isFlat } = entity.effect;
   const lvl = getLevelMult(level);
   const effCount = total ? getEffectiveCount(count, entity.maxCount, type === 'time') : 1;
   const curve = getGearPowerMult(power, entity.stageId, carried);
-  const pct = (v: number) => `+${formatPct(v)}`;
+  // #50: quality scales the shown number so the card matches the applied power.
+  const q = qualityMult(quality);
+  const pct = (v: number) => `+${formatPct(v * q)}`;
   switch (type) {
     case 'click':
       return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectClickPower') };
     case 'auto':
       return {
-        value: `+${formatAutoRateValue(getEntityAutoRate(entity, power, total ? count : 1, level, carried))}${t(lang, 'effectAutoRateUnit')}`,
+        value: `+${formatAutoRateValue(getEntityAutoRate(entity, power, total ? count : 1, level, carried) * q)}${t(lang, 'effectAutoRateUnit')}`,
         label: t(lang, 'hudAuto'),
       };
     case 'crit':
@@ -245,7 +216,7 @@ function effectValueLabel(
     case 'entropy':
       return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectEncounter') };
     case 'combo_cap':
-      return { value: `+${(value * effCount * lvl).toFixed(1)}`, label: t(lang, 'substatComboCap') };
+      return { value: `+${(value * effCount * lvl * q).toFixed(1)}`, label: t(lang, 'substatComboCap') };
     default:
       return { value: pct(value * effCount * lvl), label: String(type) };
   }
@@ -257,14 +228,15 @@ function substatValueLabel(
   lang: Lang,
   level: number,
   gearPower: number,
+  quality?: number,
 ): { icon: string; value: string; label: string } {
-  const v = sub.value * getLevelMult(level) * (sub.scales ? gearPower : 1);
+  const v = sub.value * getLevelMult(level) * (sub.scales ? gearPower : 1) * qualityMult(quality);
   const value = sub.type === 'comboCap' ? `+${v.toFixed(1)}` : `+${v.toFixed(1)}%`;
   return { icon: SUBSTAT_TRAIT[sub.type], value, label: t(lang, SUBSTAT_LABEL_KEY[sub.type]) };
 }
 
 /** Corner trait badge — at-a-glance "what does this item do" on any item card. */
-function TraitBadge({ entity, className = '' }: { entity: StageEntity; className?: string }) {
+export function TraitBadge({ entity, className = '' }: { entity: StageEntity; className?: string }) {
   const trait = EFFECT_TRAIT[entity.effect.type];
   if (!trait) return null;
   return (
@@ -279,7 +251,7 @@ function TraitBadge({ entity, className = '' }: { entity: StageEntity; className
 }
 
 /** Icon + value + label chip — the readable spec line inside an expanded card. */
-function SpecChip({ icon, value, label, accent, primary = false }: { icon: string; value: string; label: string; accent: string; primary?: boolean }) {
+export function SpecChip({ icon, value, label, accent, primary = false }: { icon: string; value: string; label: string; accent: string; primary?: boolean }) {
   return (
     <span className={`spec-chip ${primary ? 'spec-chip--primary' : ''}`} style={{ '--chip-accent': accent } as CSSProperties}>
       <span className="spec-chip__icon">{icon}</span>
@@ -299,6 +271,15 @@ const TRAIT_LEGEND: { type: keyof typeof EFFECT_TRAIT; labelKey: Parameters<type
   { type: 'multiplier', labelKey: 'effectAllSources' },
 ];
 
+// #48: the SUBSTAT shapes (✷✶🔗🌀🎁⚗⚙🖱🌙) were missing from the legend, so the
+// chips on the cards had no key. Driven straight off SUBSTAT_TRAIT/LABEL so it
+// can never drift from what the cards actually render.
+const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[]).map((type) => ({
+  type,
+  icon: SUBSTAT_TRAIT[type],
+  labelKey: SUBSTAT_LABEL_KEY[type],
+}));
+
 /** Legend explaining what each trait shape means (#42-fix: 도형 직관화). */
 function TraitLegend({ language }: { language: Lang }) {
   return (
@@ -306,6 +287,13 @@ function TraitLegend({ language }: { language: Lang }) {
       {TRAIT_LEGEND.map(({ type, labelKey }) => (
         <span key={type} className="trait-legend__item">
           <span className="trait-legend__icon" style={{ color: EFFECT_TRAIT[type].accent }}>{EFFECT_TRAIT[type].icon}</span>
+          <span className="trait-legend__label">{t(language, labelKey)}</span>
+        </span>
+      ))}
+      <span className="trait-legend__divider" aria-hidden="true" />
+      {SUBSTAT_LEGEND.map(({ type, icon, labelKey }) => (
+        <span key={type} className="trait-legend__item trait-legend__item--sub">
+          <span className="trait-legend__icon trait-legend__icon--sub">{icon}</span>
           <span className="trait-legend__label">{t(language, labelKey)}</span>
         </span>
       ))}
@@ -415,6 +403,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const enhanceTimerRef = useRef<number | null>(null);
   // Fuse-All exclude: stacks the player locked out of the batch.
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
+  // #51: Enhance-All exclude — equipped items the player has shielded from the
+  // bulk 강화 (since #47 enhance can DESTROY an item in the risk phase, you want
+  // to keep your best gear out of the spray-and-pray).
+  const [enhanceExcludedIds, setEnhanceExcludedIds] = useState<Set<string>>(() => new Set());
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
   const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
@@ -568,16 +560,20 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     if (page !== 'fuse' && lastFusionEvent) onClearFusionEvent(lastFusionEvent.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
-  // Sequential gacha flip — reveal result cards one-by-one (skippable).
+  // Sequential gacha flip — reveal result cards one-by-one (skippable). #49: the
+  // batch grid shows only rarity-UP cards (fails roll up into the 강화석 total), so
+  // the flip sequence counts ups, not every trio.
   useEffect(() => {
     if (!lastFusionEvent) { setRevealedCount(0); return undefined; }
-    if (lastFusionEvent.cards.length <= 1) { setRevealedCount(lastFusionEvent.cards.length); return undefined; }
+    const upCount = lastFusionEvent.cards.filter((c) => c.rarityUp).length;
+    const target = lastFusionEvent.cards.length <= 1 ? lastFusionEvent.cards.length : upCount;
+    if (target <= 1) { setRevealedCount(target); return undefined; }
     setRevealedCount(0);
     let n = 0;
     const id = window.setInterval(() => {
       n += 1;
       setRevealedCount(n);
-      if (n >= lastFusionEvent.cards.length) window.clearInterval(id);
+      if (n >= target) window.clearInterval(id);
     }, 180);
     return () => window.clearInterval(id);
   }, [lastFusionEvent]);
@@ -765,6 +761,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // span all eras; chips are an opt-in filter (default = all).
           const collectedSet = collectedIdSet(almanacCollected);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
+          // #45: entries from eras the player hasn't reached are LOCKED (blur + 🔒)
+          // — distinct from merely-uncollected. The full-roster totals below are
+          // left untouched, so "collected/total" still counts these in the denominator.
+          const isFutureStage = (e: StageEntity) => e.stageId > currentStageId;
           // 🅠6 codex cleanup: the completion meter, prestige-mass factor,
           // "closest set" nudge and per-rarity drop-rate legend are gone — the
           // set/subset dividers carry the only signal (the set-completion benefit).
@@ -856,6 +856,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           <div className="almanac-grid">
                             {visible.map((entity, idx) => {
                               const collected = isCollected(entity);
+                              const future = !collected && isFutureStage(entity);
                               const rarityColor = RARITY_COLORS[entity.rarity];
                               // Signature specialty (P4) — the item's one varied identity stat.
                               const signature = getSecondaryStats(entity)[0];
@@ -863,13 +864,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                 <button
                                   key={entity.id}
                                   type="button"
-                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : 'almanac-card--locked'}`}
+                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}
                                   style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
                                   onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
                                 >
                                   {collected && codexNew.has(entity.id) ? (
                                     <span className="almanac-card__new">NEW</span>
                                   ) : null}
+                                  {future ? <span className="almanac-card__lock" aria-hidden="true">🔒</span> : null}
                                   {collected ? <TraitBadge entity={entity} className="trait-badge--card" /> : null}
                                   <div className="almanac-card__glyph">
                                     {collected
@@ -953,7 +955,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       <button
                         key={i}
                         type="button"
-                        className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${linked ? 'equip-slot-card--linked' : ''}`}
+                        className={`equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${linked ? 'equip-slot-card--linked' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
                         style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity] } as CSSProperties) : undefined}
                         onClick={() => {
                           setEquipCat(cat);
@@ -965,6 +967,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         {slotEntity ? (
                           <>
                             {linked ? <span className="equip-slot-card__set">⬡</span> : null}
+                            {/* #51: at-a-glance "전체 강화에서 빠짐" marker. */}
+                            {enhanceExcludedIds.has(slotEntity.id) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
                             {/* Inline unequip — a span (not button) since this card is itself a button. */}
                             <span
                               className="equip-slot-card__remove"
@@ -982,9 +986,18 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                               <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
                             </div>
                             <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
-                            <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                              {formatEntityEffectTotal(slotEntity, entry?.count ?? 1, language, power, entry?.level ?? 1, entry?.carried)}
-                            </div>
+                            {/* #48: drop the old "+% 합계" dense string (the "합계" term wasn't in
+                                the legend) — show the structured value + the SAME effect term the
+                                legend explains, so the card matches the rest of the panel. */}
+                            {(() => {
+                              const p = effectValueLabel(slotEntity, language, power, entry?.count ?? 1, entry?.level ?? 1, entry?.carried ?? false, true, entry?.quality);
+                              return (
+                                <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
+                                  <span className="equip-slot-card__effect-value">{p.value}</span>
+                                  <span className="equip-slot-card__effect-label">{p.label}</span>
+                                </div>
+                              );
+                            })()}
                           </>
                         ) : (
                           <>
@@ -1026,7 +1039,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   className="equip-enhance-all"
                   disabled={!enhanceUnlocked}
                   title={enhanceUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}
-                  onClick={() => { [...equippedSlots, ...riftSlots].forEach((id) => { if (id) onEnhance(id); }); }}
+                  onClick={() => { [...equippedSlots, ...riftSlots].forEach((id) => { if (id && !enhanceExcludedIds.has(id)) onEnhance(id); }); }}
                 >
                   {enhanceUnlocked ? t(language, 'enhanceAll') : `🔒 ${t(language, 'enhanceAll')}`}
                 </button>
@@ -1065,7 +1078,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         <button
                           key={entity.id}
                           type="button"
-                          className={`owned-card ${alreadyAt >= 0 ? 'owned-card--dim' : ''}`}
+                          className={`owned-card ${alreadyAt >= 0 ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
                           disabled={alreadyAt >= 0}
                           onClick={() => {
@@ -1268,7 +1281,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         >
                           <button
                             type="button"
-                            className={`owned-card ${blocked ? 'owned-card--dim' : ''}`}
+                            className={`owned-card ${blocked ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
                             disabled={blocked}
                             onClick={() => addFuseInput(entity)}
                           >
@@ -1335,7 +1348,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         // Batch → gacha card-pull grid: flip each result one-by-one (skippable).
         const ev = lastFusionEvent;
         if (ev.cards.length > 1) {
-          const total = ev.cards.length;
+          // #49: show ONLY the rarity-up reveals as cards; every failed trio rolls
+          // up into the single 강화석 total below (no clutter of identical fail cards).
+          const upCards = ev.cards.filter((c) => c.rarityUp);
+          const failCount = ev.cards.length - upCards.length;
+          const total = upCards.length;
           const allRevealed = revealedCount >= total;
           return (
             <div className="fusion-result fusion-result--grid" role="status">
@@ -1343,39 +1360,46 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 <span className="fusion-reveal__tag">
                   {t(language, 'fuseBatchSummary').replace('{s}', String(ev.successCount)).replace('{n}', String(ev.batchCount))}
                 </span>
-                {!allRevealed ? (
+                {total > 0 && !allRevealed ? (
                   <button type="button" className="fusion-reveal__skip" onClick={() => setRevealedCount(total)}>
                     {t(language, 'fuseSkip')}
                   </button>
                 ) : null}
               </div>
-              <div className="fusion-reveal-grid">
-                {ev.cards.map((card, i) => {
-                  const ent = findEntityById(card.outputEntityId);
-                  const flipped = i < revealedCount;
-                  return (
-                    <div
-                      key={i}
-                      className={`fusion-reveal-card ${flipped ? 'is-flipped' : ''} ${flipped ? (card.rarityUp ? 'fusion-reveal-card--up' : 'fusion-reveal-card--fail') : ''}`}
-                      style={ent ? ({ '--rarity-color': RARITY_COLORS[ent.rarity] } as CSSProperties) : undefined}
-                    >
-                      <div className="fusion-reveal-card__inner">
-                        <span className="fusion-reveal-card__back" aria-hidden="true">◈</span>
-                        <span className="fusion-reveal-card__face">
-                          {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[ent.rarity]} /> : null}
-                          <span className="fusion-reveal-card__badge">
-                            {card.rarityUp ? '⬆' : card.stonesEarned > 0 ? `💎${card.stonesEarned}` : '·'}
+              {upCards.length > 0 ? (
+                <div className="fusion-reveal-grid">
+                  {upCards.map((card, i) => {
+                    const ent = findEntityById(card.outputEntityId);
+                    const flipped = i < revealedCount;
+                    return (
+                      <div
+                        key={i}
+                        className={`fusion-reveal-card ${flipped ? 'is-flipped' : ''} ${flipped ? 'fusion-reveal-card--up' : ''}`}
+                        style={ent ? ({ '--rarity-color': RARITY_COLORS[ent.rarity] } as CSSProperties) : undefined}
+                      >
+                        <div className="fusion-reveal-card__inner">
+                          <span className="fusion-reveal-card__back" aria-hidden="true">◈</span>
+                          <span className="fusion-reveal-card__face">
+                            {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[ent.rarity]} /> : null}
+                            <span className="fusion-reveal-card__badge">⬆</span>
                           </span>
-                        </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="fusion-reveal__allfail">{t(language, 'fuseResultFail')}</div>
+              )}
+              {failCount > 0 ? (
+                <div className="fusion-reveal__failnote">
+                  {t(language, 'fuseBatchFailStones').replace('{n}', String(failCount)).replace('{s}', String(ev.stonesEarned))}
+                </div>
+              ) : null}
               <div className="fusion-reveal__totals">
                 <span>{`+${formatEntropyAmount(ev.entropyBurst)} ${t(language, 'hudEntropy')}`}</span>
                 {ev.stonesEarned > 0 ? <span>{`💎 ${ev.stonesEarned}`}</span> : null}
-                {ev.refund > 0 ? <span>{`+⚛${formatEntityCost(ev.refund)}`}</span> : null}
+                {ev.refund > 0 ? <span>{`⚛${formatEntityCost(ev.refund)}`}</span> : null}
               </div>
               <div className="fusion-result__actions">
                 <button type="button" className="fusion-result__retry" disabled={!canRetry} onClick={(e) => { e.stopPropagation(); retryFuse(); }}>
@@ -1433,7 +1457,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               </div>
               {lastFusionEvent.refund > 0 ? (
                 <div className="fusion-result__refund">
-                  {`${t(language, 'fuseRefund')} +⚛${formatEntityCost(lastFusionEvent.refund)}`}
+                  {`${t(language, 'fuseRefund')} ⚛${formatEntityCost(lastFusionEvent.refund)}`}
                 </div>
               ) : null}
               {/* 🅠4: explicit retry + close — no auto-dismiss, no auto-refill. */}
@@ -1463,9 +1487,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           read like "a new item appeared" and the live effect-total recompute made
           click power flicker). A small chip near the top: outcome + new level + payout. */}
       {lastEnhanceEvent ? (() => {
-        const palette: Record<string, string> = { up: '#bb8cff', down: '#d8a24a', break: '#e2554a', protected: '#4a8fff' };
+        const palette: Record<string, string> = { up: '#bb8cff', break: '#e2554a', protected: '#4a8fff' };
         const col = palette[lastEnhanceEvent.outcome];
-        const labelKey = ({ up: 'enhanceOutcomeUp', down: 'enhanceOutcomeDown', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[lastEnhanceEvent.outcome];
+        const labelKey = ({ up: 'enhanceOutcomeUp', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[lastEnhanceEvent.outcome];
         return (
           <div
             className={`enhance-toast enhance-toast--${lastEnhanceEvent.outcome}`}
@@ -1475,8 +1499,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           >
             <span className="enhance-toast__tag">{t(language, labelKey)}</span>
             {lastEnhanceEvent.outcome !== 'break' ? <span className="enhance-toast__lv">{`Lv.${lastEnhanceEvent.level}`}</span> : null}
-            {lastEnhanceEvent.payout && lastEnhanceEvent.payout > 0 ? (
-              <span className="enhance-toast__payout">{`+⚛${formatEntityCost(lastEnhanceEvent.payout)}`}</span>
+            {/* #47: a break refunds 강화석 — show only that count on the card. */}
+            {lastEnhanceEvent.outcome === 'break' && (lastEnhanceEvent.stonesEarned ?? 0) > 0 ? (
+              <span className="enhance-toast__payout">{`◆ ${lastEnhanceEvent.stonesEarned}`}</span>
+            ) : null}
+            {lastEnhanceEvent.outcome !== 'break' && lastEnhanceEvent.payout && lastEnhanceEvent.payout > 0 ? (
+              <span className="enhance-toast__payout">{`⚛${formatEntityCost(lastEnhanceEvent.payout)}`}</span>
             ) : null}
           </div>
         );
@@ -1502,32 +1530,34 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const atCap = lvl >= cap;
         const stonePhase = isEnhanceStonePhase(lvl);
         const matterCost = getEnhanceCost(ent, lvl, currentStageId);
-        const stoneCost = getEnhanceStoneCost(ent, lvl);
         const protectCost = getEnhanceProtectStoneCost(ent, lvl);
-        const totalStones = stoneCost + (protectEnhance ? protectCost : 0);
         const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
-        // Stone phase now spends BOTH matter and stones — must afford both.
-        const affordable = !atCap && (stonePhase ? (enhanceStones >= totalStones && quanta >= matterCost) : quanta >= matterCost);
+        // #47: normal enhance is matter-only; 강화석 is needed only when protecting.
+        const affordable = !atCap && quanta >= matterCost && (stonePhase && protectEnhance ? enhanceStones >= protectCost : true);
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
-            <article className={`entity-detail-card entity-detail-card--${ent.rarity}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
+            <article className={`entity-detail-card entity-detail-card--${ent.rarity} ${isTailQuality(entry?.quality) ? 'entity-detail-card--tail' : ''}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
               <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={() => setInspectedSlot(null)}>×</button>
               <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
               <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
               <div className="entity-detail-card__stats">
                 {(() => {
-                  const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true);
+                  const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
                   const tr = EFFECT_TRAIT[ent.effect.type];
                   return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
                 })()}
                 <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${entry?.count ?? 1}`}</span>
+                {/* #50: a tail (gold) specimen shows its quality percentile. */}
+                {isTailQuality(entry?.quality) ? (
+                  <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
+                ) : null}
               </div>
               {getSecondaryStats(ent).length > 0 ? (
                 <div className="entity-detail-card__substats spec-chip-row">
                   {getSecondaryStats(ent).map((sub) => {
-                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried));
+                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried), entry?.quality);
                     return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
                   })}
                 </div>
@@ -1538,7 +1568,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   className={`slot-detail__protect ${protectEnhance ? 'slot-detail__protect--on' : ''}`}
                   onClick={() => { setProtectEnhance((v) => !v); onUITap?.(); }}
                 >
-                  {`${protectEnhance ? '☑' : '☐'} ${t(language, 'enhanceProtect')} +◆${formatEntityCost(protectCost)}`}
+                  {`${protectEnhance ? '☑' : '☐'} ${t(language, 'enhanceProtect')} ◆${formatEntityCost(protectCost)}`}
                 </button>
               ) : null}
               <button
@@ -1552,10 +1582,35 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   ? `🔒 ${t(language, 'enhanceLabel')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`
                   : atCap
                     ? `${t(language, 'enhanceLabel')} ${t(language, 'enhanceMax')} (Lv.${lvl})`
-                    : stonePhase
-                      ? `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)} ◆${formatEntityCost(totalStones)} · ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}`
-                      : `${t(language, 'enhanceLabel')} Lv.${lvl} → ${lvl + 1} · ⚛${formatEntityCost(matterCost)}`}
+                    : (
+                      <>
+                        <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
+                        <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
+                        <span className="enhance-btn__cost">{`⚛${formatEntityCost(matterCost)}`}</span>
+                        {stonePhase ? (
+                          <span className="enhance-btn__fail">{t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}</span>
+                        ) : null}
+                      </>
+                    )}
               </button>
+              {/* #51: keep this item out of the "전체 강화" spray (so Enhance-All
+                  never risk-destroys your best gear). */}
+              {!atCap ? (
+                <button
+                  type="button"
+                  className={`slot-detail__skip ${enhanceExcludedIds.has(ent.id) ? 'slot-detail__skip--on' : ''}`}
+                  onClick={() => {
+                    setEnhanceExcludedIds((prev) => {
+                      const nextSet = new Set(prev);
+                      if (nextSet.has(ent.id)) nextSet.delete(ent.id); else nextSet.add(ent.id);
+                      return nextSet;
+                    });
+                    onUITap?.();
+                  }}
+                >
+                  {`${enhanceExcludedIds.has(ent.id) ? '☑' : '☐'} ${t(language, 'enhanceExcludeToggle')}`}
+                </button>
+              ) : null}
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip" style={{ borderColor: rc, color: rc }} onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
                   {t(language, 'equipSwap')}

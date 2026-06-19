@@ -105,6 +105,13 @@ export interface EntityInstance {
   /** Cumulative 강화석 spent on stone-phase levels — partially refunded on fusion (P1, v19). */
   investedStones?: number;
   /**
+   * #50 quality (가우시언 테일, v23): gaussian score in [0,1] for this stack's BEST
+   * acquired copy. Multiplies the primary effect + scaling substats and drives the
+   * gold tail border. Undefined → neutral (× 1.0); pre-v23 entries stay undefined
+   * (no retroactive roll — they keep exactly their current power until re-acquired).
+   */
+  quality?: number;
+  /**
    * Carried across prestige (Phase 4-3 D2). Carried items keep their level but
    * NOT their origin-stage power: getGearPowerExponent drops the itemStage
    * clamp so the exponent follows the player's stage only — a head start, not

@@ -19,6 +19,7 @@ import {
   RARITY_STAGE_GATES,
 } from '../balance';
 import { getEntitiesForStage } from './stageItems';
+import { bestQuality } from './quality';
 import type { EntityInstance, EntityRarity, StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -194,13 +195,26 @@ export function getCollisionDropChance(): number {
   return DROP_CHANCE_COLLISION;
 }
 
-/** Add one copy of an entity to the inventory (immutable). */
-export function addToInventory(inventory: EntityInstance[], entityId: string): EntityInstance[] {
+/**
+ * Add one copy of an entity to the inventory (immutable). #50: `quality` is the
+ * fresh roll for this copy; a stack keeps its BEST specimen (max), so acquiring
+ * more copies can only improve the stack's quality (and never downgrades it).
+ * Omitted (e.g. tests) → quality is left untouched / neutral.
+ */
+export function addToInventory(
+  inventory: EntityInstance[],
+  entityId: string,
+  quality?: number,
+): EntityInstance[] {
   const existing = inventory.find((e) => e.entityId === entityId);
   if (existing) {
-    return inventory.map((e) => (e.entityId === entityId ? { ...e, count: e.count + 1 } : e));
+    return inventory.map((e) =>
+      e.entityId === entityId
+        ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, quality) }
+        : e,
+    );
   }
-  return [...inventory, { entityId, count: 1, level: 1 }];
+  return [...inventory, { entityId, count: 1, level: 1, ...(quality !== undefined ? { quality } : {}) }];
 }
 
 /** Record an entity in the almanac collection grid (immutable, idempotent). */

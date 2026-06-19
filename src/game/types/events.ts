@@ -81,8 +81,9 @@ export interface FusionEvent {
   cards: FusionResultCard[];
 }
 
-/** Outcome of a 강화 attempt — drives the reveal flash (P1). */
-export type EnhanceOutcome = 'up' | 'down' | 'break' | 'protected';
+/** Outcome of a 강화 attempt — drives the reveal flash. #47: 'down' (level-down)
+ *  is gone; a failed unprotected attempt now 'break's (destroy + 강화석 refund). */
+export type EnhanceOutcome = 'up' | 'break' | 'protected';
 
 export interface EnhanceEvent {
   id: number;
@@ -92,6 +93,19 @@ export interface EnhanceEvent {
   level: number;
   /** Matter handed back this attempt (#40 payout) — shown on the inline indicator. */
   payout?: number;
+  /** #47: 강화석 minted when a failed unprotected attempt destroys a copy (0 otherwise). */
+  stonesEarned?: number;
+}
+
+/** #43 gacha pull — drives the single-card reveal in the shop's Nebula Boxes board. */
+export interface GachaEvent {
+  id: number;
+  /** The rolled entity (look up details via findEntityById). */
+  entityId: string;
+  /** Quality score [0,1] of the pulled copy (#50) — gold border when in the tail. */
+  quality: number;
+  /** Which box tier was opened (for the "다시 뽑기" retry). */
+  boxId: string;
 }
 
 /** A claimed milestone/era-record (#42) — drives the slot-machine matter rollup. */

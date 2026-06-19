@@ -3,6 +3,7 @@ import { getActiveShopBoostMultiplier, getOfflineRewardCapSec, shiftBoostExpiry 
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { generateDailyShop, toDateKey } from '../shop/daily';
+import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost } from '../shop/pricing';
 
 const AD = 'free_matter_burst';
 const MIN5 = 5 * 60 * 1000;
@@ -43,11 +44,15 @@ describe('cash shop matter boost (ad)', () => {
 });
 
 describe('matter packs + 강화석 purchase', () => {
-  it('a matter pack grants matter scaled to current output', () => {
+  it('a matter pack grants stage-anchored matter (NOT click/auto-scaled, #43)', () => {
     const before = { ...s3(), quanta: 0 };
     const after = gameReducer(before, { type: 'COMPLETE_SHOP_PURCHASE', itemId: 'pack_1', now: 10_000 });
     expect(after.quanta).toBeGreaterThan(0);
     expect(after.totalShopSpentUSD).toBe(0.99);
+    // Payout is a function of the STAGE anchor, not of the player's click power:
+    // a build with huge click power gets the same pack payout at the same stage.
+    const buffed = gameReducer({ ...s3(), quanta: 0, inventory: [] }, { type: 'COMPLETE_SHOP_PURCHASE', itemId: 'pack_1', now: 10_000 });
+    expect(buffed.quanta).toBe(after.quanta);
   });
 
   it('buys 강화석 with matter, debiting quanta', () => {
@@ -98,6 +103,51 @@ describe('daily shop', () => {
     expect(after.dailyShopDateKey).toBe(toDateKey(10_000));
     expect(after.dailyShopRefreshCount).toBe(0);
     expect(after.dailyShopPurchased).toEqual([]);
+  });
+});
+
+describe('#43 stage/rarity pricing + gacha', () => {
+  it('item price is decoupled from click/auto: monotonic in stage AND rarity', () => {
+    // Higher stage anchor → more expensive; higher rarity → more expensive.
+    expect(shopItemMatterCost('common', 8)).toBeGreaterThan(shopItemMatterCost('common', 2));
+    expect(shopItemMatterCost('legendary', 8)).toBeGreaterThan(shopItemMatterCost('common', 8));
+    expect(shopStoneMatterCost(8, 10)).toBe(shopStoneMatterCost(8, 1) * 10);
+    expect(shopRefreshMatterCost(8, 1)).toBeGreaterThan(shopRefreshMatterCost(8, 0));
+  });
+
+  it('a gacha box spends matter, grants an entity, and stashes a reveal event', () => {
+    const rich = { ...s3(), quanta: 1e15 };
+    const after = gameReducer(rich, {
+      type: 'OPEN_GACHA_BOX', boxId: 'box_faint',
+      rolls: { rarityRoll: 0.5, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 },
+    });
+    expect(after.quanta).toBeLessThan(rich.quanta);
+    expect(after.inventory.length).toBeGreaterThan(0);
+    expect(after.lastGachaEvent).not.toBeNull();
+    expect(after.lastGachaEvent?.boxId).toBe('box_faint');
+  });
+
+  it('gacha rarity is gate-clamped: a prime box at stage 3 cannot mint legendary', () => {
+    // RARITY_STAGE_GATES.legendary = 12, so at stage 3 the legendary/epic rolls
+    // step down to the highest gate-open tier (rare at S3).
+    const rich = { ...createInitialGameState(0), stageIdx: 2, quanta: 1e15 }; // stage 3
+    const after = gameReducer(rich, {
+      type: 'OPEN_GACHA_BOX', boxId: 'box_prime',
+      rolls: { rarityRoll: 0.99, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 }, // rolls high (legendary)
+    });
+    const got = after.inventory.find((e) => e.entityId === after.lastGachaEvent?.entityId);
+    const ent = got ? getEntitiesForStage(3).concat(getEntitiesForStage(2), getEntitiesForStage(1)).find((e) => e.id === got.entityId) : undefined;
+    expect(ent).toBeDefined();
+    expect(['common', 'rare']).toContain(ent!.rarity);
+  });
+
+  it('rejects a gacha open the player cannot afford', () => {
+    const broke = { ...s3(), quanta: 0 };
+    const after = gameReducer(broke, {
+      type: 'OPEN_GACHA_BOX', boxId: 'box_prime',
+      rolls: { rarityRoll: 0.5, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 },
+    });
+    expect(after).toBe(broke);
   });
 });
 

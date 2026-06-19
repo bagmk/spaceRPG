@@ -11,7 +11,7 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent } from './types/events';
+import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent, GachaEvent } from './types/events';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 22;
+  version: 23;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -324,6 +324,8 @@ export interface GameState extends PersistentGameState {
   lastFusionEvent: FusionEvent | null;
   lastEnhanceEvent: EnhanceEvent | null;
   lastQuestClaimEvent: QuestClaimEvent | null;
+  /** #43 transient gacha-pull reveal — drives the shop Nebula Box reveal (not persisted). */
+  lastGachaEvent: GachaEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
   offlineEntropyGained: number;

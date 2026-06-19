@@ -4,6 +4,7 @@ import { STORAGE_KEYS, TUNING } from './constants';
 import { ENHANCE_LEVEL_CAPS, ENTROPY_THRESHOLDS } from './balance';
 import { createDefaultPrestigeUpgrades } from './prestige';
 import { findEntityById } from './entities/stageItems';
+import { bestQuality } from './entities/quality';
 import type { EntityInstance, GameState, PersistentGameState, SaveState } from './types';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
 import {
@@ -50,8 +51,10 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
   return result;
 }
 
-/** Single source of truth for the save schema version (local + cloud). */
-export const SAVE_SCHEMA_VERSION = 22;
+/** Single source of truth for the save schema version (local + cloud).
+ *  v23: per-item quality (가우시언 테일, #50) — a nested EntityInstance field that
+ *  flows through validateV5 untouched; legacy entries stay undefined (neutral). */
+export const SAVE_SCHEMA_VERSION = 23;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -75,7 +78,9 @@ function clampInstance(e: EntityInstance): EntityInstance {
   const countCeil = entity && entity.maxCount > 0 ? entity.maxCount * 1000 : Number.MAX_SAFE_INTEGER;
   const levelCap = entity ? ENHANCE_LEVEL_CAPS[entity.rarity] ?? 25 : 25;
   const rawLevel = Number.isFinite(e.level) ? Math.max(1, Math.floor(e.level)) : 1;
-  return { ...e, count: Math.min(rawCount, countCeil), level: Math.min(rawLevel, levelCap) };
+  // #50: keep quality a valid [0,1] score (drop corrupt values to undefined → neutral).
+  const quality = Number.isFinite(e.quality) ? Math.min(1, Math.max(0, e.quality as number)) : undefined;
+  return { ...e, count: Math.min(rawCount, countCeil), level: Math.min(rawLevel, levelCap), quality };
 }
 
 function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameState {
@@ -92,6 +97,8 @@ function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameStat
       // silently vanishes from refund accounting.
       existing.invested = (existing.invested ?? 0) + (e.invested ?? 0);
       existing.investedStones = (existing.investedStones ?? 0) + (e.investedStones ?? 0);
+      // #50: keep the best specimen's quality across a canonical-id merge.
+      existing.quality = bestQuality(existing.quality, e.quality);
     } else {
       invMap.set(id, { ...e, entityId: id });
     }
@@ -477,12 +484,13 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22) {
-      // v14..v22 share a field schema (v17 dropped the legacy skill fields;
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23) {
+      // v14..v23 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added
-      // the per-stage milestone counters — all optional in validateV5, which
-      // seeds defaults for pre-N saves).
+      // the per-stage milestone counters; v23 added the per-item `quality` field
+      // on inventory entries — a nested EntityInstance field that passes through
+      // validateV5 untouched, so pre-v23 saves simply keep it undefined/neutral).
       // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
       // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
       // and seeds the v18 codex/hint fields for pre-v18 saves).

@@ -17,10 +17,11 @@ export interface OfflineStorageEffect {
   capHours: number;
 }
 
-/** USD matter pack: grants matter = (clickPower + autoRate) × payoutMult (reducer-computed). */
+/** USD matter pack: grants matter = ENTITY_COST_ANCHORS[stage] × SHOP_PACK_MATTER_FRAC[packIndex]
+ *  (#43 — stage-anchored, reducer-computed; no longer coupled to click/auto output). */
 export interface MatterPackEffect {
   type: 'matter_pack';
-  payoutMult: number;
+  packIndex: number;
 }
 
 export interface BaseShopEntry {
@@ -94,7 +95,7 @@ export const MATTER_PACK_PRODUCTS: MatterPackProduct[] = MATTER_PACKS.map((p, i)
     ko: '현재 생산량에 비례한 물질',
   },
   priceUSD: p.priceUSD,
-  effect: { type: 'matter_pack', payoutMult: p.payoutMult },
+  effect: { type: 'matter_pack', packIndex: i },
 }));
 
 export const DEEP_SPACE_STORAGE: PermanentUpgradeProduct = {

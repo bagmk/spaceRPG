@@ -16,6 +16,7 @@ import {
 } from '../balance';
 import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
 import { getGearPowerExponent, getGearPowerMult, getSecondaryStats, type GearPower } from './substats';
+import { qualityMult } from './quality';
 import {
   CODEX_SETS,
   collectedIdSet,
@@ -93,11 +94,14 @@ export function applyEntityModifiers(
     // (prestige) follow only the player term — see getGearPowerExponent.
     const carried = entry.carried === true;
     const gearPower = getGearPowerMult(power, entity.stageId, carried);
-    const total = value * count * levelMult;
+    // #50: per-copy quality multiplies the primary effect, the matter channel AND
+    // the scaling substats — a tail (gold) item is simply a stronger specimen.
+    const qMult = qualityMult(entry.quality);
+    const total = value * count * levelMult * qMult;
     // Matter-only channel (#40): levels grow GEOMETRICALLY here so enhancing a
     // click item feels explosive — decoupled from `total` (which stays linear and
     // feeds the entropy gate). Equal to `total` at Lv1.
-    const matterTotal = value * count * Math.pow(ENHANCE_MATTER_LEVEL_GROWTH, Math.max(0, (entry.level ?? 1) - 1));
+    const matterTotal = value * count * Math.pow(ENHANCE_MATTER_LEVEL_GROWTH, Math.max(0, (entry.level ?? 1) - 1)) * qMult;
 
     switch (type) {
       case 'auto':
@@ -149,7 +153,7 @@ export function applyEntityModifiers(
     // Secondary stats (A안): rare+ entities mix extra stats into the build.
     // `scales` substats ride the same gear power curve, applied at use time.
     for (const sub of getSecondaryStats(entity)) {
-      const subTotal = sub.value * levelMult * (sub.scales ? gearPower : 1);
+      const subTotal = sub.value * levelMult * (sub.scales ? gearPower : 1) * qMult;
       switch (sub.type) {
         case 'critChance':
           mods.critChanceAdd += subTotal / 100;

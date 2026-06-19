@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
-import { formatGameNumberShort, getClickPower, getAutoRate } from '../game/formulas';
-import { getCurrentModifiers } from '../game/reducers/helpers';
+import { formatGameNumberShort, getEntropyGateProgress } from '../game/formulas';
 import type { GameAction } from '../game/reducer';
 import {
   MATTER_PACK_PRODUCTS,
@@ -21,12 +20,16 @@ import {
   isCashShopUnlocked,
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
-import { generateDailyShop, dailyRefreshCostSeconds, toDateKey } from '../game/shop/daily';
-import { STONE_BUNDLES, STONE_MATTER_COST_SECONDS } from '../game/balance';
+import { generateDailyShop, toDateKey } from '../game/shop/daily';
+import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost } from '../game/shop/pricing';
+import { STONE_BUNDLES, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
-import { findEntityById, entityName } from '../game/entities/stageItems';
+import { findEntityById, entityName, entityDescription } from '../game/entities/stageItems';
+import { isTailQuality } from '../game/entities/quality';
 import type { EntityRarity } from '../game/entities/types';
+import type { GearPower } from '../game/entities/substats';
 import { EntityGlyph } from './EntityGlyph';
+import { effectValueLabel, SpecChip, TraitBadge } from './EntityPanel';
 import type { GameState, ShopBoostCategory } from '../game/types';
 import { t, type Lang } from '../i18n';
 
@@ -37,8 +40,15 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   legendary: '#ffa500',
   mythic: '#ff5db5',
 };
-
-type ShopTab = 'matter' | 'daily' | 'boosts';
+const RARITY_LABEL_KEY: Record<EntityRarity, Parameters<typeof t>[1]> = {
+  common: 'rarityCommon', rare: 'rarityRare', epic: 'rarityEpic', legendary: 'rarityLegendary', mythic: 'rarityMythic',
+};
+/** Box tier display names (KO/EN). */
+const GACHA_BOX_NAME: Record<string, { en: string; ko: string }> = {
+  box_faint: { en: 'Faint Nebula', ko: '희미한 성운' },
+  box_bright: { en: 'Bright Nebula', ko: '찬란한 성운' },
+  box_prime: { en: 'Primordial Nebula', ko: '태초의 성운' },
+};
 
 function formatRemainingMs(ms: number): string | null {
   if (ms <= 0) return null;
@@ -103,9 +113,21 @@ function ActiveSummary({ boosts, now, language }: { boosts: GameState['shopBoost
   );
 }
 
+/** A board section ("게시판") wrapping a group of shop cards so groups read distinctly. */
+function ShopBoard({ title, modifier, action, children }: { title: string; modifier?: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className={`shop-board ${modifier ?? ''}`}>
+      <div className="shop-board__head">
+        <span className="shop-board__title">{title}</span>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPanelProps) {
   const [now, setNow] = useState(Date.now());
-  const [tab, setTab] = useState<ShopTab>('matter');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const unlocked = isCashShopUnlocked(state);
@@ -123,29 +145,30 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
   }, [onClose]);
   // Commit the date-rollover on open AND whenever the local day flips while the
   // shop stays open, so the persisted roster matches what's displayed/charged.
-  // (syncDailyShop returns the same state ref when the day is unchanged, so the
-  // todayKey-gated re-fire is a no-op until midnight.)
   useEffect(() => { dispatch({ type: 'SYNC_DAILY_SHOP', now }); }, [dispatch, todayKey, now]);
+
+  // Clear any lingering gacha reveal when the shop closes.
+  useEffect(() => () => {
+    if (state.lastGachaEvent) dispatch({ type: 'CLEAR_GACHA_EVENT', id: state.lastGachaEvent.id });
+  }, [dispatch, state.lastGachaEvent]);
 
   if (!unlocked) return null;
 
-  const mods = getCurrentModifiers(state);
-  const outputRate = Math.max(1, getClickPower(mods) + getAutoRate(mods));
   const quanta = state.quanta;
   const playerStageId = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
+  // GearPower for the inline spec preview — matches what equipping would yield.
+  const power: GearPower = { stageId: playerStageId, gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx) };
 
   // Effective daily roster — mirrors the reducer's date-rollover so display
-  // matches what a buy will charge (SYNC above persists it; buys use the same
-  // `now` clock as this display).
+  // matches what a buy will charge.
   const fresh = state.dailyShopDateKey !== todayKey;
   const refreshCount = fresh ? 0 : state.dailyShopRefreshCount;
   const purchased = fresh ? [] : state.dailyShopPurchased;
   const roster = generateDailyShop(todayKey, refreshCount, playerStageId);
-  const refreshCost = Math.ceil(outputRate * dailyRefreshCostSeconds(refreshCount));
+  const refreshCost = shopRefreshMatterCost(playerStageId, refreshCount);
 
   const handlePaid = async (product: PaidShopProduct) => {
-    // #43: cash-shop payment is OFF — everything is FREE for now (the user wants
-    // all paid items grantable without a payment backend). completeMockPurchase
+    // #43: cash-shop payment is OFF — everything is FREE for now. completeMockPurchase
     // always succeeds; no purchase event is recorded.
     if (!unlocked || pendingId) return;
     setPendingId(product.id);
@@ -171,9 +194,6 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
     let restored = 0;
     for (const id of ownedIds) {
       const product = findPaidShopProduct(id);
-      // Restore only NON-consumable products (Deep Space Storage). Matter packs
-      // are repeatable consumables and would otherwise be re-granted for free on
-      // every restore tap (they surface in the store's owned list).
       if (product && product.repeatable === false) {
         dispatch({ type: 'COMPLETE_SHOP_PURCHASE', itemId: id, now: Date.now(), viaRestore: true });
         void recordPurchaseEvent({ type: 'restore', productId: id });
@@ -184,11 +204,19 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
     setPendingId(null);
   };
 
-  const TABS: { id: ShopTab; label: string }[] = [
-    { id: 'matter', label: t(language, 'shopTabMatter') },
-    { id: 'daily', label: t(language, 'shopTabDaily') },
-    { id: 'boosts', label: t(language, 'shopTabBoosts') },
-  ];
+  const openBox = (boxId: string) => {
+    const cost = gachaBoxMatterCost(boxId, playerStageId);
+    if (cost <= 0 || quanta < cost) return;
+    dispatch({
+      type: 'OPEN_GACHA_BOX',
+      boxId,
+      rolls: { rarityRoll: Math.random(), stageRoll: Math.random(), pickRoll: Math.random(), q1: Math.random(), q2: Math.random() },
+    });
+    onSfx?.();
+  };
+
+  const gachaEvent = state.lastGachaEvent;
+  const gachaEnt = gachaEvent ? findEntityById(gachaEvent.entityId) : undefined;
 
   const accent = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].accent ?? '#8090b0';
   return (
@@ -196,159 +224,203 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
       <section className="entity-fs__panel" onClick={(e) => e.stopPropagation()} style={{ '--stage-accent': accent } as CSSProperties}>
       <header className="entity-fs__topbar">
         <h2 className="entity-fs__screen-title">{t(language, 'hudShop')}</h2>
-        <span className="shop-fs__balance">⚛{formatGameNumberShort(quanta)} · 💎{formatGameNumberShort(state.enhanceStones)}</span>
+        <span className="shop-fs__balance">⚛{formatGameNumberShort(quanta)} · ◆{formatGameNumberShort(state.enhanceStones)}</span>
         <button className="entity-fs__close" aria-label={t(language, 'shopClose')} onClick={onClose}>✕</button>
       </header>
 
-      <div className="shop-fs__tabs">
-        {TABS.map((tb) => (
-          <button
-            key={tb.id}
-            type="button"
-            className={`shop-fs__tab ${tab === tb.id ? 'shop-fs__tab--active' : ''}`}
-            onClick={() => setTab(tb.id)}
-          >
-            {tb.label}
-          </button>
-        ))}
-      </div>
-
       <div className="shop-fs__body">
-        {tab === 'matter' ? (
-          <>
-            {/* 강화석 with matter */}
-            <div className="shop-fs__section-title">{t(language, 'shopStonesTitle')}</div>
-            <div className="shop-fs__stones">
-              {STONE_BUNDLES.map((count) => {
-                const cost = Math.ceil(outputRate * STONE_MATTER_COST_SECONDS * count);
-                const afford = quanta >= cost;
-                return (
-                  <button
-                    key={count}
-                    type="button"
-                    className="shop-stone-card"
-                    disabled={!afford}
-                    onClick={() => { dispatch({ type: 'BUY_ENHANCE_STONES', count }); onSfx?.(); }}
-                  >
-                    <span className="shop-stone-card__amount">💎 {count}</span>
-                    <span className="shop-stone-card__cost">⚛{formatGameNumberShort(cost)}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Matter packs (USD) */}
-            <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
-            <div className="shop-fs__packs">
-              {MATTER_PACK_PRODUCTS.map((p) => {
-                const payout = Math.ceil(outputRate * p.effect.payoutMult);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="shop-pack-card"
-                    style={{ '--boost-color': p.color } as CSSProperties}
-                    disabled={pendingId !== null}
-                    onClick={() => handlePaid(p)}
-                  >
-                    <span className="shop-pack-card__icon">{p.icon}</span>
-                    <span className="shop-pack-card__amount">+{formatGameNumberShort(payout)}</span>
-                    <span className="shop-pack-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'daily' ? (
-          <>
-            <div className="shop-fs__daily-head">
-              <span className="shop-fs__section-title">{t(language, 'shopDailyTitle')}</span>
-              <button
-                type="button"
-                className="shop-fs__refresh"
-                disabled={quanta < refreshCost}
-                onClick={() => dispatch({ type: 'REFRESH_DAILY_SHOP', now })}
-              >
-                {`↻ ${t(language, 'shopDailyRefresh')} · ⚛${formatGameNumberShort(refreshCost)}`}
-              </button>
-            </div>
-            <div className="shop-fs__daily-grid">
-              {roster.map((offer) => {
-                const ent = findEntityById(offer.entityId);
-                const cost = Math.ceil(outputRate * offer.priceSeconds);
-                const sold = purchased.includes(offer.slot);
-                const afford = quanta >= cost;
-                return (
-                  <button
-                    key={offer.slot}
-                    type="button"
-                    className={`shop-daily-card ${sold ? 'shop-daily-card--sold' : ''}`}
-                    style={{ '--rarity-color': RARITY_COLORS[offer.rarity] } as CSSProperties}
-                    disabled={sold || !afford}
-                    onClick={() => { dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now }); onSfx?.(); }}
-                  >
-                    {ent ? <EntityGlyph entity={ent} color={RARITY_COLORS[offer.rarity]} /> : null}
-                    <span className="shop-daily-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
-                    <span className="shop-daily-card__cost">
-                      {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="shop-fs__daily-hint">{t(language, 'shopDailyHint')}</div>
-          </>
-        ) : null}
-
-        {tab === 'boosts' ? (
-          <>
-            <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
-            <div className="shop-fs__boosts">
-              {REWARDED_AD_PRODUCTS.map((ad) => {
-                const remaining = formatRemainingMs(getBoostRemainingMs(state.shopBoosts, ad.id, now));
-                return (
-                  <article key={ad.id} className="shop-boost-card shop-boost-card--free" style={{ '--boost-color': ad.color } as CSSProperties}>
-                    <div className="shop-boost-card__icon">{ad.icon}</div>
-                    <div className="shop-boost-card__body">
-                      <div className="shop-boost-card__name">{ad.name[language]}</div>
-                      <div className="shop-boost-card__desc">{ad.description[language]}</div>
-                      {remaining ? <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div> : null}
-                    </div>
-                    <button type="button" className="shop-boost-card__buy shop-boost-card__buy--free" disabled={pendingId !== null} onClick={() => handleRewardedAd(ad)}>
-                      {ad.button[language]}
-                    </button>
-                  </article>
-                );
-              })}
-              {(() => {
-                const owned = state.hasOfflineStorageUpgrade;
-                const p = DEEP_SPACE_STORAGE;
-                return (
-                  <article className="shop-boost-card" style={{ '--boost-color': p.color } as CSSProperties}>
-                    <div className="shop-boost-card__icon">{p.icon}</div>
-                    <div className="shop-boost-card__body">
-                      <div className="shop-boost-card__name">{p.name[language]}</div>
-                      <div className="shop-boost-card__desc">{p.description[language]}</div>
-                    </div>
-                    <button type="button" className="shop-boost-card__buy" disabled={owned || pendingId !== null} onClick={() => handlePaid(p)}>
-                      {owned ? (language === 'ko' ? '보유중' : 'Owned') : (pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`)}
-                    </button>
-                  </article>
-                );
-              })()}
-            </div>
-            {Capacitor.isNativePlatform() ? (
-              <div className="shop-fs__restore">
-                <button type="button" onClick={handleRestore} disabled={pendingId !== null}>
-                  {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
+        {/* 1) Today's Shop — the loudest board so daily items read distinct. */}
+        <ShopBoard
+          title={t(language, 'shopDailyTitle')}
+          modifier="shop-board--daily"
+          action={(
+            <button
+              type="button"
+              className="shop-fs__refresh"
+              disabled={quanta < refreshCost}
+              onClick={() => dispatch({ type: 'REFRESH_DAILY_SHOP', now })}
+            >
+              {`↻ ⚛${formatGameNumberShort(refreshCost)}`}
+            </button>
+          )}
+        >
+          <div className="shop-fs__daily-grid">
+            {roster.map((offer) => {
+              const ent = findEntityById(offer.entityId);
+              const cost = shopItemMatterCost(offer.rarity, playerStageId);
+              const sold = purchased.includes(offer.slot);
+              const afford = quanta >= cost;
+              const rc = RARITY_COLORS[offer.rarity];
+              const spec = ent ? effectValueLabel(ent, language, power, 1, 1, false, false) : null;
+              const tr = ent ? EFFECT_TRAIT[ent.effect.type] : null;
+              return (
+                <button
+                  key={offer.slot}
+                  type="button"
+                  className={`shop-item-card ${sold ? 'shop-item-card--sold' : ''}`}
+                  style={{ '--rarity-color': rc } as CSSProperties}
+                  disabled={sold || !afford}
+                  onClick={() => { dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now }); onSfx?.(); }}
+                >
+                  {ent ? <TraitBadge entity={ent} className="trait-badge--card" /> : null}
+                  <span className="shop-item-card__rarity" style={{ color: rc }}>{t(language, RARITY_LABEL_KEY[offer.rarity])}</span>
+                  {ent ? <EntityGlyph entity={ent} color={rc} /> : null}
+                  <span className="shop-item-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
+                  {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={tr.accent} /> : null}
+                  {ent ? <span className="shop-item-card__desc">{entityDescription(ent, language)}</span> : null}
+                  <span className="shop-item-card__cost">
+                    {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
+                  </span>
                 </button>
-                {restoreMsg ? <div className="shop-fs__restore-msg">{restoreMsg}</div> : null}
+              );
+            })}
+          </div>
+          <div className="shop-fs__daily-hint">{t(language, 'shopDailyHint')}</div>
+        </ShopBoard>
+
+        {/* 2) Nebula Boxes (gacha) — buy with matter, reveal in place. */}
+        <ShopBoard title={t(language, 'shopGachaTitle')} modifier="shop-board--feature">
+          <div className="shop-gacha-row">
+            {GACHA_BOXES.map((box) => {
+              const cost = gachaBoxMatterCost(box.id, playerStageId);
+              const afford = quanta >= cost;
+              const odds = (['rare', 'epic', 'legendary'] as EntityRarity[])
+                .filter((r) => (box.odds[r] ?? 0) > 0)
+                .map((r) => `${t(language, RARITY_LABEL_KEY[r])} ${box.odds[r]}%`)
+                .join(' · ');
+              return (
+                <button
+                  key={box.id}
+                  type="button"
+                  className="shop-gacha-card"
+                  disabled={!afford}
+                  onClick={() => openBox(box.id)}
+                  title={`${t(language, 'shopGachaOdds')}: ${odds}`}
+                >
+                  <span className="shop-gacha-card__icon" aria-hidden="true">🎁</span>
+                  <span className="shop-gacha-card__name">{GACHA_BOX_NAME[box.id]?.[language] ?? box.id}</span>
+                  <span className="shop-gacha-card__odds">{odds}</span>
+                  <span className="shop-gacha-card__cost">⚛{formatGameNumberShort(cost)}</span>
+                </button>
+              );
+            })}
+          </div>
+          {gachaEvent && gachaEnt ? (() => {
+            const rc = RARITY_COLORS[gachaEnt.rarity];
+            const spec = effectValueLabel(gachaEnt, language, power, 1, 1, false, false);
+            const tr = EFFECT_TRAIT[gachaEnt.effect.type];
+            const tail = isTailQuality(gachaEvent.quality);
+            const again = gachaBoxMatterCost(gachaEvent.boxId, playerStageId);
+            return (
+              <div className="fusion-result fusion-result--boom shop-gacha-reveal" role="status">
+                <div
+                  className={`fusion-result__card fusion-result__card--${gachaEnt.rarity} ${tail ? 'entity-detail-card--tail' : ''}`}
+                  style={{ '--rarity-color': rc } as CSSProperties}
+                >
+                  <div className="fusion-result__rays" aria-hidden="true" />
+                  <EntityGlyph entity={gachaEnt} color={rc} />
+                  <div className="fusion-result__name">{entityName(gachaEnt, language)}</div>
+                  <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={tr.accent} primary />
+                  {tail ? <div className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round(gachaEvent.quality * 100)}%`}</div> : null}
+                </div>
+                <div className="fusion-result__actions">
+                  <button type="button" className="fusion-result__retry" disabled={quanta < again} onClick={() => openBox(gachaEvent.boxId)}>
+                    {t(language, 'shopGachaAgain')}
+                  </button>
+                  <button type="button" className="fusion-result__close" onClick={() => dispatch({ type: 'CLEAR_GACHA_EVENT', id: gachaEvent.id })}>
+                    {t(language, 'fuseClose')}
+                  </button>
+                </div>
               </div>
-            ) : null}
-          </>
-        ) : null}
+            );
+          })() : null}
+        </ShopBoard>
+
+        {/* 3) Enhance Stones + Matter Packs. */}
+        <ShopBoard title={t(language, 'shopStonesTitle')}>
+          <div className="shop-fs__stones">
+            {STONE_BUNDLES.map((count) => {
+              const cost = shopStoneMatterCost(playerStageId, count);
+              const afford = quanta >= cost;
+              return (
+                <button
+                  key={count}
+                  type="button"
+                  className="shop-stone-card"
+                  disabled={!afford}
+                  onClick={() => { dispatch({ type: 'BUY_ENHANCE_STONES', count }); onSfx?.(); }}
+                >
+                  <span className="shop-stone-card__amount">◆ {count}</span>
+                  <span className="shop-stone-card__cost">⚛{formatGameNumberShort(cost)}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
+          <div className="shop-fs__packs">
+            {MATTER_PACK_PRODUCTS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="shop-pack-card"
+                style={{ '--boost-color': p.color } as CSSProperties}
+                disabled={pendingId !== null}
+                onClick={() => handlePaid(p)}
+              >
+                <span className="shop-pack-card__icon">{p.icon}</span>
+                <span className="shop-pack-card__amount">{p.name[language]}</span>
+                <span className="shop-pack-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
+              </button>
+            ))}
+          </div>
+        </ShopBoard>
+
+        {/* 4) Boosts & storage. */}
+        <ShopBoard title={t(language, 'shopTabBoosts')}>
+          <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
+          <div className="shop-fs__boosts">
+            {REWARDED_AD_PRODUCTS.map((ad) => {
+              const remaining = formatRemainingMs(getBoostRemainingMs(state.shopBoosts, ad.id, now));
+              return (
+                <article key={ad.id} className="shop-boost-card shop-boost-card--free" style={{ '--boost-color': ad.color } as CSSProperties}>
+                  <div className="shop-boost-card__icon">{ad.icon}</div>
+                  <div className="shop-boost-card__body">
+                    <div className="shop-boost-card__name">{ad.name[language]}</div>
+                    <div className="shop-boost-card__desc">{ad.description[language]}</div>
+                    {remaining ? <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div> : null}
+                  </div>
+                  <button type="button" className="shop-boost-card__buy shop-boost-card__buy--free" disabled={pendingId !== null} onClick={() => handleRewardedAd(ad)}>
+                    {ad.button[language]}
+                  </button>
+                </article>
+              );
+            })}
+            {(() => {
+              const owned = state.hasOfflineStorageUpgrade;
+              const p = DEEP_SPACE_STORAGE;
+              return (
+                <article className="shop-boost-card" style={{ '--boost-color': p.color } as CSSProperties}>
+                  <div className="shop-boost-card__icon">{p.icon}</div>
+                  <div className="shop-boost-card__body">
+                    <div className="shop-boost-card__name">{p.name[language]}</div>
+                    <div className="shop-boost-card__desc">{p.description[language]}</div>
+                  </div>
+                  <button type="button" className="shop-boost-card__buy" disabled={owned || pendingId !== null} onClick={() => handlePaid(p)}>
+                    {owned ? (language === 'ko' ? '보유중' : 'Owned') : (pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`)}
+                  </button>
+                </article>
+              );
+            })()}
+          </div>
+          {Capacitor.isNativePlatform() ? (
+            <div className="shop-fs__restore">
+              <button type="button" onClick={handleRestore} disabled={pendingId !== null}>
+                {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
+              </button>
+              {restoreMsg ? <div className="shop-fs__restore-msg">{restoreMsg}</div> : null}
+            </div>
+          ) : null}
+        </ShopBoard>
       </div>
       </section>
     </div>

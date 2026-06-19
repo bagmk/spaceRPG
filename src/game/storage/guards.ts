@@ -138,7 +138,8 @@ export function isEntityInstance(value: unknown): value is EntityInstance {
     isFiniteNumber(r.count) &&
     isFiniteNumber(r.level) &&
     (r.invested === undefined || isFiniteNumber(r.invested)) &&
-    (r.investedStones === undefined || isFiniteNumber(r.investedStones))
+    (r.investedStones === undefined || isFiniteNumber(r.investedStones)) &&
+    (r.quality === undefined || isFiniteNumber(r.quality)) // #50 quality (v23)
   );
 }
 

@@ -209,28 +209,29 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // Overhaul-3 recalibration (scripts/entropy-gate-sim.mjs, reference pinned to
   // realPlayTargetSec, ALL INVARIANTS PASS): reflects #39 stage-gated slot
-  // pacing (click slot2@S5/slot3@S9, rift slot2@S7/slot3@S12) and #40 Lv3 stone
-  // threshold. The old ladder's stage-4 spike (slot-2-at-stage-4) moved later as
-  // slots now open slower. The explosive click MATTER multiplier (#39) is
-  // decoupled from entropy and does NOT enter this calibration. Re-run the sim
-  // after touching the gear curve / slot pacing / costs / level bonus and
-  // re-paste; the v16 ladder stays FROZEN in storage/migrate.ts for the remap.
-  1: 3.291e3,
-  2: 2.152e4,
-  3: 8.479e4,
-  4: 1.931e5,
-  5: 4.153e5,
-  6: 1.176e6,
-  7: 2.694e6,
-  8: 5.875e6,
-  9: 1.192e7,
-  10: 2.216e7,
-  11: 3.915e7,
-  12: 6.496e7,
-  13: 9.412e7,
-  14: 1.704e8,
-  15: 3.827e8,
-  16: 4.686e8,
+  // pacing (click slot2@S5/slot3@S9, rift slot2@S7/slot3@S12), #40 Lv3 stone
+  // threshold, AND #50 item quality (the sim models equipped gear at
+  // QUALITY_SIM_EQUIPPED → every click/auto item ×~1.16, so the ladder rises
+  // ~13% vs the pre-quality calibration). The explosive click MATTER multiplier
+  // (#39) is decoupled from entropy and does NOT enter this calibration. Re-run
+  // the sim after touching the gear curve / slot pacing / costs / level bonus /
+  // quality and re-paste; the v16 ladder stays FROZEN in storage/migrate.ts.
+  1: 3.561e3,
+  2: 2.339e4,
+  3: 9.402e4,
+  4: 2.149e5,
+  5: 4.772e5,
+  6: 1.386e6,
+  7: 3.199e6,
+  8: 7.012e6,
+  9: 1.464e7,
+  10: 2.777e7,
+  11: 4.954e7,
+  12: 8.249e7,
+  13: 1.197e8,
+  14: 2.143e8,
+  15: 4.823e8,
+  16: 5.903e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -466,13 +467,17 @@ export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
 /** Fraction of a consumed stack's invested enhance quanta refunded on fusion. */
 export const ENHANCE_REFUND_RATE = 0.6;
 
-// ── 강화석 (enhance stones, P1) — the Lv5+ enhancement currency, minted by
-//    failed fusions. Levels 1→5 still cost matter; 5→cap cost stones + carry
-//    failure risk (운빨 존망: mostly level-down, destroy only near the cap). ──
-/** Enhancing FROM this level and up costs 강화석 (+matter) AND can FAIL — #40
- *  lowered 5→3 so risk/breakage bites early (Lv1→3 are safe matter levels). */
+// ── 강화 risk phase (#47) — every enhance costs MATTER ONLY. From this level up
+//    an attempt can FAIL; a failed UNPROTECTED attempt DESTROYS one copy and mints
+//    a RANDOM amount of 강화석 (no level-down). 강화석 is spent ONLY by 보호(protect),
+//    which negates the loss. So 강화석 is purely a "insurance / break refund"
+//    currency, minted by failed fusions AND failed enhances. ──
+/** Enhancing FROM this level and up can FAIL — #40 lowered 5→3 so risk bites
+ *  early (Lv1→3 are safe matter levels; Lv3+ risk losing the item). */
 export const ENHANCE_STONE_THRESHOLD = 3;
-/** Stones for the first stone-phase level (the 5→6 step), by rarity. */
+/** Base 강화석 cost unit, by rarity — now ONLY the anchor for the 보호 cost
+ *  (getEnhanceProtectStoneCost) AND the break-refund scale. Normal enhance is
+ *  matter-only, so this is never charged for a plain attempt. */
 export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8, mythic: 12 };
 /** Each further stone-phase level multiplies the stone cost by this. Overhaul-2
  *  (🅠1): 1.5 → 1.0 (FLAT — every stone-phase level costs ENHANCE_STONE_BASE). */
@@ -488,10 +493,11 @@ export const ENHANCE_FAIL_BASE = 0.25;
 export const ENHANCE_FAIL_PER_LEVEL = 0.06;
 /** Fail chance ceiling. */
 export const ENHANCE_FAIL_MAX = 0.55;
-/** Destruction is only possible within this many levels of the rarity cap. */
-export const ENHANCE_DESTROY_WINDOW_FROM_CAP = 3;
-/** Of failures inside the destroy window, this fraction destroy a copy (else level-down). */
-export const ENHANCE_DESTROY_CHANCE_ON_FAIL = 0.25;
+/** #47: a failed UNPROTECTED enhance destroys one copy and mints a RANDOM amount
+ *  of 강화석 in [min, max] by rarity (losing a high-rarity item refunds more, so
+ *  the loss is softened). The granted count is the only thing shown on the card. */
+export const ENHANCE_BREAK_STONE_MIN: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 3, legendary: 5, mythic: 8 };
+export const ENHANCE_BREAK_STONE_MAX: Record<EntityRarity, number> = { common: 4, rare: 7, epic: 11, legendary: 16, mythic: 24 };
 /** Protection ("보호 강화") costs this × the level's stone cost EXTRA; a failed
  *  protected attempt loses no level and destroys nothing (stones still spent). */
 export const ENHANCE_PROTECT_STONE_MULT = 1.0;
@@ -512,6 +518,23 @@ export const ENHANCE_MATTER_PAYOUT_FAIL = 0.5;
 export const FUSION_CAP_DUP_REFUND_FRAC = 0.5;
 /** When all fusion inputs share a glyph family, the output stays in that family this often. */
 export const FUSION_FAMILY_BIAS = 0.6;
+
+// ── #50 ITEM QUALITY (가우시언 테일) ───────────────────────────────────────────
+// Every acquired copy rolls a gaussian quality score in [0,1] (mean ~0.5, rare
+// tail). A stack keeps its BEST roll. quality multiplies the item's primary
+// effect AND its scaling substats by `1 + quality*QUALITY_MAX_BONUS`; the top
+// tail earns a subtle GOLD card border. Deterministic per-id substats stay; this
+// is the ONLY per-copy variation, so two copies of the same item can differ.
+/** Top-quality (score 1.0) item is this much stronger than a 0.0 roll. */
+export const QUALITY_MAX_BONUS = 0.25;
+/** quality ≥ this → "tail" item: gold border + the strongest rolls. ~top 3% (≈1.8σ). */
+export const QUALITY_TAIL_THRESHOLD = 0.8;
+/** Quality the sim assumes for the FARMED, equipped gear it models (stacks keep
+ *  the max roll, so equipped gear trends high). Drives the gate recalibration. */
+export const QUALITY_SIM_EQUIPPED = 0.65;
+/** Quality stamped on pre-v23 inventory at migration — neutral-average, so old
+ *  gear is neither nerfed nor instantly gold (tail threshold is far above this). */
+export const QUALITY_MIGRATION_DEFAULT = 0.5;
 
 // ── Secondary stats (A안 — deterministic per-entity composite stats) ────────
 
@@ -617,38 +640,90 @@ export const ENHANCE_UNLOCK_STAGE_ID = 3;
 /** Stage at which the shop unlocks (1-based). boosts.ts re-exports the predicate. */
 export const SHOP_UNLOCK_STAGE_ID = 3;
 
-// ── Shop economy (Overhaul-2 cash-shop rework) ──────────────────────────────
+// ── Shop economy (#43 redesign) ─────────────────────────────────────────────
 /**
- * Matter packs (USD IAP): each grants matter scaled to the player's CURRENT
- * output so a pack stays relevant at every stage. Payout = (clickPower +
- * autoRate) × payoutMult; bigger packs cost more USD but give more matter per
- * dollar (bulk discount). Priced/credited in the reducer from a state snapshot.
+ * Matter packs (USD IAP): each grants matter as a FRACTION of the player's
+ * current STAGE anchor (ENTITY_COST_ANCHORS), by pack index (SHOP_PACK_MATTER_FRAC)
+ * — so a pack stays stage-relevant WITHOUT coupling to click/auto output (#43).
  */
-export interface MatterPackSpec { id: string; priceUSD: number; payoutMult: number; }
+export interface MatterPackSpec { id: string; priceUSD: number; }
 export const MATTER_PACKS: MatterPackSpec[] = [
-  { id: 'pack_1', priceUSD: 0.99,  payoutMult: 10_000 },
-  { id: 'pack_2', priceUSD: 1.99,  payoutMult: 22_000 },
-  { id: 'pack_3', priceUSD: 4.99,  payoutMult: 60_000 },
-  { id: 'pack_4', priceUSD: 9.99,  payoutMult: 130_000 },
-  { id: 'pack_5', priceUSD: 19.99, payoutMult: 280_000 },
-  { id: 'pack_6', priceUSD: 49.99, payoutMult: 750_000 },
+  { id: 'pack_1', priceUSD: 0.99 },
+  { id: 'pack_2', priceUSD: 1.99 },
+  { id: 'pack_3', priceUSD: 4.99 },
+  { id: 'pack_4', priceUSD: 9.99 },
+  { id: 'pack_5', priceUSD: 19.99 },
+  { id: 'pack_6', priceUSD: 49.99 },
 ];
-/** Matter price of one 강화석 = (clickPower + autoRate) × this (≈ seconds of income). */
-export const STONE_MATTER_COST_SECONDS = 300;
+/** Matter granted by each USD pack = ENTITY_COST_ANCHORS[stage] × this[packIndex]. */
+export const SHOP_PACK_MATTER_FRAC: number[] = [0.5, 1.1, 3, 6.5, 14, 37];
 /** 강화석 bundles offered for matter. */
 export const STONE_BUNDLES: number[] = [1, 10, 100];
 
-/** Daily shop: 8 entity offers/day, rarity by weighted odds, matter-priced. */
+// #43 PRICING: every shop matter (⚛) cost = ENTITY_COST_ANCHORS[clampStage(stage)]
+// × a fraction, scaled GEOMETRICALLY by rarity/rank — NEVER from click/auto output.
+// So prices differ per stage (the anchor ladder is ~15-20×/stage) and per rarity,
+// and you must advance to afford higher tiers. Helpers live in src/game/shop/pricing.ts.
+/** Matter price of a shop item = anchor × this[rarity] × SHOP_RANK_STEP^rank. */
+export const SHOP_RARITY_PRICE_FRAC: Record<EntityRarity, number> = { common: 0.10, rare: 0.45, epic: 1.6, legendary: 4.5, mythic: 12 };
+/** Geometric premium per rank step (rarity index + gacha-box rank). */
+export const SHOP_RANK_STEP = 1.35;
+/** Rank index per rarity — the geometric exponent base for shop pricing. */
+export const SHOP_RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+/** Matter price of one 강화석 = anchor × this. */
+export const SHOP_STONE_PRICE_FRAC = 0.18;
+/** Daily-refresh matter cost = anchor × this[refreshCount] (clamped), escalating. */
+export const SHOP_REFRESH_FRAC: number[] = [0.05, 0.15, 0.4, 1.0];
+
+/** Daily shop: 8 entity offers/day, rarity by weighted odds (gate-clamped by stage). */
 export const DAILY_SHOP_SLOTS = 8;
 export const DAILY_SHOP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
   common: 52, rare: 30, epic: 14, legendary: 4, mythic: 0,
 };
-/** Matter price of a daily offer = (clickPower + autoRate) × this, by rarity. */
-export const DAILY_SHOP_PRICE_SECONDS: Record<EntityRarity, number> = {
-  common: 60, rare: 240, epic: 900, legendary: 3000, mythic: 9000,
-};
-/** Daily refresh costs (clickPower+autoRate) × this, escalating per refresh that day. */
-export const DAILY_SHOP_REFRESH_SECONDS: number[] = [120, 360, 900, 2400];
+/** Daily roster pool draws from the most recent this-many stages (recency bias). */
+export const DAILY_ROSTER_LOOKBACK = 4;
+
+/** 뽑기 상자 (gacha) — a MATTER sink: buy a box, roll a random entity by its odds
+ *  table (gate-clamped to RARITY_STAGE_GATES), apply the #50 quality roll, reveal.
+ *  Price = ENTITY_COST_ANCHORS[clampStage(stage)] × priceFrac (negative-EV sink). */
+export interface GachaBoxSpec { id: string; priceFrac: number; rank: number; odds: Record<EntityRarity, number>; }
+export const GACHA_BOXES: GachaBoxSpec[] = [
+  { id: 'box_faint',  priceFrac: 0.6,  rank: 0, odds: { common: 60, rare: 30, epic: 9,  legendary: 1,  mythic: 0 } },
+  { id: 'box_bright', priceFrac: 3.0,  rank: 1, odds: { common: 25, rare: 42, epic: 25, legendary: 7,  mythic: 1 } },
+  { id: 'box_prime',  priceFrac: 12.0, rank: 2, odds: { common: 0,  rare: 30, epic: 45, legendary: 20, mythic: 4 } },
+];
+
+// ── #44 HEXAGON BINGO set bonuses ───────────────────────────────────────────
+// 7 equip slots in a hexagon: 0-2 = click (outer), 3-5 = rift (outer), 6 = wild
+// (center). A LINE of 3 completes when all 3 are filled and share an equip
+// FAMILY (getEquipSetKey); on the 3 center lines the wild (slot 6) is a joker —
+// it must be filled but its family is ignored, the two outer endpoints must match.
+// Each completed line feeds an OFF-GATE multiplier for its lane (click →
+// clickMatterMult only, auto → flat-auto only), so the bonus is strong but never
+// touches the entropy gate (NO re-sim). Ring order 0,1,2,3,4,5 → arcs of 3.
+export type HexLineKind = 'center' | 'pureClick' | 'pureRift' | 'mixedClick' | 'mixedRift';
+export const HEX_BINGO_LINES: { slots: [number, number, number]; kind: HexLineKind }[] = [
+  { slots: [0, 6, 3], kind: 'center' },
+  { slots: [1, 6, 4], kind: 'center' },
+  { slots: [2, 6, 5], kind: 'center' },
+  { slots: [0, 1, 2], kind: 'pureClick' },
+  { slots: [3, 4, 5], kind: 'pureRift' },
+  { slots: [1, 2, 3], kind: 'mixedClick' }, // 1,2 click + 3 rift → majority click
+  { slots: [5, 0, 1], kind: 'mixedClick' }, // 0,1 click + 5 rift → majority click
+  { slots: [2, 3, 4], kind: 'mixedRift' },  // 3,4 rift + 2 click → majority rift
+  { slots: [4, 5, 0], kind: 'mixedRift' },  // 4,5 rift + 0 click → majority rift
+];
+/** Per completed line, the bonus it adds to its lane's sum (strong / 매콤, off-gate). */
+export const HEX_LINE_BONUS = 0.5;
+/** Pure-lane arcs (all-click or all-rift) count this many line-units (double). */
+export const HEX_PURE_LINE_MULT = 2;
+/** Creative "color harmony" kicker: a completed line whose items also share a
+ *  RARITY adds this to its lane (same-family is the base; same-rarity is a treat). */
+export const HEX_HARMONY_BONUS = 0.3;
+/** Bonus SUM per lane is capped here → lane multiplier maxes at 1 + this. */
+export const HEX_BONUS_CAP = 5;
+/** Stage at which the 7th (center/wild) slot unlocks. */
+export const HEX_WILD_UNLOCK_STAGE = 9;
 
 // ── Stage milestones (Overhaul-2: per-stage "Achievement Tracks") ───────────
 /**

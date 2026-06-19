@@ -840,6 +840,8 @@ export function GameScreen({
               dropRoll: Math.random(),
               dropPickRoll: Math.random(),
               dropStageRoll: Math.random(),
+              qualityRoll1: Math.random(),
+              qualityRoll2: Math.random(),
               x: ox,
               y: oy,
               forceCrit: forceCrit || mechanicResult?.forceCrit,
@@ -864,6 +866,8 @@ export function GameScreen({
               dropRoll: Math.random(),
               dropPickRoll: Math.random(),
               dropStageRoll: Math.random(),
+              qualityRoll1: Math.random(),
+              qualityRoll2: Math.random(),
             })
           }
         />
@@ -907,9 +911,9 @@ export function GameScreen({
             language={language}
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
-            onEnhance={(entityId, protect) => { dispatch({ type: 'ENHANCE_ENTITY', entityId, failRoll: Math.random(), destroyRoll: Math.random(), protect }); soundManager?.playEntityLevelUp(); }}
+            onEnhance={(entityId, protect) => { dispatch({ type: 'ENHANCE_ENTITY', entityId, failRoll: Math.random(), stoneRoll: Math.random(), protect }); soundManager?.playEntityLevelUp(); }}
             onFuse={(inputEntityIds) => {
-              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random() });
+              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(), qualityRoll: Math.random() });
               soundManager?.playEntityLevelUp();
             }}
             onFuseBatch={(inputEntityIds) => {
@@ -920,7 +924,7 @@ export function GameScreen({
                 type: 'FUSE_BATCH',
                 inputEntityIds,
                 rolls: Array.from({ length: trioCount }, () => ({
-                  rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(),
+                  rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(), qualityRoll: Math.random(),
                 })),
               });
               soundManager?.playEntityLevelUp();

@@ -147,6 +147,31 @@ describe('save migration', () => {
     expect(migrated?.riftSlots).toContain('s13_07');
   });
 
+  it('#50 v23 per-item quality round-trips; pre-v23 entries stay neutral (undefined)', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 23,
+        inventory: [
+          { entityId: 's13_07', count: 2, level: 3, quality: 0.91 }, // a gold-tail specimen
+          { entityId: 's10_01', count: 1, level: 1 },                 // pre-quality / legacy entry
+        ],
+        almanacCollected: { 13: ['s13_07'], 10: ['s10_01'] },
+      }),
+    );
+
+    const migrated = loadGame();
+    expect(migrated?.inventory.find((e) => e.entityId === 's13_07')?.quality).toBeCloseTo(0.91);
+    // An entry with no quality stays undefined → neutral (×1.0), never invented.
+    expect(migrated?.inventory.find((e) => e.entityId === 's10_01')?.quality).toBeUndefined();
+  });
+
   it('v16 resets the offline window once and clamps corrupt inventory entries', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

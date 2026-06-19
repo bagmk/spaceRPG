@@ -9,10 +9,9 @@
 import {
   DAILY_SHOP_SLOTS,
   DAILY_SHOP_RARITY_WEIGHTS,
-  DAILY_SHOP_PRICE_SECONDS,
-  DAILY_SHOP_REFRESH_SECONDS,
+  DAILY_ROSTER_LOOKBACK,
 } from '../balance';
-import { pickEntityByRarity } from '../entities/drops';
+import { pickEntityByRarity, getRarityGateRamp } from '../entities/drops';
 import type { EntityRarity } from '../entities/types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -46,11 +45,16 @@ function mulberry32(a: number): () => number {
   };
 }
 
-function pickRarity(roll: number): EntityRarity {
-  const total = RARITY_ORDER.reduce((sum, r) => sum + (DAILY_SHOP_RARITY_WEIGHTS[r] ?? 0), 0);
+// #43: rarity odds are GATE-CLAMPED per stage — a rarity's base weight is scaled
+// by getRarityGateRamp so locked tiers contribute 0 (s2 = pure commons; epics
+// trickle in at S7; legendaries at S12). So the roster differs per stage for free.
+function pickRarity(roll: number, playerStageId: number): EntityRarity {
+  const weight = (r: EntityRarity) => (DAILY_SHOP_RARITY_WEIGHTS[r] ?? 0) * getRarityGateRamp(r, playerStageId);
+  const total = RARITY_ORDER.reduce((sum, r) => sum + weight(r), 0);
+  if (total <= 0) return 'common';
   let cursor = roll * total;
   for (const r of RARITY_ORDER) {
-    cursor -= DAILY_SHOP_RARITY_WEIGHTS[r] ?? 0;
+    cursor -= weight(r);
     if (cursor < 0) return r;
   }
   return 'common';
@@ -60,38 +64,29 @@ export interface DailyShopOffer {
   slot: number;
   entityId: string;
   rarity: EntityRarity;
-  /** Matter price = (clickPower + autoRate) × priceSeconds. */
-  priceSeconds: number;
 }
 
 /**
  * Deterministic daily roster — stable for the same (dateKey, refreshCount,
- * playerStageId). Each slot rolls a rarity by the odds table, then an entity of
- * that rarity from a random reachable stage (1..playerStageId).
+ * playerStageId). Each slot rolls a stage-gated rarity, then an entity from a
+ * RECENT stage (within DAILY_ROSTER_LOOKBACK of the player) so the roster skews
+ * to the current era. Prices are NOT stored — the reducer/UI derive them from
+ * (rarity, playerStageId) via shop/pricing.ts at display + buy time.
  */
 export function generateDailyShop(dateKey: string, refreshCount: number, playerStageId: number): DailyShopOffer[] {
   const rng = mulberry32(hashSeed(`${dateKey}#${refreshCount}#${playerStageId}`));
   const maxStage = Math.max(1, playerStageId);
   const offers: DailyShopOffer[] = [];
   for (let i = 0; i < DAILY_SHOP_SLOTS; i++) {
-    const rarity = pickRarity(rng());
-    const stage = 1 + Math.floor(rng() * maxStage);
+    const rarity = pickRarity(rng(), maxStage);
+    // Recency bias: draw from the most recent DAILY_ROSTER_LOOKBACK stages.
+    const span = Math.min(maxStage, DAILY_ROSTER_LOOKBACK);
+    const stage = Math.max(1, maxStage - Math.floor(rng() * span));
     const ent =
-      pickEntityByRarity(Math.min(stage, maxStage), rarity, rng(), true) ??
+      pickEntityByRarity(stage, rarity, rng(), true) ??
       pickEntityByRarity(1, 'common', rng(), true);
     if (!ent) continue;
-    offers.push({
-      slot: i,
-      entityId: ent.id,
-      rarity: ent.rarity,
-      priceSeconds: DAILY_SHOP_PRICE_SECONDS[ent.rarity] ?? 60,
-    });
+    offers.push({ slot: i, entityId: ent.id, rarity: ent.rarity });
   }
   return offers;
-}
-
-/** (clickPower+autoRate) × this = matter cost of the next refresh that day. */
-export function dailyRefreshCostSeconds(refreshCount: number): number {
-  const arr = DAILY_SHOP_REFRESH_SECONDS;
-  return arr[Math.min(Math.max(0, refreshCount), arr.length - 1)] ?? arr[arr.length - 1];
 }

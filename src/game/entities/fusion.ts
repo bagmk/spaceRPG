@@ -32,6 +32,7 @@ import { getSetKey } from './effects';
 import { getCodexSubsetIdForEntity } from './codexSets';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from './stageItems';
 import { pickEntityByRarity } from './drops';
+import { bestQuality } from './quality';
 import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -306,6 +307,7 @@ export function applyFusionOutput(
   inventory: EntityInstance[],
   output: StageEntity,
   _playerStageId?: number,
+  quality?: number,
 ): FusionOutputResult {
   const existing = inventory.find((e) => e.entityId === output.id);
   if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
@@ -317,13 +319,13 @@ export function applyFusionOutput(
   if (existing) {
     return {
       inventory: inventory.map((e) =>
-        e.entityId === output.id ? { ...e, count: e.count + 1 } : e,
+        e.entityId === output.id ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, quality) } : e,
       ),
       capRefund: 0,
     };
   }
   return {
-    inventory: [...inventory, { entityId: output.id, count: 1, level: 1 }],
+    inventory: [...inventory, { entityId: output.id, count: 1, level: 1, ...(quality !== undefined ? { quality } : {}) }],
     capRefund: 0,
   };
 }

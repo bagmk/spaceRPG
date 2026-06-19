@@ -16,20 +16,18 @@ import {
 import {
   getEnhanceCost,
   getEnhanceLevelCap,
-  getEnhanceStoneCost,
   getEnhanceProtectStoneCost,
   getEnhanceFailChance,
   isEnhanceStonePhase,
-  isEnhanceDestroyEligible,
+  getEnhanceBreakStoneReward,
 } from '../entities/enhance';
+import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
 import {
   FUSION_ENHANCE_COST_BASE,
   FUSION_BURST_REF_COST_FRAC,
   FUSION_INPUT_COUNT,
   RARITY_STAGE_GATES,
-  ENHANCE_DESTROY_CHANCE_ON_FAIL,
-  ENHANCE_STONE_THRESHOLD,
   ENHANCE_MATTER_PAYOUT_SUCCESS,
   ENHANCE_MATTER_PAYOUT_FAIL,
   FUSION_FAIL_STONES_BY_TIER,
@@ -148,11 +146,16 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   const cost = getEntityCost(entity, currentCount, currentStage.id);
   if (state.quanta < cost) return state;
 
+  // #50: a purchased copy rolls quality too; the stack keeps its best specimen.
+  const rolledQuality =
+    action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
+      ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
+      : undefined;
   const updatedInventory = existing
     ? state.inventory.map((e) =>
-        e.entityId === existing.entityId ? { ...e, count: e.count + 1 } : e,
+        e.entityId === existing.entityId ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, rolledQuality) } : e,
       )
-    : [...state.inventory, { entityId: action.entityId, count: 1, level: 1 }];
+    : [...state.inventory, { entityId: action.entityId, count: 1, level: 1, ...(rolledQuality !== undefined ? { quality: rolledQuality } : {}) }];
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
@@ -173,6 +176,8 @@ interface FuseRolls {
   rarityRoll: number;
   pickRoll: number;
   stageRoll?: number;
+  /** #50 — gaussian quality roll for the fused output (paired with pickRoll). */
+  qualityRoll?: number;
 }
 
 interface OneFusionResult {
@@ -250,7 +255,11 @@ function fuseOnce(
   if (!output) return null;
 
   const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
-  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion);
+  // #50: the fused output rolls quality too — fusion is the headline "pull", so a
+  // lucky tail here is the most exciting place to land a gold item.
+  const fusedQuality =
+    rolls.qualityRoll !== undefined ? rollQualityScore(rolls.qualityRoll, rolls.pickRoll) : undefined;
+  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality);
   const totalRefund = enhanceRefund + capRefund;
   // RARITY-UP IS THE ACTUAL OUTPUT vs INPUT (#42-fix): rollFusionRarity can roll
   // "up" but pickFusionOutput falls back to a lower rarity when the rolled output
@@ -412,10 +421,11 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
 }
 
 /**
- * ENHANCE_ENTITY (강화소): level an owned stack directly. Lv1→5 spend matter and
- * always succeed; Lv5+ spend 강화석 and CAN FAIL — mostly a level-down, with a
- * small chance to destroy a copy near the cap. "보호 강화" (protect) costs extra
- * stones and negates any loss on a failed attempt (운빨 존망겜, P1).
+ * ENHANCE_ENTITY (강화소): level an owned stack directly. The base cost is MATTER
+ * ONLY at every level (stage-independent). Lv1→3 always succeed; from Lv3 an
+ * attempt CAN FAIL (#47) — a failed UNPROTECTED attempt DESTROYS one copy and
+ * mints a RANDOM amount of 강화석 (no level-down). 강화석 is spent only to
+ * 보호(protect), which negates the loss on a failed attempt.
  */
 export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
@@ -449,52 +459,55 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     });
   }
 
-  // ── Stone phase (Lv ≥ 5): pay 강화석 AND matter, can fail. ──
-  // 강화석만 쓰던 버그 수정 — stone-phase enhancement also costs matter (the same
-  // stage-independent quanta cost as the matter phase), so 강화 always spends both.
+  // ── Risk phase (Lv ≥ 3, #47): MATTER-only base cost, can fail. 강화석 is spent
+  //    ONLY to 보호(protect). A failed unprotected attempt destroys one copy and
+  //    mints random 강화석 (no level-down). ──
   const protect = action.protect === true;
   const matterCost = getEnhanceCost(entity, level, stageId);
-  const stoneCost = getEnhanceStoneCost(entity, level);
   const protectCost = protect ? getEnhanceProtectStoneCost(entity, level) : 0;
-  const totalStones = stoneCost + protectCost;
-  if (state.enhanceStones < totalStones || state.quanta < matterCost) return state;
+  // Need matter for the attempt, and stones only if protecting.
+  if (state.quanta < matterCost || state.enhanceStones < protectCost) return state;
 
   const failChance = getEnhanceFailChance(level);
   const succeeded = (action.failRoll ?? 1) >= failChance;
-  const nextStones = state.enhanceStones - totalStones;
 
-  let outcome: 'up' | 'down' | 'break' | 'protected';
-  let nextLevel = level;
-  let destroyed = false;
+  // ── Success: matter-only cost, level up, small matter payback. ──
   if (succeeded) {
-    outcome = 'up';
-    nextLevel = level + 1;
-  } else if (protect) {
-    outcome = 'protected'; // loss negated — stones still spent
-  } else if (isEnhanceDestroyEligible(entity, level) && (action.destroyRoll ?? 1) < ENHANCE_DESTROY_CHANCE_ON_FAIL) {
-    outcome = 'break';
-    destroyed = true;
-  } else {
-    outcome = 'down';
-    nextLevel = Math.max(ENHANCE_STONE_THRESHOLD, level - 1); // never below the matter-bought line
+    const payout = Math.ceil(matterCost * ENHANCE_MATTER_PAYOUT_SUCCESS);
+    return withCurrentUniverseEndingProgress({
+      ...state,
+      quanta: state.quanta - matterCost + payout,
+      enhanceStones: state.enhanceStones - protectCost, // 0 unless protecting
+      eventCounter: eventId,
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
+      inventory: state.inventory.map((e) =>
+        e.entityId === owned.entityId ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + matterCost } : e,
+      ),
+    });
   }
 
-  // Apply to the stack. A break consumes one copy and resets the stack's level;
-  // if it empties, drop the entry's slot references.
-  let nextInventory = state.inventory.map((e) => {
-    if (e.entityId !== owned.entityId) return e;
-    const investedStones = succeeded ? (e.investedStones ?? 0) + stoneCost : (e.investedStones ?? 0);
-    if (destroyed) {
-      return { ...e, count: e.count - 1, level: 1, investedStones: 0 };
-    }
-    return { ...e, level: nextLevel, investedStones };
-  });
-  // #40: matter payout — a small reward on success, a larger consolation on a
-  // failed attempt (so a fail still hands back some matter). Matter-only, so it
-  // never touches the entropy gate.
-  const payout = Math.ceil(matterCost * (succeeded ? ENHANCE_MATTER_PAYOUT_SUCCESS : ENHANCE_MATTER_PAYOUT_FAIL));
-  let nextState: GameState = { ...state, enhanceStones: Math.max(0, nextStones), quanta: state.quanta - matterCost + payout };
-  if (destroyed && (nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
+  // ── Failed + 보호: loss negated. Protect stones spent, matter spent (consolation payout). ──
+  if (protect) {
+    const payout = Math.ceil(matterCost * ENHANCE_MATTER_PAYOUT_FAIL);
+    return withCurrentUniverseEndingProgress({
+      ...state,
+      quanta: state.quanta - matterCost + payout,
+      enhanceStones: Math.max(0, state.enhanceStones - protectCost),
+      eventCounter: eventId,
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'protected', level, payout },
+    });
+  }
+
+  // ── Failed unprotected: DESTROY one copy + mint random 강화석. No matter charged
+  //    (the lost item IS the cost); the card shows only the 강화석 gained. ──
+  const stonesEarned = getEnhanceBreakStoneReward(entity, action.stoneRoll ?? 0.5);
+  let nextInventory = state.inventory.map((e) =>
+    e.entityId === owned.entityId
+      ? { ...e, count: e.count - 1, level: e.count - 1 <= 0 ? e.level : 1, investedStones: 0 }
+      : e,
+  );
+  let nextState: GameState = { ...state, enhanceStones: state.enhanceStones + stonesEarned };
+  if ((nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
     nextInventory = nextInventory.filter((e) => e.entityId !== owned.entityId);
     nextState = {
       ...nextState,
@@ -507,6 +520,6 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     ...nextState,
     inventory: nextInventory,
     eventCounter: eventId,
-    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome, level: destroyed ? 1 : nextLevel, payout },
+    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'break', level, stonesEarned },
   }));
 }

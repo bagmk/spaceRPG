@@ -34,7 +34,7 @@ import {
 } from './reducers/stage';
 import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
-import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop } from './reducers/shop';
+import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox } from './reducers/shop';
 import {
   handleAdminNextStage,
   handleAdminPrevStage,
@@ -57,6 +57,7 @@ import {
   handleClearFusionEvent,
   handleClearEnhanceEvent,
   handleClearQuestClaimEvent,
+  handleClearGachaEvent,
   handleClearCollisionEvent,
   handleClearEncounterEvent,
 } from './reducers/meta';
@@ -87,6 +88,9 @@ export type GameAction =
       dropPickRoll?: number;
       /** 0..1 — which stage's pool the drop comes from (absent → current stage). */
       dropStageRoll?: number;
+      /** #50 — two 0..1 rolls → gaussian quality for a dropped copy (absent → neutral). */
+      qualityRoll1?: number;
+      qualityRoll2?: number;
     }
   | { type: 'START_CONDENSE'; now: number }
   | { type: 'ADVANCE_STAGE'; now: number }
@@ -113,6 +117,9 @@ export type GameAction =
       dropPickRoll?: number;
       /** 0..1 — which stage's pool the drop comes from (absent → current stage). */
       dropStageRoll?: number;
+      /** #50 — two 0..1 rolls → gaussian quality for a dropped copy (absent → neutral). */
+      qualityRoll1?: number;
+      qualityRoll2?: number;
     }
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
@@ -127,23 +134,26 @@ export type GameAction =
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
   | { type: 'MARK_CODEX_SEEN' }
   | { type: 'MARK_PANEL_HINT'; hintId: string }
-  | { type: 'PURCHASE_ENTITY'; entityId: string }
+  | { type: 'PURCHASE_ENTITY'; entityId: string; qualityRoll1?: number; qualityRoll2?: number }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
-  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number }
+  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number; qualityRoll?: number }
   // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
-  | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number }[] }
-  | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; destroyRoll?: number; protect?: boolean }
+  | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number; qualityRoll?: number }[] }
+  | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; stoneRoll?: number; protect?: boolean }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
   | { type: 'CLEAR_QUEST_CLAIM_EVENT'; id: number }
+  | { type: 'CLEAR_GACHA_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
   | { type: 'BUY_ENHANCE_STONES'; count: number }
   | { type: 'BUY_DAILY_ITEM'; slot: number; now: number }
   | { type: 'REFRESH_DAILY_SHOP'; now: number }
+  // #43 gacha: rolls injected at dispatch (Math.random()) so the reducer stays pure.
+  | { type: 'OPEN_GACHA_BOX'; boxId: string; rolls: { rarityRoll: number; stageRoll: number; pickRoll: number; q1: number; q2: number } }
   | { type: 'SYNC_DAILY_SHOP'; now: number };
 
 // ---------------------------------------------------------------------------
@@ -234,6 +244,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'BUY_ENHANCE_STONES':    return handleBuyEnhanceStones(state, action);
     case 'BUY_DAILY_ITEM':        return handleBuyDailyItem(state, action);
     case 'REFRESH_DAILY_SHOP':    return handleRefreshDailyShop(state, action);
+    case 'OPEN_GACHA_BOX':        return handleOpenGachaBox(state, action);
     case 'SYNC_DAILY_SHOP':       return handleSyncDailyShop(state, action);
     case 'ADMIN_NEXT_STAGE':      return handleAdminNextStage(state, action);
     case 'ADMIN_PREV_STAGE':      return handleAdminPrevStage(state, action);
@@ -263,6 +274,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);
     case 'CLEAR_QUEST_CLAIM_EVENT': return handleClearQuestClaimEvent(state, action);
+    case 'CLEAR_GACHA_EVENT':     return handleClearGachaEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
     default: {
       const exhaustiveAction: never = action;

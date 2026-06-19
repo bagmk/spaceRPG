@@ -69,8 +69,15 @@ const GATE_RAMP = 3;
 // Overhaul-2 🅠1: growth 2.2 → 1.0 (FLAT per level) — lockstep with balance.ts.
 const ENHANCE_COST_FACTOR = 1.5;
 const ENHANCE_COST_GROWTH = 1.0;
-// P1 강화석: Lv1→5 matter, Lv5+ stones (minted by failed fusions). The stone
-// budget per stage = expected fusions × fail rate × stones-per-fail(best rarity).
+// #47 reinterpretation: enhance is now MATTER-ONLY at every level. 강화석 are spent
+// only to 보호(protect) a risk-phase attempt; an unprotected fail DESTROYS the item.
+// A rational player climbs the risk phase by protecting every attempt, so the
+// reliably-reachable level is still gated by the 강화석 budget — protectCost ≈
+// ENHANCE_STONE_BASE (PROTECT_STONE_MULT = 1.0), so `derivedLevel`'s stone-phase
+// loop is unchanged: it now counts "levels you can afford to PROTECT" rather than
+// "levels you can afford to BUY". The entropy-side level math is therefore identical.
+// Stone budget per stage = expected fusions × fail rate × stones-per-fail(best rarity)
+// (enhance-break refunds add more, ignored here for a conservative lower bound).
 const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 (was 5) — lockstep with balance.ts.
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.0; // Overhaul-2 🅠1: 1.5 → 1.0 (FLAT) — lockstep with balance.ts.
@@ -91,6 +98,12 @@ const FUSION_FLAT_COST = { common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
+// #50 item quality (가우시언 테일) — lockstep with balance.ts QUALITY_*. Equipped
+// gear is FARMED (stacks keep their best roll), so the sim models it at the high
+// QUALITY_SIM_EQUIPPED percentile; this multiplies every equipped click/auto item.
+const QUALITY_MAX_BONUS = 0.25;
+const QUALITY_SIM_EQUIPPED = 0.65;
+const QUALITY_FACTOR = 1 + QUALITY_SIM_EQUIPPED * QUALITY_MAX_BONUS;
 
 // Combo cap GROWS with stage (P5/R10) — lockstep with balance.ts COMBO_CAP_*
 // and formulas.ts getComboMult/getComboCapMult. The sim mirrors the BASE+stage
@@ -172,7 +185,9 @@ function derivedLevel(stageId, rarity, stoneBudget = 0) {
     total += next;
     level += 1;
   }
-  // Stone phase: levels funded by 강화석 from fusion fails (P1).
+  // Risk phase (#47): matter-funded but reliably gated by the 강화석 budget you can
+  // spend on 보호(protect) — protectCost ≈ ENHANCE_STONE_BASE, so this loop is the
+  // same as the old stone-purchase loop (protected attempts ≈ stone-bought levels).
   let stoneTotal = 0;
   while (level < LEVEL_CAPS[rarity]) {
     const over = level - ENHANCE_STONE_THRESHOLD;
@@ -192,7 +207,7 @@ function gearClickMult(stageId, p, stoneBudget = 0) {
   const r = bestRarity(stageId);
   const q = GEAR.click[r];
   const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
-  const stack = (q.pct * q.eff * lvl * maturity(stageId, p) * g) / 100;
+  const stack = (q.pct * q.eff * lvl * maturity(stageId, p) * g * QUALITY_FACTOR) / 100;
   return Math.pow(1 + stack, clickSlots(stageId));
 }
 function gearAutoFlat(stageId, p, stoneBudget = 0) {
@@ -201,7 +216,7 @@ function gearAutoFlat(stageId, p, stoneBudget = 0) {
   const r = bestRarity(stageId);
   const q = GEAR.auto[r];
   const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
-  const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * lvl * maturity(stageId, p)) / 100;
+  const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * lvl * maturity(stageId, p) * QUALITY_FACTOR) / 100;
   const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power late
   return perSlot * riftSlots(stageId) * autoPowerMult;
 }

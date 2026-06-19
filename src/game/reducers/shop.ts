@@ -3,13 +3,22 @@
 
 import { applyTimedShopBoost, isCashShopUnlocked, shiftBoostExpiry } from '../shop/boosts';
 import { findPaidShopProduct, findRewardedAdProduct } from '../shop/items';
-import { generateDailyShop, dailyRefreshCostSeconds, toDateKey } from '../shop/daily';
-import { STONE_MATTER_COST_SECONDS } from '../balance';
-import { getClickPower, getAutoRate } from '../formulas';
-import { getCurrentModifiers } from './helpers';
-import { addToInventory, addToAlmanac } from '../entities/drops';
+import { generateDailyShop, toDateKey } from '../shop/daily';
+import {
+  shopItemMatterCost,
+  shopStoneMatterCost,
+  shopRefreshMatterCost,
+  packMatterPayout,
+  gachaBoxMatterCost,
+  weightedRarityPick,
+} from '../shop/pricing';
+import { GACHA_BOXES, RARITY_STAGE_GATES } from '../balance';
+import { addToInventory, addToAlmanac, pickDropStage, pickEntityByRarity } from '../entities/drops';
+import { rollQualityScore } from '../entities/quality';
 import { findEntityById } from '../entities/stageItems';
+import { nextEventId } from './helpers';
 import { STAGES } from '../stages';
+import type { EntityRarity } from '../entities/types';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 
@@ -20,11 +29,15 @@ type BuyEnhanceStonesAction = Extract<GameAction, { type: 'BUY_ENHANCE_STONES' }
 type BuyDailyItemAction = Extract<GameAction, { type: 'BUY_DAILY_ITEM' }>;
 type RefreshDailyShopAction = Extract<GameAction, { type: 'REFRESH_DAILY_SHOP' }>;
 type SyncDailyShopAction = Extract<GameAction, { type: 'SYNC_DAILY_SHOP' }>;
+type OpenGachaBoxAction = Extract<GameAction, { type: 'OPEN_GACHA_BOX' }>;
 
-/** (clickPower + autoRate) — the per-second output rate that prices shop matter. */
-function outputRate(state: GameState): number {
-  const mods = getCurrentModifiers(state);
-  return Math.max(1, getClickPower(mods) + getAutoRate(mods));
+const RARITY_LADDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+/** Step a rolled rarity DOWN the ladder until its stage gate is open (#43 gacha safety). */
+function clampRarityToStage(rarity: EntityRarity, playerStageId: number): EntityRarity {
+  let idx = RARITY_LADDER.indexOf(rarity);
+  while (idx > 0 && (RARITY_STAGE_GATES[RARITY_LADDER[idx]] ?? 1) > playerStageId) idx -= 1;
+  return RARITY_LADDER[idx];
 }
 
 function playerStageId(state: GameState): number {
@@ -59,7 +72,7 @@ export function handleCompleteShopPurchase(
   // store flow before this dispatch). Never credit a consumable on a RESTORE
   // path — restore is for non-consumables only (defense-in-depth vs the UI).
   if (action.viaRestore) return state;
-  const payout = Math.ceil(outputRate(state) * product.effect.payoutMult);
+  const payout = packMatterPayout(product.effect.packIndex, playerStageId(state));
   return {
     ...state,
     quanta: state.quanta + payout,
@@ -84,11 +97,11 @@ export function handleClaimAdReward(state: GameState, action: ClaimAdRewardActio
   );
 }
 
-/** Buy 강화석 with matter: cost = outputRate × seconds × count. */
+/** Buy 강화석 with matter: cost = stage anchor × SHOP_STONE_PRICE_FRAC × count (#43). */
 export function handleBuyEnhanceStones(state: GameState, action: BuyEnhanceStonesAction): GameState {
   if (!isCashShopUnlocked(state)) return state;
   const count = Math.max(1, Math.floor(action.count));
-  const cost = Math.ceil(outputRate(state) * STONE_MATTER_COST_SECONDS * count);
+  const cost = shopStoneMatterCost(playerStageId(state), count);
   if (state.quanta < cost) return state;
   return {
     ...state,
@@ -105,7 +118,7 @@ export function handleBuyDailyItem(state: GameState, action: BuyDailyItemAction)
   const roster = generateDailyShop(s.dailyShopDateKey, s.dailyShopRefreshCount, playerStageId(s));
   const offer = roster.find((o) => o.slot === action.slot);
   if (!offer) return s;
-  const cost = Math.ceil(outputRate(s) * offer.priceSeconds);
+  const cost = shopItemMatterCost(offer.rarity, playerStageId(s));
   if (s.quanta < cost) return s;
   const entity = findEntityById(offer.entityId);
   return {
@@ -123,7 +136,7 @@ export function handleBuyDailyItem(state: GameState, action: BuyDailyItemAction)
 export function handleRefreshDailyShop(state: GameState, action: RefreshDailyShopAction): GameState {
   if (!isCashShopUnlocked(state)) return state;
   const s = syncDailyShop(state, action.now);
-  const cost = Math.ceil(outputRate(s) * dailyRefreshCostSeconds(s.dailyShopRefreshCount));
+  const cost = shopRefreshMatterCost(playerStageId(s), s.dailyShopRefreshCount);
   if (s.quanta < cost) return s;
   return {
     ...s,
@@ -136,6 +149,39 @@ export function handleRefreshDailyShop(state: GameState, action: RefreshDailySho
 /** Lazy daily reset on shop open (date rollover). */
 export function handleSyncDailyShop(state: GameState, action: SyncDailyShopAction): GameState {
   return syncDailyShop(state, action.now);
+}
+
+/**
+ * #43 뽑기 상자 (gacha): spend matter, roll a random entity by the box's odds
+ * (GATE-CLAMPED to RARITY_STAGE_GATES so no tier drops before its stage), apply
+ * the #50 quality roll, add it to inventory/almanac, and stash a transient
+ * lastGachaEvent for the single-card reveal. A pure MATTER sink — unlimited.
+ */
+export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction): GameState {
+  if (!isCashShopUnlocked(state)) return state;
+  const box = GACHA_BOXES.find((b) => b.id === action.boxId);
+  if (!box) return state;
+  const stage = playerStageId(state);
+  const cost = gachaBoxMatterCost(box.id, stage);
+  if (cost <= 0 || state.quanta < cost) return state;
+
+  const rolledRarity = clampRarityToStage(weightedRarityPick(box.odds, action.rolls.rarityRoll), stage);
+  const poolStage = pickDropStage(stage, action.rolls.stageRoll, state.almanacCollected);
+  const entity =
+    pickEntityByRarity(poolStage, rolledRarity, action.rolls.pickRoll, poolStage !== stage) ??
+    pickEntityByRarity(stage, 'common', action.rolls.pickRoll, true);
+  if (!entity) return state;
+
+  const quality = rollQualityScore(action.rolls.q1, action.rolls.q2);
+  const eventId = nextEventId(state);
+  return {
+    ...state,
+    quanta: state.quanta - cost,
+    inventory: addToInventory(state.inventory, entity.id, quality),
+    almanacCollected: addToAlmanac(state.almanacCollected, entity.stageId, entity.id),
+    eventCounter: eventId,
+    lastGachaEvent: { id: eventId, entityId: entity.id, quality, boxId: box.id },
+  };
 }
 
 /**

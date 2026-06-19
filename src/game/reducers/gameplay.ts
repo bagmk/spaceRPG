@@ -30,6 +30,7 @@ import {
   getCollisionDropChance,
   rollEntityDrop,
 } from '../entities/drops';
+import { rollQualityScore } from '../entities/quality';
 import { getEquippedInstances } from '../entities/effects';
 import { syncSlotUnlocks } from './entities';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -220,7 +221,15 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     comboThisStage: Math.max(state.comboThisStage, combo), // milestones: per-stage peak combo
     lastClick: action.now,
     eventCounter: eventId,
-    inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
+    inventory: droppedEntity
+      ? addToInventory(
+          state.inventory,
+          droppedEntity.id,
+          action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
+            ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
+            : undefined,
+        )
+      : state.inventory,
     almanacCollected: droppedEntity
       ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
       : state.almanacCollected,
@@ -288,7 +297,15 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
     collisions: state.collisions + 1,
     cometsThisStage: state.cometsThisStage + 1, // milestones: per-stage comet counter
     eventCounter: eventId,
-    inventory: droppedEntity ? addToInventory(state.inventory, droppedEntity.id) : state.inventory,
+    inventory: droppedEntity
+      ? addToInventory(
+          state.inventory,
+          droppedEntity.id,
+          action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
+            ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
+            : undefined,
+        )
+      : state.inventory,
     almanacCollected: droppedEntity
       ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
       : state.almanacCollected,
