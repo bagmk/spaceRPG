@@ -12,6 +12,7 @@ import {
   ENHANCE_FAIL_BASE,
   ENHANCE_FAIL_MAX,
   ENHANCE_STONE_BASE,
+  ENHANCE_STONE_GROWTH,
   ENHANCE_STONE_THRESHOLD,
   ENHANCE_BREAK_STONE_MIN,
   ENHANCE_BREAK_STONE_MAX,
@@ -109,9 +110,14 @@ describe('#47: enhance fail / phase / break-reward math (direct)', () => {
     expect(getEnhanceFailChance(9999)).toBeCloseTo(ENHANCE_FAIL_MAX);
   });
 
-  it('🅠1: protect-stone anchor is the flat rarity base at every risk level (growth 1.0)', () => {
+  it('Overhaul-3: protect-stone cost climbs geometrically (ENHANCE_STONE_GROWTH=1.5) above the threshold', () => {
+    // At the threshold it is exactly the rarity base; each further risk level ×1.5.
     expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD)).toBe(ENHANCE_STONE_BASE.common);
-    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 2)).toBe(ENHANCE_STONE_BASE.common);
+    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 2))
+      .toBe(Math.ceil(ENHANCE_STONE_BASE.common * ENHANCE_STONE_GROWTH ** 2));
+    // Strictly increasing across risk levels.
+    expect(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 3))
+      .toBeGreaterThan(getEnhanceStoneCost(common, ENHANCE_STONE_THRESHOLD + 1));
   });
 
   it('break-stone reward stays within the rarity range and rises with rarity', () => {

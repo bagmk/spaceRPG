@@ -66,9 +66,11 @@ const CRIT_MAX = 0.5;
 const RARITY_GATES = { common: 1, rare: 3, epic: 7, legendary: 12 };
 const GATE_RAMP = 3;
 // Enhance sink (honest levels): cost = anchor(player) × rarityFactor × 1.5 × growth^(L-1).
-// Overhaul-2 🅠1: growth 2.2 → 1.0 (FLAT per level) — lockstep with balance.ts.
+// Overhaul-3: growth 1.0 (FLAT) → 1.7 (geometric) — lockstep with balance.ts. Higher
+// growth lowers the budget-reachable level (derivedLevel), which lowers gear power /
+// income, so the thresholds below were re-pinned DOWN in this same sim pass.
 const ENHANCE_COST_FACTOR = 1.5;
-const ENHANCE_COST_GROWTH = 1.0;
+const ENHANCE_COST_GROWTH = 1.7;
 // #47 reinterpretation: enhance is now MATTER-ONLY at every level. 강화석 are spent
 // only to 보호(protect) a risk-phase attempt; an unprotected fail DESTROYS the item.
 // A rational player climbs the risk phase by protecting every attempt, so the
@@ -80,7 +82,7 @@ const ENHANCE_COST_GROWTH = 1.0;
 // (enhance-break refunds add more, ignored here for a conservative lower bound).
 const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 (was 5) — lockstep with balance.ts.
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
-const ENHANCE_STONE_GROWTH = 1.0; // Overhaul-2 🅠1: 1.5 → 1.0 (FLAT) — lockstep with balance.ts.
+const ENHANCE_STONE_GROWTH = 1.5; // Overhaul-3: 1.0 → 1.5 (geometric protect cost) — lockstep with balance.ts.
 // Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
 // A fusion that does NOT rarity-up mints 강화석, so failRate = 1 − up1 − up2 for
 // the tier being fused. P6 fix: this was a flat 0.55 (a P1 leftover from before
@@ -94,7 +96,10 @@ const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
 // (was 10%-of-bank × rarity mult). Lockstep with balance.ts FUSION_FLAT_COST.
 // Values equal the old effective cost at "bank == anchor", so burst scaling
 // (cost vs anchor × burstRefCostFrac) is unchanged.
-const FUSION_FLAT_COST = { common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60 };
+// Overhaul-3: geometric rarity climb (k=3.5) — lockstep with balance.ts. The sim's
+// burst scale saturates at 1.0 for bestRarity (legendary) either way, so this does
+// not move the calibration; mirrored for consistency.
+const FUSION_FLAT_COST = { common: 0.04, rare: 0.14, epic: 0.49, legendary: 1.715 };
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };

@@ -97,7 +97,7 @@ describe('gameReducer', () => {
     const trios = 12;
     const ids: string[] = [];
     for (let i = 0; i < trios * 3; i++) ids.push(input.id);
-    const rolls = Array.from({ length: trios }, () => ({ rarityRoll: 0.99, pickRoll: 0.1 }));
+    const rolls = Array.from({ length: trios }, () => ({ rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0 }));
     const state = {
       ...createInitialGameState(0),
       quanta: 1e12,

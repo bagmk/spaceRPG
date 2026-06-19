@@ -381,8 +381,16 @@ export const FUSION_UP_CHANCE_CAP = 0.65;
  * compares cost against ENTITY_COST_ANCHORS × FUSION_BURST_REF_COST_FRAC — is
  * unchanged. The player must AFFORD the full cost (no bank-cap discount).
  */
+// Overhaul-3: a GEOMETRIC rarity climb (k=3.5, base 0.04) so legendary/mythic
+// fusions are a real sink instead of the old near-flat ~2.5× step. Cost =
+// ENTITY_COST_ANCHORS[playerStage] × this fraction (getFusionQuantaCost now
+// re-anchors to the player stage), so as a fraction of one current-era item:
+// common 4% · rare 14% · epic 49% · legendary 172% · mythic 600%. PACING-SAFE:
+// the entropy burst's burstCostScale saturates at 1.0 for everything above
+// common and is then span-capped (FUSION_BURST_SPAN_CAP), and burstRefCost stays
+// stage-1-anchored — so steeper cost does NOT inflate the burst.
 export const FUSION_FLAT_COST: Record<EntityRarity, number> = {
-  common: 0.04, rare: 0.10, epic: 0.25, legendary: 0.60, mythic: 1.2,
+  common: 0.04, rare: 0.14, epic: 0.49, legendary: 1.715, mythic: 6.0,
 };
 // P2b bonuses (R9): fusing 3 of the SAME entity, or 3 from the same codex category.
 export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance
@@ -464,10 +472,15 @@ export const RARITY_GATE_RAMP_STAGES = 3;
 
 /** First enhance costs this multiple of the item's base cost. */
 export const ENHANCE_COST_FACTOR = 1.5;
-/** Each further level multiplies the enhance cost by this. Overhaul-2 (🅠1):
- *  2.2 → 1.0 (FLAT — every matter-phase level costs the same anchor×1.5). Locked
- *  decision: costs fully fixed; pacing is held by re-tuned ENTROPY_THRESHOLDS. */
-export const ENHANCE_COST_GROWTH = 1.0;
+/** Each further level multiplies the enhance cost by this. Overhaul-3: 1.0 (flat)
+ *  → 1.7 (geometric). Per-level matter cost = baseCost × 1.5 × 1.7^(level-1), so
+ *  Lv1→2 = 1.5×base, cumulative-to-Lv10 ≈ 322×base, to-Lv20 ≈ 9,400×base. Since
+ *  the entropy-feeding effect grows only LINEARLY per level (ENTITY_LEVEL_EFFECT_
+ *  BONUS=0.85) and the matter-power channel ~1.3^level, cost (1.7×) outruns power
+ *  → marginal cost-per-power RISES: high levels are a real escalating spend. This
+ *  lowers the budget-reachable level, so ENTROPY_THRESHOLDS were re-pinned via the
+ *  sim in lockstep (ENHANCE_COST_GROWTH mirrored at scripts/entropy-gate-sim.mjs). */
+export const ENHANCE_COST_GROWTH = 1.7;
 /** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
 export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   common: 10,
@@ -491,9 +504,11 @@ export const ENHANCE_STONE_THRESHOLD = 3;
  *  (getEnhanceProtectStoneCost) AND the break-refund scale. Normal enhance is
  *  matter-only, so this is never charged for a plain attempt. */
 export const ENHANCE_STONE_BASE: Record<EntityRarity, number> = { common: 2, rare: 3, epic: 5, legendary: 8, mythic: 12 };
-/** Each further stone-phase level multiplies the stone cost by this. Overhaul-2
- *  (🅠1): 1.5 → 1.0 (FLAT — every stone-phase level costs ENHANCE_STONE_BASE). */
-export const ENHANCE_STONE_GROWTH = 1.0;
+/** Each further stone-phase level multiplies the 보호(protect) stone cost by this.
+ *  Overhaul-3: 1.0 (flat) → 1.5 (geometric) so insuring the high, risky levels
+ *  ramps up too — mirrored in scripts/entropy-gate-sim.mjs (drives the stone-phase
+ *  reachable level → income → re-pinned thresholds). */
+export const ENHANCE_STONE_GROWTH = 1.5;
 /** Fraction of invested stones refunded when a stack is consumed by fusion. */
 export const ENHANCE_STONE_REFUND_RATE = 0.5;
 /** A failed fusion (no rarity-up) mints this many 강화석, by the input tier. */
