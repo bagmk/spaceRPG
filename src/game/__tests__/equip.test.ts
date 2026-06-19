@@ -67,6 +67,21 @@ describe('equip system (Phase 2)', () => {
     expect(next.equippedSlots).toEqual([]);
   });
 
+  // #44 hexagon center / wild slot
+  it('blocks the wild slot before its unlock stage, allows it after', () => {
+    const early = ownedState(entity.id); // stage 1 (stageIdx 0)
+    expect(gameReducer(early, { type: 'EQUIP_ENTITY', entityId: entity.id, wild: true }).wildSlot).toBe('');
+    const late = { ...ownedState(entity.id), stageIdx: 8 }; // stage 9 = HEX_WILD_UNLOCK_STAGE
+    const eq = gameReducer(late, { type: 'EQUIP_ENTITY', entityId: entity.id, wild: true });
+    expect(eq.wildSlot).toBe(entity.id);
+    expect(gameReducer(eq, { type: 'UNEQUIP_ENTITY', slot: 0, target: 'wild' }).wildSlot).toBe('');
+  });
+
+  it('the wild slot cannot duplicate an id already in a click/rift slot', () => {
+    const state = { ...ownedState(entity.id), stageIdx: 8, equippedSlots: [entity.id] };
+    expect(gameReducer(state, { type: 'EQUIP_ENTITY', entityId: entity.id, wild: true }).wildSlot).toBe('');
+  });
+
   it('routes auto/time entities to the rift slots automatically', () => {
     const state = ownedState(riftEntity.id);
     const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: riftEntity.id });

@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 23;
+  version: 24;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -277,6 +277,10 @@ export interface SaveState {
   riftSlots: string[];
   /** How many rift slots are unlocked (1..3). */
   unlockedRiftSlotCount: number;
+  /** #44 hexagon: the single CENTER (wild) slot id, '' when empty. Accepts any
+   *  gear category; unlocks at HEX_WILD_UNLOCK_STAGE. The 7-slot hex (for bingo
+   *  bonuses) is derived = [...equippedSlots(3), ...riftSlots(3), wildSlot]. */
+  wildSlot: string;
   /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
   almanacCollected: Record<number, string[]>;
   prestigeUpgrades: PrestigeUpgradeLevels;

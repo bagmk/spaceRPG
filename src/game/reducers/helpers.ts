@@ -60,6 +60,13 @@ export function getEncounterClickMultiplier(tier: RogueTypeKey): number {
   return 10;
 }
 
+/** #44: the 7-slot hexagon array (0-2 click / 3-5 rift / 6 wild) for bingo bonuses. */
+export function getHexSlots(state: GameState): (string | null)[] {
+  const e = state.equippedSlots;
+  const r = state.riftSlots;
+  return [e[0] || null, e[1] || null, e[2] || null, r[0] || null, r[1] || null, r[2] || null, state.wildSlot || null];
+}
+
 export function getCurrentModifiers(state: GameState) {
   const stage = getCurrentStage(state);
   return getActiveModifiers({
@@ -69,7 +76,8 @@ export function getCurrentModifiers(state: GameState) {
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
+    hexSlots: getHexSlots(state),
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected);
 }
 
 export function getAdjustedClickPower(state: GameState): number {

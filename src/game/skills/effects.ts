@@ -2,6 +2,7 @@ import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses } from '../entities/effects';
+import { computeHexBingo } from '../entities/hexBingo';
 
 export interface ModifierContext {
   currentQuanta?: number;
@@ -16,6 +17,10 @@ export interface ModifierContext {
    */
   gateProgress01: number;
   progress01?: number;
+  /** #44 hexagon: the 7-slot positional array (0-2 click / 3-5 rift / 6 wild),
+   *  ids or null. When present, completed bingo lines feed the off-gate
+   *  click/auto matter multipliers. */
+  hexSlots?: (string | null)[];
 }
 
 export interface Modifiers {
@@ -30,6 +35,13 @@ export interface Modifiers {
    * across all 16 stages is untouched (no re-sim needed).
    */
   clickMatterMult: number;
+  /**
+   * #44 hexagon bingo: wallet-only AUTO multiplier — mirrors clickMatterMult.
+   * Boosts the auto matter that hits the WALLET but NOT the auto entropy (which
+   * keeps riding the tame auto delta), so a strong hex auto bonus never touches
+   * the entropy gate. Default 1.
+   */
+  autoMatterMult: number;
   clickEmissionCount: number;
   clickVfxScale: number;
   autoRateMult: number;
@@ -74,6 +86,7 @@ export function defaultModifiers(): Modifiers {
     clickPowerMult: 1,
     clickPowerAdd: 0,
     clickMatterMult: 1,
+    autoMatterMult: 1,
     clickEmissionCount: 1,
     clickVfxScale: 1,
     autoRateMult: 1,
@@ -125,6 +138,14 @@ export function getActiveModifiers(
   if (inventory && inventory.length > 0) {
     applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });
     applySetBonuses(mods, inventory);
+  }
+
+  // #44 hexagon bingo: completed lines feed OFF-GATE matter multipliers (click →
+  // wallet click matter, auto → wallet auto matter), never the entropy gate.
+  if (ctx.hexSlots) {
+    const hb = computeHexBingo(ctx.hexSlots);
+    mods.clickMatterMult *= hb.clickMult;
+    mods.autoMatterMult *= hb.autoMult;
   }
 
   // Codex collection completion rewards (permanent, from the almanac).

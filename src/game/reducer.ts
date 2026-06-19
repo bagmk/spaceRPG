@@ -135,8 +135,8 @@ export type GameAction =
   | { type: 'MARK_CODEX_SEEN' }
   | { type: 'MARK_PANEL_HINT'; hintId: string }
   | { type: 'PURCHASE_ENTITY'; entityId: string; qualityRoll1?: number; qualityRoll2?: number }
-  | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number }
-  | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' }
+  | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number; wild?: boolean }
+  | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' | 'wild' }
   | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number; qualityRoll?: number }
   // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
@@ -207,6 +207,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     unlockedSlotCount: state.unlockedSlotCount,
     riftSlots: state.riftSlots,
     unlockedRiftSlotCount: state.unlockedRiftSlotCount,
+    wildSlot: state.wildSlot,
     almanacCollected: state.almanacCollected,
     prestigeUpgrades: state.prestigeUpgrades,
     peakEntropy: state.peakEntropy,

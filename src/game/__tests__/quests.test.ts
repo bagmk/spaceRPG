@@ -94,7 +94,7 @@ describe('🅠5 quests', () => {
       comboThisStage: 55,
     };
     const snapshot = createSaveSnapshot(base);
-    expect(snapshot.version).toBe(23);
+    expect(snapshot.version).toBe(24);
     const migrated = migrateToCurrent(snapshot);
     expect(migrated).not.toBeNull();
     // claimed milestones are once-only and must survive a load verbatim.

@@ -172,6 +172,20 @@ describe('save migration', () => {
     expect(migrated?.inventory.find((e) => e.entityId === 's10_01')?.quality).toBeUndefined();
   });
 
+  it('#44 v24 wildSlot round-trips; pre-v24 saves default it to empty', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    // A pre-v24 save (no wildSlot field) → defaults to ''.
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 23, equippedSlots: ['s1_00'] }));
+    expect(loadGame()?.wildSlot).toBe('');
+    // A v24 save round-trips the wild slot id.
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 24, wildSlot: 's10_01' }));
+    expect(loadGame()?.wildSlot).toBe('s10_01');
+  });
+
   it('v16 resets the offline window once and clamps corrupt inventory entries', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

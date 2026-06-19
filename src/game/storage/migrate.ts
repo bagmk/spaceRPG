@@ -88,7 +88,7 @@ function clampEntropyForGate(entropy: number, stageIdx: number): number {
 type EntityModelFields = Pick<
   PersistentGameState,
   | 'inventory' | 'equippedSlots' | 'unlockedSlotCount' | 'riftSlots' | 'unlockedRiftSlotCount'
-  | 'almanacCollected' | 'entropy' | 'peakEntropy'
+  | 'wildSlot' | 'almanacCollected' | 'entropy' | 'peakEntropy'
 >;
 
 /**
@@ -126,9 +126,13 @@ function convertEntityModelV14(record: Partial<SaveState>): EntityModelFields {
   const riftSlots = isStringArray(record.riftSlots)
     ? record.riftSlots.slice(0, unlockedRiftSlotCount)
     : [];
+  // #44 (v24): the hexagon center/wild slot — pre-v24 saves default to empty.
+  const wildSlot = typeof (record as { wildSlot?: unknown }).wildSlot === 'string'
+    ? (record as { wildSlot: string }).wildSlot
+    : '';
   return {
     inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount,
-    almanacCollected, entropy, peakEntropy,
+    wildSlot, almanacCollected, entropy, peakEntropy,
   };
 }
 

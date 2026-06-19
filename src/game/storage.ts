@@ -52,9 +52,9 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 }
 
 /** Single source of truth for the save schema version (local + cloud).
- *  v23: per-item quality (가우시언 테일, #50) — a nested EntityInstance field that
- *  flows through validateV5 untouched; legacy entries stay undefined (neutral). */
-export const SAVE_SCHEMA_VERSION = 23;
+ *  v23: per-item quality (가우시언 테일, #50). v24: hexagon center/wild slot
+ *  (#44) — an additive `wildSlot` string, default '' for pre-v24 saves. */
+export const SAVE_SCHEMA_VERSION = 24;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -111,6 +111,7 @@ function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameStat
     ...state,
     inventory: Array.from(invMap.values()),
     equippedSlots: (state.equippedSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
+    wildSlot: state.wildSlot ? canonicalEntityId(state.wildSlot) : '',
     riftSlots: (state.riftSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
     almanacCollected,
   };
@@ -172,6 +173,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     totalShopSpentUSD: state.totalShopSpentUSD,
     inventory: state.inventory,
     equippedSlots: state.equippedSlots,
+    wildSlot: state.wildSlot,
     unlockedSlotCount: state.unlockedSlotCount,
     riftSlots: state.riftSlots,
     unlockedRiftSlotCount: state.unlockedRiftSlotCount,
@@ -484,7 +486,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24) {
       // v14..v23 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added

@@ -34,6 +34,7 @@ import {
   FUSION_SAME_ENTITY_UP_BONUS,
   FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
   FUSION_SAME_SUBSET_BURST_MULT,
+  HEX_WILD_UNLOCK_STAGE,
 } from '../balance';
 import { getEntityCost } from '../entities/types';
 import { getAutoRate, safeAdd } from '../formulas';
@@ -74,6 +75,23 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
   if (!owned || owned.count <= 0) return state;
 
+  // Vacuum-decay (crit-gear) flag — shared by the wild + normal equip paths.
+  const isCritGear =
+    entity.effect.type === 'crit' ||
+    getSecondaryStats(entity).some((sub) => sub.type === 'critChance' || sub.type === 'critMult');
+  const critFlags = isCritGear && !state.endingProgressFlags.criticalUpgradedThisUniverse
+    ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
+    : state.endingProgressFlags;
+
+  // #44 hexagon CENTER (wild) slot — accepts ANY category. Unlocks by stage; an
+  // id already equipped in a click/rift slot can't also fill the wild (no free dupe).
+  if (action.wild) {
+    const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+    if (stageId < HEX_WILD_UNLOCK_STAGE) return state;
+    if (state.equippedSlots.includes(action.entityId) || state.riftSlots.includes(action.entityId)) return state;
+    return { ...state, wildSlot: action.entityId, endingProgressFlags: critFlags };
+  }
+
   const category = getEquipCategory(entity);
   const slots = category === 'rift' ? state.riftSlots : state.equippedSlots;
   const slotCount = category === 'rift' ? state.unlockedRiftSlotCount : state.unlockedSlotCount;
@@ -87,29 +105,25 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
     }
   }
   if (slot < 0 || slot >= slotCount) return state;
-  // Same entity cannot occupy two slots.
+  // Same entity cannot occupy two slots (or duplicate the wild).
   if (slots.some((id, i) => i !== slot && id === action.entityId)) return state;
+  if (state.wildSlot === action.entityId) return state;
 
   // Dense array — empty slots hold '' so JSON round-trips cleanly (no holes).
   const next: string[] = [];
   for (let i = 0; i < slotCount; i++) next[i] = slots[i] ?? '';
   next[slot] = action.entityId;
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
-  // Vacuum decay in gear terms (Phase 4-2): equipping Critical-flavored gear
-  // marks the universe as crit-upgraded — the ending requires never doing so.
-  const isCritGear =
-    entity.effect.type === 'crit' ||
-    getSecondaryStats(entity).some((sub) => sub.type === 'critChance' || sub.type === 'critMult');
-  const endingProgressFlags = isCritGear && !state.endingProgressFlags.criticalUpgradedThisUniverse
-    ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
-    : state.endingProgressFlags;
   return category === 'rift'
-    ? { ...state, riftSlots: next, endingProgressFlags }
-    : { ...state, equippedSlots: next, endingProgressFlags };
+    ? { ...state, riftSlots: next, endingProgressFlags: critFlags }
+    : { ...state, equippedSlots: next, endingProgressFlags: critFlags };
 }
 
 export function handleUnequipEntity(state: GameState, action: UnequipAction): GameState {
   const category = action.target ?? 'click';
+  if (category === 'wild') {
+    return state.wildSlot ? { ...state, wildSlot: '' } : state;
+  }
   const slots = category === 'rift' ? state.riftSlots : state.equippedSlots;
   if (action.slot < 0 || action.slot >= slots.length) return state;
   if (!slots[action.slot]) return state;
@@ -201,7 +215,7 @@ function fuseOnce(
   inputEntityIds: string[],
   rolls: FuseRolls,
 ): { state: GameState; result: OneFusionResult } | null {
-  const equippedIds = new Set([...state.equippedSlots, ...state.riftSlots].filter(Boolean) as string[]);
+  const equippedIds = new Set([...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[]);
   const validation = validateFusionInputs(state.inventory, inputEntityIds, equippedIds);
   if (!validation.ok || !validation.rarity || !validation.stageId) return null;
 
@@ -513,6 +527,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       ...nextState,
       equippedSlots: state.equippedSlots.filter((id) => id !== owned.entityId),
       riftSlots: state.riftSlots.filter((id) => id !== owned.entityId),
+      wildSlot: state.wildSlot === owned.entityId ? '' : state.wildSlot,
     };
   }
 

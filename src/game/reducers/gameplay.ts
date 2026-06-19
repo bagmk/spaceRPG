@@ -42,6 +42,7 @@ import {
   getComboCapBonus,
   getCurrentModifiers,
   getAdjustedClickPower,
+  getHexSlots,
   getEncounterRewardMultiplier,
   getEncounterClickMultiplier,
   createClickEvent,
@@ -72,7 +73,8 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
+    hexSlots: getHexSlots(state),
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
@@ -114,11 +116,16 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const tickQuantaDelta = (tickResult?.quantaDelta ?? 0) * timeBoost * matterBoost;
   const tickEntropyDelta = (tickResult?.entropyDelta ?? 0) * timeBoost;
   const tickMechanicChargeDelta = (tickResult?.mechanicChargeDelta ?? 0) * timeBoost;
-  const quantaDelta = gained + tickQuantaDelta;
+  // #44 hexagon: the auto bingo bonus boosts the WALLET auto only — entropy keeps
+  // riding the TAME `gained` (mirrors clickMatterMult), so a strong auto bonus
+  // never feeds the entropy gate (no re-sim). autoMatterMult defaults to 1.
+  const walletAuto = gained * modifiers.autoMatterMult;
+  const quantaDelta = walletAuto + tickQuantaDelta;
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
+  const tameAutoNextQuanta = safeAdd(state.quanta, gained + tickQuantaDelta);
   const entropyFromMatter = canAccrue
-    ? getEntropyFromMatterGain(state.quanta, nextQuanta, effectiveThreshold, 'auto') *
+    ? getEntropyFromMatterGain(state.quanta, tameAutoNextQuanta, effectiveThreshold, 'auto') *
       entropyEchoMult * modifiers.entropyGainMult
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
@@ -126,7 +133,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // gearless (base auto income) — entityId '' renders as a plain "+N/s" float.
   // Transient — driven off action.now, never persisted.
   const primaryRiftId = state.riftSlots[0];
-  const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost;
+  const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost * modifiers.autoMatterMult;
   const emitAutoIncome =
     canAccrue &&
     perSecAuto > 0 &&
@@ -168,7 +175,8 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
+    hexSlots: getHexSlots(state),
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);

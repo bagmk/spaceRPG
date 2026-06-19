@@ -124,6 +124,7 @@ export function createInitialGameState(now: number): GameState {
     totalShopSpentUSD: 0,
     inventory: createDefaultInventory(),
     equippedSlots: [],
+    wildSlot: '',
     unlockedSlotCount: 1,
     riftSlots: [],
     unlockedRiftSlotCount: 1,
