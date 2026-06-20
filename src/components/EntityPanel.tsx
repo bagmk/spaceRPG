@@ -1324,7 +1324,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   title={enhanceUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}
                   onClick={() => { [...equippedSlots, ...riftSlots, wildSlot].forEach((id) => { if (id && !enhanceExcludedIds.has(id)) onEnhance(id); }); }}
                 >
-                  {enhanceUnlocked ? t(language, 'enhanceAll') : `🔒 ${t(language, 'enhanceAll')}`}
+                  {/* C-P2: show the unlock-stage reason in the VISIBLE label (not just
+                      title=, invisible on touch) — mirrors the codex-card enhance button. */}
+                  {enhanceUnlocked
+                    ? t(language, 'enhanceAll')
+                    : `🔒 ${t(language, 'enhanceAll')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`}
                 </button>
               </div>
 

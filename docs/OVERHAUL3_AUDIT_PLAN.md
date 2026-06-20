@@ -87,8 +87,14 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   `seen`; the real value is testability + a lean GameScreen, not a behavior change.)
 - [ ] **C-P2 HUD topline:** give quanta a dedicated reserved-width region (index.css:11110) so big
   numbers + long Korean stage names don't wrap and shove the entropy meter.
-- [ ] **C-P2 Touch affordances:** lock reasons / condense-disabled explanation live in `title=`
-  tooltips (never show on touch) — surface as visible inline/tappable text.
+- [ ] **C-P2 Touch affordances (PARTIAL):** DONE — the equip-panel **Enhance-All** locked button now
+  shows the unlock-stage reason in its VISIBLE label (`🔒 전체 강화 · 스테이지 N`), mirroring the proven
+  codex-card pattern (EntityPanel:1874) — zero layout risk. DEFERRED (needs-visual, behind the OAuth
+  login wall): the **equip/fuse side-rail** lock hints (GameScreen ~1020/1033) and the **condense
+  pre-gate** guidance line — both add a line to tight HUD/rail controls whose reflow can't be
+  confirmed in the dev preview. Exact edits are specified in the scope-section-c workflow output
+  (touch-affordances spec); land them when a visual path opens. The remaining `title=` attributes
+  (shop odds, icon-button names) are decorative/redundant — leave alone.
 - [x] **C-P2 Global focus-visible ring** DONE — global :focus-visible outline added.
 - [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
 - [x] **C-P2 Daily check-in streak** DONE — consecutive-day gap detection (gap→reset to 1) + escalating 강화석 reward (2..8 by streak) shown in the offline modal.
