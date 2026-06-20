@@ -17,7 +17,6 @@ interface IntroScreenProps {
   onNewStart: () => void;
   onComplete: () => void;
   onUnlockAudio: () => void;
-  onPlayBigBang: () => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
 }
@@ -47,7 +46,6 @@ export function IntroScreen({
   onNewStart,
   onComplete,
   onUnlockAudio,
-  onPlayBigBang,
   onOpenAtlas,
   onOpenLeaderboard,
 }: IntroScreenProps) {
@@ -61,16 +59,10 @@ export function IntroScreen({
 
     let frameId = 0;
     const startTime = performance.now();
-    let bigBangPlayed = false;
 
     const tick = (now: number) => {
       const nextElapsed = now - startTime;
       setElapsed(nextElapsed);
-
-      if (!bigBangPlayed && nextElapsed >= GENESIS_MS) {
-        bigBangPlayed = true;
-        onPlayBigBang();
-      }
 
       if (nextElapsed >= GENESIS_MS + BIG_BANG_TO_GAME_MS) {
         setPhase('done');
@@ -86,7 +78,7 @@ export function IntroScreen({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [onComplete, onPlayBigBang, phase]);
+  }, [onComplete, phase]);
 
   const bgElapsed = phase === 'expanding' ? Math.max(0, elapsed - GENESIS_MS) : 0;
   const tickerIndex = Math.min(

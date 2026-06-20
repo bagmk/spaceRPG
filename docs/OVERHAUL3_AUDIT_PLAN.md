@@ -91,9 +91,13 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
 - [ ] **C-P2 Memoize open modal panels** (Shop/Entity/Quest/Settings re-render ~10×/s) + extract &
   unit-test offline catch-up + cloud-merge (and switch vitest env to jsdom for component tests).
 - [ ] **C-P2 Save export/import** in Settings + a small ring of timestamped backups.
-- [ ] **C-P3 Dead code:** onPlayBigBang no-op, ResourcePanel/StatsRow dead components, stale
-  scripts/balance-design.ts, dead `.bottom-buttons` CSS family (#46), reconcile prestige legacy key
-  names (prestige.ts:74-81). Sourcemaps `hidden` + lightweight error reporter.
+- [ ] **C-P3 Dead code (PARTIAL):** DONE — deleted unimported `ResourcePanel.tsx` + `StatsRow.tsx`;
+  removed the no-op `onPlayBigBang` prop (IntroScreen + App). DEFERRED (each its own reason):
+  `scripts/balance-design.ts` is NOT dead — it backs `npm run sim` (keep/re-point separately);
+  `.bottom-buttons` CSS family (#46) is ~40 scattered rules many compound-mixed with live classes
+  (`.bottom-settings-button`/`.entity-lab-button`) and inert (class unused) — needs visual diff to
+  remove safely, low harm staying; prestige legacy-key reconcile (prestige.ts) is save-touching;
+  sourcemaps `hidden` + error reporter is build-config, separate.
 
 ## D. Done this session (shipped to main @ 207a34f)
 P1 pacing (fusion-burst cap + condense-overflow reset) · P2 economy (enhance/fusion geometric — see

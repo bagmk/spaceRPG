@@ -266,9 +266,6 @@ function AppInner() {
           onUnlockAudio={() => {
             soundManagerRef.current?.unlock();
           }}
-          onPlayBigBang={() => {
-            // (Big Bang sting removed — too cheesy. Music handles the transition.)
-          }}
           onOpenAtlas={() => setRoute('atlas')}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
         />
