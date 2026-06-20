@@ -102,15 +102,19 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
 - [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
 - [x] **C-P2 Daily check-in streak** DONE — consecutive-day gap detection (gap→reset to 1) + escalating 강화석 reward (2..8 by streak) shown in the offline modal.
   — add consecutive-day detection + an escalating return reward.
-- [ ] **C-P2 Memoize open modal panels + extract/test save-sync logic (PARTIAL):** DONE — extracted
-  the load-bearing decisions to pure, unit-tested modules: **cloud-merge** (`src/cloud/merge.ts`
+- [x] **C-P2 extract/test save-sync logic + memoize panels (RESOLVED):** DONE — extracted the
+  load-bearing decisions to pure, unit-tested modules: **cloud-merge** (`src/cloud/merge.ts`
   `decideCloudMerge` — last-write-wins + regression guard, 6 tests) and the **daily check-in/streak**
   (`src/game/dailyCheckIn.ts` `computeDailyCheckIn` — consecutive/gap/first-ever, 5 tests); both
-  behaviour-preserving, useCloudSync/useGameState now delegate. 347 tests green. DEFERRED: the panel
-  React.memo work (Shop/Quest take whole `state` = new ref/tick → need comparators or prop-narrowing;
-  `modifiers`/`wallNow` rebuild every render = prerequisite blocker; the win is bounded to the one
-  open panel and the staleness risk can't be profiled behind the OAuth wall) + the FULL offline-gain
-  extraction (large, load-bearing — do with jsdom component tests) + jsdom vitest env.
+  behaviour-preserving, useCloudSync/useGameState delegate. 347 tests green. **Panel React.memo:
+  investigated + deliberately DECLINED** — `getActiveModifiers` reads `gateProgress01` (feeds
+  `applyEntityModifiers` gear-power scaling), which advances EVERY tick via constant base
+  auto-income; so the panels' per-tick re-renders are mostly LEGITIMATE content updates (power /
+  affordability genuinely changing), not waste. memo could only spare the rare fully-static frame,
+  and only by rounding `gateProgress01` — which would regress gear-power ramping into visible steps.
+  No felt perf problem; the optimization is unwarranted. REMAINING (deferred, not blocking): the FULL
+  offline-gain extraction — large, hot, load-bearing; safe only with a jsdom golden-baseline harness
+  (forcing it risks a silent offline-reward bug, same class as the CSS-stripper incident).
 - [x] **C-P2 Save export/import** DONE — storage.ts codec `serializeSave`/`deserializeSave`
   (UTF-8-safe base64, `CCSAVE1.` envelope, raw-JSON + bare-base64 fallbacks, routes through
   migrateToCurrent → v25) + a rolling `cc_save_backup_ring` (last 5 autosaves, deduped, skipped on
@@ -118,7 +122,7 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   section: Export (copy/download), Import (paste/upload), Restore-from-backup. Import stamps a fresh
   `lastSaveAt` (no offline windfall + wins the next cloud sync). 7 new vitest cases (round-trip,
   v24→v25 import explode, KO/UTF-8, fail-soft, ring cap/dedupe). 326 tests green.
-- [ ] **C-P3 Dead code (MOSTLY DONE):** DONE — deleted unimported `ResourcePanel.tsx` +
+- [x] **C-P3 Dead code (RESOLVED):** DONE — deleted unimported `ResourcePanel.tsx` +
   `StatsRow.tsx`; removed the no-op `onPlayBigBang` prop (IntroScreen + App); **removed the dead
   `.bottom-buttons` CSS family (#46) — 30 inert rules dropped + 2 live-mixed compounds
   (`.scale-indicator.focus-hidden`, `.hud-info,…,.scale-indicator`) rewritten to keep only the live
