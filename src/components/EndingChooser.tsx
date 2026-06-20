@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import type { EndingOption, EndingId } from '../game/types';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { t, type Lang } from '../i18n';
 
 interface EndingChooserProps {
@@ -9,8 +11,11 @@ interface EndingChooserProps {
 }
 
 export function EndingChooser({ options, onChoose, onClose, language }: EndingChooserProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  // Esc only dismisses when a close handler exists; either way focus is trapped.
+  useModalA11y(overlayRef, onClose ?? (() => {}));
   return (
-    <div className="overlay-backdrop" role="dialog" aria-modal="true">
+    <div className="overlay-backdrop" role="dialog" aria-modal="true" ref={overlayRef} tabIndex={-1}>
       <div className="overlay-card ending-chooser">
         <div className="ending-chooser__header">
           <div className="q-stage">{t(language, 'endingHeadline')}</div>

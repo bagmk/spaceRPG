@@ -70,8 +70,11 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   `needs:` of build + a pull_request-triggered workflow.
 - [x] **C-P1 prefers-reduced-motion covers shake/flash/cinematics** DONE — RM block kills .shake/.shake-big + enhance-shake + collapses stage-transition rays/wash to opacity. (not just ~8 decorative rules):
   .shake/.shake-big, stage-transition cinematics, BigBangCinematic, intro. Opacity-only under RM.
-- [ ] **C-P1 Modal a11y:** focus-trap on open + restore on close; shared `useEscapeToClose` for all
-  overlays (offline, ending chooser, reset, almanac, quests — shop already has Esc).
+- [x] **C-P1 Modal a11y:** DONE — new shared hook `src/hooks/useModalA11y.ts` (Esc-to-close +
+  Tab/Shift+Tab focus trap + focus restore on close). Applied to OfflineProgressModal, EndingChooser
+  (Esc no-ops when mandatory), AlmanacOverlay (trap paused while nested LoreModal owns focus),
+  QuestPanel, the App reset-confirm dialog, and ShopPanel (replaced its Esc-only effect). Each
+  overlay root got `tabIndex={-1}` + (where missing) `role=dialog`/`aria-modal`.
 - [x] **C-P1 Cloud merge safety:** DONE — snapshot local to cc_cloud_overwrite_backup before remote-newer overwrite + skip overwrite when remote regressed on both stage & peakEntropy. snapshot the discarded save before last-write-wins overwrite
   and/or merge on peakEntropy/stageIdx maxima (useCloudSync.ts:64-69).
 - [ ] **C-P2 Tutorial queue.** Replace the winner-take-all ~14-branch useMemo (GameScreen.tsx:299-435)

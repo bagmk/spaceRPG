@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { NameSetupModal } from './components/NameSetupModal';
 import { LoginScreen } from './components/LoginScreen';
 import { useCloudSync } from './hooks/useCloudSync';
+import { useModalA11y } from './hooks/useModalA11y';
 import { initAdMob } from './lib/admob';
 import { initRevenueCat } from './game/shop/purchase';
 import { Leaderboard } from './components/Leaderboard';
@@ -83,6 +84,9 @@ function AppInner() {
   const [openingCinematic, setOpeningCinematic] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const soundManagerRef = useRef<SoundManager | null>(null);
+  // C-P1 a11y: Esc-to-close + focus trap for the reset-confirm dialog.
+  const resetModalRef = useRef<HTMLDivElement>(null);
+  useModalA11y(resetModalRef, () => setShowResetConfirm(false), showResetConfirm);
 
   useEffect(() => {
     initAdMob().catch(console.warn);
@@ -354,7 +358,7 @@ function AppInner() {
       ) : null}
 
       {showResetConfirm ? (
-        <div className="reset-backdrop" role="dialog" aria-modal="true">
+        <div className="reset-backdrop" role="dialog" aria-modal="true" ref={resetModalRef} tabIndex={-1}>
           <div className="reset-modal">
             <h2>{t(language, 'resetTitle')}</h2>
             <p>{t(language, 'resetWarn')}</p>

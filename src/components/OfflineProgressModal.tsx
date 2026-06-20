@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { formatDuration, formatEntropyParts, formatWhole } from '../game/formulas';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { t, type Lang } from '../i18n';
 
 interface OfflineProgressModalProps {
@@ -29,8 +31,11 @@ export function OfflineProgressModal({
     ? `오프라인 보상은 최대 ${formatDuration(capMs)}까지 쌓입니다.`
     : `Offline rewards are capped at ${formatDuration(capMs)}.`;
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useModalA11y(overlayRef, onDismiss);
+
   return (
-    <div className="overlay-backdrop" role="dialog" aria-modal="true">
+    <div className="overlay-backdrop" role="dialog" aria-modal="true" ref={overlayRef} tabIndex={-1}>
       <div className="overlay-card">
         <div className="q-stage">{t(language, 'offlineEyebrow')}</div>
         <h2>{t(language, 'offlineTitle')}</h2>

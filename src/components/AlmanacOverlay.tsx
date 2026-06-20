@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { ALMANAC, pickLang } from '../game/almanac';
 import { STAGE_LOGS, getLogsForStage, pickLogText } from '../game/stageLogs';
 import { STAGES } from '../game/stages';
@@ -35,6 +36,10 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
   const contentRef = useRef<HTMLDivElement | null>(null);
   const infoRef = useRef<HTMLDivElement | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  // Esc-to-close + focus trap. Disable the trap while the nested LoreModal owns
+  // focus so the two dialogs don't fight over Tab.
+  useModalA11y(overlayRef, onClose, activeLoreId === null);
 
   useEffect(() => {
     const container = pillsRef.current;
@@ -67,7 +72,7 @@ export function AlmanacOverlay({ currentStageId, progressPercent, language, onCl
   const totalCount = STAGE_LOGS.length;
 
   return (
-    <div className="overlay-backdrop" role="dialog" aria-modal="true" aria-label={t(language, 'almanacTitle')}>
+    <div className="overlay-backdrop" role="dialog" aria-modal="true" aria-label={t(language, 'almanacTitle')} ref={overlayRef} tabIndex={-1}>
       <div className="overlay-card almanac-overlay">
         <div className="almanac-header">
           <div>

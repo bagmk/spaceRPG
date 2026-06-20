@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import type { GameState } from '../game/types';
 import { t, type Lang } from '../i18n';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { ENTITY_COST_ANCHORS } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { formatGameNumberShort } from '../game/formulas';
@@ -31,8 +33,11 @@ export function QuestPanel({ state, language, onClaim, onClose }: QuestPanelProp
     .map((id) => getQuest(id))
     .filter((q): q is QuestDef => q !== undefined);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useModalA11y(overlayRef, onClose);
+
   return (
-    <div className="quest-overlay" role="dialog" aria-label={t(language, 'questTitle')} onClick={onClose}>
+    <div className="quest-overlay" role="dialog" aria-modal="true" aria-label={t(language, 'questTitle')} onClick={onClose} ref={overlayRef} tabIndex={-1}>
       <div className="quest-panel cc-scroll" onClick={(e) => e.stopPropagation()}>
         <div className="quest-panel__head">
           <h2 className="quest-panel__title">{t(language, 'questTitle')}</h2>

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
 import { formatGameNumberShort, getEntropyGateProgress } from '../game/formulas';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { GameAction } from '../game/reducer';
 import {
   MATTER_PACK_PRODUCTS,
@@ -138,11 +139,9 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  // C-P1 a11y: Esc-to-close + focus trap + restore (replaces the old Esc-only effect).
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useModalA11y(overlayRef, onClose);
   // Commit the date-rollover on open AND whenever the local day flips while the
   // shop stays open, so the persisted roster matches what's displayed/charged.
   useEffect(() => { dispatch({ type: 'SYNC_DAILY_SHOP', now }); }, [dispatch, todayKey, now]);
@@ -223,7 +222,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
 
   const accent = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].accent ?? '#8090b0';
   return (
-    <div className="entity-fs shop-fs" onClick={onClose}>
+    <div className="entity-fs shop-fs" role="dialog" aria-modal="true" aria-label={t(language, 'hudShop')} onClick={onClose} ref={overlayRef} tabIndex={-1}>
       <section className="entity-fs__panel" onClick={(e) => e.stopPropagation()} style={{ '--stage-accent': accent } as CSSProperties}>
       <header className="entity-fs__topbar">
         <h2 className="entity-fs__screen-title">{t(language, 'hudShop')}</h2>
