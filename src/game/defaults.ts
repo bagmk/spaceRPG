@@ -107,6 +107,7 @@ export function createInitialGameState(now: number): GameState {
     offlineGained: 0,
     offlineEntropyGained: 0,
     offlineTimeProgressGained: 0,
+    offlineDailyStonesGained: 0,
     endingStartedAt: null,
     lastCondensedMassEarned: 0,
     lastCodexMassBonus: 0,

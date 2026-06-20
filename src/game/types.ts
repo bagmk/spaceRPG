@@ -334,6 +334,8 @@ export interface GameState extends PersistentGameState {
   offlineGained: number;
   offlineEntropyGained: number;
   offlineTimeProgressGained: number;
+  /** C-P2: 강화석 granted by the daily check-in on this load (0 if not a new day). */
+  offlineDailyStonesGained: number;
   endingStartedAt: number | null;
   /**
    * Transient display breakdown of the last completion reward (Phase 4-3) —

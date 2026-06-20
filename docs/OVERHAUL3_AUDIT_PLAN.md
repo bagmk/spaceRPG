@@ -72,7 +72,7 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   tooltips (never show on touch) — surface as visible inline/tappable text.
 - [x] **C-P2 Global focus-visible ring** DONE — global :focus-visible outline added.
 - [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
-- [ ] **C-P2 Daily check-in streak** has no gap detection + grants nothing (useGameState.ts:169-174)
+- [x] **C-P2 Daily check-in streak** DONE — consecutive-day gap detection (gap→reset to 1) + escalating 강화석 reward (2..8 by streak) shown in the offline modal.
   — add consecutive-day detection + an escalating return reward.
 - [ ] **C-P2 Memoize open modal panels** (Shop/Entity/Quest/Settings re-render ~10×/s) + extract &
   unit-test offline catch-up + cloud-merge (and switch vitest env to jsdom for component tests).

@@ -734,6 +734,17 @@ export function gachaItemCount(rank: number): number {
   return GACHA_ITEMS_BASE + (rank >= 2 ? GACHA_TOP_RANK_BONUS_ITEM : 0);
 }
 
+// C-P2 (audit): daily check-in reward — an escalating 강화석 grant that re-hooks
+// returning players. The streak only continues on CONSECUTIVE calendar days
+// (a gap resets it to 1); reward grows with streak up to a cap.
+export const DAILY_CHECKIN_STONES_BASE = 2;
+export const DAILY_CHECKIN_STONES_PER_STREAK = 1;
+export const DAILY_CHECKIN_STREAK_CAP = 7;
+export function dailyCheckInStones(streakDays: number): number {
+  const s = Math.max(1, Math.floor(streakDays));
+  return DAILY_CHECKIN_STONES_BASE + Math.min(s - 1, DAILY_CHECKIN_STREAK_CAP - 1) * DAILY_CHECKIN_STONES_PER_STREAK;
+}
+
 // ── #44 HEXAGON BINGO set bonuses ───────────────────────────────────────────
 // 7 equip slots in a hexagon: 0-2 = click (outer), 3-5 = rift (outer), 6 = wild
 // (center). A LINE of 3 completes when all 3 are filled and share an equip

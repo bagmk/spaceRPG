@@ -1206,6 +1206,7 @@ export function GameScreen({
           gained={state.offlineGained}
           entropyGained={state.offlineEntropyGained}
           timeProgressGained={state.offlineTimeProgressGained}
+          dailyStonesGained={state.offlineDailyStonesGained}
           language={language}
           onDismiss={() => dispatch({ type: 'DISMISS_OFFLINE_MODAL' })}
         />

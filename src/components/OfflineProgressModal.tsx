@@ -7,6 +7,8 @@ interface OfflineProgressModalProps {
   gained: number;
   entropyGained: number;
   timeProgressGained: number;
+  /** C-P2: 강화석 from the daily check-in (0 if not a new day). */
+  dailyStonesGained?: number;
   language: Lang;
   onDismiss: () => void;
 }
@@ -17,6 +19,7 @@ export function OfflineProgressModal({
   gained,
   entropyGained,
   timeProgressGained,
+  dailyStonesGained = 0,
   language,
   onDismiss,
 }: OfflineProgressModalProps) {
@@ -40,6 +43,9 @@ export function OfflineProgressModal({
             <span>{`${t(language, 'offlineEntropy')}: ${entropyReadout.value}`}</span>
             <span className="hud-entropy-unit">{entropyReadout.unit}</span>
           </span>
+          {dailyStonesGained > 0 ? (
+            <span className="offline-daily-reward">{`${t(language, 'offlineDailyReward')}: ◆ ${dailyStonesGained}`}</span>
+          ) : null}
         </div>
         <button className="q-continue" type="button" onClick={onDismiss}>
           {t(language, 'offlineReturn')}

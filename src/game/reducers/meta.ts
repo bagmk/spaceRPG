@@ -42,6 +42,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     offlineGained: 0,
     offlineEntropyGained: 0,
     offlineTimeProgressGained: 0,
+    offlineDailyStonesGained: 0,
     endingStartedAt: null,
     lastCondensedMassEarned: 0,
     lastCodexMassBonus: 0,
@@ -82,6 +83,7 @@ export function handleDismissOfflineModal(state: GameState): GameState {
     offlineGained: 0,
     offlineEntropyGained: 0,
     offlineTimeProgressGained: 0,
+    offlineDailyStonesGained: 0,
   };
 }
 

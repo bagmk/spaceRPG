@@ -12,7 +12,7 @@ import {
   getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
-import { OFFLINE_ENTROPY_FLOOR_FRAC } from '../game/balance';
+import { OFFLINE_ENTROPY_FLOOR_FRAC, dailyCheckInStones } from '../game/balance';
 import {
   getOfflineRewardCapSec,
   integrateBoostedSeconds,
@@ -153,11 +153,22 @@ export function useGameState(): UseGameStateResult {
       const previousTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, safeCosmic);
       const nextTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, nextCosmicClockSec);
       const todayKey = getDayKey(new Date(now));
+      const yesterdayKey = getDayKey(new Date(now - 24 * 60 * 60 * 1000));
       const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
+      // C-P2 (audit): a streak only continues on CONSECUTIVE days; a gap (or the
+      // first ever check-in) resets it to 1. The check-in grants an escalating
+      // 강화석 reward so returning after a break is actually rewarded.
+      const newStreak = !isDailyCheckIn
+        ? payload.dailyCheckIns.streakDays
+        : payload.dailyCheckIns.lastDayKey === yesterdayKey
+          ? payload.dailyCheckIns.streakDays + 1
+          : 1;
+      const dailyStones = isDailyCheckIn ? dailyCheckInStones(newStreak) : 0;
       return {
         ...baseState,
         quanta: nextQuanta,
         entropy: safeAdd(baseState.entropy, entropyGained),
+        enhanceStones: Math.max(0, baseState.enhanceStones + dailyStones),
         cosmicClockSec: nextCosmicClockSec,
         timeGauge: nextTimeGauge,
         lastSaveAt: now,
@@ -165,12 +176,10 @@ export function useGameState(): UseGameStateResult {
         offlineGained: gained,
         offlineEntropyGained: entropyGained,
         offlineTimeProgressGained: Math.max(0, nextTimeGauge - previousTimeGauge),
+        offlineDailyStonesGained: dailyStones,
         shopBoosts: pruneExpiredShopBoosts(payload.shopBoosts, now),
         dailyCheckIns: isDailyCheckIn
-          ? {
-              lastDayKey: todayKey,
-              streakDays: payload.dailyCheckIns.lastDayKey ? payload.dailyCheckIns.streakDays + 1 : 1,
-            }
+          ? { lastDayKey: todayKey, streakDays: newStreak }
           : payload.dailyCheckIns,
       };
       } catch (e) {

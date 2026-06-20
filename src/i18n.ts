@@ -180,6 +180,7 @@ export const STRINGS = {
   offlineMatter:  { en: 'Matter gathered', ko: '획득한 물질' },
   offlineTime:    { en: 'Time advanced', ko: '진행된 시간' },
   offlineEntropy: { en: 'Entropy gained', ko: '획득한 엔트로피' },
+  offlineDailyReward: { en: 'Daily check-in', ko: '일일 출석 보상' },
   offlineReturn:  { en: 'RETURN', ko: '돌아가기' },
 
   // ── Stage names ───────────────────────────────────────────────
