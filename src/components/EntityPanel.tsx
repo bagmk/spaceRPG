@@ -1227,6 +1227,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   wild). Completed bingo lines light their segments. */}
               <div className="hex-board">
                 <svg className="hex-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  {/* A8: arrowhead marker — completed bonus lines become directional
+                      arrows; the mid-marker lands on the SHARED/hub slot so overlapping
+                      lines visibly connect there. */}
+                  <defs>
+                    <marker id="hex-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.4" markerHeight="3.4" orient="auto-start-reverse">
+                      <path d="M1,1 L9,5 L1,9 Z" className="hex-links__arrow" />
+                    </marker>
+                  </defs>
                   {HEX_LINK_EDGES.map(([a, b], i) => (
                     <line
                       key={`e${i}`}
@@ -1239,7 +1247,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     const pts = HEX_BINGO_LINES[li].slots
                       .map((s) => `${HEX_NODE_XY[s][0]},${HEX_NODE_XY[s][1]}`)
                       .join(' ');
-                    return <polyline key={`l${li}`} className="hex-links__lit" points={pts} />;
+                    return (
+                      <polyline
+                        key={`l${li}`}
+                        className="hex-links__lit"
+                        points={pts}
+                        markerMid="url(#hex-arrow)"
+                        markerEnd="url(#hex-arrow)"
+                      />
+                    );
                   })}
                 </svg>
                 {[0, 1, 2, 3, 4, 5].map((idx) => <Fragment key={idx}>{renderHexOuter(idx)}</Fragment>)}

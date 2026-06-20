@@ -800,6 +800,8 @@ button.hud-stage-title--clickable:hover {
   filter: drop-shadow(0 0 4px rgba(255, 214, 130, 0.85));
   animation: hex-line-pulse 1.8s ease-in-out infinite;
 }
+/* A8: arrowheads on the completed-bonus lines (direction + overlap at shared slots). */
+.hex-links__arrow { fill: #ffe0a0; }
 .hex-slot {
   position: absolute;
   transform: translate(-50%, -50%);

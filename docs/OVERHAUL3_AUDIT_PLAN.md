@@ -31,7 +31,7 @@
 - [x] **A7 Nebula box → 3-4 items + 강화석.** DONE — multi-item haul (faint/bright 3, prime 4) + stones (3/6/12) + grid reveal. OPEN_GACHA_BOX should grant 3–4 entities
   + some 강화석 (not a single item). Rework `handleOpenGachaBox` (reducers/shop.ts) + the reveal UI
   (ShopPanel) to show the multi-item haul clearly (current single-card reveal is hard to read).
-- [ ] **A8 Bonus-overlap arrows.** Where hex bingo bonuses overlap/stack, draw connecting arrows
+- [x] **A8 Bonus-overlap arrows.** DONE — arrowhead markers on completed bonus polylines (marker-mid lands on shared/hub slot). Where hex bingo bonuses overlap/stack, draw connecting arrows
   on the hex so the player sees which lines combine.
 
 ## B. P6 — inventory instance model (save v25) — DO FIRST per user
