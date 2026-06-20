@@ -17,12 +17,12 @@
   Update fusion.test.ts back to stage-independent + geometric-rarity assertions.
 - [x] **A2 Enhance cost too steep.** DONE — ENHANCE_COST_GROWTH 1.7→1.35, ENHANCE_STONE_GROWTH
   1.5→1.3; mirrored in entropy-gate-sim.mjs, invariants green.
-- [ ] **A3 Hexagon: lines strictly BEHIND cards + cards readable.** SVG `.hex-links` z-index
+- [x] **A3 Hexagon: lines BEHIND cards + cards readable.** DONE — opaque filled-card bg (rgba(12,14,22,.94)) so links don't bleed through. SVG `.hex-links` z-index
   below `.hex-slot` (already 0/1 — make slot cards more opaque so lines don't bleed through;
   ensure equipped card + its effect label are clearly legible over the links/glow).
-- [ ] **A4 Hexagon card name wrapping.** Long names (e.g. 글루온/글루온 플라스마) overflow/break
+- [x] **A4 Hexagon card name wrapping.** DONE — 2-line clamp + keep-all. Long names (e.g. 글루온/글루온 플라스마) overflow/break
   in `.equip-slot-card__name` / `.hex-slot`. Allow 2-line wrap (clamp 2) instead of clip.
-- [ ] **A5 Completed-line glow.** Confirm completed bingo lines visibly light (the lit polyline)
+- [x] **A5 Completed-line glow.** DONE (implemented in P3; lit polyline per completed line, clearer now). Confirm completed bingo lines visibly light (the lit polyline)
   when a full line of 3 matches; fix if not firing.
 - [ ] **A6 Consolidate overlapping effects.** Crit chance / click power / auto speed appear as
   BOTH a primary trait AND a substat (legend shows ★치명타확률 twice, ●/🖱 클릭위력, ■/⚙ 오토속도).

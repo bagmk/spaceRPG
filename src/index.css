@@ -674,9 +674,12 @@ button.hud-stage-title--clickable:hover {
 .equip-slot-card--filled {
   border-style: solid;
   border-color: var(--rarity-color);
+  /* A3 (user): an OPAQUE dark base so the hexagon link lines behind the card
+     don't bleed through — the equipped card + its effect label must read clearly
+     on top of the SVG. Rarity tint sits over the solid fill. */
   background:
-    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--rarity-color) 16%, transparent), transparent),
-    rgba(255, 255, 255, 0.02);
+    radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--rarity-color) 22%, transparent), transparent),
+    rgba(12, 14, 22, 0.94);
   box-shadow: 0 0 14px color-mix(in srgb, var(--rarity-color) 25%, transparent);
 }
 
@@ -696,7 +699,16 @@ button.hud-stage-title--clickable:hover {
 .equip-slot-card__name {
   font-size: 11px;
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.2;
+  /* A4 (user): long names (글루온 플라스마) overflowed the narrow hex slot. Wrap to
+     2 lines with Korean-friendly word breaking instead of clipping/spilling. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .equip-slot-card__meta {
