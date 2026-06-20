@@ -55,7 +55,7 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   ~0.68GB; Big Rip "1 Ronna Byte" fires ~3.25GB; Big Crunch "1GB" fires ~15MB). Interpolate the live
   balance.ts values into the i18n strings at runtime so they can't desync. (prestige.ts:129-133,
   multiverse.ts:39/50)
-- [ ] **C-P1 CI runs tests + PR trigger.** deploy.yml only `npm run build`; add a `test` job as a
+- [x] **C-P1 CI runs tests + PR trigger.** DONE — deploy.yml gates on npm test; new ci.yml runs tsc+test+build on PRs + non-main pushes. deploy.yml only `npm run build`; add a `test` job as a
   `needs:` of build + a pull_request-triggered workflow.
 - [x] **C-P1 prefers-reduced-motion covers shake/flash/cinematics** DONE — RM block kills .shake/.shake-big + enhance-shake + collapses stage-transition rays/wash to opacity. (not just ~8 decorative rules):
   .shake/.shake-big, stage-transition cinematics, BigBangCinematic, intro. Opacity-only under RM.

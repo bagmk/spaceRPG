@@ -31,6 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # C-P1 (audit): gate the production deploy on the test suite. `npm run build`
+      # only typechecks, so a green deploy could previously ship a broken reducer.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
         env:

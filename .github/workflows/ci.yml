@@ -1,0 +1,40 @@
+name: CI
+
+# C-P1 (audit): the repo had NO pull_request-triggered CI and never ran the test
+# suite before deploy. This runs typecheck + tests + build on every PR and on
+# pushes to non-main branches (main is covered by deploy.yml, which now also gates
+# on tests). The build here needs no Firebase secrets — the app reads them at
+# runtime and falls back to offline mode when absent.
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
