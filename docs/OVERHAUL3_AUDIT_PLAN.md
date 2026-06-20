@@ -61,7 +61,7 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   .shake/.shake-big, stage-transition cinematics, BigBangCinematic, intro. Opacity-only under RM.
 - [ ] **C-P1 Modal a11y:** focus-trap on open + restore on close; shared `useEscapeToClose` for all
   overlays (offline, ending chooser, reset, almanac, quests — shop already has Esc).
-- [ ] **C-P1 Cloud merge safety:** snapshot the discarded save before last-write-wins overwrite
+- [x] **C-P1 Cloud merge safety:** DONE — snapshot local to cc_cloud_overwrite_backup before remote-newer overwrite + skip overwrite when remote regressed on both stage & peakEntropy. snapshot the discarded save before last-write-wins overwrite
   and/or merge on peakEntropy/stageIdx maxima (useCloudSync.ts:64-69).
 - [ ] **C-P2 Tutorial queue.** Replace the winner-take-all ~14-branch useMemo (GameScreen.tsx:299-435)
   with an ordered queue that advances one step at a time (lower-priority tutorials currently skipped

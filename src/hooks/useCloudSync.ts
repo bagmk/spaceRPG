@@ -62,11 +62,27 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
       const localSaveAt = local.lastSaveAt ?? 0;
       const remoteSaveAt = remote.lastSaveAt ?? 0;
 
-      if (localIsEmpty || remoteSaveAt > localSaveAt) {
-        // Remote is newer or local is fresh/empty — hydrate from remote
+      // C-P1 (audit): last-write-wins on each device's wall clock can silently
+      // destroy progress across devices (clock skew, or just the last device to
+      // push). Guard 1 — if the remote is STRICTLY behind local on BOTH stage and
+      // peak entropy, it's a regression (almost certainly stale/skewed): keep local.
+      const remoteRegressed =
+        remote.stageIdx < local.stageIdx && (remote.peakEntropy ?? 0) < (local.peakEntropy ?? 0);
+
+      if (localIsEmpty || (remoteSaveAt > localSaveAt && !remoteRegressed)) {
+        // Guard 2 — snapshot the local save we're about to discard so it's
+        // recoverable instead of lost, unless local was fresh/empty anyway.
+        if (!localIsEmpty) {
+          try {
+            localStorage.setItem(
+              'cc_cloud_overwrite_backup',
+              JSON.stringify({ savedAt: Date.now(), reason: 'remote-newer', state: toCloudSave(local) }),
+            );
+          } catch { /* best-effort backup — quota/serialization */ }
+        }
         dispatch({ type: 'HYDRATE', payload: remote, now: Date.now() });
       }
-      // Otherwise local is newer — keep local, it'll push on next save
+      // Otherwise local is newer (or remote regressed) — keep local, it'll push on next save
     })();
   }, [status, user, dispatch]);
 
