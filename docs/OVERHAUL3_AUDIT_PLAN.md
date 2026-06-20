@@ -57,7 +57,7 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   multiverse.ts:39/50)
 - [ ] **C-P1 CI runs tests + PR trigger.** deploy.yml only `npm run build`; add a `test` job as a
   `needs:` of build + a pull_request-triggered workflow.
-- [ ] **C-P1 prefers-reduced-motion covers shake/flash/cinematics** (not just ~8 decorative rules):
+- [x] **C-P1 prefers-reduced-motion covers shake/flash/cinematics** DONE — RM block kills .shake/.shake-big + enhance-shake + collapses stage-transition rays/wash to opacity. (not just ~8 decorative rules):
   .shake/.shake-big, stage-transition cinematics, BigBangCinematic, intro. Opacity-only under RM.
 - [ ] **C-P1 Modal a11y:** focus-trap on open + restore on close; shared `useEscapeToClose` for all
   overlays (offline, ending chooser, reset, almanac, quests — shop already has Esc).

@@ -201,6 +201,19 @@ canvas {
   animation: shakebig 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
+/* C-P1 (audit): real reduced-motion support. The prior RM blocks only covered a
+   few decorative rules — the seizure-risk SHAKE (fires on every comet collision)
+   and the "violent shake / blinding flash" stage-transition cinematics stayed
+   fully active. Under reduced-motion, kill the shakes/flashes and collapse the
+   cinematic washes/rays to a calm opacity cue. */
+@media (prefers-reduced-motion: reduce) {
+  .shake, .shake-big { animation: none !important; }
+  .enhance-toast--break { animation: enhance-toast-in 0.26s ease-out !important; } /* drop the shake half */
+  [class*="stage-transition-rays"] { animation: none !important; opacity: 0 !important; }
+  [class*="stage-transition-wash"] { animation: none !important; transition: opacity 0.4s ease !important; }
+  [class*="stage-transition-wash"].active { opacity: 0.45 !important; }
+}
+
 @keyframes shake {
   10%,
   90% {
