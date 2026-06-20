@@ -1199,9 +1199,7 @@ export function GameScreen({
           musicMuted={musicMuted}
           musicVolume={musicVolume}
           language={language}
-          state={state}
           soundManager={soundManager}
-          onImportSave={(persistent) => { dispatch({ type: 'HYDRATE', payload: persistent, now: Date.now() }); setSettingsOpen(false); }}
           onToggleMusic={onToggleMusic}
           onSetMusicVolume={onSetMusicVolume}
           onToggleSfx={onToggleSfx}
