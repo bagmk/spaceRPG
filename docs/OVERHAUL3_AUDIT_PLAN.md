@@ -85,16 +85,19 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   against the original chain (diffed all 12 branches). 10 new vitest cases incl. the anti-shadow
   advance + allDismissed gate. 336 tests green. (Note: the original chain already fell through on
   `seen`; the real value is testability + a lean GameScreen, not a behavior change.)
-- [ ] **C-P2 HUD topline:** give quanta a dedicated reserved-width region (index.css:11110) so big
-  numbers + long Korean stage names don't wrap and shove the entropy meter.
-- [ ] **C-P2 Touch affordances (PARTIAL):** DONE — the equip-panel **Enhance-All** locked button now
-  shows the unlock-stage reason in its VISIBLE label (`🔒 전체 강화 · 스테이지 N`), mirroring the proven
-  codex-card pattern (EntityPanel:1874) — zero layout risk. DEFERRED (needs-visual, behind the OAuth
-  login wall): the **equip/fuse side-rail** lock hints (GameScreen ~1020/1033) and the **condense
-  pre-gate** guidance line — both add a line to tight HUD/rail controls whose reflow can't be
-  confirmed in the dev preview. Exact edits are specified in the scope-section-c workflow output
-  (touch-affordances spec); land them when a visual path opens. The remaining `title=` attributes
-  (shop odds, icon-button names) are decorative/redundant — leave alone.
+- [x] **C-P2 HUD topline:** VERIFIED — no fix needed (and the proposed fix would regress). Now that
+  the offline preview reaches the game screen, tested the worst case at 390px mobile width: the
+  longest stage name ("Cosmic Dark Age", EN) renders on ONE line (18px, no wrap, readout right edge
+  376 < 390), with a large gap before MATTER; KO stage names are all ≤6 chars and `formatGameNumberShort`
+  keeps quanta ~6 chars, so no realistic reflow. The spec's `flex-wrap:nowrap` + title `max-width`
+  + ellipsis would CLIP names that currently display fully → deliberately NOT applied.
+- [x] **C-P2 Touch affordances:** DONE — (1) equip-panel **Enhance-All** locked button shows the
+  unlock-stage in its visible label (`🔒 전체 강화 · 스테이지 N`); (2) the **equip/fuse side-rail** locked
+  buttons now carry a small absolutely-positioned `S{n}` stage badge (`.entity-lab-button__lockstage`,
+  verified in the offline preview — 18×14px corner pills, zero reflow of the 44px circles). The
+  **condense pre-gate** guidance is already surfaced by the entropy tutorial bubble (the
+  `hudEntropyGateHint` line shows on first reaching the meter), so a persistent meter note would be
+  redundant — skipped. Remaining `title=` attributes (shop odds, icon names) are decorative — left.
 - [x] **C-P2 Global focus-visible ring** DONE — global :focus-visible outline added.
 - [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
 - [x] **C-P2 Daily check-in streak** DONE — consecutive-day gap detection (gap→reset to 1) + escalating 강화석 reward (2..8 by streak) shown in the offline modal.
