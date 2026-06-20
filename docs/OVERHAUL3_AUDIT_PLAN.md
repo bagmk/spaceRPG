@@ -7,7 +7,8 @@
 > then fast-forward `main` AND `feat/entity-redesign` to the tip and `git push origin main feat/entity-redesign <branch>`.
 > CWD GOTCHA: always run shell cmds from the worktree (avoid `cd /Users/saesunkim/게임 &&` — it
 > poisons cwd for the next command). The main working dir has `feat/entity-redesign` checked out.
-> Save schema is at v24; P6 bumps to v25. Do NOT ask the user to confirm — just proceed.
+> Save schema is at **v25** (P6 flat instance model shipped, commit b8308b2). Do NOT ask the user
+> to confirm — just proceed.
 > Update the checkboxes below as items land.
 
 ## A. Immediate user fixes (from 2026-06-19 feedback batch)
@@ -34,18 +35,24 @@
 - [x] **A8 Bonus-overlap arrows.** DONE — arrowhead markers on completed bonus polylines (marker-mid lands on shared/hub slot). Where hex bingo bonuses overlap/stack, draw connecting arrows
   on the hex so the player sees which lines combine.
 
-## B. P6 — inventory instance model (save v25) — DO FIRST per user
+## B. P6 — inventory instance model (save v25) — ✅ DONE (commit b8308b2)
 Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Migration explode
 (user choice): **one copy keeps the stack level, the rest → Lv1.**
-- [ ] **B1 Foundation + migration.** Flat EntityInstance (instanceId, count→1), v24→v25 migration
-  (explode), full save checklist (SAVE_SCHEMA_VERSION 24→25, SaveState/snapshot/toPersistentState/
-  withHydratedTransient, validateV5 whitelist, isEntityInstance guard, normalizeSavedEntityIds
-  canonicalize-WITHOUT-merging, finalizeV17 seed, migrateByVersion v25), derived `getOwnedCount`/
-  `getCopies` helpers, reroute ~23 `.count` readers. Behavior-preserving; 318 tests + v24→v25
-  round-trip test pass.
-- [ ] **B2 Per-copy placement** — equip slots carry instanceId; two copies in two hex slots.
-- [ ] **B3 Per-copy enhance** — ENHANCE_ENTITY targets instanceId; Lv3 break destroys that copy only.
-- [ ] **B4 Per-copy fusion** — fusion consumes specific instances; refund uses each copy's invested.
+- [x] **B1 Foundation + migration.** Flat EntityInstance (`instanceId?`, count stays 1), v24→v25
+  migration explode. Save checklist done: SAVE_SCHEMA_VERSION 24→25, SaveState.version 25,
+  validateV5/isEntityInstance whitelist `instanceId`, `normalizeSavedEntityIds` keeps flat copies
+  separate (only merges legacy no-id stacks), new `ensureFlatInstances` (explode, slot remap,
+  `FLAT_EXPLODE_HARD_CAP` against corrupt counts, idempotent for v25). New `entities/instances.ts`
+  (`newInstanceId`/`makeInstance`/`pickFreeCopyId`/`reservedInstanceIds`/`getCopies`).
+- [x] **B2 Per-copy placement** — equip slots carry instanceId (entityId fallback for legacy);
+  reducer resolves a free copy; two copies fill two hex slots. EntityPanel groups display by
+  entityId (count = copies); `entryOfSlot`/`entityOfSlot`/`freeCountOf` instanceId-aware.
+- [x] **B3 Per-copy enhance** — `ENHANCE_ENTITY` targets the slot's instanceId; Lv3 break destroys
+  that copy only + clears its slot. Enhance-exclude keyed by instanceId.
+- [x] **B4 Per-copy fusion** — count-aware validate/consume; consumes spare copies lowest-level
+  first, never an equipped one; refund uses each consumed copy's invested.
+- Verified: tsc clean, 319 tests (incl. v25 idempotency round-trip), entropy-gate-sim invariants,
+  production build.
 
 ## C. Audit fixes (from the 7-persona audit, prioritized)
 - [ ] **C-P0 Accessibility: core gather loop keyboard/SR operable.** ParticleField hitbox →
