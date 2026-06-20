@@ -281,11 +281,17 @@ const TRAIT_LEGEND: { type: keyof typeof EFFECT_TRAIT; labelKey: Parameters<type
 // #48: the SUBSTAT shapes (✷✶🔗🌀🎁⚗⚙🖱🌙) were missing from the legend, so the
 // chips on the cards had no key. Driven straight off SUBSTAT_TRAIT/LABEL so it
 // can never drift from what the cards actually render.
-const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[]).map((type) => ({
-  type,
-  icon: SUBSTAT_TRAIT[type],
-  labelKey: SUBSTAT_LABEL_KEY[type],
-}));
+// A6: critChance / autoPct / clickPct are the SAME stat as the click/auto/crit
+// primaries (now sharing their icon) — list them only in the primary legend so
+// each stat appears once, not twice.
+const SUBSTAT_LEGEND_OMIT: ReadonlySet<SecondaryStatType> = new Set(['critChance', 'autoPct', 'clickPct']);
+const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[])
+  .filter((type) => !SUBSTAT_LEGEND_OMIT.has(type))
+  .map((type) => ({
+    type,
+    icon: SUBSTAT_TRAIT[type],
+    labelKey: SUBSTAT_LABEL_KEY[type],
+  }));
 
 /** Legend explaining what each trait shape means (#42-fix: 도형 직관화).
     Collapsed by default — the per-item SpecChips already label each stat, so the

@@ -615,15 +615,20 @@ export const EFFECT_TRAIT: Record<EntityEffectType, { icon: string; accent: stri
 };
 
 /** Trait icon per secondary (substat) type — same vocabulary as EFFECT_TRAIT. */
+// Overhaul-3 A6 (user): substats that are the SAME stat as a primary trait now
+// reuse that primary's icon so a stat reads as ONE concept everywhere — critChance
+// → ★ (= crit primary), autoPct → ■ (= auto primary), clickPct → ● (= click
+// primary). The legend (EntityPanel SUBSTAT_LEGEND) drops these three so each
+// stat is listed exactly once.
 export const SUBSTAT_TRAIT: Record<SecondaryStatType, string> = {
-  critChance:  '✷',
+  critChance:  '★',
   critMult:    '✶',
   comboCap:    '🔗',
   entropyGain: '🌀',
   dropRate:    '🎁',
   fusionBurst: '⚗',
-  autoPct:     '⚙',
-  clickPct:    '🖱',
+  autoPct:     '■',
+  clickPct:    '●',
   offlineEff:  '🌙',
 };
 

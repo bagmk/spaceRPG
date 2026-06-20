@@ -24,7 +24,7 @@
   in `.equip-slot-card__name` / `.hex-slot`. Allow 2-line wrap (clamp 2) instead of clip.
 - [x] **A5 Completed-line glow.** DONE (implemented in P3; lit polyline per completed line, clearer now). Confirm completed bingo lines visibly light (the lit polyline)
   when a full line of 3 matches; fix if not firing.
-- [ ] **A6 Consolidate overlapping effects.** Crit chance / click power / auto speed appear as
+- [x] **A6 Consolidate overlapping effects.** DONE — substat critChance→★ autoPct→■ clickPct→● (match primaries); legend omits the 3 dupes. Crit chance / click power / auto speed appear as
   BOTH a primary trait AND a substat (legend shows ★치명타확률 twice, ●/🖱 클릭위력, ■/⚙ 오토속도).
   Unify to ONE icon+label per stat across EFFECT_TRAIT (balance.ts) + SUBSTAT_TRAIT/labels so the
   legend + chips don't duplicate concepts.
