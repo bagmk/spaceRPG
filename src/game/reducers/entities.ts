@@ -502,7 +502,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       ...state,
       quanta: state.quanta - cost + payout,
       eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, instanceId: owned.instanceId, outcome: 'up', level: level + 1, prevLevel: level, payout },
       inventory: state.inventory.map((e) =>
         matchesOwned(e)
           ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
@@ -531,7 +531,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       quanta: state.quanta - matterCost + payout,
       enhanceStones: state.enhanceStones - protectCost, // 0 unless protecting
       eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
+      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, instanceId: owned.instanceId, outcome: 'up', level: level + 1, prevLevel: level, payout },
       inventory: state.inventory.map((e) =>
         matchesOwned(e) ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + matterCost } : e,
       ),

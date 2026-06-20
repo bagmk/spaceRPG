@@ -635,10 +635,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     return () => window.clearInterval(id);
   }, [lastFusionEvent]);
 
-  // Auto-dismiss the 강화 result flash (break lingers a touch longer).
+  // Auto-dismiss the 강화 result card (it's a full card now — give it time to read;
+  // break lingers longest). Click also dismisses.
   useEffect(() => {
     if (!lastEnhanceEvent || !onClearEnhanceEvent) return undefined;
-    const ms = lastEnhanceEvent.outcome === 'break' ? 2200 : 1100;
+    const ms = lastEnhanceEvent.outcome === 'break' ? 3600 : 3000;
     const id = window.setTimeout(() => onClearEnhanceEvent(lastEnhanceEvent.id), ms);
     return () => window.clearTimeout(id);
   }, [lastEnhanceEvent, onClearEnhanceEvent]);
@@ -1775,30 +1776,61 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           </div>
         );
       })() : null}
-      {/* 강화 result flash (P1) */}
-      {/* #40: compact inline outcome toast — NOT a full-screen center card (that
-          read like "a new item appeared" and the live effect-total recompute made
-          click power flicker). A small chip near the top: outcome + new level + payout. */}
+      {/* 강화 result CARD (user feedback): a proper card-sized popup — outcome banner +
+          the item's glyph + (on success) the primary stat BEFORE → AFTER, level, and
+          matter payback; on a destroy, a shattered glyph + the 강화석 minted. Replaces
+          the old tiny "파괴됨! ◆7" chip. Click anywhere or wait to dismiss. */}
       {lastEnhanceEvent ? (() => {
+        const ev = lastEnhanceEvent;
         const palette: Record<string, string> = { up: '#bb8cff', break: '#e2554a', protected: '#4a8fff' };
-        const col = palette[lastEnhanceEvent.outcome];
-        const labelKey = ({ up: 'enhanceOutcomeUp', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[lastEnhanceEvent.outcome];
+        const col = palette[ev.outcome];
+        const labelKey = ({ up: 'enhanceOutcomeUp', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[ev.outcome];
+        const ent = findEntityById(ev.entityId);
+        const entry = ev.instanceId ? inventory.find((e) => e.instanceId === ev.instanceId) : undefined;
+        const tr = ent ? EFFECT_TRAIT[ent.effect.type] : null;
+        // before → after for the primary stat on a successful level-up.
+        let beforeVal: string | null = null;
+        let afterVal: string | null = null;
+        let statLabel = '';
+        if (ent && ev.outcome === 'up' && ev.prevLevel != null) {
+          const cnt = entry?.count ?? 1;
+          const carried = entry?.carried ?? false;
+          const before = effectValueLabel(ent, language, power, cnt, ev.prevLevel, carried, true, entry?.quality);
+          const after = effectValueLabel(ent, language, power, cnt, ev.level, carried, true, entry?.quality);
+          beforeVal = before.value; afterVal = after.value; statLabel = after.label;
+        }
         return (
-          <div
-            className={`enhance-toast enhance-toast--${lastEnhanceEvent.outcome}`}
-            role="status"
-            style={{ '--flash-color': col } as CSSProperties}
-            onClick={() => onClearEnhanceEvent?.(lastEnhanceEvent.id)}
-          >
-            <span className="enhance-toast__tag">{t(language, labelKey)}</span>
-            {lastEnhanceEvent.outcome !== 'break' ? <span className="enhance-toast__lv">{`Lv.${lastEnhanceEvent.level}`}</span> : null}
-            {/* #47: a break refunds 강화석 — show only that count on the card. */}
-            {lastEnhanceEvent.outcome === 'break' && (lastEnhanceEvent.stonesEarned ?? 0) > 0 ? (
-              <span className="enhance-toast__payout">{`◆ ${lastEnhanceEvent.stonesEarned}`}</span>
-            ) : null}
-            {lastEnhanceEvent.outcome !== 'break' && lastEnhanceEvent.payout && lastEnhanceEvent.payout > 0 ? (
-              <span className="enhance-toast__payout">{`⚛${formatEntityCost(lastEnhanceEvent.payout)}`}</span>
-            ) : null}
+          <div className="enhance-result-layer" role="status" onClick={() => onClearEnhanceEvent?.(ev.id)}>
+            <article
+              className={`enhance-result-card enhance-result-card--${ev.outcome}`}
+              style={{ '--flash-color': col } as CSSProperties}
+            >
+              <div className="enhance-result-card__banner">{t(language, labelKey)}</div>
+              {ent ? (
+                <div className={`enhance-result-card__visual ${ev.outcome === 'break' ? 'enhance-result-card__visual--broken' : ''}`}>
+                  <EntityGlyph entity={ent} color={ev.outcome === 'break' ? '#e2554a' : RARITY_COLORS[ent.rarity]} />
+                </div>
+              ) : null}
+              {ent ? <h3 className="enhance-result-card__name">{entityName(ent, language)}</h3> : null}
+              {ev.outcome === 'up' && beforeVal && afterVal ? (
+                <div className="enhance-result-card__delta">
+                  {tr ? <span className="enhance-result-card__delta-icon" style={{ color: tr.accent }}>{tr.icon}</span> : null}
+                  <span className="enhance-result-card__stat">{statLabel}</span>
+                  <span className="enhance-result-card__before">{beforeVal}</span>
+                  <span className="enhance-result-card__arrow">→</span>
+                  <span className="enhance-result-card__after">{afterVal}</span>
+                </div>
+              ) : null}
+              {ev.outcome !== 'break' ? (
+                <div className="enhance-result-card__lv">{`Lv.${ev.prevLevel ?? ev.level} → Lv.${ev.level}`}</div>
+              ) : null}
+              {ev.outcome === 'break' && (ev.stonesEarned ?? 0) > 0 ? (
+                <div className="enhance-result-card__payout enhance-result-card__payout--stones">{`◆ ${ev.stonesEarned} ${t(language, 'hudStones')}`}</div>
+              ) : null}
+              {ev.outcome !== 'break' && ev.payout && ev.payout > 0 ? (
+                <div className="enhance-result-card__payout">{`⚛ ${formatEntityCost(ev.payout)}`}</div>
+              ) : null}
+            </article>
           </div>
         );
       })() : null}

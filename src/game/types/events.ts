@@ -88,9 +88,13 @@ export type EnhanceOutcome = 'up' | 'break' | 'protected';
 export interface EnhanceEvent {
   id: number;
   entityId: string;
+  /** P6: the specific copy enhanced — lets the result popup recompute its stat. */
+  instanceId?: string;
   outcome: EnhanceOutcome;
   /** The stack's level AFTER the attempt. */
   level: number;
+  /** The level BEFORE the attempt — drives the before→after stat readout on success. */
+  prevLevel?: number;
   /** Matter handed back this attempt (#40 payout) — shown on the inline indicator. */
   payout?: number;
   /** #47: 강화석 minted when a failed unprotected attempt destroys a copy (0 otherwise). */
