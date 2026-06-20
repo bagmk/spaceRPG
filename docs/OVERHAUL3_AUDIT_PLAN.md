@@ -111,9 +111,13 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
 - [ ] **C-P3 Dead code (PARTIAL):** DONE — deleted unimported `ResourcePanel.tsx` + `StatsRow.tsx`;
   removed the no-op `onPlayBigBang` prop (IntroScreen + App). DEFERRED (each its own reason):
   `scripts/balance-design.ts` is NOT dead — it backs `npm run sim` (keep/re-point separately);
-  `.bottom-buttons` CSS family (#46) is ~40 scattered rules many compound-mixed with live classes
-  (`.bottom-settings-button`/`.entity-lab-button`) and inert (class unused) — needs visual diff to
-  remove safely, low harm staying; prestige legacy-key reconcile (prestige.ts) is save-touching;
+  `.bottom-buttons` CSS family (#46) is ~39 scattered rules many compound-mixed with live classes
+  (`.scale-indicator`/`.hud-info`/`.entity-lab-button`) and inert (class unused) — **a parser-based
+  auto-remover was attempted 2026-06-20 and REVERTED: its span math corrupted the adjacent live
+  `.stat-header.stat-header--top` rule (CSS fails silently, so build/tests stayed green — only a
+  line-by-line git-diff audit caught it). Lesson: this removal needs a real CSS-AST tool (postcss)
+  or hand edits gated by a VISUAL build review, not a bespoke brace-counter.** Harmless staying;
+  prestige legacy-key reconcile (prestige.ts) is save-touching;
   sourcemaps `hidden` + error reporter is build-config, separate.
 
 ## D. Done this session (shipped to main @ 207a34f)
