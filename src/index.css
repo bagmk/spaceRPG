@@ -6539,6 +6539,27 @@ button.stat-header-item {
   background: #ffd34d;
   box-shadow: 0 0 6px rgba(255, 211, 77, 0.9);
 }
+/* C-P2 touch: unlock-stage badge on a locked rail button (the title= reason is
+   invisible on touch). Absolutely positioned → no reflow of the 44px circle. */
+.entity-lab-button__lockstage {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  background: rgba(20, 22, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(235, 240, 255, 0.92);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+  opacity: 1;
+}
 
 /* ============================================================
    QUEST PANEL (🅠5)

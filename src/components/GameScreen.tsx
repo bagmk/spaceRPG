@@ -1021,6 +1021,9 @@ export function GameScreen({
           >
             <span className="hud-action-icon" aria-hidden="true">{equipUnlocked ? '⌖' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'entityEquip')}</span>
+            {/* C-P2 touch: surface the unlock-stage on the locked circle (title= is
+                invisible on touch). aria-hidden — the button's title/aria-label carry it. */}
+            {!equipUnlocked ? <span className="entity-lab-button__lockstage" aria-hidden="true">{`S${EQUIP_UNLOCK_STAGE_ID}`}</span> : null}
             {equipHasNew ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
@@ -1034,6 +1037,7 @@ export function GameScreen({
           >
             <span className="hud-action-icon" aria-hidden="true">{fusionUnlocked ? '🔨' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'fuseTitle')}</span>
+            {!fusionUnlocked ? <span className="entity-lab-button__lockstage" aria-hidden="true">{`S${FUSION_UNLOCK_STAGE_ID}`}</span> : null}
             {fuseHasNew ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <div ref={shopAnchorRef} className="side-rail__shop-slot" style={{ '--rail-accent': '#ff9f6b' } as React.CSSProperties}>
