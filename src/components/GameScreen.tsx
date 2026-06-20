@@ -314,6 +314,9 @@ export function GameScreen({
       stageId: stage.id,
       universeCount: state.universeCount,
       entityPanelOpen,
+      questOpen,
+      shopOpen,
+      settingsOpen,
       totalClicks: state.totalClicks,
       equipUnlocked,
       ownedCurrentStageEntityCount,
@@ -359,6 +362,9 @@ export function GameScreen({
     state.tutorialFlags,
     state.universeCount,
     almanacOpen,
+    questOpen,
+    shopOpen,
+    settingsOpen,
   ]);
 
 

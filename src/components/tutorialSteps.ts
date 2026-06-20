@@ -17,6 +17,10 @@ export interface TutorialStepCtx {
   stageId: number;
   universeCount: number;
   entityPanelOpen: boolean;
+  /** Any full-screen overlay open (quest/shop/settings panels) — suppress bubbles. */
+  questOpen: boolean;
+  shopOpen: boolean;
+  settingsOpen: boolean;
   totalClicks: number;
   equipUnlocked: boolean;
   ownedCurrentStageEntityCount: number;
@@ -142,8 +146,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
 
 /** The first eligible-and-unseen tutorial step in canonical order, or null. */
 export function selectTutorialStep(ctx: TutorialStepCtx): TutorialStep | null {
-  // Global suppression — entity panel open, or not the first universe.
-  if (ctx.entityPanelOpen || ctx.universeCount !== 1) return null;
+  // Global suppression — never float a bubble over a full-screen overlay (it would
+  // point at a now-hidden background element / overlap the panel), or after universe 1.
+  if (
+    ctx.entityPanelOpen ||
+    ctx.questOpen ||
+    ctx.shopOpen ||
+    ctx.settingsOpen ||
+    ctx.almanacOpen ||
+    ctx.universeCount !== 1
+  ) {
+    return null;
+  }
   const dismissed = Boolean(ctx.flags.allDismissed);
   for (const step of TUTORIAL_STEPS) {
     if (dismissed && step.suppressedByAllDismissed) continue;

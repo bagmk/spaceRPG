@@ -6,6 +6,9 @@ function ctx(over: Partial<TutorialStepCtx> = {}): TutorialStepCtx {
     stageId: 1,
     universeCount: 1,
     entityPanelOpen: false,
+    questOpen: false,
+    shopOpen: false,
+    settingsOpen: false,
     totalClicks: 5,
     equipUnlocked: false,
     ownedCurrentStageEntityCount: 0,
@@ -24,6 +27,14 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
   it('suppresses entirely when the entity panel is open or it is not the first universe', () => {
     expect(selectTutorialStep(ctx({ entityPanelOpen: true }))).toBeNull();
     expect(selectTutorialStep(ctx({ universeCount: 2 }))).toBeNull();
+  });
+
+  it('suppresses while any full-screen overlay is open (no bubble over the milestone/shop/settings panel)', () => {
+    // stage-1 intro would otherwise be eligible (totalClicks 0)
+    expect(selectTutorialStep(ctx({ totalClicks: 0, questOpen: true }))).toBeNull();
+    expect(selectTutorialStep(ctx({ totalClicks: 0, shopOpen: true }))).toBeNull();
+    expect(selectTutorialStep(ctx({ totalClicks: 0, settingsOpen: true }))).toBeNull();
+    expect(selectTutorialStep(ctx({ totalClicks: 0, almanacOpen: true }))).toBeNull();
   });
 
   it('matter-time-intro shows the pre-first-click variant before any click', () => {
