@@ -33,7 +33,7 @@ import {
   getOfflineRewardCapSec,
   isCashShopUnlocked,
 } from '../game/shop/boosts';
-import { EQUIP_UNLOCK_STAGE_ID, FUSION_UNLOCK_STAGE_ID } from '../game/balance';
+import { EQUIP_UNLOCK_STAGE_ID, FUSION_UNLOCK_STAGE_ID, SHOP_UNLOCK_STAGE_ID } from '../game/balance';
 import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
@@ -94,7 +94,7 @@ interface ComboDisplay {
 
 interface TutorialBubble {
   flagId: string;
-  anchor: 'entity' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
+  anchor: 'entity' | 'equip' | 'fuse' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
@@ -178,6 +178,8 @@ export function GameScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const equipAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const fuseAnchorRef = useRef<HTMLButtonElement | null>(null);
   const questAnchorRef = useRef<HTMLButtonElement | null>(null);
   // Quest-milestone notification toast (fires when a quest's condition is met).
   const [questToast, setQuestToast] = useState<{ id: string; title: string } | null>(null);
@@ -1015,6 +1017,7 @@ export function GameScreen({
             {hasClaimableQuest ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
+            ref={equipAnchorRef}
             type="button"
             className={`entity-lab-button ${equipUnlocked ? '' : 'entity-lab-button--locked'} ${equipHasNew ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#8ef0c0' } as React.CSSProperties}
@@ -1031,6 +1034,7 @@ export function GameScreen({
             {equipHasNew ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
+            ref={fuseAnchorRef}
             type="button"
             className={`entity-lab-button ${fusionUnlocked ? '' : 'entity-lab-button--locked'} ${fuseHasNew ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#c79bff' } as React.CSSProperties}
@@ -1048,6 +1052,7 @@ export function GameScreen({
             <ShopButton
               highlighted={hasShopNotification}
               disabled={!canShowShop}
+              lockStageLabel={`S${SHOP_UNLOCK_STAGE_ID}`}
               onClick={() => {
                 setShopOpen(true);
                 soundManager?.playUIOpen();
@@ -1211,15 +1216,19 @@ export function GameScreen({
           anchorRef={
             activeTutorialBubble.anchor === 'entity'
               ? entityAnchorRef
-              : activeTutorialBubble.anchor === 'quest'
-                ? questAnchorRef
-                : activeTutorialBubble.anchor === 'shop'
-                  ? shopAnchorRef
-                  : activeTutorialBubble.anchor === 'boost'
-                    ? boostAnchorRef
-                    : activeTutorialBubble.anchor === 'field'
-                        ? fieldCenterAnchorRef
-                        : resourceAnchorRef
+              : activeTutorialBubble.anchor === 'equip'
+                ? equipAnchorRef
+                : activeTutorialBubble.anchor === 'fuse'
+                  ? fuseAnchorRef
+                  : activeTutorialBubble.anchor === 'quest'
+                    ? questAnchorRef
+                    : activeTutorialBubble.anchor === 'shop'
+                      ? shopAnchorRef
+                      : activeTutorialBubble.anchor === 'boost'
+                        ? boostAnchorRef
+                        : activeTutorialBubble.anchor === 'field'
+                          ? fieldCenterAnchorRef
+                          : resourceAnchorRef
           }
           position={
             activeTutorialBubble.anchor === 'resource'

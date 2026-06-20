@@ -1908,7 +1908,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 </button>
               ) : null}
               <div className="slot-detail__actions">
-                <button type="button" className="entity-detail-card__equip" style={{ borderColor: rc, color: rc }} onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
+                <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
                   {t(language, 'equipSwap')}
                 </button>
                 <button type="button" className="entity-detail-card__equip slot-detail__remove" onClick={() => { onUnequip(i, equipCat); setInspectedSlot(null); }}>

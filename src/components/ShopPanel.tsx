@@ -73,11 +73,14 @@ export function ShopButton({
   disabled = false,
   onClick,
   label = 'Shop',
+  lockStageLabel,
 }: {
   highlighted: boolean;
   disabled?: boolean;
   onClick: () => void;
   label?: string;
+  /** e.g. "S3" — corner badge while locked (parity with the equip/fuse rail buttons). */
+  lockStageLabel?: string;
 }) {
   return (
     <button
@@ -90,6 +93,7 @@ export function ShopButton({
       <span className="hud-action-icon" aria-hidden="true">{disabled ? '🔒' : '🛒'}</span>
       <span className="hud-action-label">{label}</span>
       {highlighted && !disabled ? <span className="hud-notification-dot" aria-hidden="true" /> : null}
+      {disabled && lockStageLabel ? <span className="entity-lab-button__lockstage" aria-hidden="true">{lockStageLabel}</span> : null}
     </button>
   );
 }

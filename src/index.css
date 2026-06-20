@@ -720,7 +720,7 @@ button.hud-stage-title--clickable:hover {
 }
 
 .equip-slot-card--locked {
-  opacity: 0.45;
+  opacity: 0.7;
   cursor: default;
   justify-content: center;
 }
@@ -772,10 +772,20 @@ button.hud-stage-title--clickable:hover {
   opacity: 0.5;
 }
 
-.equip-slot-card__hint,
 .equip-slot-card__lock {
   font-size: 10px;
   opacity: 0.65;
+  text-align: center;
+}
+
+/* D (user): the "N시대에 해금" unlock hint was double-dimmed (locked-card 0.45 ×
+   hint 0.65 ≈ 0.29) and unreadable. Full opacity + a bright legible color + weight
+   so it reads clearly while the slot frame itself stays subdued. */
+.equip-slot-card__hint {
+  font-size: 10px;
+  opacity: 1;
+  color: rgba(226, 233, 248, 0.92);
+  font-weight: 600;
   text-align: center;
 }
 
@@ -1627,7 +1637,26 @@ button.hud-stage-title--clickable:hover {
 .owned-card__delta--down { background: #6b2a2a; color: #f0c0c0; }
 
 .slot-detail__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.slot-detail__remove { border-color: rgba(220, 120, 120, 0.5) !important; color: #e89a9a !important; }
+/* B (user): the 교체/해제 actions were transparent outlines (교체 even tinted by the
+   item's rarity, so low rarities read flat grey). Give them distinct, polished tinted
+   fills — blue for swap, red for unequip — with bright legible labels. */
+.slot-detail__swap {
+  background: rgba(126, 200, 255, 0.16) !important;
+  border-color: rgba(126, 200, 255, 0.55) !important;
+  color: #d2e9ff !important;
+  font-weight: 600;
+}
+.slot-detail__swap:hover { background: rgba(126, 200, 255, 0.26) !important; }
+.slot-detail__remove {
+  background: rgba(224, 120, 116, 0.16) !important;
+  border-color: rgba(224, 120, 116, 0.6) !important;
+  color: #f4bcb9 !important;
+  font-weight: 600;
+}
+.slot-detail__remove:hover { background: rgba(224, 120, 116, 0.26) !important; }
+/* The 강화 button is purple-filled when affordable; give its disabled/locked state a
+   soft purple tint (instead of a bare transparent outline) so it still reads on-theme. */
+.entity-detail-card__enhance:disabled { background: rgba(187, 140, 255, 0.12); }
 
 /* ════ P1: 강화석 wallet pill, protect toggle, enhance flash ════ */
 .entity-fs__wallet--stones strong { color: #9fd0ff; }
@@ -9976,6 +10005,7 @@ button.stat-header-item {
   background: rgba(255, 255, 255, 0.055);
   color: var(--text-primary);
   box-shadow: none;
+  position: relative; /* anchor the S{n} lockstage badge */
 }
 
 .entity-lab-button:hover,

@@ -9,7 +9,7 @@
  * module is pure (no React, no i18n resolution): it returns the step descriptor
  * (messageKey / ctaAction / anchor) and GameScreen resolves strings + onCta.
  */
-export type TutorialAnchor = 'entity' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
+export type TutorialAnchor = 'entity' | 'equip' | 'fuse' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
 
 export type TutorialCtaAction = 'quest' | 'entityEquip' | 'shop' | 'almanac';
 
@@ -87,21 +87,21 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'time-gauge-visible'),
   },
   {
-    id: 'first-fuse-equip', flagId: 'first-fuse-equip', anchor: 'entity',
+    id: 'first-fuse-equip', flagId: 'first-fuse-equip', anchor: 'equip',
     messageKey: 'tutFirstFuseEquip', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
     suppressedByAllDismissed: true,
     eligible: (c) => flag(c, 'first-fuse-done') && c.equipUnlocked,
     seen: (c) => flag(c, 'first-fuse-equip'),
   },
   {
-    id: 'second-fuse-equip', flagId: 'second-fuse-equip', anchor: 'entity',
+    id: 'second-fuse-equip', flagId: 'second-fuse-equip', anchor: 'equip',
     messageKey: 'tutSecondFuseEquip', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
     suppressedByAllDismissed: true,
     eligible: (c) => flag(c, 'second-fuse-done') && c.equipUnlocked,
     seen: (c) => flag(c, 'second-fuse-equip'),
   },
   {
-    id: 'entity-lab-intro', flagId: 'entity-lab-intro', anchor: 'entity',
+    id: 'entity-lab-intro', flagId: 'entity-lab-intro', anchor: 'equip',
     messageKey: 'tutEntityLabIntro', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
     suppressedByAllDismissed: true,
     eligible: (c) => c.equipUnlocked && c.ownedCurrentStageEntityCount > 0,
