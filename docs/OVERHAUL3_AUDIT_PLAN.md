@@ -108,17 +108,17 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   section: Export (copy/download), Import (paste/upload), Restore-from-backup. Import stamps a fresh
   `lastSaveAt` (no offline windfall + wins the next cloud sync). 7 new vitest cases (round-trip,
   v24→v25 import explode, KO/UTF-8, fail-soft, ring cap/dedupe). 326 tests green.
-- [ ] **C-P3 Dead code (PARTIAL):** DONE — deleted unimported `ResourcePanel.tsx` + `StatsRow.tsx`;
-  removed the no-op `onPlayBigBang` prop (IntroScreen + App). DEFERRED (each its own reason):
+- [ ] **C-P3 Dead code (MOSTLY DONE):** DONE — deleted unimported `ResourcePanel.tsx` +
+  `StatsRow.tsx`; removed the no-op `onPlayBigBang` prop (IntroScreen + App); **removed the dead
+  `.bottom-buttons` CSS family (#46) — 30 inert rules dropped + 2 live-mixed compounds
+  (`.scale-indicator.focus-hidden`, `.hud-info,…,.scale-indicator`) rewritten to keep only the live
+  member + 3 emptied `@media` dropped, via a postcss-AST pass (after a bespoke brace-counter
+  corrupted `.stat-header` and was reverted). Verified: grep-zero refs, no empty @media, the
+  `.stat-header` canary + every adjacent live rule intact, build + 336 tests green; diff = 258
+  deletions / 1 insertion, all `.bottom-buttons`-only.** DEFERRED (each its own reason):
   `scripts/balance-design.ts` is NOT dead — it backs `npm run sim` (keep/re-point separately);
-  `.bottom-buttons` CSS family (#46) is ~39 scattered rules many compound-mixed with live classes
-  (`.scale-indicator`/`.hud-info`/`.entity-lab-button`) and inert (class unused) — **a parser-based
-  auto-remover was attempted 2026-06-20 and REVERTED: its span math corrupted the adjacent live
-  `.stat-header.stat-header--top` rule (CSS fails silently, so build/tests stayed green — only a
-  line-by-line git-diff audit caught it). Lesson: this removal needs a real CSS-AST tool (postcss)
-  or hand edits gated by a VISUAL build review, not a bespoke brace-counter.** Harmless staying;
-  prestige legacy-key reconcile (prestige.ts) is save-touching;
-  sourcemaps `hidden` + error reporter is build-config, separate.
+  prestige legacy-key reconcile (prestige.ts) is save-touching; sourcemaps `hidden` + error reporter
+  is build-config, separate.
 
 ## D. Done this session (shipped to main @ 207a34f)
 P1 pacing (fusion-burst cap + condense-overflow reset) · P2 economy (enhance/fusion geometric — see

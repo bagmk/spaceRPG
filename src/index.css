@@ -1902,17 +1902,6 @@ button.stat-header-item {
   gap: 6px;
 }
 
-.bottom-buttons {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: max(12px, env(safe-area-inset-bottom));
-  z-index: 20;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 /* 🅠6 (req ⑦): right-side vertical action rail (replaces the bottom bar). */
 .side-rail {
   position: fixed;
@@ -6433,14 +6422,6 @@ button.stat-header-item {
     font-size: 15px;
   }
 
-  .bottom-buttons {
-    gap: 6px;
-    bottom: 10px;
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-  }
-
   /* ── Scale indicator: small, bottom-left ── */
   .scale-indicator {
     bottom: 72px;
@@ -9417,12 +9398,10 @@ button.stat-header-item {
   transform: translateY(-12px);
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
-.scale-indicator.focus-hidden,
-.bottom-buttons.focus-hidden {
+.scale-indicator.focus-hidden {
   transform: translateY(12px);
 }
 .hud-info,
-.bottom-buttons,
 .scale-indicator {
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
@@ -10004,26 +9983,6 @@ button.stat-header-item {
   text-overflow: ellipsis;
 }
 
-.bottom-buttons {
-  left: 50%;
-  right: auto;
-  bottom: max(14px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  background: rgba(8, 9, 14, 0.72);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.36);
-  backdrop-filter: var(--panel-blur);
-}
-
-.bottom-buttons > div {
-  display: flex;
-}
-
 .entity-lab-button,
 .shop-button {
   width: 96px;
@@ -10357,11 +10316,6 @@ button.stat-header-item {
     font-size: 10px;
   }
 
-  .bottom-buttons {
-    width: min(328px, calc(100vw - 20px));
-    justify-content: center;
-  }
-
   .entity-lab-button,
   .shop-button {
     width: auto;
@@ -10674,33 +10628,6 @@ button.stat-header-item {
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
 }
 
-.bottom-buttons {
-  left: 50%;
-  right: auto;
-  bottom: max(18px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: 56px minmax(112px, 1fr) 56px;
-  align-items: center;
-  gap: 6px;
-  width: min(250px, calc(100vw - 320px));
-  min-width: 236px;
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
-    rgba(8, 9, 14, 0.74);
-  box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: var(--panel-blur);
-}
-
-.bottom-buttons > div {
-  min-width: 0;
-}
-
 .entity-lab-button,
 .shop-button,
 .bottom-settings-button {
@@ -10730,10 +10657,6 @@ button.stat-header-item {
 
 .bottom-settings-button {
   letter-spacing: 0;
-}
-
-.bottom-buttons .hud-action-label {
-  display: none;
 }
 
 .entity-lab-button {
@@ -10839,19 +10762,6 @@ button.stat-header-item {
     font-size: 8px;
   }
 
-  .bottom-buttons {
-    left: 50%;
-    right: auto;
-    bottom: max(10px, env(safe-area-inset-bottom));
-    width: min(224px, calc(100vw - 20px));
-    min-width: 0;
-    transform: translateX(-50%);
-    grid-template-columns: 46px minmax(96px, 1fr) 46px;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 10px;
-  }
-
   .entity-lab-button,
   .shop-button,
   .bottom-settings-button {
@@ -10897,14 +10807,6 @@ button.stat-header-item {
   }
 }
 
-@media (min-width: 761px) and (max-width: 1100px) {
-  .bottom-buttons {
-    width: min(244px, calc(100vw - 270px));
-    min-width: 228px;
-    grid-template-columns: 54px minmax(108px, 1fr) 54px;
-  }
-}
-
 .stat-header.stat-header--top {
   left: 50%;
   right: auto;
@@ -10919,12 +10821,6 @@ button.stat-header-item {
   border-radius: 12px;
 }
 
-.bottom-buttons {
-  width: min(420px, calc(100vw - 40px));
-  min-width: 0;
-  grid-template-columns: minmax(72px, 0.86fr) minmax(132px, 1.28fr) minmax(72px, 0.86fr);
-}
-
 @media (max-width: 760px) {
   .stat-header.stat-header--top {
     left: 50%;
@@ -10937,11 +10833,6 @@ button.stat-header-item {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
-  }
-
-  .bottom-buttons {
-    width: min(340px, calc(100vw - 20px));
-    grid-template-columns: minmax(54px, 0.8fr) minmax(96px, 1.4fr) minmax(54px, 0.8fr);
   }
 
   .stat-header-item {
@@ -11617,33 +11508,6 @@ button.stat-header-item {
   right: max(26px, env(safe-area-inset-right));
 }
 
-.bottom-buttons {
-  left: 50%;
-  right: auto;
-  bottom: max(22px, env(safe-area-inset-bottom));
-  width: min(460px, calc(100vw - 44px));
-  min-width: 0;
-  transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: minmax(88px, 0.86fr) minmax(160px, 1.28fr) minmax(88px, 0.86fr);
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.082), rgba(255, 255, 255, 0.026)),
-    rgba(8, 9, 14, 0.72);
-  box-shadow:
-    0 18px 52px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: var(--panel-blur);
-}
-
-.bottom-buttons > div {
-  min-width: 0;
-}
-
 .entity-lab-button,
 .shop-button,
 .bottom-settings-button {
@@ -12019,15 +11883,6 @@ button.stat-header-item {
     text-indent: 0.24em;
   }
 
-  .bottom-buttons {
-    bottom: max(12px, env(safe-area-inset-bottom));
-    width: min(340px, calc(100vw - 20px));
-    grid-template-columns: minmax(64px, 0.78fr) minmax(118px, 1.44fr) minmax(64px, 0.78fr);
-    gap: 5px;
-    padding: 5px;
-    border-radius: 14px;
-  }
-
   .entity-lab-button,
   .shop-button,
   .bottom-settings-button {
@@ -12221,15 +12076,6 @@ button.stat-header-item {
     right: max(20px, env(safe-area-inset-right));
   }
 
-  .bottom-buttons {
-    bottom: max(16px, env(safe-area-inset-bottom));
-    width: 294px;
-    grid-template-columns: 46px 150px 46px;
-    gap: 5px;
-    padding: 4px;
-    border-radius: 11px;
-  }
-
   .entity-lab-button,
   .shop-button,
   .bottom-settings-button {
@@ -12404,14 +12250,6 @@ button.stat-header-item {
 
   .hud-progress-stack {
     gap: 4px;
-  }
-
-  .bottom-buttons {
-    bottom: max(10px, env(safe-area-inset-bottom));
-    width: min(292px, calc(100vw - 20px));
-    grid-template-columns: 44px minmax(124px, 1fr) 44px;
-    gap: 4px;
-    padding: 4px;
   }
 
   .entity-lab-button,
@@ -12948,13 +12786,6 @@ button.stat-header-item {
   min-height: 30px !important;
 }
 
-.bottom-buttons {
-  width: max-content !important;
-  grid-template-columns: 44px 144px 44px !important;
-  gap: 4px !important;
-  padding: 4px !important;
-}
-
 @media (min-width: 901px) {
   .active-boost-hud {
     top: max(14px, env(safe-area-inset-top)) !important;
@@ -13062,11 +12893,6 @@ button.stat-header-item {
   .stage-log-toast {
     bottom: calc(max(10px, env(safe-area-inset-bottom)) + 60px) !important;
   }
-
-  .bottom-buttons {
-    grid-template-columns: 40px 120px 40px !important;
-    gap: 4px !important;
-  }
 }
 
 /* Scale is outside the HUD so desktop transforms cannot pull it upward. */
@@ -13166,11 +12992,6 @@ button.stat-header-item {
   .entity-card__buy {
     width: 64px !important;
     padding: 0 6px !important;
-  }
-
-  .bottom-buttons {
-    grid-template-columns: 44px 136px 44px !important;
-    justify-items: center !important;
   }
 }
 
@@ -13630,15 +13451,6 @@ button.stat-header-item {
 }
 
 /* Mobile bottom actions: Entity Lab stays wide; all three buttons share one height. */
-@media (max-width: 760px) {
-  .bottom-buttons > div:first-child,
-  .bottom-buttons > div:first-child .shop-button,
-  .bottom-buttons > button.entity-lab-button,
-  .bottom-buttons > button.bottom-settings-button {
-    height: 44px !important;
-    min-height: 0 !important;
-  }
-}
 /* ===== Inline lore section (EntityDetailCard) ===== */
 .lore-section {
   margin-top: 12px;
@@ -13885,75 +13697,6 @@ button.stat-header-item {
 /* ── Bottom bar: five uniform icon buttons in one row ───────────────────────
    Late in the file on purpose — overrides the per-theme button sizings so the
    bar never wraps into the uneven two-row layout. */
-.bottom-buttons {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-
-.bottom-buttons > div {
-  display: flex;
-  flex: 0 0 58px;
-}
-
-.bottom-buttons .entity-lab-button,
-.bottom-buttons .shop-button,
-.bottom-buttons .bottom-settings-button {
-  box-sizing: border-box;
-  flex: 0 0 58px;
-  width: 58px;
-  min-width: 58px;
-  max-width: 58px;
-  height: 48px;
-  display: grid;
-  grid-template-columns: none;
-  grid-template-rows: auto auto;
-  place-items: center;
-  align-content: center;
-  gap: 3px;
-  padding: 4px 2px;
-  border-radius: 10px;
-}
-
-.bottom-buttons .hud-action-icon {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.bottom-buttons .hud-action-label {
-  font-size: 7.5px;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 54px;
-}
-
-@media (max-width: 760px) {
-  .bottom-buttons > div {
-    flex-basis: 56px;
-    height: 40px !important;
-  }
-
-  .bottom-buttons > div:first-child .shop-button,
-  .bottom-buttons > button.entity-lab-button,
-  .bottom-buttons > button.bottom-settings-button {
-    flex-basis: 56px;
-    width: 56px;
-    min-width: 56px;
-    max-width: 56px;
-    height: 40px !important;
-  }
-
-  .bottom-buttons .hud-action-icon {
-    font-size: 16px;
-  }
-
-  .bottom-buttons .hud-action-label {
-    font-size: 7px;
-    max-width: 52px;
-  }
-}
 
 /* ── Item progression UI (mystery cards, enhance, substats) ────────────────── */
 .entity-card--mystery {
