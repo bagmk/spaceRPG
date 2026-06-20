@@ -1,6 +1,7 @@
 import type { EndingId, EndingOption, EndingProgressFlags, GameState, Stage, UniverseSeed, AnomalyType } from './types';
 import type { Lang } from '../i18n';
 import { BIG_CRUNCH_ENTROPY_KB, BIG_RIP_ENTROPY_KB } from './balance';
+import { formatEntropyAmount } from './formulas';
 import { STAGES } from './stages';
 
 const BASE_ENDINGS: EndingId[] = ['heat_death', 'big_crunch', 'big_rip', 'vacuum_decay'];
@@ -36,8 +37,10 @@ export const ENDING_DEFINITIONS: Record<EndingId, EndingDefinition> = {
       ko: '우주는 자신의 무게를 이기지 못하고 무너집니다.',
     },
     condition: {
-      en: 'Reach 1GB Entropy by Stage 3.',
-      ko: '스테이지 3까지 엔트로피 1GB를 달성하세요.',
+      // C-P1 (audit): interpolate the REAL trigger (threshold-relative) so the
+      // text can never desync from the code — was hardcoded "1GB" but fires ~15MB.
+      en: `Reach ${formatEntropyAmount(BIG_CRUNCH_ENTROPY_THRESHOLD_KB)} Entropy by Stage 3.`,
+      ko: `스테이지 3까지 엔트로피 ${formatEntropyAmount(BIG_CRUNCH_ENTROPY_THRESHOLD_KB)}를 달성하세요.`,
     },
   },
   big_rip: {
@@ -47,8 +50,10 @@ export const ENDING_DEFINITIONS: Record<EndingId, EndingDefinition> = {
       ko: '가속이 모든 결합을 찢어냅니다.',
     },
     condition: {
-      en: 'Reach 1 Ronna Byte (1024 YB) of Entropy.',
-      ko: '엔트로피 1 론나바이트(1024 YB)를 달성하세요.',
+      // C-P1 (audit): real trigger interpolated — was hardcoded "1 Ronna Byte
+      // (1024 YB)" but fires at ~3 GB.
+      en: `Reach ${formatEntropyAmount(BIG_RIP_ENTROPY_THRESHOLD_KB)} of Entropy.`,
+      ko: `엔트로피 ${formatEntropyAmount(BIG_RIP_ENTROPY_THRESHOLD_KB)}를 달성하세요.`,
     },
   },
   vacuum_decay: {

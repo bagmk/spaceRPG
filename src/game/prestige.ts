@@ -6,6 +6,7 @@
 
 import type { Lang } from '../i18n';
 import { PRESTIGE_COST_BASE_KB, PRESTIGE_COST_GROWTH } from './balance';
+import { formatEntropyAmount } from './formulas';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,9 +128,11 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
 // ---------------------------------------------------------------------------
 
 export function formatPrestigeCost(level: number): string {
-  if (level >= PRESTIGE_MAX_LEVEL) return '';
-  const ybAmount = [1, 5, 10, 50, 100][level];
-  return `${ybAmount}YB`;
+  // C-P1 (audit): show the REAL entropy cost (getPrestigeCost → PRESTIGE_COSTS_KB),
+  // formatted with the game's entropy units — the old hardcoded "1YB/5YB/…" was
+  // off by ~12-14 orders of magnitude vs the threshold-relative cost.
+  const cost = getPrestigeCost(level);
+  return cost === null ? '' : formatEntropyAmount(cost);
 }
 
 export function getPrestigeUpgradeName(id: PrestigeUpgradeId, lang: Lang): string {
