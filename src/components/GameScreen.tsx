@@ -296,6 +296,15 @@ export function GameScreen({
   }, 0);
   const showEndingButton = state.completedRun && state.lastEndingId === null && endingChooserDismissed;
   const showCondenseGate = isViewingPastStage || canCondense || showEndingButton;
+  // C-P0 a11y: a polite live-region message. Recomputed every render but the same
+  // string never re-announces — so it speaks only on discrete transitions (stage
+  // entry, condense becomes available), never per-frame spam.
+  const srAnnouncement = useMemo(() => {
+    const stageLine = t(language, 'srStageEntered')
+      .replace('{n}', String(displayStage.id))
+      .replace('{name}', displayStageLabel);
+    return canCondense ? `${stageLine}. ${t(language, 'srReadyToCondense')}` : stageLine;
+  }, [language, displayStage.id, displayStageLabel, canCondense]);
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
     if (entityPanelOpen || state.universeCount !== 1) {
       return null;
@@ -745,6 +754,8 @@ export function GameScreen({
       className={`app-shell ${shakeClass} ${transitionPhase === 'revealing' ? 'stage-revealing' : ''} ${transitionClass}`}
       style={{ '--accent': displayStage.accent, '--core': displayStage.coreColor } as CSSProperties}
     >
+      {/* C-P0 a11y: announces stage entry + condense-ready to assistive tech. */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{srAnnouncement}</div>
       {saveErrorVisible ? (
         <div className="save-error-toast" role="alert">
           {t(language, 'saveFailedQuota')}

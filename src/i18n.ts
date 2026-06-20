@@ -27,6 +27,9 @@ export const STRINGS = {
   hudCondenseFor: { en: 'Condense for', ko: '응축하여 획득' },
   hudCondenseAlready: { en: 'This stage has already been condensed.', ko: '이미 응축된 단계입니다.' },
   hudEntropyGateHint: { en: 'Grow entropy to advance — click, collect, condense.', ko: '엔트로피를 키워 진행하세요 — 클릭과 수집이 가속합니다.' },
+  // C-P0 a11y: screen-reader status announcements (discrete events, not per-frame).
+  srStageEntered: { en: 'Stage {n}: {name}', ko: '{n}단계: {name}' },
+  srReadyToCondense: { en: 'Ready to condense — activate the Condense button.', ko: '응축 준비 완료 — 응축 버튼을 누르세요.' },
   entityEquip:    { en: 'Equip', ko: '장착' },
   entityUnequip:  { en: 'Unequip', ko: '해제' },
   equipSlotLockedStage:   { en: 'Unlocks at Stage {n}', ko: '{n}시대에 해금' },

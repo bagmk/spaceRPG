@@ -55,9 +55,13 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   production build.
 
 ## C. Audit fixes (from the 7-persona audit, prioritized)
-- [ ] **C-P0 Accessibility: core gather loop keyboard/SR operable.** ParticleField hitbox →
-  role+tabIndex+Space/Enter gather; ARIA live region for quanta/stage.
-- [ ] **C-P0 Branch hygiene.** Confirm `develop` is dead; stop branching from it (we use main/feat).
+- [x] **C-P0 Accessibility: core gather loop keyboard/SR operable.** DONE — `.game-canvas-hitbox`
+  is now `role=button` + `tabIndex` (−1 when locked) + `aria-keyshortcuts` + Space/Enter gathers at
+  field centre; new `.sr-only` `role=status aria-live=polite` region in GameScreen announces stage
+  entry + condense-ready (discrete events, no per-frame spam). i18n `srStageEntered`/`srReadyToCondense`.
+- [x] **C-P0 Branch hygiene.** DONE (confirmed) — `origin/develop` is **318 commits behind main** =
+  dead. Workflow is standardized on `main` + `feat/entity-redesign` (worktree FF's both on push).
+  Remote `develop` left intact (not deleting it autonomously — irreversible); just don't branch from it.
 - [x] **C-P1 Number-lie fix.** DONE — formatPrestigeCost shows real getPrestigeCost (was 1YB..); Big Crunch/Big Rip conditions interpolate the real threshold (formatEntropyAmount). Ending/prestige strings hardcode wrong magnitudes (prestige 1YB vs
   ~0.68GB; Big Rip "1 Ronna Byte" fires ~3.25GB; Big Crunch "1GB" fires ~15MB). Interpolate the live
   balance.ts values into the i18n strings at runtime so they can't desync. (prestige.ts:129-133,

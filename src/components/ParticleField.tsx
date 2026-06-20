@@ -1703,8 +1703,19 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
       }}
-      role="presentation"
-      aria-label={totalClicks > 0 ? `${stage.name} field` : `${stage.name} field, click to gather`}
+      // C-P0 a11y: the core gather loop is keyboard-operable — Space/Enter gathers
+      // at field centre, so the game is playable without a pointer / by SR users.
+      onKeyDown={(event) => {
+        if (interactionLocked) return;
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          onGatherClick(sizeRef.current.width / 2, sizeRef.current.height / 2, false);
+        }
+      }}
+      role="button"
+      tabIndex={interactionLocked ? -1 : 0}
+      aria-keyshortcuts="Space Enter"
+      aria-label={totalClicks > 0 ? `${stage.name} — gather (Space/Enter)` : `${stage.name} — press Space or Enter to gather`}
     >
       <canvas
         ref={canvasRef}

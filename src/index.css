@@ -53,6 +53,20 @@
   border-radius: 4px;
 }
 
+/* C-P0 (audit a11y): visually-hidden but screen-reader-readable. Used for the
+   live status region that announces stage changes / condense-ready. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body,
 #root {
