@@ -108,13 +108,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'entity-lab-intro'),
   },
   {
-    id: 'focus-mode-intro', flagId: 'focus-mode-intro', anchor: 'focus',
-    messageKey: 'tutFocusMode', autoCloseMs: 7000,
-    suppressedByAllDismissed: true,
-    eligible: (c) => c.stageId >= 3,
-    seen: (c) => flag(c, 'focus-mode-intro'),
-  },
-  {
     id: 'hasSeenCashShopTutorial', flagId: 'hasSeenCashShopTutorial', anchor: 'shop',
     messageKey: 'tutShop', ctaKey: 'tutShopOpen', ctaAction: 'shop',
     suppressedByAllDismissed: true,

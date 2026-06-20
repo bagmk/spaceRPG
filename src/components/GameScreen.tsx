@@ -176,9 +176,7 @@ export function GameScreen({
   const hasClaimableQuest = claimableQuestIds.length > 0;
   const questMilestoneSeen = Boolean(state.tutorialFlags['quest-milestone-intro']);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
-  const focusAnchorRef = useRef<HTMLButtonElement | null>(null);
   const entityAnchorRef = useRef<HTMLButtonElement | null>(null);
   const questAnchorRef = useRef<HTMLButtonElement | null>(null);
   // Quest-milestone notification toast (fires when a quest's condition is met).
@@ -894,7 +892,7 @@ export function GameScreen({
             </button>
           </div>
         ) : null}
-        <div className={`hud-info ${focusMode ? 'focus-hidden' : ''}`} ref={resourceAnchorRef}>
+        <div className="hud-info" ref={resourceAnchorRef}>
           <div className="hud-info-click-zone">
             <div className="hud-topline">
               <button
@@ -992,7 +990,7 @@ export function GameScreen({
           })()}
         </div>
         {/* 🅠6 (req ⑦): right-side vertical rail — 도감·퀘스트·장착·융합소·상점 + settings. */}
-        <div className={`side-rail ${focusMode ? 'focus-hidden' : ''}`}>
+        <div className="side-rail">
           <button
             ref={entityAnchorRef}
             type="button"
@@ -1072,15 +1070,6 @@ export function GameScreen({
             <span className="hud-action-label">{t(language, 'hudSettings')}</span>
           </button>
         </div>
-        <button
-          ref={focusAnchorRef}
-          type="button"
-          className={`focus-toggle-btn ${focusMode ? 'focus-toggle-btn--active' : ''}`}
-          onClick={() => { setFocusMode((v) => !v); soundManager?.playToggle(!focusMode); }}
-          aria-label={focusMode ? 'Exit focus mode' : 'Enter focus mode'}
-        >
-          {focusMode ? '◉' : '○'}
-        </button>
         {/* Render transition overlays via Portal directly into document.body so
             they are completely independent of .app-shell's stacking/containing/
             clipping context. This guarantees the fixed-positioned wash/rays/fade
@@ -1093,7 +1082,7 @@ export function GameScreen({
           </>,
           document.body,
         )}
-        <ScaleIndicator stageId={displayStage.id} language={language} className={focusMode ? 'focus-hidden' : ''} />
+        <ScaleIndicator stageId={displayStage.id} language={language} />
         {/* #42-fix: the progress-based lore toast is gone — era-records now unfold
             via the claimable quest alarm below (one alarm, claimable-synced) and
             in the almanac on claim. */}
@@ -1228,9 +1217,7 @@ export function GameScreen({
                   ? shopAnchorRef
                   : activeTutorialBubble.anchor === 'boost'
                     ? boostAnchorRef
-                    : activeTutorialBubble.anchor === 'focus'
-                      ? focusAnchorRef
-                      : activeTutorialBubble.anchor === 'field'
+                    : activeTutorialBubble.anchor === 'field'
                         ? fieldCenterAnchorRef
                         : resourceAnchorRef
           }
@@ -1241,9 +1228,7 @@ export function GameScreen({
                 ? 'top'
                 : activeTutorialBubble.anchor === 'field'
                   ? 'top'
-                  : activeTutorialBubble.anchor === 'focus'
-                    ? 'top'
-                    : 'left'
+                  : 'left'
           }
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}

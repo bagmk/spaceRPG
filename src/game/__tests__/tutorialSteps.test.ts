@@ -80,12 +80,9 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     });
     // earlier steps are seen/ineligible → first unseen eligible is entity-lab-intro
     expect(selectTutorialStep(base)?.id).toBe('entity-lab-intro');
-    // mark it seen → the next unseen eligible (focus-mode) surfaces, not null
+    // mark it seen → nothing else eligible at this ctx → null (no shadowing left over)
     const afterLab = ctx({ ...base, flags: { ...base.flags, 'entity-lab-intro': true } });
-    expect(selectTutorialStep(afterLab)?.id).toBe('focus-mode-intro');
-    // mark that too → nothing else eligible → null
-    const afterFocus = ctx({ ...afterLab, flags: { ...afterLab.flags, 'focus-mode-intro': true } });
-    expect(selectTutorialStep(afterFocus)).toBeNull();
+    expect(selectTutorialStep(afterLab)).toBeNull();
   });
 
   it('allDismissed still allows the two stage-1 intros but suppresses every later step', () => {
@@ -118,7 +115,7 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro', 'time-gauge-visible',
-      'first-fuse-equip', 'second-fuse-equip', 'entity-lab-intro', 'focus-mode-intro',
+      'first-fuse-equip', 'second-fuse-equip', 'entity-lab-intro',
       'hasSeenCashShopTutorial', 'boost-hud-seen', 'condense-ready', 'info-hint-seen',
     ]);
   });
