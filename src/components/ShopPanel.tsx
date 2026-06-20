@@ -210,13 +210,16 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
     dispatch({
       type: 'OPEN_GACHA_BOX',
       boxId,
-      rolls: { rarityRoll: Math.random(), stageRoll: Math.random(), pickRoll: Math.random(), q1: Math.random(), q2: Math.random() },
+      // A7: one roll set per potential item (handler slices to the box's count).
+      rolls: Array.from({ length: 4 }, () => ({
+        rarityRoll: Math.random(), stageRoll: Math.random(), pickRoll: Math.random(), q1: Math.random(), q2: Math.random(),
+      })),
+      stoneRoll: Math.random(),
     });
     onSfx?.();
   };
 
   const gachaEvent = state.lastGachaEvent;
-  const gachaEnt = gachaEvent ? findEntityById(gachaEvent.entityId) : undefined;
 
   const accent = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].accent ?? '#8090b0';
   return (
@@ -304,24 +307,33 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               );
             })}
           </div>
-          {gachaEvent && gachaEnt ? (() => {
-            const rc = RARITY_COLORS[gachaEnt.rarity];
-            const spec = effectValueLabel(gachaEnt, language, power, 1, 1, false, false);
-            const tr = EFFECT_TRAIT[gachaEnt.effect.type];
-            const tail = isTailQuality(gachaEvent.quality);
+          {gachaEvent && gachaEvent.items.length > 0 ? (() => {
             const again = gachaBoxMatterCost(gachaEvent.boxId, playerStageId);
             return (
               <div className="fusion-result fusion-result--boom shop-gacha-reveal" role="status">
-                <div
-                  className={`fusion-result__card fusion-result__card--${gachaEnt.rarity} ${tail ? 'entity-detail-card--tail' : ''}`}
-                  style={{ '--rarity-color': rc } as CSSProperties}
-                >
-                  <div className="fusion-result__rays" aria-hidden="true" />
-                  <EntityGlyph entity={gachaEnt} color={rc} />
-                  <div className="fusion-result__name">{entityName(gachaEnt, language)}</div>
-                  <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={tr.accent} primary />
-                  {tail ? <div className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round(gachaEvent.quality * 100)}%`}</div> : null}
+                <div className="fusion-result__rays" aria-hidden="true" />
+                <div className="shop-gacha-haul">
+                  {gachaEvent.items.map((it, i) => {
+                    const ent = findEntityById(it.entityId);
+                    if (!ent) return null;
+                    const rc = RARITY_COLORS[ent.rarity];
+                    const tail = isTailQuality(it.quality);
+                    return (
+                      <div
+                        key={i}
+                        className={`shop-gacha-haul-card shop-gacha-haul-card--${ent.rarity} ${tail ? 'entity-detail-card--tail' : ''}`}
+                        style={{ '--rarity-color': rc } as CSSProperties}
+                      >
+                        <EntityGlyph entity={ent} color={rc} />
+                        <span className="shop-gacha-haul-card__name">{entityName(ent, language)}</span>
+                        <span className="shop-gacha-haul-card__rarity" style={{ color: rc }}>{t(language, RARITY_LABEL_KEY[ent.rarity])}</span>
+                      </div>
+                    );
+                  })}
                 </div>
+                {gachaEvent.stonesEarned > 0 ? (
+                  <div className="shop-gacha-haul__stones">{`◆ ${gachaEvent.stonesEarned} ${t(language, 'shopStonesTitle')}`}</div>
+                ) : null}
                 <div className="fusion-result__actions">
                   <button type="button" className="fusion-result__retry" disabled={quanta < again} onClick={() => openBox(gachaEvent.boxId)}>
                     {t(language, 'shopGachaAgain')}

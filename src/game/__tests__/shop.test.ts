@@ -115,38 +115,39 @@ describe('#43 stage/rarity pricing + gacha', () => {
     expect(shopRefreshMatterCost(8, 1)).toBeGreaterThan(shopRefreshMatterCost(8, 0));
   });
 
-  it('a gacha box spends matter, grants an entity, and stashes a reveal event', () => {
-    const rich = { ...s3(), quanta: 1e15 };
-    const after = gameReducer(rich, {
-      type: 'OPEN_GACHA_BOX', boxId: 'box_faint',
-      rolls: { rarityRoll: 0.5, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 },
-    });
+  const mkRolls = (rarityRoll: number) =>
+    Array.from({ length: 4 }, () => ({ rarityRoll, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 }));
+
+  it('A7: a gacha box spends matter, grants a HAUL of entities + 강화석, and stashes a reveal event', () => {
+    const rich = { ...s3(), quanta: 1e15, enhanceStones: 0 };
+    const after = gameReducer(rich, { type: 'OPEN_GACHA_BOX', boxId: 'box_faint', rolls: mkRolls(0.5), stoneRoll: 0.5 });
     expect(after.quanta).toBeLessThan(rich.quanta);
     expect(after.inventory.length).toBeGreaterThan(0);
-    expect(after.lastGachaEvent).not.toBeNull();
     expect(after.lastGachaEvent?.boxId).toBe('box_faint');
+    // faint box (rank 0) → 3 items + 3 강화석.
+    expect(after.lastGachaEvent?.items.length).toBe(3);
+    expect(after.lastGachaEvent?.stonesEarned).toBe(3);
+    expect(after.enhanceStones).toBe(3);
+    // prime box (rank 2) yields one more item (4) + more 강화석 (12).
+    const prime = gameReducer({ ...s3(), quanta: 1e15 }, { type: 'OPEN_GACHA_BOX', boxId: 'box_prime', rolls: mkRolls(0.5), stoneRoll: 0.5 });
+    expect(prime.lastGachaEvent?.items.length).toBe(4);
+    expect(prime.lastGachaEvent?.stonesEarned).toBe(12);
   });
 
   it('gacha rarity is gate-clamped: a prime box at stage 3 cannot mint legendary', () => {
-    // RARITY_STAGE_GATES.legendary = 12, so at stage 3 the legendary/epic rolls
-    // step down to the highest gate-open tier (rare at S3).
     const rich = { ...createInitialGameState(0), stageIdx: 2, quanta: 1e15 }; // stage 3
-    const after = gameReducer(rich, {
-      type: 'OPEN_GACHA_BOX', boxId: 'box_prime',
-      rolls: { rarityRoll: 0.99, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 }, // rolls high (legendary)
-    });
-    const got = after.inventory.find((e) => e.entityId === after.lastGachaEvent?.entityId);
-    const ent = got ? getEntitiesForStage(3).concat(getEntitiesForStage(2), getEntitiesForStage(1)).find((e) => e.id === got.entityId) : undefined;
-    expect(ent).toBeDefined();
-    expect(['common', 'rare']).toContain(ent!.rarity);
+    const after = gameReducer(rich, { type: 'OPEN_GACHA_BOX', boxId: 'box_prime', rolls: mkRolls(0.99), stoneRoll: 0.5 });
+    const all = getEntitiesForStage(3).concat(getEntitiesForStage(2), getEntitiesForStage(1));
+    for (const item of after.lastGachaEvent!.items) {
+      const ent = all.find((e) => e.id === item.entityId);
+      expect(ent).toBeDefined();
+      expect(['common', 'rare']).toContain(ent!.rarity);
+    }
   });
 
   it('rejects a gacha open the player cannot afford', () => {
     const broke = { ...s3(), quanta: 0 };
-    const after = gameReducer(broke, {
-      type: 'OPEN_GACHA_BOX', boxId: 'box_prime',
-      rolls: { rarityRoll: 0.5, stageRoll: 0, pickRoll: 0.5, q1: 0.5, q2: 0.5 },
-    });
+    const after = gameReducer(broke, { type: 'OPEN_GACHA_BOX', boxId: 'box_prime', rolls: mkRolls(0.5), stoneRoll: 0.5 });
     expect(after).toBe(broke);
   });
 });

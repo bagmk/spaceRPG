@@ -726,6 +726,13 @@ export const GACHA_BOXES: GachaBoxSpec[] = [
   { id: 'box_bright', priceFrac: 3.0,  rank: 1, odds: { common: 25, rare: 42, epic: 25, legendary: 7,  mythic: 1 } },
   { id: 'box_prime',  priceFrac: 12.0, rank: 2, odds: { common: 0,  rare: 30, epic: 45, legendary: 20, mythic: 4 } },
 ];
+// A7 (user): a box gives a HAUL — this many entities (top tier gets +1) + 강화석.
+export const GACHA_ITEMS_BASE = 3;
+export const GACHA_TOP_RANK_BONUS_ITEM = 1; // rank ≥ 2 yields one extra entity
+export const GACHA_STONES_BY_RANK: Record<number, number> = { 0: 3, 1: 6, 2: 12 };
+export function gachaItemCount(rank: number): number {
+  return GACHA_ITEMS_BASE + (rank >= 2 ? GACHA_TOP_RANK_BONUS_ITEM : 0);
+}
 
 // ── #44 HEXAGON BINGO set bonuses ───────────────────────────────────────────
 // 7 equip slots in a hexagon: 0-2 = click (outer), 3-5 = rift (outer), 6 = wild

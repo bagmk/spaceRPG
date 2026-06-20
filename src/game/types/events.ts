@@ -97,13 +97,19 @@ export interface EnhanceEvent {
   stonesEarned?: number;
 }
 
-/** #43 gacha pull — drives the single-card reveal in the shop's Nebula Boxes board. */
-export interface GachaEvent {
-  id: number;
-  /** The rolled entity (look up details via findEntityById). */
+/** One entity in a gacha haul. */
+export interface GachaPullItem {
   entityId: string;
   /** Quality score [0,1] of the pulled copy (#50) — gold border when in the tail. */
   quality: number;
+}
+/** #43 gacha pull — A7 (user): a box yields a HAUL of 3-4 entities + 강화석,
+ *  revealed as a multi-card grid in the shop's Nebula Boxes board. */
+export interface GachaEvent {
+  id: number;
+  items: GachaPullItem[];
+  /** 강화석 granted alongside the items. */
+  stonesEarned: number;
   /** Which box tier was opened (for the "다시 뽑기" retry). */
   boxId: string;
 }

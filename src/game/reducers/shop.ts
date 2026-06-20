@@ -12,7 +12,8 @@ import {
   gachaBoxMatterCost,
   weightedRarityPick,
 } from '../shop/pricing';
-import { GACHA_BOXES, RARITY_STAGE_GATES } from '../balance';
+import { GACHA_BOXES, RARITY_STAGE_GATES, gachaItemCount, GACHA_STONES_BY_RANK } from '../balance';
+import type { GachaPullItem } from '../types/events';
 import { addToInventory, addToAlmanac, pickDropStage, pickEntityByRarity } from '../entities/drops';
 import { rollQualityScore } from '../entities/quality';
 import { findEntityById } from '../entities/stageItems';
@@ -165,22 +166,39 @@ export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction)
   const cost = gachaBoxMatterCost(box.id, stage);
   if (cost <= 0 || state.quanta < cost) return state;
 
-  const rolledRarity = clampRarityToStage(weightedRarityPick(box.odds, action.rolls.rarityRoll), stage);
-  const poolStage = pickDropStage(stage, action.rolls.stageRoll, state.almanacCollected);
-  const entity =
-    pickEntityByRarity(poolStage, rolledRarity, action.rolls.pickRoll, poolStage !== stage) ??
-    pickEntityByRarity(stage, 'common', action.rolls.pickRoll, true);
-  if (!entity) return state;
+  // A7: a box yields a HAUL of gachaItemCount(rank) entities + 강화석. Each item
+  // rolls independently from the box odds (one roll set per item, injected at dispatch).
+  const wantCount = gachaItemCount(box.rank);
+  const rolls = action.rolls.slice(0, wantCount);
+  if (rolls.length === 0) return state;
 
-  const quality = rollQualityScore(action.rolls.q1, action.rolls.q2);
+  let inventory = state.inventory;
+  let almanacCollected = state.almanacCollected;
+  const items: GachaPullItem[] = [];
+  for (const r of rolls) {
+    const rolledRarity = clampRarityToStage(weightedRarityPick(box.odds, r.rarityRoll), stage);
+    const poolStage = pickDropStage(stage, r.stageRoll, state.almanacCollected);
+    const entity =
+      pickEntityByRarity(poolStage, rolledRarity, r.pickRoll, poolStage !== stage) ??
+      pickEntityByRarity(stage, 'common', r.pickRoll, true);
+    if (!entity) continue;
+    const quality = rollQualityScore(r.q1, r.q2);
+    inventory = addToInventory(inventory, entity.id, quality);
+    almanacCollected = addToAlmanac(almanacCollected, entity.stageId, entity.id);
+    items.push({ entityId: entity.id, quality });
+  }
+  if (items.length === 0) return state;
+
+  const stonesEarned = GACHA_STONES_BY_RANK[box.rank] ?? 0;
   const eventId = nextEventId(state);
   return {
     ...state,
     quanta: state.quanta - cost,
-    inventory: addToInventory(state.inventory, entity.id, quality),
-    almanacCollected: addToAlmanac(state.almanacCollected, entity.stageId, entity.id),
+    inventory,
+    almanacCollected,
+    enhanceStones: Math.max(0, state.enhanceStones + stonesEarned),
     eventCounter: eventId,
-    lastGachaEvent: { id: eventId, entityId: entity.id, quality, boxId: box.id },
+    lastGachaEvent: { id: eventId, items, stonesEarned, boxId: box.id },
   };
 }
 

@@ -28,7 +28,7 @@
   BOTH a primary trait AND a substat (legend shows ★치명타확률 twice, ●/🖱 클릭위력, ■/⚙ 오토속도).
   Unify to ONE icon+label per stat across EFFECT_TRAIT (balance.ts) + SUBSTAT_TRAIT/labels so the
   legend + chips don't duplicate concepts.
-- [ ] **A7 Nebula box (성운 상자) → 3–4 items + 강화석.** OPEN_GACHA_BOX should grant 3–4 entities
+- [x] **A7 Nebula box → 3-4 items + 강화석.** DONE — multi-item haul (faint/bright 3, prime 4) + stones (3/6/12) + grid reveal. OPEN_GACHA_BOX should grant 3–4 entities
   + some 강화석 (not a single item). Rework `handleOpenGachaBox` (reducers/shop.ts) + the reveal UI
   (ShopPanel) to show the multi-item haul clearly (current single-card reveal is hard to read).
 - [ ] **A8 Bonus-overlap arrows.** Where hex bingo bonuses overlap/stack, draw connecting arrows

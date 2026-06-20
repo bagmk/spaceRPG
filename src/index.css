@@ -14894,6 +14894,46 @@ button.stat-header-item {
 .shop-gacha-card__odds { font-size: 8px; color: rgba(245, 247, 250, 0.5); text-align: center; line-height: 1.15; }
 .shop-gacha-card__cost { font-family: var(--mono); font-size: 11px; font-weight: 700; color: #ffe08a; }
 .shop-gacha-reveal { margin-top: 14px; }
+/* A7: multi-item gacha haul — a clear grid of pulled cards + the 강화석 line. */
+.shop-gacha-haul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.shop-gacha-haul-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: 11px;
+  border: 1px solid var(--rarity-color, #8090b0);
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 12%, rgba(12, 14, 22, 0.92));
+}
+.shop-gacha-haul-card__name {
+  font-size: var(--fs-micro, 11px);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15;
+  word-break: keep-all;
+}
+.shop-gacha-haul-card__rarity {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.shop-gacha-haul__stones {
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: #cfe0ff;
+}
 .shop-fs__boosts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .shop-fs__status { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .shop-fs__status-chip {

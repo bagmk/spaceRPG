@@ -153,7 +153,7 @@ export type GameAction =
   | { type: 'BUY_DAILY_ITEM'; slot: number; now: number }
   | { type: 'REFRESH_DAILY_SHOP'; now: number }
   // #43 gacha: rolls injected at dispatch (Math.random()) so the reducer stays pure.
-  | { type: 'OPEN_GACHA_BOX'; boxId: string; rolls: { rarityRoll: number; stageRoll: number; pickRoll: number; q1: number; q2: number } }
+  | { type: 'OPEN_GACHA_BOX'; boxId: string; rolls: Array<{ rarityRoll: number; stageRoll: number; pickRoll: number; q1: number; q2: number }>; stoneRoll: number }
   | { type: 'SYNC_DAILY_SHOP'; now: number };
 
 // ---------------------------------------------------------------------------
