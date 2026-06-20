@@ -913,7 +913,7 @@ export function GameScreen({
             onEquip={(entityId, slot) => { dispatch({ type: 'EQUIP_ENTITY', entityId, slot }); soundManager?.playUITap(); }}
             onEquipWild={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId, wild: true }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
-            onEnhance={(entityId, protect) => { dispatch({ type: 'ENHANCE_ENTITY', entityId, failRoll: Math.random(), stoneRoll: Math.random(), protect }); soundManager?.playEntityLevelUp(); }}
+            onEnhance={(id, protect) => { dispatch({ type: 'ENHANCE_ENTITY', instanceId: id, failRoll: Math.random(), stoneRoll: Math.random(), protect }); soundManager?.playEntityLevelUp(); }}
             onFuse={(inputEntityIds) => {
               dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(), qualityRoll: Math.random() });
               soundManager?.playEntityLevelUp();

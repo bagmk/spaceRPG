@@ -132,7 +132,8 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // 🅠3: throttled (~1/sec) passive auto-income floating text. Now also fires
   // gearless (base auto income) — entityId '' renders as a plain "+N/s" float.
   // Transient — driven off action.now, never persisted.
-  const primaryRiftId = state.riftSlots[0];
+  // P6: slots store an instanceId — resolve it to the entity id the float renders.
+  const primaryRiftId = getEquippedInstances(state.inventory, state.riftSlots.slice(0, 1))[0]?.entityId ?? '';
   const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost * modifiers.autoMatterMult;
   const emitAutoIncome =
     canAccrue &&

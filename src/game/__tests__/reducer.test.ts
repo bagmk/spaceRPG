@@ -223,7 +223,8 @@ describe('gameReducer', () => {
     const funded = { ...createInitialGameState(0), quanta: getEntityCost(entity, 0, 1) * 10 };
     const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
     const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
-    expect(equipped.riftSlots[0]).toBe(entity.id);
+    // P6: slots store the equipped copy's instanceId (resolves back to the entity).
+    expect(equipped.riftSlots[0]).toBeTruthy();
 
     // First tick (t=1000, gap from t0=0 ≥ 1s) emits for the equipped rift entity.
     const t1 = gameReducer({ ...equipped, lastAutoIncomeEvent: null }, { type: 'TICK', now: 1000, dt: 1000 });
@@ -284,7 +285,10 @@ describe('gameReducer', () => {
       y: 100,
     });
 
-    expect(purchased.inventory).toEqual([{ entityId: entity.id, count: 1, level: 1 }]);
+    // P6: a purchase adds one flat copy (its own instanceId, count 1, level 1).
+    expect(purchased.inventory).toHaveLength(1);
+    expect(purchased.inventory[0]).toMatchObject({ entityId: entity.id, count: 1, level: 1 });
+    expect(purchased.inventory[0].instanceId).toBeTruthy();
     // Absorption (Phase 2): unequipped ownership gives no passive click bonus.
     expect(unequippedClick.lastClickEvent?.gained).toBe(baseline.lastClickEvent?.gained);
     // CHECKPOINT: equipping changes click output.

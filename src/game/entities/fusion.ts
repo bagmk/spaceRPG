@@ -31,6 +31,7 @@ import {
 import { getSetKey } from './effects';
 import { getCodexSubsetIdForEntity } from './codexSets';
 import { STAGE_ENTITIES, getEntitiesForStage, findEntityById } from './stageItems';
+import { makeInstance } from './instances';
 import { pickEntityByRarity } from './drops';
 import { bestQuality } from './quality';
 import { getEquipCategory, type EntityInstance, type EntityRarity, type EquipCategory, type StageEntity } from './types';
@@ -79,11 +80,13 @@ export function validateFusionInputs(
   for (const [id, count] of needed) {
     const entity = findEntityById(id);
     if (!entity) return { ok: false };
-    const owned = inventory.find((e) => e.entityId === id);
-    // The equipped copy is reserved — only spare copies can be fused, so the
-    // worn item can never be consumed out from under its slot (장착 = 조합 불가).
-    const reserved = equippedIds.has(id) ? 1 : 0;
-    if (!owned || owned.count - reserved < count) return { ok: false };
+    // P6: count the FREE (un-equipped) flat copies. A copy is reserved when its
+    // instanceId sits in a slot, so the worn item is never fused out from under
+    // its slot (장착 = 조합 불가).
+    const free = inventory
+      .filter((e) => e.entityId === id && e.count > 0 && !(e.instanceId && equippedIds.has(e.instanceId)))
+      .reduce((s, e) => s + e.count, 0);
+    if (free < count) return { ok: false };
     if (rarity === undefined) rarity = entity.rarity;
     else if (entity.rarity !== rarity) return { ok: false };
     stageId = Math.max(stageId, entity.stageId);
@@ -243,14 +246,17 @@ export function getExpectedFusionRefund(
   inventory: EntityInstance[],
   inputEntityIds: string[],
 ): number {
+  // P6: preview the refund from the SPECIFIC flat copies that would be consumed
+  // (lowest-level first), matching consumeFusionInputs.
   const needed = new Map<string, number>();
   for (const id of inputEntityIds) needed.set(id, (needed.get(id) ?? 0) + 1);
   let refund = 0;
-  for (const [id, consumed] of needed) {
-    const owned = inventory.find((e) => e.entityId === id);
-    if (!owned || owned.count <= 0) continue;
-    const share = Math.min(1, consumed / owned.count);
-    refund += (owned.invested ?? 0) * share * ENHANCE_REFUND_RATE;
+  for (const [id, count] of needed) {
+    const picks = inventory
+      .filter((e) => e.entityId === id && e.count > 0)
+      .sort((a, b) => (a.level ?? 1) - (b.level ?? 1))
+      .slice(0, count);
+    for (const c of picks) refund += (c.invested ?? 0) * ENHANCE_REFUND_RATE;
   }
   return refund;
 }
@@ -263,33 +269,53 @@ export interface ConsumeResult {
   stoneRefund: number;
 }
 
-/** Consume the input copies (counts may reach 0; entries are kept for the almanac/UI). */
+/** Consume the input copies. P6 flat: emptied entries are dropped, not kept. */
 export function consumeFusionInputs(
   inventory: EntityInstance[],
   inputEntityIds: string[],
+  reserved: ReadonlySet<string> = new Set(),
 ): ConsumeResult {
+  // P6: consume copies lowest-level first (keep the player's enhanced copy as
+  // fodder last) and never an equipped copy. Count-aware so a legacy count>1
+  // stack consumes per-copy too. Refund = each consumed copy's invested share.
   const needed = new Map<string, number>();
   for (const id of inputEntityIds) needed.set(id, (needed.get(id) ?? 0) + 1);
-  const refund = getExpectedFusionRefund(inventory, inputEntityIds);
+  const taken = new Map<EntityInstance, number>();
+  let refund = 0;
   let stoneRefund = 0;
-  const next = inventory.map((e) => {
-    const consumed = needed.get(e.entityId);
-    if (consumed === undefined) return e;
-    const share = e.count > 0 ? Math.min(1, consumed / e.count) : 0;
-    const remaining = e.count - consumed;
-    stoneRefund += (e.investedStones ?? 0) * share * ENHANCE_STONE_REFUND_RATE;
-    return {
+  for (const [entityId, want] of needed) {
+    let remaining = want;
+    const candidates = inventory
+      .filter((e) => e.entityId === entityId && e.count > 0 && !(e.instanceId && reserved.has(e.instanceId)))
+      .sort((a, b) => (a.level ?? 1) - (b.level ?? 1));
+    for (const c of candidates) {
+      if (remaining <= 0) break;
+      const already = taken.get(c) ?? 0;
+      const avail = c.count - already;
+      if (avail <= 0) continue;
+      const take = Math.min(avail, remaining);
+      remaining -= take;
+      taken.set(c, already + take);
+      const frac = take / c.count;
+      refund += (c.invested ?? 0) * frac * ENHANCE_REFUND_RATE;
+      stoneRefund += (c.investedStones ?? 0) * frac * ENHANCE_STONE_REFUND_RATE;
+    }
+  }
+  const next: EntityInstance[] = [];
+  for (const e of inventory) {
+    const t = taken.get(e) ?? 0;
+    if (t <= 0) { next.push(e); continue; }
+    const remainingCount = e.count - t;
+    if (remainingCount <= 0) continue; // fully consumed → drop the entry (flat)
+    const frac = remainingCount / e.count;
+    next.push({
       ...e,
-      count: remaining,
-      // Levels do NOT survive an emptied stack — otherwise max-level → fuse
-      // away → refund 60% leaves every future drop of this id pre-leveled
-      // for a net 40% of an already-paid cost (permanent level inflation).
-      level: remaining <= 0 ? 1 : e.level,
-      invested: Math.max(0, (e.invested ?? 0) * (1 - share)),
-      investedStones: remaining <= 0 ? 0 : Math.max(0, (e.investedStones ?? 0) * (1 - share)),
-    };
-  });
-  return { inventory: next, refund, stoneRefund: Math.floor(stoneRefund) };
+      count: remainingCount,
+      invested: Math.max(0, (e.invested ?? 0) * frac),
+      investedStones: Math.max(0, (e.investedStones ?? 0) * frac),
+    });
+  }
+  return { inventory: next, refund: Math.floor(refund), stoneRefund: Math.floor(stoneRefund) };
 }
 
 export interface FusionOutputResult {
@@ -313,23 +339,16 @@ export function applyFusionOutput(
   _playerStageId?: number,
   quality?: number,
 ): FusionOutputResult {
-  const existing = inventory.find((e) => e.entityId === output.id);
-  if (existing && output.maxCount > 0 && existing.count >= output.maxCount) {
+  // P6: count total flat copies; at the cap, refund instead of minting another.
+  const ownedCount = inventory.reduce((s, e) => (e.entityId === output.id ? s + e.count : s), 0);
+  if (output.maxCount > 0 && ownedCount >= output.maxCount) {
     return {
       inventory,
       capRefund: Math.ceil(FUSION_ENHANCE_COST_BASE * ENTITY_BASE_COST_FACTOR[output.rarity] * FUSION_CAP_DUP_REFUND_FRAC),
     };
   }
-  if (existing) {
-    return {
-      inventory: inventory.map((e) =>
-        e.entityId === output.id ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, quality) } : e,
-      ),
-      capRefund: 0,
-    };
-  }
   return {
-    inventory: [...inventory, { entityId: output.id, count: 1, level: 1, ...(quality !== undefined ? { quality } : {}) }],
+    inventory: [...inventory, makeInstance(output.id, quality !== undefined ? { quality } : {})],
     capRefund: 0,
   };
 }

@@ -11,6 +11,7 @@ import type { GameAction } from '../reducer';
 import { resetMechanicState, hasUnlock } from './helpers';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { entityMatchesId } from '../entities/stageItems';
+import { makeInstance } from '../entities/instances';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type AdminNextStageAction = Extract<GameAction, { type: 'ADMIN_NEXT_STAGE' }>;
@@ -188,17 +189,15 @@ export function handleAdminMaxEntities(state: GameState): GameState {
   if (!currentStage) return state;
 
   const entities = getEntitiesForStage(currentStage.id);
-  const updatedEntities = state.inventory.map((e) => ({ ...e }));
-
+  // P6: flat model — top each entity up to a few SEPARATE copies (enough to test
+  // per-copy enhance/placement + a fusion trio) without bloating the array.
+  const perEntity = Math.min(5, ADMIN_UNLIMITED_MAX);
+  let inventory = state.inventory;
   for (const entity of entities) {
-    const targetCount = entity.maxCount > 0 ? entity.maxCount : ADMIN_UNLIMITED_MAX;
-    const existing = updatedEntities.find((e) => entityMatchesId(entity, e.entityId));
-    if (existing) {
-      existing.count = Math.max(existing.count, targetCount);
-    } else {
-      updatedEntities.push({ entityId: entity.id, count: targetCount, level: 1 });
-    }
+    const target = entity.maxCount > 0 ? Math.min(entity.maxCount, perEntity) : perEntity;
+    const owned = inventory.reduce((s, e) => (entityMatchesId(entity, e.entityId) ? s + e.count : s), 0);
+    for (let i = owned; i < target; i++) inventory = [...inventory, makeInstance(entity.id)];
   }
 
-  return withCurrentUniverseEndingProgress({ ...state, inventory: updatedEntities });
+  return withCurrentUniverseEndingProgress({ ...state, inventory });
 }

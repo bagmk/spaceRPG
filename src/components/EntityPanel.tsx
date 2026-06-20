@@ -498,18 +498,38 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     () => new Set([...equippedSlots, ...riftSlots, wildSlot].filter(Boolean) as string[]),
     [equippedSlots, riftSlots, wildSlot],
   );
-  const reservedOf = (id: string) => (equippedIdSet.has(id) ? 1 : 0);
+  // P6: slots hold instanceIds. "Reserved" = how many copies of this entityId are
+  // currently equipped (their instanceId sits in a slot); only spare copies fuse.
+  const reservedOf = (entityId: string) =>
+    inventory.filter((e) => e.entityId === entityId && e.count > 0 && e.instanceId && equippedIdSet.has(e.instanceId)).length;
+  const copiesOf = (entityId: string) =>
+    inventory.reduce((s, e) => (e.entityId === entityId && e.count > 0 ? s + e.count : s), 0);
+  const freeCountOf = (entityId: string) => copiesOf(entityId) - reservedOf(entityId);
+  // Resolve a slot's stored instanceId → the specific equipped copy + its entity.
+  const entryOfSlot = (slotId: string): EntityInstance | undefined => {
+    if (!slotId) return undefined;
+    const byInst = inventory.find((e) => e.instanceId === slotId);
+    if (byInst) return byInst;
+    const ent = findEntityById(slotId); // legacy/unmigrated slot held an entityId
+    return ent ? inventory.find((e) => entityMatchesId(ent, e.entityId) && e.count > 0) : undefined;
+  };
+  const entityOfSlot = (slotId: string): StageEntity | undefined => {
+    const entry = entryOfSlot(slotId);
+    if (entry) return findEntityById(entry.entityId);
+    return slotId ? findEntityById(slotId) : undefined;
+  };
 
   // 🅠4: draw a flat list of FUSION_INPUT_COUNT × N owned copies of one rarity
   // (N = up to maxTrios) for a batch fuse. The reducer caps at what's affordable.
   const drawTriosOfRarity = (rarity: EntityRarity, maxTrios: number): string[] => {
     const ids: string[] = [];
     for (const e of inventory) {
-      const usable = e.count - reservedOf(e.entityId); // never fuse the equipped copy
-      if (usable <= 0) continue;
+      // P6 flat: one copy per entry; skip the equipped copy (instanceId in a slot).
+      if (e.count <= 0) continue;
+      if (e.instanceId && equippedIdSet.has(e.instanceId)) continue;
       const ent = findEntityById(e.entityId);
       if (!ent || ent.rarity !== rarity) continue;
-      for (let k = 0; k < usable; k++) ids.push(e.entityId);
+      ids.push(e.entityId);
     }
     const trios = Math.min(maxTrios, Math.floor(ids.length / FUSION_INPUT_COUNT));
     return ids.slice(0, trios * FUSION_INPUT_COUNT);
@@ -537,11 +557,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       if (trioBudget <= 0) break;
       const ids: string[] = [];
       for (const e of inventory) {
-        const usable = e.count - reservedOf(e.entityId); // never fuse the equipped copy
-        if (usable <= 0 || excludedIds.has(e.entityId)) continue;
+        // P6 flat: one copy per entry; skip equipped copies + excluded entity types.
+        if (e.count <= 0 || excludedIds.has(e.entityId)) continue;
+        if (e.instanceId && equippedIdSet.has(e.instanceId)) continue;
         const ent = findEntityById(e.entityId);
         if (!ent || ent.rarity !== r) continue;
-        for (let k = 0; k < usable; k++) ids.push(e.entityId);
+        ids.push(e.entityId);
       }
       const trios = Math.min(trioBudget, Math.floor(ids.length / FUSION_INPUT_COUNT));
       for (let i = 0; i < trios * FUSION_INPUT_COUNT; i++) out.push(ids[i]);
@@ -626,12 +647,31 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const gearSlots = equipCat === 'rift' ? riftSlots : equippedSlots;
   const gearSlotCount = equipCat === 'rift' ? unlockedRiftSlotCount : unlockedSlotCount;
 
-  // Every owned stack, across ALL eras — sorted best-first (rarity desc → era asc).
+  // P6: the inventory is FLAT (one entry per copy). For DISPLAY we group by
+  // canonical entityId — one tile per item, the synthesized `entry.count` = the
+  // number of copies, the representative = the highest-level copy (best quality).
+  // Per-copy levels stay visible on equipped slots (resolved by instanceId).
   const ownedEntities = useMemo(() => {
-    return inventory
-      .filter((entry) => entry.count > 0)
-      .map((entry) => ({ entry, entity: findEntityById(entry.entityId) }))
-      .filter((x): x is { entry: EntityInstance; entity: StageEntity } => Boolean(x.entity))
+    const byId = new Map<string, { entry: EntityInstance; entity: StageEntity; copies: number; bestQ: number | undefined }>();
+    for (const inst of inventory) {
+      if (inst.count <= 0) continue;
+      const entity = findEntityById(inst.entityId);
+      if (!entity) continue;
+      const g = byId.get(entity.id);
+      const q = inst.quality;
+      if (!g) {
+        byId.set(entity.id, { entry: inst, entity, copies: inst.count, bestQ: q });
+      } else {
+        g.copies += inst.count;
+        if ((inst.level ?? 1) > (g.entry.level ?? 1)) g.entry = inst; // show the best copy
+        if (q !== undefined && (g.bestQ === undefined || q > g.bestQ)) g.bestQ = q;
+      }
+    }
+    return [...byId.values()]
+      .map(({ entry, entity, copies, bestQ }) => ({
+        entry: { ...entry, count: copies, quality: bestQ } as EntityInstance,
+        entity,
+      }))
       .sort((a, b) => {
         const rr = (RARITY_RANK.get(b.entity.rarity) ?? 0) - (RARITY_RANK.get(a.entity.rarity) ?? 0);
         if (rr !== 0) return rr;
@@ -655,14 +695,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
   // Active set bonus spans both gear categories (largest glyph family counts).
   const equippedEntities = useMemo(
-    () => gearSlots.map((id) => (id ? findEntityById(id) : undefined)),
-    [gearSlots],
+    () => gearSlots.map((id) => (id ? entityOfSlot(id) : undefined)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gearSlots, inventory],
   );
   const allEquippedEntities = useMemo(
     // #44: include the wild slot so the displayed set tier matches the applied
     // bonus (the reducer counts wildSlot in getEquippedInstances for set bonuses).
-    () => [...equippedSlots, ...riftSlots, wildSlot].map((id) => (id ? findEntityById(id) : undefined)),
-    [equippedSlots, riftSlots, wildSlot],
+    () => [...equippedSlots, ...riftSlots, wildSlot].map((id) => (id ? entityOfSlot(id) : undefined)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [equippedSlots, riftSlots, wildSlot, inventory],
   );
   const setInfo = useMemo(() => {
     const counts = new Map<string, number>();
@@ -684,10 +726,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
   const addFuseInput = (entity: StageEntity) => {
     if (fuseInputs.length >= FUSION_INPUT_COUNT) return;
-    const owned = inventory.find((e) => e.entityId === entity.id);
     const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
-    // Reserve the equipped copy — a spare can be fused, the worn one cannot.
-    if (!owned || owned.count - reservedOf(entity.id) <= usedCopies) return;
+    // P6: only spare (un-equipped) copies are fuseable; the worn one is reserved.
+    if (freeCountOf(entity.id) <= usedCopies) return;
     if (trayRarity && entity.rarity !== trayRarity) return;
     setFuseInputs((current) => [...current, entity.id]);
     onUITap?.();
@@ -985,8 +1026,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       );
                     }
                     const slotId = slots[i];
-                    const slotEntity = slotId ? findEntityById(slotId) : undefined;
-                    const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+                    const slotEntity = entityOfSlot(slotId);
+                    const entry = entryOfSlot(slotId);
                     const linked = Boolean(slotEntity && dominantKey && getEquipSetKey(slotEntity) === dominantKey);
                     const isPicking = equipCat === cat && pickingSlot === i;
                     return (
@@ -1006,7 +1047,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           <>
                             {linked ? <span className="equip-slot-card__set">⬡</span> : null}
                             {/* #51: at-a-glance "전체 강화에서 빠짐" marker. */}
-                            {enhanceExcludedIds.has(slotEntity.id) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
+                            {entry?.instanceId && enhanceExcludedIds.has(entry.instanceId) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
                             {/* Inline unequip — a span (not button) since this card is itself a button. */}
                             <span
                               className="equip-slot-card__remove"
@@ -1088,7 +1129,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
             return (
               <>
                 {linked ? <span className="equip-slot-card__set">⬡</span> : null}
-                {enhanceExcludedIds.has(slotEntity.id) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
+                {entry?.instanceId && enhanceExcludedIds.has(entry.instanceId) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
                 <span
                   className="equip-slot-card__remove"
                   role="button"
@@ -1135,8 +1176,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               );
             }
             const slotId = slots[slot];
-            const slotEntity = slotId ? findEntityById(slotId) : undefined;
-            const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+            const slotEntity = entityOfSlot(slotId);
+            const entry = entryOfSlot(slotId);
             const isPicking = equipCat === cat && pickingSlot === slot && !pickingWild;
             return (
               <button
@@ -1170,8 +1211,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 </div>
               );
             }
-            const slotEntity = wildSlot ? findEntityById(wildSlot) : undefined;
-            const entry = slotEntity ? ownedEntryOf(slotEntity) : undefined;
+            const slotEntity = entityOfSlot(wildSlot);
+            const entry = entryOfSlot(wildSlot);
             return (
               <button
                 type="button"
@@ -1281,7 +1322,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   className="equip-enhance-all"
                   disabled={!enhanceUnlocked}
                   title={enhanceUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}
-                  onClick={() => { [...equippedSlots, ...riftSlots].forEach((id) => { if (id && !enhanceExcludedIds.has(id)) onEnhance(id); }); }}
+                  onClick={() => { [...equippedSlots, ...riftSlots, wildSlot].forEach((id) => { if (id && !enhanceExcludedIds.has(id)) onEnhance(id); }); }}
                 >
                   {enhanceUnlocked ? t(language, 'enhanceAll') : `🔒 ${t(language, 'enhanceAll')}`}
                 </button>
@@ -1310,13 +1351,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 ) : (
                   <div className="owned-grid">
                     {pickerEntities.map(({ entry, entity }) => {
-                      // While picking the wild, "already equipped" spans BOTH lanes
-                      // (the reducer rejects a dupe of a click/rift item in the wild).
-                      const alreadyAt = pickingWild
-                        ? [...equippedSlots, ...riftSlots, wildSlot].indexOf(entity.id)
-                        : gearSlots.indexOf(entity.id);
+                      // P6: per-copy placement — equippable while a SPARE (un-equipped)
+                      // copy exists, even if another copy of the same item is already
+                      // worn. Dim only when every copy is already equipped.
+                      const noFree = freeCountOf(entity.id) <= 0;
                       let delta: number | null = null;
-                      if (pickingSlot !== null && pickBase > 0 && alreadyAt < 0) {
+                      if (pickingSlot !== null && pickBase > 0 && !noFree) {
                         const d = Math.round((gearStrength(entity, entry) / pickBase - 1) * 100);
                         if (Number.isFinite(d)) delta = d;
                       }
@@ -1324,9 +1364,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         <button
                           key={entity.id}
                           type="button"
-                          className={`owned-card ${alreadyAt >= 0 ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
+                          className={`owned-card ${noFree ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
-                          disabled={alreadyAt >= 0}
+                          disabled={noFree}
                           onClick={() => {
                             if (pickingWild) {
                               onEquipWild?.(entity.id);
@@ -1773,7 +1813,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       {inspectedSlot !== null && equippedEntities[inspectedSlot] ? (() => {
         const i = inspectedSlot;
         const ent = equippedEntities[i]!;
-        const entry = ownedEntryOf(ent);
+        // P6: this detail is for the SPECIFIC equipped copy — resolve by the slot's
+        // instanceId so its own level/quality (not a spare's) drives enhance.
+        const slotVal = gearSlots[i] ?? '';
+        const entry = entryOfSlot(slotVal);
         const lvl = entry?.level ?? 1;
         const cap = getEnhanceLevelCap(ent);
         const atCap = lvl >= cap;
@@ -1797,7 +1840,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   const tr = EFFECT_TRAIT[ent.effect.type];
                   return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
                 })()}
-                <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${entry?.count ?? 1}`}</span>
+                <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
                 {/* #50: a tail (gold) specimen shows its quality percentile. */}
                 {isTailQuality(entry?.quality) ? (
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
@@ -1825,7 +1868,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 className="entity-detail-card__equip entity-detail-card__enhance"
                 style={affordable && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
                 disabled={!affordable || !enhanceUnlocked || enhancing !== null}
-                onClick={() => triggerEnhance(ent.id, stonePhase ? protectEnhance : false)}
+                onClick={() => triggerEnhance(slotVal, stonePhase ? protectEnhance : false)}
               >
                 {!enhanceUnlocked
                   ? `🔒 ${t(language, 'enhanceLabel')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`
@@ -1847,17 +1890,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {!atCap ? (
                 <button
                   type="button"
-                  className={`slot-detail__skip ${enhanceExcludedIds.has(ent.id) ? 'slot-detail__skip--on' : ''}`}
+                  className={`slot-detail__skip ${enhanceExcludedIds.has(slotVal) ? 'slot-detail__skip--on' : ''}`}
                   onClick={() => {
                     setEnhanceExcludedIds((prev) => {
                       const nextSet = new Set(prev);
-                      if (nextSet.has(ent.id)) nextSet.delete(ent.id); else nextSet.add(ent.id);
+                      if (nextSet.has(slotVal)) nextSet.delete(slotVal); else nextSet.add(slotVal);
                       return nextSet;
                     });
                     onUITap?.();
                   }}
                 >
-                  {`${enhanceExcludedIds.has(ent.id) ? '☑' : '☐'} ${t(language, 'enhanceExcludeToggle')}`}
+                  {`${enhanceExcludedIds.has(slotVal) ? '☑' : '☐'} ${t(language, 'enhanceExcludeToggle')}`}
                 </button>
               ) : null}
               <div className="slot-detail__actions">

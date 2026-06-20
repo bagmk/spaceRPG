@@ -54,7 +54,12 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 /** Single source of truth for the save schema version (local + cloud).
  *  v23: per-item quality (가우시언 테일, #50). v24: hexagon center/wild slot
  *  (#44) — an additive `wildSlot` string, default '' for pre-v24 saves. */
-export const SAVE_SCHEMA_VERSION = 24;
+export const SAVE_SCHEMA_VERSION = 25;
+
+/** P6: per-entity ceiling when exploding a count-stack into flat copies, for
+ *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
+ *  inventory array against a corrupt/runaway saved count. */
+const FLAT_EXPLODE_HARD_CAP = 200;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
 
@@ -84,11 +89,24 @@ function clampInstance(e: EntityInstance): EntityInstance {
 }
 
 function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameState {
-  const invMap = new Map<string, EntityInstance>();
+  // P6 (v25): the inventory is FLAT — each entry is one physical copy keyed by a
+  // unique instanceId. Copies with distinct instanceIds must stay SEPARATE (they
+  // carry per-copy levels). Only LEGACY entries (no instanceId — v24 and earlier
+  // stacks) are merged by canonical id, exactly as before; ensureFlatInstances
+  // (in finalizeV17) then explodes those merged stacks into flat copies.
+  const flatCopies: EntityInstance[] = []; // entries that already have an instanceId
+  const seenInstanceIds = new Set<string>();
+  const legacyMap = new Map<string, EntityInstance>(); // count-stacked, no instanceId
   for (const raw of state.inventory ?? []) {
     const e = clampInstance(raw);
     const id = canonicalEntityId(e.entityId);
-    const existing = invMap.get(id);
+    if (e.instanceId) {
+      if (seenInstanceIds.has(e.instanceId)) continue; // dedupe true id collisions
+      seenInstanceIds.add(e.instanceId);
+      flatCopies.push({ ...e, entityId: id });
+      continue;
+    }
+    const existing = legacyMap.get(id);
     if (existing) {
       existing.count += e.count;
       existing.level = Math.max(existing.level ?? 1, e.level ?? 1);
@@ -100,20 +118,82 @@ function normalizeSavedEntityIds(state: PersistentGameState): PersistentGameStat
       // #50: keep the best specimen's quality across a canonical-id merge.
       existing.quality = bestQuality(existing.quality, e.quality);
     } else {
-      invMap.set(id, { ...e, entityId: id });
+      legacyMap.set(id, { ...e, entityId: id });
     }
   }
+  const inventory = [...flatCopies, ...legacyMap.values()];
   const almanacCollected: Record<number, string[]> = {};
   for (const [stage, ids] of Object.entries(state.almanacCollected ?? {})) {
     almanacCollected[Number(stage)] = Array.from(new Set(ids.map(canonicalEntityId)));
   }
   return {
     ...state,
-    inventory: Array.from(invMap.values()),
+    inventory,
+    // canonicalEntityId passes instanceId slot values through untouched (no alias
+    // match) and canonicalizes legacy entityId slot values — both are remapped to
+    // a real instanceId by ensureFlatInstances below.
     equippedSlots: (state.equippedSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
     wildSlot: state.wildSlot ? canonicalEntityId(state.wildSlot) : '',
     riftSlots: (state.riftSlots ?? []).map((s) => (s ? canonicalEntityId(s) : s)),
     almanacCollected,
+  };
+}
+
+/**
+ * P6 (v25): explode every count-stacked / instanceId-less inventory entry into
+ * FLAT copies (one per count) with a unique instanceId, and remap any equip slot
+ * that still holds an entityId onto a real copy's instanceId. The v24→v25
+ * boundary rule: the FIRST copy of a stack keeps the stack's level + invested;
+ * the rest reset to Lv1 (a stack of N at Lv5 → one Lv5 + (N-1) Lv1). Idempotent:
+ * an already-flat v25 inventory (every entry count 1 with an instanceId) passes
+ * through unchanged, so reloads never re-flatten or lose per-copy levels.
+ */
+function ensureFlatInstances(state: PersistentGameState): PersistentGameState {
+  const inv = state.inventory ?? [];
+  let seq = 0;
+  const flat: EntityInstance[] = [];
+  // entityId → its copies' instanceIds in order (primary/leveled first) — used to
+  // remap legacy entityId slot values.
+  const byEntity = new Map<string, string[]>();
+  for (const e of inv) {
+    // Cap the explosion: a corrupt/legacy count (clampInstance allows up to
+    // maxCount×1000) must never spawn millions of copies. Bound to the entity's
+    // maxCount, or a generous ceiling for unlimited-count items.
+    const entity = findEntityById(e.entityId);
+    const explodeCap = entity && entity.maxCount > 0 ? entity.maxCount : FLAT_EXPLODE_HARD_CAP;
+    const n = Math.min(Math.max(1, e.count ?? 1), explodeCap);
+    for (let i = 0; i < n; i++) {
+      const isPrimary = i === 0;
+      const instanceId = isPrimary && e.instanceId ? e.instanceId : `${e.entityId}#m${seq++}`;
+      const copy: EntityInstance = {
+        entityId: e.entityId,
+        instanceId,
+        count: 1,
+        level: isPrimary ? e.level ?? 1 : 1,
+      };
+      if (isPrimary && e.invested !== undefined) copy.invested = e.invested;
+      if (isPrimary && e.investedStones !== undefined) copy.investedStones = e.investedStones;
+      if (e.quality !== undefined) copy.quality = e.quality;
+      if (e.carried !== undefined) copy.carried = e.carried;
+      flat.push(copy);
+      const arr = byEntity.get(e.entityId);
+      if (arr) arr.push(instanceId);
+      else byEntity.set(e.entityId, [instanceId]);
+    }
+  }
+  const liveInstanceIds = new Set(flat.map((f) => f.instanceId as string));
+  const remapSlot = (slotId: string): string => {
+    if (!slotId) return '';
+    if (liveInstanceIds.has(slotId)) return slotId; // already a real instanceId
+    const ids = byEntity.get(canonicalEntityId(slotId)); // legacy entityId slot
+    return ids && ids.length > 0 ? ids[0] : '';
+  };
+  return {
+    ...state,
+    inventory: flat,
+    equippedSlots: (state.equippedSlots ?? []).map(remapSlot),
+    riftSlots: (state.riftSlots ?? []).map(remapSlot),
+    wildSlot: remapSlot(state.wildSlot ?? ''),
   };
 }
 
@@ -400,7 +480,9 @@ export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | 
   const sourceVersion = (parsedUnknown as { version?: number }).version ?? 0;
   const migrated = migrateByVersion(parsedUnknown as Partial<SaveState>);
   if (!migrated) return null;
-  const finalized = finalizeV17(normalizeSavedEntityIds(migrated) as LegacyMigratedState, sourceVersion);
+  const finalized = ensureFlatInstances(
+    finalizeV17(normalizeSavedEntityIds(migrated) as LegacyMigratedState, sourceVersion),
+  );
   // Pre-v17 loads reset the offline window once: both the v16 gear rebuff and
   // the v17 recalibrated (lower) gates would otherwise pay a first-load
   // windfall / instant multi-condense.
@@ -486,7 +568,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25) {
       // v14..v23 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added

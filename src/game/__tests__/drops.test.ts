@@ -43,11 +43,15 @@ describe('entity drops', () => {
     }
   });
 
-  it('addToInventory stacks counts and starts new stacks at level 1', () => {
+  it('P6 flat: addToInventory adds a separate level-1 copy with its own instanceId', () => {
     const inv1 = addToInventory([], 'e1');
-    expect(inv1).toEqual([{ entityId: 'e1', count: 1, level: 1 }]);
+    expect(inv1).toHaveLength(1);
+    expect(inv1[0]).toMatchObject({ entityId: 'e1', count: 1, level: 1 });
+    expect(inv1[0].instanceId).toBeTruthy();
     const inv2 = addToInventory(inv1, 'e1');
-    expect(inv2).toEqual([{ entityId: 'e1', count: 2, level: 1 }]);
+    expect(inv2).toHaveLength(2);
+    expect(inv2.every((e) => e.entityId === 'e1' && e.count === 1 && e.level === 1)).toBe(true);
+    expect(new Set(inv2.map((e) => e.instanceId)).size).toBe(2); // distinct copies
   });
 
   it('addToAlmanac is idempotent per entity', () => {

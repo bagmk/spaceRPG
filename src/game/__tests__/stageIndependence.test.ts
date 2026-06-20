@@ -101,15 +101,15 @@ describe('Phase 4-1: economy re-anchors', () => {
       .toBeCloseTo(getAutoOutputAnchor(s13Auto, { stageId: 13, gateProgress01: 0 }), 5);
   });
 
-  it('emptying a stack via fusion resets its level (no near-free permanent levels)', () => {
+  it('P6: fusing away every copy drops the entry entirely (no near-free permanent levels)', () => {
     const target = getEntitiesForStage(1).filter((e) => e.rarity === 'common')[0];
     const { inventory } = consumeFusionInputs(
       [{ entityId: target.id, count: 3, level: 9, invested: 500 }],
       [target.id, target.id, target.id],
     );
-    const entry = inventory.find((e) => e.entityId === target.id)!;
-    expect(entry.count).toBe(0);
-    expect(entry.level).toBe(1);
+    // Flat model: a fully-consumed entry is removed, so a future drop starts fresh
+    // at Lv1 — the leveled copy can never resurrect as a near-free pre-leveled drop.
+    expect(inventory.find((e) => e.entityId === target.id)).toBeUndefined();
   });
 
   it('🅠1: fusion cost is a fixed per-era price — burst is bank-independent + gated on affordability', () => {

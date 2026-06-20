@@ -139,12 +139,18 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     // Name-derived ids (aliases) collapse to their canonical position-only id.
-    expect(migrated?.inventory.find((e) => e.entityId === 's13_07')).toMatchObject({ count: 3, level: 2 });
+    // P6: the count-3 stack explodes to 3 flat copies — one keeps the stack level.
+    const pulsarCopies = migrated!.inventory.filter((e) => e.entityId === 's13_07');
+    expect(pulsarCopies).toHaveLength(3);
+    expect(Math.max(...pulsarCopies.map((e) => e.level))).toBe(2);
     expect(migrated?.inventory.some((e) => e.entityId === 's13_07_pulsar')).toBe(false);
     expect(migrated?.almanacCollected[13]).toEqual(['s13_07']);
     expect(migrated?.almanacCollected[10]).toEqual(['s10_01']);
-    expect(migrated?.equippedSlots).toContain('s10_01');
-    expect(migrated?.riftSlots).toContain('s13_07');
+    // Slots now hold an instanceId that resolves to the canonical entity.
+    const clickInst = migrated!.inventory.find((e) => e.instanceId === migrated!.equippedSlots[0]);
+    expect(clickInst?.entityId).toBe('s10_01');
+    const riftInst = migrated!.inventory.find((e) => e.instanceId === migrated!.riftSlots[0]);
+    expect(riftInst?.entityId).toBe('s13_07');
   });
 
   it('#50 v23 per-item quality round-trips; pre-v23 entries stay neutral (undefined)', () => {
@@ -181,9 +187,14 @@ describe('save migration', () => {
     // A pre-v24 save (no wildSlot field) → defaults to ''.
     localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 23, equippedSlots: ['s1_00'] }));
     expect(loadGame()?.wildSlot).toBe('');
-    // A v24 save round-trips the wild slot id.
-    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 24, wildSlot: 's10_01' }));
-    expect(loadGame()?.wildSlot).toBe('s10_01');
+    // A v24 save round-trips the wild slot — P6 remaps the entityId to the owned
+    // copy's instanceId, which must resolve back to that entity.
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({ ...base, version: 24, wildSlot: 's10_01', inventory: [{ entityId: 's10_01', count: 1, level: 1 }] }),
+    );
+    const m = loadGame();
+    expect(m?.inventory.find((e) => e.instanceId === m.wildSlot)?.entityId).toBe('s10_01');
   });
 
   it('v16 resets the offline window once and clamps corrupt inventory entries', () => {
@@ -209,10 +220,11 @@ describe('save migration', () => {
     const migrated = loadGame();
     // Offline window reset: the gear power rebuff must not pay a retroactive windfall.
     expect(migrated!.lastSaveAt).toBeGreaterThan(staleSaveAt + 86_000_000);
-    const corrupt = migrated!.inventory.find((e) => e.entityId === 's1_01')!;
-    expect(corrupt.count).toBeLessThanOrEqual(20 * 1000); // maxCount × 1000 ceiling
-    expect(corrupt.level).toBeLessThanOrEqual(25); // rarity level cap
-    expect(migrated!.inventory.find((e) => e.entityId === 's1_02')?.count).toBe(3);
+    // P6: a runaway count explodes to flat copies but is BOUNDED (never millions).
+    const corruptCopies = migrated!.inventory.filter((e) => e.entityId === 's1_01');
+    expect(corruptCopies.length).toBeLessThanOrEqual(20 * 1000); // bounded, not 1e9
+    expect(Math.max(...corruptCopies.map((e) => e.level))).toBeLessThanOrEqual(25); // rarity level cap
+    expect(migrated!.inventory.filter((e) => e.entityId === 's1_02')).toHaveLength(3);
   });
 
   it('v17 derives the crit flag and pays compensation from legacy skills, then strips them', () => {
@@ -401,8 +413,10 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated).not.toBeNull();
-    // purchasedEntities → inventory with level 1
-    expect(migrated?.inventory).toEqual([{ entityId: entity.id, count: 3, level: 1 }]);
+    // purchasedEntities → inventory; P6 explodes the count-3 stack to 3 flat copies.
+    const copies = migrated!.inventory.filter((e) => e.entityId === entity.id);
+    expect(copies).toHaveLength(3);
+    expect(copies.every((e) => e.count === 1 && e.level === 1 && e.instanceId)).toBe(true);
     // almanac seeded from owned entities
     expect(migrated?.almanacCollected[entity.stageId]).toContain(entity.id);
     // new equip fields get defaults
@@ -457,12 +471,46 @@ describe('save migration', () => {
     localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify(save));
 
     const migrated = loadGame();
-    expect(migrated?.inventory).toEqual([{ entityId: entity.id, count: 2, level: 4 }]);
+    // P6: the count-2 stack explodes to 2 flat copies — one keeps the stack level.
+    const copies = migrated!.inventory.filter((e) => e.entityId === entity.id);
+    expect(copies).toHaveLength(2);
+    expect(Math.max(...copies.map((e) => e.level))).toBe(4);
     // v17 remap: the v16 stage-1 gate maps EXACTLY onto the new stage-1 gate
     // (piecewise remap preserves gate progress).
     expect(migrated?.entropy).toBeCloseTo(STAGES[0].entropyThreshold, 6);
-    expect(migrated?.equippedSlots).toEqual([entity.id]);
+    // The equipped slot remaps onto an owned copy that resolves to the entity.
+    expect(migrated!.inventory.find((e) => e.instanceId === migrated!.equippedSlots[0])?.entityId).toBe(entity.id);
     expect(migrated?.unlockedSlotCount).toBe(2);
     expect(migrated?.almanacCollected[1]).toContain(entity.id);
+  });
+
+  it('P6: a v25 flat save round-trips unchanged — per-copy levels survive, no re-explode', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const ent = getEntitiesForStage(1)[0];
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 25,
+        inventory: [
+          { entityId: ent.id, instanceId: 'inst-A', count: 1, level: 5 },
+          { entityId: ent.id, instanceId: 'inst-B', count: 1, level: 1 },
+        ],
+        equippedSlots: ['inst-A'], // the Lv5 copy is worn; the Lv1 spare is not
+        unlockedSlotCount: 1,
+      }),
+    );
+    const m = loadGame();
+    // Two distinct copies survive with their OWN levels — no merge, no re-flatten.
+    const copies = m!.inventory.filter((e) => e.entityId === ent.id);
+    expect(copies).toHaveLength(2);
+    expect(copies.find((e) => e.instanceId === 'inst-A')?.level).toBe(5);
+    expect(copies.find((e) => e.instanceId === 'inst-B')?.level).toBe(1);
+    // The equipped slot still points at the SAME (Lv5) copy by instanceId.
+    expect(m!.equippedSlots).toContain('inst-A');
   });
 });

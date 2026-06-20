@@ -141,7 +141,7 @@ export type GameAction =
   // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
   | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number; qualityRoll?: number }[] }
-  | { type: 'ENHANCE_ENTITY'; entityId: string; failRoll?: number; stoneRoll?: number; protect?: boolean }
+  | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; stoneRoll?: number; protect?: boolean }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }

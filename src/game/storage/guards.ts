@@ -135,6 +135,7 @@ export function isEntityInstance(value: unknown): value is EntityInstance {
   const r = value as Record<string, unknown>;
   return (
     typeof r.entityId === 'string' &&
+    (r.instanceId === undefined || typeof r.instanceId === 'string') && // P6 per-copy id (v25)
     isFiniteNumber(r.count) &&
     isFiniteNumber(r.level) &&
     (r.invested === undefined || isFiniteNumber(r.invested)) &&

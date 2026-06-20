@@ -94,9 +94,14 @@ export interface PurchasedEntityEntry {
   count: number;
 }
 
-/** What gets serialised in SaveState (v14+): owned entity stacks. */
+/** What gets serialised in SaveState. P6 (v25): the inventory is FLAT — each
+ *  EntityInstance is ONE physical copy with a unique `instanceId` and `count` 1.
+ *  (Optional in the type only so legacy fixtures compile; runtime + the v24→v25
+ *  migration always assign one, and equip/enhance/fusion key off it.) */
 export interface EntityInstance {
   entityId: string;
+  /** P6: unique per-copy id; equip slots / enhance / fusion target this. */
+  instanceId?: string;
   count: number;
   /** Upgrade level — duplicates feed level-ups (Phase 3 fusion sink). Starts at 1. */
   level: number;

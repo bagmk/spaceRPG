@@ -1,8 +1,9 @@
 import type { GameState, FusionResultCard } from '../types';
 import type { GameAction } from '../reducer';
-import { entityMatchesId, findEntityById, getEntitiesForStage } from '../entities/stageItems';
+import { entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
 import { addToAlmanac, pickDropStage } from '../entities/drops';
+import { makeInstance, pickFreeCopyId, reservedInstanceIds } from '../entities/instances';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
 import {
   applyFusionOutput,
@@ -74,8 +75,12 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   const entity = findEntityById(action.entityId);
   if (!entity) return state;
 
-  const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
-  if (!owned || owned.count <= 0) return state;
+  // P6: equip a SPECIFIC free copy. The UI still passes an entityId; the reducer
+  // picks the first un-equipped copy's instanceId, so clicking equip on the same
+  // item twice places two distinct copies in two slots (per-copy placement).
+  const reserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
+  const instanceId = pickFreeCopyId(state.inventory, entity, reserved);
+  if (!instanceId) return state; // no spare (un-equipped) copy to place
 
   // Vacuum-decay (crit-gear) flag — shared by the wild + normal equip paths.
   const isCritGear =
@@ -85,13 +90,11 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
     ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
     : state.endingProgressFlags;
 
-  // #44 hexagon CENTER (wild) slot — accepts ANY category. Unlocks by stage; an
-  // id already equipped in a click/rift slot can't also fill the wild (no free dupe).
+  // #44 hexagon CENTER (wild) slot — accepts ANY category. Unlocks by stage.
   if (action.wild) {
     const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
     if (stageId < HEX_WILD_UNLOCK_STAGE) return state;
-    if (state.equippedSlots.includes(action.entityId) || state.riftSlots.includes(action.entityId)) return state;
-    return { ...state, wildSlot: action.entityId, endingProgressFlags: critFlags };
+    return { ...state, wildSlot: instanceId, endingProgressFlags: critFlags };
   }
 
   const category = getEquipCategory(entity);
@@ -107,14 +110,12 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
     }
   }
   if (slot < 0 || slot >= slotCount) return state;
-  // Same entity cannot occupy two slots (or duplicate the wild).
-  if (slots.some((id, i) => i !== slot && id === action.entityId)) return state;
-  if (state.wildSlot === action.entityId) return state;
 
   // Dense array — empty slots hold '' so JSON round-trips cleanly (no holes).
+  // The chosen copy is guaranteed un-reserved, so no duplicate-instance check.
   const next: string[] = [];
   for (let i = 0; i < slotCount; i++) next[i] = slots[i] ?? '';
-  next[slot] = action.entityId;
+  next[slot] = instanceId;
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
   return category === 'rift'
     ? { ...state, riftSlots: next, endingProgressFlags: critFlags }
@@ -148,8 +149,8 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   // one tier early, but the shop never sells ahead of the gate).
   if ((RARITY_STAGE_GATES[entity.rarity] ?? 1) > currentStage.id) return state;
 
-  const existing = state.inventory.find((entry) => entityMatchesId(entity, entry.entityId));
-  const currentCount = existing?.count ?? 0;
+  // P6: count is the total of all flat copies of this entity (each count 1).
+  const currentCount = getOwnedEntityCount(state.inventory, entity);
 
   // Max count check
   if (entity.maxCount > 0 && currentCount >= entity.maxCount) return state;
@@ -167,11 +168,11 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
     action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
       ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
       : undefined;
-  const updatedInventory = existing
-    ? state.inventory.map((e) =>
-        e.entityId === existing.entityId ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, rolledQuality) } : e,
-      )
-    : [...state.inventory, { entityId: action.entityId, count: 1, level: 1, ...(rolledQuality !== undefined ? { quality: rolledQuality } : {}) }];
+  // P6: every purchase adds a NEW flat copy (its own instanceId, level 1).
+  const updatedInventory = [
+    ...state.inventory,
+    makeInstance(action.entityId, rolledQuality !== undefined ? { quality: rolledQuality } : {}),
+  ];
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
@@ -270,7 +271,10 @@ function fuseOnce(
   }
   if (!output) return null;
 
-  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds);
+  // P6: never consume an equipped copy — pass the reserved instanceIds so the
+  // forge picks only spare (un-equipped) copies.
+  const fuseReserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
+  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds, fuseReserved);
   // #50: the fused output rolls quality too — fusion is the headline "pull", so a
   // lucky tail here is the most exciting place to land a gold item.
   const fusedQuality =
@@ -469,10 +473,20 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
     return state;
   }
-  const entity = findEntityById(action.entityId);
-  if (!entity) return state;
-  const owned = state.inventory.find((e) => entityMatchesId(entity, e.entityId));
+  // P6: enhance a SPECIFIC copy by instanceId (the equipped slot's value). Falls
+  // back to the first copy of an entityId for any legacy/test caller.
+  const targetId = action.instanceId;
+  let owned = state.inventory.find((e) => e.instanceId === targetId);
+  if (!owned) {
+    const fallbackEnt = findEntityById(targetId);
+    owned = fallbackEnt ? state.inventory.find((e) => entityMatchesId(fallbackEnt, e.entityId) && e.count > 0) : undefined;
+  }
   if (!owned || owned.count <= 0) return state;
+  const entity = findEntityById(owned.entityId);
+  if (!entity) return state;
+  const ownedKey = owned; // capture for per-copy matching in the maps below
+  const matchesOwned = (e: typeof owned) =>
+    ownedKey.instanceId ? e!.instanceId === ownedKey.instanceId : e === ownedKey;
   const level = owned.level;
   if (level >= getEnhanceLevelCap(entity)) return state;
 
@@ -490,7 +504,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       eventCounter: eventId,
       lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
       inventory: state.inventory.map((e) =>
-        e.entityId === owned.entityId
+        matchesOwned(e)
           ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
           : e,
       ),
@@ -519,7 +533,7 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       eventCounter: eventId,
       lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'up', level: level + 1, payout },
       inventory: state.inventory.map((e) =>
-        e.entityId === owned.entityId ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + matterCost } : e,
+        matchesOwned(e) ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + matterCost } : e,
       ),
     });
   }
@@ -538,22 +552,17 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
 
   // ── Failed unprotected: DESTROY one copy + mint random 강화석. No matter charged
   //    (the lost item IS the cost); the card shows only the 강화석 gained. ──
+  // P6: destroy THAT specific copy (flat) + clear it from any slot it occupied.
   const stonesEarned = getEnhanceBreakStoneReward(entity, action.stoneRoll ?? 0.5);
-  let nextInventory = state.inventory.map((e) =>
-    e.entityId === owned.entityId
-      ? { ...e, count: e.count - 1, level: e.count - 1 <= 0 ? e.level : 1, investedStones: 0 }
-      : e,
-  );
-  let nextState: GameState = { ...state, enhanceStones: state.enhanceStones + stonesEarned };
-  if ((nextInventory.find((e) => e.entityId === owned.entityId)?.count ?? 0) <= 0) {
-    nextInventory = nextInventory.filter((e) => e.entityId !== owned.entityId);
-    nextState = {
-      ...nextState,
-      equippedSlots: state.equippedSlots.filter((id) => id !== owned.entityId),
-      riftSlots: state.riftSlots.filter((id) => id !== owned.entityId),
-      wildSlot: state.wildSlot === owned.entityId ? '' : state.wildSlot,
-    };
-  }
+  const destroyKey = ownedKey.instanceId ?? ownedKey.entityId;
+  const nextInventory = state.inventory.filter((e) => !matchesOwned(e));
+  const nextState: GameState = {
+    ...state,
+    enhanceStones: state.enhanceStones + stonesEarned,
+    equippedSlots: state.equippedSlots.filter((id) => id !== destroyKey),
+    riftSlots: state.riftSlots.filter((id) => id !== destroyKey),
+    wildSlot: state.wildSlot === destroyKey ? '' : state.wildSlot,
+  };
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...nextState,

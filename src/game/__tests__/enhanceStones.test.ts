@@ -30,7 +30,7 @@ function baseState(over: Partial<GameState>): GameState {
 describe('#47: matter-only enhance + risk phase (강화석 = protect / break refund)', () => {
   it('Lv<3 spends matter only and always succeeds (no stones)', () => {
     const s = baseState({ quanta: 1e12, inventory: [{ entityId: common.id, count: 1, level: 1 }] });
-    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 0 });
+    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: common.id, failRoll: 0 });
     expect(next.inventory[0].level).toBe(2);
     expect(next.quanta).toBeLessThan(1e12);
     expect(next.enhanceStones).toBe(0);
@@ -39,19 +39,27 @@ describe('#47: matter-only enhance + risk phase (강화석 = protect / break ref
 
   it('Lv≥3 success spends MATTER ONLY (no 강화석) and levels up', () => {
     const s = baseState({ quanta: 1e9, enhanceStones: 1000, inventory: [{ entityId: common.id, count: 1, level: 5 }] });
-    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 1 });
+    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: common.id, failRoll: 1 });
     expect(next.inventory[0].level).toBe(6);
     expect(next.quanta).toBeLessThan(1e9);    // matter spent
     expect(next.enhanceStones).toBe(1000);    // stones untouched on an unprotected success
     expect(next.lastEnhanceEvent?.outcome).toBe('up');
   });
 
-  it('Lv≥3 unprotected failure DESTROYS a copy and mints random 강화석', () => {
-    const s = baseState({ quanta: 1e9, enhanceStones: 0, inventory: [{ entityId: common.id, count: 2, level: 6 }] });
-    const fail = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 0, stoneRoll: 0 });
-    expect(fail.inventory[0].count).toBe(1);          // one copy gone
-    expect(fail.inventory[0].level).toBe(1);          // remaining copies reset
-    expect(fail.quanta).toBe(1e9);                    // no matter charged on a break
+  it('Lv≥3 unprotected failure DESTROYS that specific copy, leaving the others intact (P6)', () => {
+    const s = baseState({
+      quanta: 1e9,
+      enhanceStones: 0,
+      inventory: [
+        { entityId: common.id, instanceId: 'a', count: 1, level: 6 },
+        { entityId: common.id, instanceId: 'b', count: 1, level: 6 },
+      ],
+    });
+    const fail = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, stoneRoll: 0 });
+    expect(fail.inventory).toHaveLength(1);            // the targeted copy is gone
+    expect(fail.inventory[0].instanceId).toBe('b');    // the OTHER copy survives…
+    expect(fail.inventory[0].level).toBe(6);           // …at its own level (per-copy)
+    expect(fail.quanta).toBe(1e9);                     // no matter charged on a break
     expect(fail.enhanceStones).toBe(getEnhanceBreakStoneReward(common, 0)); // random refund (min at roll 0)
     expect(fail.lastEnhanceEvent?.outcome).toBe('break');
     expect(fail.lastEnhanceEvent?.stonesEarned).toBe(getEnhanceBreakStoneReward(common, 0));
@@ -64,7 +72,7 @@ describe('#47: matter-only enhance + risk phase (강화석 = protect / break ref
       inventory: [{ entityId: common.id, count: 1, level: 6 }],
       equippedSlots: [common.id],
     });
-    const fail = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 0, stoneRoll: 0.5 });
+    const fail = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: common.id, failRoll: 0, stoneRoll: 0.5 });
     expect(fail.inventory.find((e) => e.entityId === common.id)).toBeUndefined();
     expect(fail.equippedSlots).not.toContain(common.id);
     expect(fail.enhanceStones).toBeGreaterThan(0);
@@ -73,7 +81,7 @@ describe('#47: matter-only enhance + risk phase (강화석 = protect / break ref
   it('보호(protect) negates a failed attempt — item kept, only protect stones spent', () => {
     const protectCost = getEnhanceProtectStoneCost(common, 6);
     const s = baseState({ quanta: 1e9, enhanceStones: 1000, inventory: [{ entityId: common.id, count: 1, level: 6 }] });
-    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 0, protect: true });
+    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: common.id, failRoll: 0, protect: true });
     expect(next.inventory[0].level).toBe(6);              // no level change
     expect(next.inventory[0].count).toBe(1);              // not destroyed
     expect(next.enhanceStones).toBe(1000 - protectCost);  // only the protect cost
@@ -82,7 +90,7 @@ describe('#47: matter-only enhance + risk phase (강화석 = protect / break ref
 
   it('rejects a protected attempt when 강화석 are short', () => {
     const s = baseState({ quanta: 1e9, enhanceStones: 0, inventory: [{ entityId: common.id, count: 1, level: 6 }] });
-    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', entityId: common.id, failRoll: 0, protect: true });
+    const next = gameReducer(s, { type: 'ENHANCE_ENTITY', instanceId: common.id, failRoll: 0, protect: true });
     expect(next).toBe(s); // unaffordable → no-op
   });
 

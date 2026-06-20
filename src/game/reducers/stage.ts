@@ -21,6 +21,7 @@ import {
 import { createInitialGameState } from '../defaults';
 import { pickActiveQuests, refillActiveQuests } from '../quests';
 import { findEntityById } from '../entities/stageItems';
+import { makeInstance } from '../entities/instances';
 import { getEquipCategory, type EntityInstance, type EntityRarity } from '../entities/types';
 import { PRESTIGE_CARRY_COUNT_CAP } from '../balance';
 import type { GameState } from '../types';
@@ -67,16 +68,17 @@ export function computeCarriedInventory(inventory: EntityInstance[]): EntityInst
       if (isRift) bestRift = winner; else bestClick = winner;
     }
   }
+  // P6: carry up to CAP SEPARATE flat copies (each its own instanceId). The first
+  // keeps the winning copy's level; the rest carry at Lv1 (mirrors the stack-
+  // explode rule), so per-copy enhance survives prestige intact.
   const carried: EntityInstance[] = [];
   for (const best of [bestClick, bestRift]) {
     if (!best) continue;
     const canonicalId = findEntityById(best.entry.entityId)?.id ?? best.entry.entityId;
-    carried.push({
-      entityId: canonicalId,
-      count: Math.min(best.entry.count, PRESTIGE_CARRY_COUNT_CAP),
-      level: best.entry.level,
-      carried: true,
-    });
+    const n = Math.min(best.entry.count, PRESTIGE_CARRY_COUNT_CAP);
+    for (let i = 0; i < n; i++) {
+      carried.push(makeInstance(canonicalId, { level: i === 0 ? best.entry.level : 1, carried: true }));
+    }
   }
   return carried;
 }

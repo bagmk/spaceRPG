@@ -50,18 +50,18 @@ describe('#50 item quality (가우시언 테일)', () => {
     expect(bestQuality(undefined, undefined)).toBeUndefined();
   });
 
-  it('addToInventory stamps a new stack and keeps the best across copies', () => {
+  it('P6 flat: addToInventory adds a separate copy, each stamped with its own quality', () => {
     const inv0 = addToInventory([], common.id, 0.4);
+    expect(inv0).toHaveLength(1);
     expect(inv0[0].quality).toBe(0.4);
-    // A weaker second copy does not lower the stack.
+    // A second copy is its OWN flat entry — qualities no longer merge to a best.
     const inv1 = addToInventory(inv0, common.id, 0.1);
-    expect(inv1[0].count).toBe(2);
-    expect(inv1[0].quality).toBe(0.4);
-    // A stronger copy raises it.
+    expect(inv1).toHaveLength(2);
+    expect(inv1.map((e) => e.quality).sort()).toEqual([0.1, 0.4]);
     const inv2 = addToInventory(inv1, common.id, 0.95);
-    expect(inv2[0].count).toBe(3);
-    expect(inv2[0].quality).toBe(0.95);
-    // Omitting quality leaves a new stack neutral (undefined).
+    expect(inv2).toHaveLength(3);
+    expect(Math.max(...inv2.map((e) => e.quality ?? 0))).toBe(0.95);
+    // Omitting quality leaves a new copy neutral (undefined).
     const plain = addToInventory([], common.id);
     expect(plain[0].quality).toBeUndefined();
   });

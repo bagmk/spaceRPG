@@ -156,7 +156,7 @@ describe('enhancement (강화소)', () => {
       quanta: cost + 10,
       inventory: [{ entityId: entity.id, count: 1, level: 1 }],
     };
-    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
     expect(next.inventory[0].level).toBe(2);
     // #40: a successful enhance now also pays back a small matter fraction.
     const payout = Math.ceil(cost * ENHANCE_MATTER_PAYOUT_SUCCESS);
@@ -169,14 +169,14 @@ describe('enhancement (강화소)', () => {
       quanta: 0,
       inventory: [{ entityId: entity.id, count: 1, level: 1 }],
     };
-    expect(gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id }).inventory[0].level).toBe(1);
+    expect(gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id }).inventory[0].level).toBe(1);
 
     const capped: GameState = {
       ...createInitialGameState(0),
       quanta: 1e18,
       inventory: [{ entityId: entity.id, count: 1, level: ENHANCE_LEVEL_CAPS.common }],
     };
-    expect(gameReducer(capped, { type: 'ENHANCE_ENTITY', entityId: entity.id }).inventory[0].level)
+    expect(gameReducer(capped, { type: 'ENHANCE_ENTITY', instanceId: entity.id }).inventory[0].level)
       .toBe(ENHANCE_LEVEL_CAPS.common);
   });
 
@@ -223,8 +223,8 @@ describe('gear system (category purity + refunds)', () => {
       quanta: cost1 + cost2 + 10,
       inventory: [{ entityId: entity.id, count: 1, level: 1 }],
     };
-    state = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
-    state = gameReducer(state, { type: 'ENHANCE_ENTITY', entityId: entity.id });
+    state = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
+    state = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
     expect(state.inventory[0].level).toBe(3);
     expect(state.inventory[0].invested).toBeCloseTo(cost1 + cost2, 5);
   });

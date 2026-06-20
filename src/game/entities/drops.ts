@@ -19,7 +19,7 @@ import {
   RARITY_STAGE_GATES,
 } from '../balance';
 import { getEntitiesForStage } from './stageItems';
-import { bestQuality } from './quality';
+import { makeInstance } from './instances';
 import type { EntityInstance, EntityRarity, StageEntity } from './types';
 
 const RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -206,15 +206,9 @@ export function addToInventory(
   entityId: string,
   quality?: number,
 ): EntityInstance[] {
-  const existing = inventory.find((e) => e.entityId === entityId);
-  if (existing) {
-    return inventory.map((e) =>
-      e.entityId === entityId
-        ? { ...e, count: e.count + 1, quality: bestQuality(e.quality, quality) }
-        : e,
-    );
-  }
-  return [...inventory, { entityId, count: 1, level: 1, ...(quality !== undefined ? { quality } : {}) }];
+  // P6: every acquired copy is its OWN flat entry (instanceId, level 1, count 1).
+  // No stacking — per-copy level/placement is the whole point of the v25 model.
+  return [...inventory, makeInstance(entityId, quality !== undefined ? { quality } : {})];
 }
 
 /** Record an entity in the almanac collection grid (immutable, idempotent). */

@@ -39,9 +39,13 @@ export function getEquippedInstances(
   const result: EntityInstance[] = [];
   for (const slotId of equippedSlots) {
     if (!slotId) continue;
-    const entity = findEntityById(slotId);
-    if (!entity) continue;
-    const owned = inventory.find((e) => entityMatchesId(entity, e.entityId));
+    // P6: slots store an instanceId. Fall back to entityId resolution for any
+    // legacy/unmigrated slot value so a stale save never blanks the loadout.
+    let owned = inventory.find((e) => e.instanceId === slotId);
+    if (!owned) {
+      const entity = findEntityById(slotId);
+      owned = entity ? inventory.find((e) => entityMatchesId(entity, e.entityId) && e.count > 0) : undefined;
+    }
     if (owned && owned.count > 0) result.push(owned);
   }
   return result;
