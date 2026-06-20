@@ -44,6 +44,15 @@
   box-sizing: border-box;
 }
 
+/* C-P2 (audit a11y): a global keyboard focus ring — only .entity-card had one,
+   so keyboard / switch users got no visible focus anywhere else. Uses
+   :focus-visible so it never shows on mouse/touch interaction. */
+:focus-visible {
+  outline: 2px solid var(--core, #ffaa66);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 html,
 body,
 #root {

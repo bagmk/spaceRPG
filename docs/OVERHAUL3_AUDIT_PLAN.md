@@ -70,8 +70,8 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   numbers + long Korean stage names don't wrap and shove the entropy meter.
 - [ ] **C-P2 Touch affordances:** lock reasons / condense-disabled explanation live in `title=`
   tooltips (never show on touch) — surface as visible inline/tappable text.
-- [ ] **C-P2 Global focus-visible ring** (remove blanket `outline:none` at index.css:4050).
-- [ ] **C-P2 user-scalable=no** removal (index.html:5) — WCAG 1.4.4.
+- [x] **C-P2 Global focus-visible ring** DONE — global :focus-visible outline added.
+- [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
 - [ ] **C-P2 Daily check-in streak** has no gap detection + grants nothing (useGameState.ts:169-174)
   — add consecutive-day detection + an escalating return reward.
 - [ ] **C-P2 Memoize open modal panels** (Shop/Entity/Quest/Settings re-render ~10×/s) + extract &
