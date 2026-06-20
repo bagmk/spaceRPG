@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { pullRemoteSave, debouncedPush, flushPendingPush } from '../cloud/sync';
+import { decideCloudMerge } from '../cloud/merge';
 import { pushLeaderboardEntry } from '../cloud/leaderboard';
 import { toPersistentState } from '../game/reducer';
 import { SAVE_SCHEMA_VERSION } from '../game/storage';
@@ -58,31 +59,22 @@ export function useCloudSync({ state, dispatch }: UseCloudSyncOptions): void {
       if (!remote) return; // No remote save — local is the source of truth
 
       const local = stateRef.current;
-      const localIsEmpty = local.totalClicks === 0 && local.stageIdx === 0;
-      const localSaveAt = local.lastSaveAt ?? 0;
-      const remoteSaveAt = remote.lastSaveAt ?? 0;
-
-      // C-P1 (audit): last-write-wins on each device's wall clock can silently
-      // destroy progress across devices (clock skew, or just the last device to
-      // push). Guard 1 — if the remote is STRICTLY behind local on BOTH stage and
-      // peak entropy, it's a regression (almost certainly stale/skewed): keep local.
-      const remoteRegressed =
-        remote.stageIdx < local.stageIdx && (remote.peakEntropy ?? 0) < (local.peakEntropy ?? 0);
-
-      if (localIsEmpty || (remoteSaveAt > localSaveAt && !remoteRegressed)) {
-        // Guard 2 — snapshot the local save we're about to discard so it's
-        // recoverable instead of lost, unless local was fresh/empty anyway.
-        if (!localIsEmpty) {
+      // C-P1/C-P2 (audit): the merge decision is extracted to a pure, unit-tested
+      // function (src/cloud/merge.ts) — last-write-wins with a regression guard.
+      const decision = decideCloudMerge(local, remote);
+      if (decision.hydrate) {
+        if (decision.backupLocal) {
+          // Snapshot the local save we're about to discard so it's recoverable.
           try {
             localStorage.setItem(
               'cc_cloud_overwrite_backup',
-              JSON.stringify({ savedAt: Date.now(), reason: 'remote-newer', state: toCloudSave(local) }),
+              JSON.stringify({ savedAt: Date.now(), reason: decision.reason, state: toCloudSave(local) }),
             );
           } catch { /* best-effort backup — quota/serialization */ }
         }
         dispatch({ type: 'HYDRATE', payload: remote, now: Date.now() });
       }
-      // Otherwise local is newer (or remote regressed) — keep local, it'll push on next save
+      // Otherwise local is newer (or remote regressed) — keep local, it pushes on next save.
     })();
   }, [status, user, dispatch]);
 

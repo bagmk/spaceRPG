@@ -12,7 +12,8 @@ import {
   getTimeGaugeForCosmicClock,
   safeAdd,
 } from '../game/formulas';
-import { OFFLINE_ENTROPY_FLOOR_FRAC, dailyCheckInStones } from '../game/balance';
+import { OFFLINE_ENTROPY_FLOOR_FRAC } from '../game/balance';
+import { computeDailyCheckIn } from '../game/dailyCheckIn';
 import {
   getOfflineRewardCapSec,
   integrateBoostedSeconds,
@@ -152,23 +153,17 @@ export function useGameState(): UseGameStateResult {
       const nextCosmicClockSec = Math.min(safeCosmic + cosmicDelta, stage.cosmicTimeSec);
       const previousTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, safeCosmic);
       const nextTimeGauge = getTimeGaugeForCosmicClock(payload.stageIdx, nextCosmicClockSec);
+      // C-P2 (audit): daily check-in / streak resolution is extracted to a pure,
+      // unit-tested helper (consecutive-day streak, gap/first-ever resets to 1,
+      // escalating 강화석 reward).
       const todayKey = getDayKey(new Date(now));
       const yesterdayKey = getDayKey(new Date(now - 24 * 60 * 60 * 1000));
-      const isDailyCheckIn = payload.dailyCheckIns.lastDayKey !== todayKey;
-      // C-P2 (audit): a streak only continues on CONSECUTIVE days; a gap (or the
-      // first ever check-in) resets it to 1. The check-in grants an escalating
-      // 강화석 reward so returning after a break is actually rewarded.
-      const newStreak = !isDailyCheckIn
-        ? payload.dailyCheckIns.streakDays
-        : payload.dailyCheckIns.lastDayKey === yesterdayKey
-          ? payload.dailyCheckIns.streakDays + 1
-          : 1;
-      const dailyStones = isDailyCheckIn ? dailyCheckInStones(newStreak) : 0;
+      const checkIn = computeDailyCheckIn(payload.dailyCheckIns, todayKey, yesterdayKey);
       return {
         ...baseState,
         quanta: nextQuanta,
         entropy: safeAdd(baseState.entropy, entropyGained),
-        enhanceStones: Math.max(0, baseState.enhanceStones + dailyStones),
+        enhanceStones: Math.max(0, baseState.enhanceStones + checkIn.stones),
         cosmicClockSec: nextCosmicClockSec,
         timeGauge: nextTimeGauge,
         lastSaveAt: now,
@@ -176,11 +171,9 @@ export function useGameState(): UseGameStateResult {
         offlineGained: gained,
         offlineEntropyGained: entropyGained,
         offlineTimeProgressGained: Math.max(0, nextTimeGauge - previousTimeGauge),
-        offlineDailyStonesGained: dailyStones,
+        offlineDailyStonesGained: checkIn.stones,
         shopBoosts: pruneExpiredShopBoosts(payload.shopBoosts, now),
-        dailyCheckIns: isDailyCheckIn
-          ? { lastDayKey: todayKey, streakDays: newStreak }
-          : payload.dailyCheckIns,
+        dailyCheckIns: checkIn.next,
       };
       } catch (e) {
         // Back up the raw save before resetting — a hydrate crash must never

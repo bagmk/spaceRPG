@@ -99,8 +99,15 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
 - [x] **C-P2 user-scalable=no** DONE — removed maximum-scale+user-scalable=no from index.html viewport (WCAG 1.4.4).
 - [x] **C-P2 Daily check-in streak** DONE — consecutive-day gap detection (gap→reset to 1) + escalating 강화석 reward (2..8 by streak) shown in the offline modal.
   — add consecutive-day detection + an escalating return reward.
-- [ ] **C-P2 Memoize open modal panels** (Shop/Entity/Quest/Settings re-render ~10×/s) + extract &
-  unit-test offline catch-up + cloud-merge (and switch vitest env to jsdom for component tests).
+- [ ] **C-P2 Memoize open modal panels + extract/test save-sync logic (PARTIAL):** DONE — extracted
+  the load-bearing decisions to pure, unit-tested modules: **cloud-merge** (`src/cloud/merge.ts`
+  `decideCloudMerge` — last-write-wins + regression guard, 6 tests) and the **daily check-in/streak**
+  (`src/game/dailyCheckIn.ts` `computeDailyCheckIn` — consecutive/gap/first-ever, 5 tests); both
+  behaviour-preserving, useCloudSync/useGameState now delegate. 347 tests green. DEFERRED: the panel
+  React.memo work (Shop/Quest take whole `state` = new ref/tick → need comparators or prop-narrowing;
+  `modifiers`/`wallNow` rebuild every render = prerequisite blocker; the win is bounded to the one
+  open panel and the staleness risk can't be profiled behind the OAuth wall) + the FULL offline-gain
+  extraction (large, load-bearing — do with jsdom component tests) + jsdom vitest env.
 - [x] **C-P2 Save export/import** DONE — storage.ts codec `serializeSave`/`deserializeSave`
   (UTF-8-safe base64, `CCSAVE1.` envelope, raw-JSON + bare-base64 fallbacks, routes through
   migrateToCurrent → v25) + a rolling `cc_save_backup_ring` (last 5 autosaves, deduped, skipped on
