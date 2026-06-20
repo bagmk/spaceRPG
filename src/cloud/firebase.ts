@@ -20,8 +20,13 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 
+// Dev/offline escape hatch: `VITE_FORCE_OFFLINE=1` skips Firebase init so the app
+// takes its existing anonymous/offline path (no login wall) — for local testing
+// and previews. Production builds never set it, so it has zero prod effect.
+const forceOffline = import.meta.env.VITE_FORCE_OFFLINE === '1';
+
 try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  if (!forceOffline && firebaseConfig.apiKey && firebaseConfig.projectId) {
     app = initializeApp(firebaseConfig);
     // Keep localStorage persistence for Capacitor, but explicitly install the
     // browser resolver because initializeAuth() does not add it automatically.
@@ -31,7 +36,7 @@ try {
     });
     db = getFirestore(app);
   } else {
-    console.warn('[Firebase] Missing config — running in offline mode');
+    console.warn(`[Firebase] ${forceOffline ? 'VITE_FORCE_OFFLINE set' : 'Missing config'} — running in offline mode`);
   }
 } catch (e) {
   console.error('[Firebase] Init failed — running in offline mode', e);

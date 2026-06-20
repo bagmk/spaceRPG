@@ -48,8 +48,10 @@ export function LoginScreen({ language, onLanguageChange, onContinue }: LoginScr
     }
   };
 
-  // If already authed (e.g. returning Google user), auto-proceed
-  if (status === 'authed' || status === 'needsName') {
+  // Auto-proceed when there's nothing to sign in for: a returning Google user
+  // (authed/needsName), OR offline/anonymous mode where Firebase is unavailable
+  // (login buttons can't work) — go straight into the game instead of a dead gate.
+  if (status === 'authed' || status === 'needsName' || status === 'anonymous') {
     Promise.resolve().then(onContinue);
     return null;
   }
