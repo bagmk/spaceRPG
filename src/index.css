@@ -787,7 +787,21 @@ button.hud-stage-title--clickable:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin: 2px 0 4px;
+  /* Pin the click/auto power readout to the top of the scrolling equip page so
+     it stays visible while you scroll the hexagon + inventory below and place
+     cards — power updates are visible without scrolling back up. Bleeds over the
+     .equip-page 12px side padding with an opaque bg so scrolled content can't
+     show through behind it. */
+  position: sticky;
+  /* Pin flush to the scroll-body's top — the negative offset + matching padding
+     cancel the body's top padding so no scrolled content peeks above the bar. */
+  top: -16px;
+  z-index: 6;
+  margin: -16px -12px 4px;
+  padding: 16px 12px 8px;
+  background: rgba(10, 12, 20, 0.97);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.7);
 }
 .hex-hero {
   display: flex;
