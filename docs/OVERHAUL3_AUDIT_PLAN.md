@@ -77,9 +77,14 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   overlay root got `tabIndex={-1}` + (where missing) `role=dialog`/`aria-modal`.
 - [x] **C-P1 Cloud merge safety:** DONE — snapshot local to cc_cloud_overwrite_backup before remote-newer overwrite + skip overwrite when remote regressed on both stage & peakEntropy. snapshot the discarded save before last-write-wins overwrite
   and/or merge on peakEntropy/stageIdx maxima (useCloudSync.ts:64-69).
-- [ ] **C-P2 Tutorial queue.** Replace the winner-take-all ~14-branch useMemo (GameScreen.tsx:299-435)
-  with an ordered queue that advances one step at a time (lower-priority tutorials currently skipped
-  permanently for returning players).
+- [x] **C-P2 Tutorial queue.** DONE — extracted the 12-branch tutorial useMemo into a pure,
+  unit-tested table `src/components/tutorialSteps.ts` (`TUTORIAL_STEPS` + `selectTutorialStep` =
+  first-eligible-and-unseen in canonical order, preserving the `allDismissed` post-intro suppression,
+  the matter-intro pre/post-first-click dual content, and the cash-shop dedicated-boolean
+  discriminator). GameScreen builds the ctx + resolves strings/onCta; behavior verified identical
+  against the original chain (diffed all 12 branches). 10 new vitest cases incl. the anti-shadow
+  advance + allDismissed gate. 336 tests green. (Note: the original chain already fell through on
+  `seen`; the real value is testability + a lean GameScreen, not a behavior change.)
 - [ ] **C-P2 HUD topline:** give quanta a dedicated reserved-width region (index.css:11110) so big
   numbers + long Korean stage names don't wrap and shove the entropy meter.
 - [ ] **C-P2 Touch affordances:** lock reasons / condense-disabled explanation live in `title=`

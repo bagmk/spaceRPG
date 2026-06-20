@@ -44,6 +44,7 @@ import { ParticleField, type ParticleFieldHandle } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
 import { ScaleIndicator } from './ScaleIndicator';
 import { SpeechBubble } from './SpeechBubble';
+import { selectTutorialStep, type TutorialStepCtx } from './tutorialSteps';
 import { ShopButton, ShopPanel } from './ShopPanel';
 import { ActiveBoostHud } from './ActiveBoostHud';
 import { EntityPanel } from './EntityPanel';
@@ -59,7 +60,7 @@ import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { milestoneEraLog } from '../game/milestones';
 import { pickLogText } from '../game/stageLogs';
 import { SettingsPanel } from './SettingsPanel';
-import { t, stageName } from '../i18n';
+import { t, stageName, type StringKey } from '../i18n';
 import { getRogueNameLabel } from '../canvas/stageSprites';
 import { getPrestigeMultiplier, PRESTIGE_UPGRADES, type PrestigeUpgradeId } from '../game/prestige';
 import { useBoostNotifications } from '../hooks/useBoostNotifications';
@@ -306,125 +307,42 @@ export function GameScreen({
     return canCondense ? `${stageLine}. ${t(language, 'srReadyToCondense')}` : stageLine;
   }, [language, displayStage.id, displayStageLabel, canCondense]);
   const activeTutorialBubble = useMemo<TutorialBubble | null>(() => {
-    if (entityPanelOpen || state.universeCount !== 1) {
-      return null;
+    // C-P2: selection extracted to ./tutorialSteps (pure + unit-tested). Build the
+    // context, pick the first eligible-and-unseen step, then resolve strings + onCta
+    // here (the closures stay in the component). Behavior is preserved exactly.
+    const ctx: TutorialStepCtx = {
+      stageId: stage.id,
+      universeCount: state.universeCount,
+      entityPanelOpen,
+      totalClicks: state.totalClicks,
+      equipUnlocked,
+      ownedCurrentStageEntityCount,
+      hasClaimableQuest,
+      canShowShop,
+      hasActiveBoost,
+      canCondense,
+      almanacOpen,
+      hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
+      flags: state.tutorialFlags,
+    };
+    const step = selectTutorialStep(ctx);
+    if (!step) return null;
+    let onCta: (() => void) | undefined;
+    switch (step.ctaAction) {
+      case 'quest': onCta = () => { setQuestOpen(true); soundManager?.playUIOpen(); }; break;
+      case 'entityEquip': onCta = () => openEntityPanel('equip', 'click'); break;
+      case 'shop': onCta = () => { setShopOpen(true); soundManager?.playUIOpen(); }; break;
+      case 'almanac': onCta = () => { setAlmanacOpen(true); soundManager?.playUIOpen(); }; break;
+      default: onCta = undefined;
     }
-    if (stage.id === 1 && !state.tutorialFlags['matter-time-intro']) {
-      // Before the first click: invite interaction at the field center.
-      // After it: explain matter/time, anchored to the resource panel.
-      const beforeFirstClick = state.totalClicks === 0;
-      return {
-        flagId: 'matter-time-intro',
-        anchor: beforeFirstClick ? 'field' : 'resource',
-        message: t(language, beforeFirstClick ? 'tutFirstClick' : 'tutMatterTimeIntro'),
-        autoCloseMs: beforeFirstClick ? 0 : 9000,
-      };
-    }
-    // Stage 1, after the matter intro: teach the new base auto income + the
-    // collect → equip → enhance growth loop.
-    if (stage.id === 1 && state.tutorialFlags['matter-time-intro'] && !state.tutorialFlags['auto-income-intro']) {
-      return {
-        flagId: 'auto-income-intro',
-        anchor: 'field',
-        message: t(language, 'tutAutoIncome'),
-        autoCloseMs: 9000,
-      };
-    }
-    if (state.tutorialFlags.allDismissed) {
-      return null;
-    }
-    // First time a quest milestone is reached: teach the claim→almanac loop.
-    if (hasClaimableQuest && !state.tutorialFlags['quest-milestone-intro']) {
-      return {
-        flagId: 'quest-milestone-intro',
-        anchor: 'quest',
-        message: t(language, 'tutQuestMilestone'),
-        ctaLabel: t(language, 'tutQuestMilestoneOpen'),
-        onCta: () => { setQuestOpen(true); soundManager?.playUIOpen(); },
-      };
-    }
-    if (stage.id >= 2 && !state.tutorialFlags['time-gauge-visible']) {
-      return {
-        flagId: 'time-gauge-visible',
-        anchor: 'resource',
-        message: t(language, 'tutTimeGauge'),
-        autoCloseMs: 7000,
-      };
-    }
-    // Onboarding: after the first guaranteed fusion (click item), explain it.
-    if (state.tutorialFlags['first-fuse-done'] && !state.tutorialFlags['first-fuse-equip'] && equipUnlocked) {
-      return {
-        flagId: 'first-fuse-equip',
-        anchor: 'entity',
-        message: t(language, 'tutFirstFuseEquip'),
-        ctaLabel: t(language, 'tutEntityLabOpen'),
-        onCta: () => openEntityPanel('equip', 'click'),
-      };
-    }
-    // Onboarding: after the second guaranteed fusion (auto item), explain equipping + auto income.
-    if (state.tutorialFlags['second-fuse-done'] && !state.tutorialFlags['second-fuse-equip'] && equipUnlocked) {
-      return {
-        flagId: 'second-fuse-equip',
-        anchor: 'entity',
-        message: t(language, 'tutSecondFuseEquip'),
-        ctaLabel: t(language, 'tutEntityLabOpen'),
-        onCta: () => openEntityPanel('equip', 'click'),
-      };
-    }
-    // 🅠7: only prompt the equip/fusion lab once it's actually unlocked (S2);
-    // S1 keeps the player on click/entropy/item-collection/codex + quests.
-    if (equipUnlocked && ownedCurrentStageEntityCount > 0 && !state.tutorialFlags['entity-lab-intro']) {
-      return {
-        flagId: 'entity-lab-intro',
-        anchor: 'entity',
-        message: t(language, 'tutEntityLabIntro'),
-        ctaLabel: t(language, 'tutEntityLabOpen'),
-        onCta: () => openEntityPanel('equip', 'click'),
-      };
-    }
-    if (stage.id >= 3 && !state.tutorialFlags['focus-mode-intro']) {
-      return {
-        flagId: 'focus-mode-intro',
-        anchor: 'focus',
-        message: t(language, 'tutFocusMode'),
-        autoCloseMs: 7000,
-      };
-    }
-    if (canShowShop && !state.hasSeenCashShopTutorial) {
-      return {
-        flagId: 'hasSeenCashShopTutorial',
-        anchor: 'shop',
-        message: t(language, 'tutShop'),
-        ctaLabel: t(language, 'tutShopOpen'),
-        onCta: () => { setShopOpen(true); soundManager?.playUIOpen(); },
-      };
-    }
-    if (hasActiveBoost && !state.tutorialFlags['boost-hud-seen']) {
-      return {
-        flagId: 'boost-hud-seen',
-        anchor: 'boost',
-        message: t(language, 'tutBoost'),
-        autoCloseMs: 7000,
-      };
-    }
-    if (canCondense && !state.tutorialFlags['condense-ready']) {
-      return {
-        flagId: 'condense-ready',
-        anchor: 'resource',
-        message: t(language, 'tutCondense'),
-        autoCloseMs: 8000,
-      };
-    }
-    if (state.tutorialFlags['milestone-seen'] && !state.tutorialFlags['info-hint-seen'] && !almanacOpen) {
-      return {
-        flagId: 'info-hint-seen',
-        anchor: 'resource',
-        message: t(language, 'tutStageLog'),
-        ctaLabel: t(language, 'tutStageLogOpen'),
-        onCta: () => { setAlmanacOpen(true); soundManager?.playUIOpen(); },
-      };
-    }
-    return null;
+    return {
+      flagId: step.flagId,
+      anchor: step.resolveAnchor ? step.resolveAnchor(ctx) : step.anchor,
+      message: t(language, (step.resolveMessageKey ? step.resolveMessageKey(ctx) : step.messageKey) as StringKey),
+      ctaLabel: step.ctaKey ? t(language, step.ctaKey as StringKey) : undefined,
+      onCta,
+      autoCloseMs: step.resolveAutoCloseMs ? step.resolveAutoCloseMs(ctx) : step.autoCloseMs,
+    };
   }, [
     canCondense,
     canShowShop,
