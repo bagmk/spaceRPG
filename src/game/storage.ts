@@ -62,6 +62,11 @@ export const SAVE_SCHEMA_VERSION = 25;
 const FLAT_EXPLODE_HARD_CAP = 200;
 /** One-time raw backup of the last pre-v17 save (rollback / botched-migration safety). */
 export const SAVE_BACKUP_V16_KEY = 'cc_save_backup_v16';
+/** C-P2: rolling backup of the last N autosaves (manual rollback in Settings). */
+export const SAVE_BACKUP_RING_KEY = 'cc_save_backup_ring';
+export const SAVE_BACKUP_RING_SIZE = 5;
+/** Tag prefixing an exported save string so a stray paste can't be mistaken for one. */
+const SAVE_EXPORT_MAGIC = 'CCSAVE1';
 
 /**
  * Entity ids were decoupled from names in v15 (canonical id is now position-only,
@@ -288,10 +293,101 @@ function trySave(state: GameState, aggressive = false): boolean {
       );
     }
     localStorage.setItem(STORAGE_KEYS.save, JSON.stringify(snapshot));
+    // C-P2: keep a rolling backup ring — but never during the aggressive
+    // last-ditch trim (quota is already tight; don't add more entries).
+    if (!aggressive) pushBackupRing(snapshot);
     return true;
   } catch {
     return false;
   }
+}
+
+// ── C-P2: save export / import + rolling backup ring ────────────────────────
+export interface BackupRingEntry { t: number; v: number; data: string }
+
+// UTF-8-safe base64 (btoa/atob are latin1-only — KO item names would corrupt).
+function utf8ToBase64(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function base64ToUtf8(b64: string): string {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/** The rolling backup ring, oldest→newest. Best-effort; never throws. */
+export function listBackupRing(): BackupRingEntry[] {
+  if (!isBrowser()) return [];
+  try {
+    const raw = localStorage.getItem(SAVE_BACKUP_RING_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr)
+      ? arr.filter((e) => e && typeof e.data === 'string' && typeof e.t === 'number')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Append a snapshot to the ring (deduped against the newest, capped at N). */
+export function pushBackupRing(snapshot: SaveState): void {
+  if (!isBrowser()) return;
+  try {
+    const entry: BackupRingEntry = { t: Date.now(), v: snapshot.version, data: JSON.stringify(snapshot) };
+    const ring = listBackupRing();
+    if (ring.length > 0 && ring[ring.length - 1].data === entry.data) return; // skip idempotent autosaves
+    ring.push(entry);
+    while (ring.length > SAVE_BACKUP_RING_SIZE) ring.shift();
+    localStorage.setItem(SAVE_BACKUP_RING_KEY, JSON.stringify(ring));
+  } catch {
+    /* quota / serialize failure — the ring is best-effort, never block the save */
+  }
+}
+
+/** Migrate one ring entry back to the current runtime schema (rollback path). */
+export function restoreBackupRing(entry: BackupRingEntry): PersistentGameState | null {
+  try {
+    return migrateToCurrent(JSON.parse(entry.data));
+  } catch {
+    return null;
+  }
+}
+
+/** EXPORT: a single copyable/downloadable code for the CURRENT live state. */
+export function serializeSave(state: GameState): string {
+  return `${SAVE_EXPORT_MAGIC}.${utf8ToBase64(JSON.stringify(createSaveSnapshot(state)))}`;
+}
+
+/**
+ * IMPORT: parse an exported code (tagged base64, bare base64, or raw JSON) and
+ * run it through the full migration pipeline (→ v25 incl. the flat-instance
+ * explode). Returns null on any malformed / non-save input.
+ */
+export function deserializeSave(text: string): PersistentGameState | null {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  let json: string | null = null;
+  try {
+    if (trimmed.startsWith(SAVE_EXPORT_MAGIC + '.')) json = base64ToUtf8(trimmed.slice(SAVE_EXPORT_MAGIC.length + 1));
+    else if (trimmed.startsWith('{')) json = trimmed; // tolerate a raw JSON paste
+    else json = base64ToUtf8(trimmed); // tolerate a bare base64 paste
+  } catch {
+    return null;
+  }
+  if (json === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || typeof (parsed as { version?: unknown }).version !== 'number') return null;
+  return migrateToCurrent(parsed);
 }
 
 export function saveGame(state: GameState): void {

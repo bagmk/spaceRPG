@@ -90,7 +90,13 @@ Flat model: each `EntityInstance` = one physical copy + unique `instanceId`. Mig
   — add consecutive-day detection + an escalating return reward.
 - [ ] **C-P2 Memoize open modal panels** (Shop/Entity/Quest/Settings re-render ~10×/s) + extract &
   unit-test offline catch-up + cloud-merge (and switch vitest env to jsdom for component tests).
-- [ ] **C-P2 Save export/import** in Settings + a small ring of timestamped backups.
+- [x] **C-P2 Save export/import** DONE — storage.ts codec `serializeSave`/`deserializeSave`
+  (UTF-8-safe base64, `CCSAVE1.` envelope, raw-JSON + bare-base64 fallbacks, routes through
+  migrateToCurrent → v25) + a rolling `cc_save_backup_ring` (last 5 autosaves, deduped, skipped on
+  aggressive trim) with `listBackupRing`/`pushBackupRing`/`restoreBackupRing`. Settings "Save Data"
+  section: Export (copy/download), Import (paste/upload), Restore-from-backup. Import stamps a fresh
+  `lastSaveAt` (no offline windfall + wins the next cloud sync). 7 new vitest cases (round-trip,
+  v24→v25 import explode, KO/UTF-8, fail-soft, ring cap/dedupe). 326 tests green.
 - [ ] **C-P3 Dead code (PARTIAL):** DONE — deleted unimported `ResourcePanel.tsx` + `StatsRow.tsx`;
   removed the no-op `onPlayBigBang` prop (IntroScreen + App). DEFERRED (each its own reason):
   `scripts/balance-design.ts` is NOT dead — it backs `npm run sim` (keep/re-point separately);

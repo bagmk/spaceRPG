@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { t, type Lang } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
 import type { SoundManager } from '../game/audio';
+import type { GameState, PersistentGameState } from '../game/types';
+import { serializeSave, deserializeSave, listBackupRing, restoreBackupRing } from '../game/storage';
 
 interface SettingsPanelProps {
   sfxMuted: boolean;
   musicMuted: boolean;
   musicVolume: number;          // 0..1
   language: Lang;
+  state: GameState;             // C-P2: needed to serialize the current save
   soundManager?: SoundManager | null;
+  onImportSave: (persistent: PersistentGameState) => void;  // C-P2
   onToggleSfx: () => void;
   onToggleMusic: () => void;
   onSetMusicVolume: (v: number) => void;
@@ -24,7 +28,9 @@ export function SettingsPanel({
   musicMuted,
   musicVolume,
   language,
+  state,
   soundManager,
+  onImportSave,
   onToggleSfx,
   onToggleMusic,
   onSetMusicVolume,
@@ -40,6 +46,49 @@ export function SettingsPanel({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // ── C-P2: save export / import / backups ──
+  const [exportCode, setExportCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importStatus, setImportStatus] = useState<'idle' | 'ok' | 'bad'>('idle');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExport = () => { setExportCode(serializeSave(state)); setCopied(false); };
+  const handleCopy = async () => {
+    const code = exportCode ?? serializeSave(state);
+    setExportCode(code);
+    try { await navigator.clipboard.writeText(code); setCopied(true); }
+    catch { /* clipboard blocked: the code is visible in the textarea to copy manually */ }
+  };
+  const handleDownload = () => {
+    const code = exportCode ?? serializeSave(state);
+    setExportCode(code);
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cosmic-save-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const applyImport = (persistent: PersistentGameState | null) => {
+    if (!persistent) { setImportStatus('bad'); return; }
+    // Stamp a fresh save time so an imported (possibly old) code neither grants a
+    // bogus offline windfall nor loses to a newer cloud save on the next sync.
+    onImportSave({ ...persistent, lastSaveAt: Date.now() });
+    setImportStatus('ok');
+    onClose();
+  };
+  const handleImport = () => applyImport(deserializeSave(importText));
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { setImportText(String(reader.result ?? '')); setImportStatus('idle'); };
+    reader.readAsText(f);
+  };
+  const ringEntries = listBackupRing();
 
   const handleDeleteAccount = async () => {
     setDeleteError(null);
@@ -132,6 +181,81 @@ export function SettingsPanel({
             </button>
           </div>
         ) : null}
+
+        <div className="settings-divider" />
+
+        {/* C-P2: save export / import / backups */}
+        <div className="settings-save">
+          <span className="settings-save__heading">{t(language, 'settingsSaveSection')}</span>
+
+          <button type="button" className="settings-save__btn" onClick={handleExport}>
+            {t(language, 'settingsExport')}
+          </button>
+          {exportCode ? (
+            <>
+              <textarea
+                className="settings-save__code"
+                value={exportCode}
+                readOnly
+                rows={3}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <div className="settings-save__actions">
+                <button type="button" className="settings-save__btn" onClick={handleCopy}>
+                  {copied ? t(language, 'settingsCopied') : t(language, 'settingsCopy')}
+                </button>
+                <button type="button" className="settings-save__btn" onClick={handleDownload}>
+                  {t(language, 'settingsDownload')}
+                </button>
+              </div>
+              <span className="settings-save__hint">{t(language, 'settingsExportHint')}</span>
+            </>
+          ) : null}
+
+          <textarea
+            className="settings-save__code"
+            value={importText}
+            placeholder={t(language, 'settingsImportHint')}
+            rows={2}
+            onChange={(e) => { setImportText(e.target.value); setImportStatus('idle'); }}
+          />
+          <input type="file" accept=".txt,.json" ref={fileInputRef} onChange={handleFile} style={{ display: 'none' }} />
+          <div className="settings-save__actions">
+            <button type="button" className="settings-save__btn" onClick={() => fileInputRef.current?.click()}>
+              {t(language, 'settingsImportFile')}
+            </button>
+            <button
+              type="button"
+              className="settings-save__btn settings-save__btn--apply"
+              disabled={!importText.trim()}
+              onClick={handleImport}
+            >
+              {t(language, 'settingsImportApply')}
+            </button>
+          </div>
+          {importStatus === 'bad' ? <span className="settings-save__error">{t(language, 'settingsImportBad')}</span> : null}
+          {importStatus === 'ok' ? <span className="settings-save__ok">{t(language, 'settingsImportOk')}</span> : null}
+
+          <span className="settings-save__heading">{t(language, 'settingsBackups')}</span>
+          {ringEntries.length === 0 ? (
+            <span className="settings-save__hint">{t(language, 'settingsBackupsEmpty')}</span>
+          ) : (
+            <ul className="settings-save__ring">
+              {ringEntries.slice().reverse().map((entry) => (
+                <li key={entry.t} className="settings-save__ring-row">
+                  <span className="settings-save__ring-when">{`${new Date(entry.t).toLocaleString()} · v${entry.v}`}</span>
+                  <button
+                    type="button"
+                    className="settings-save__btn"
+                    onClick={() => applyImport(restoreBackupRing(entry))}
+                  >
+                    {t(language, 'settingsRestore')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="settings-divider" />
 
