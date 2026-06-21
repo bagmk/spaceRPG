@@ -823,7 +823,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <strong>◆{formatEntityCost(enhanceStones)}</strong>
             </div>
           ) : null}
-          {tab !== 'lab' ? (
+          {true ? (
             <button
               type="button"
               className="entity-fs__help"
@@ -902,21 +902,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <span className="codex-set-chip__label">{t(language, 'codexShowMissing')}</span>
                 </button>
               </div>
-              <p className="codex-bonus-help">{t(language, 'codexBonusHelp')}</p>
 
               {/* The glyph wall — thin set/subset dividers, dense cards. */}
               {setsToRender.map((cs) => {
-                const setDone = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
                 return (
                   <Fragment key={cs.id}>
                     {selectedSetId === 'all' ? (
                       <div className="codex-divider codex-divider--set" style={{ '--set-accent': cs.accent } as CSSProperties}>
                         <span className="codex-divider__icon">{cs.icon}</span>
                         <span className="codex-divider__label">{codexSetLabel(cs, language)}</span>
-                        <span className={`codex-reward ${setDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(cs.reward, language)}>
-                          <span className="codex-reward__star">{setDone ? '★' : '☆'}</span>
-                          <span className="codex-reward__text">{codexRewardLabel(cs.reward, language)}</span>
-                        </span>
+                        {/* Set-level reward removed (user) — only subset rewards are shown. */}
                       </div>
                     ) : null}
                     {cs.subsets.map((sub) => {
@@ -1757,11 +1752,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setHelpOpen(false); }}>
           <article className="entity-help-card cc-scroll" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="entity-help-card__close" aria-label={t(language, 'panelClose')} onClick={() => setHelpOpen(false)}>×</button>
-            <h3 className="entity-help-card__title">{`${tab === 'fuse' ? t(language, 'fuseTitle') : t(language, 'entityEquip')} · ${t(language, 'panelHelp')}`}</h3>
+            <h3 className="entity-help-card__title">{`${tab === 'fuse' ? t(language, 'fuseTitle') : tab === 'lab' ? t(language, 'collectionTitle') : t(language, 'entityEquip')} · ${t(language, 'panelHelp')}`}</h3>
             <ol className="entity-help-card__list">
               {(tab === 'fuse'
                 ? (['helpFuseRule1', 'helpFuseRule2', 'helpFuseRule3', 'helpFuseRule4'] as const)
-                : (['helpEquipRule1', 'helpEquipRule2', 'helpEquipRule3', 'helpEquipRule4'] as const)
+                : tab === 'lab'
+                  ? (['helpCodexRule1', 'helpCodexRule2', 'helpCodexRule3'] as const)
+                  : (['helpEquipRule1', 'helpEquipRule2', 'helpEquipRule3', 'helpEquipRule4'] as const)
               ).map((k) => (
                 <li key={k}>{t(language, k)}</li>
               ))}
