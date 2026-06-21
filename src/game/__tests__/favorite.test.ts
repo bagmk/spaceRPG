@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { isFavoriteEntity } from '../reducers/entities';
-import { createSaveSnapshot, migrateToCurrent } from '../storage';
+import { createSaveSnapshot, migrateToCurrent, SAVE_SCHEMA_VERSION } from '../storage';
 
 /**
  * Overhaul-4 P2 — ★ favorite (save v26). Favorited entity ids are protected from
@@ -24,7 +24,7 @@ describe('★ favorite (v26)', () => {
   it('favoriteEntityIds survive a save round-trip (v26 whitelist + snapshot)', () => {
     const state = { ...createInitialGameState(0), favoriteEntityIds: ['x', 'y'] };
     const snap = createSaveSnapshot(state);
-    expect(snap.version).toBe(26);
+    expect(snap.version).toBe(SAVE_SCHEMA_VERSION);
     const restored = migrateToCurrent(JSON.parse(JSON.stringify(snap)));
     expect(restored).not.toBeNull();
     expect(restored!.favoriteEntityIds.sort()).toEqual(['x', 'y']);

@@ -2,8 +2,9 @@ import { useRef } from 'react';
 import type { GameState } from '../game/types';
 import { t, type Lang } from '../i18n';
 import { useModalA11y } from '../hooks/useModalA11y';
-import { ENTITY_COST_ANCHORS } from '../game/balance';
+import { ENTITY_COST_ANCHORS, ATTENDANCE_REWARDS } from '../game/balance';
 import { STAGES } from '../game/stages';
+import { toDateKey } from '../game/shop/daily';
 import { formatGameNumberShort } from '../game/formulas';
 import {
   getQuest,
@@ -18,6 +19,8 @@ interface QuestPanelProps {
   state: GameState;
   language: Lang;
   onClaim: (questId: string) => void;
+  /** v27: claim today's daily attendance reward. */
+  onClaimAttendance: () => void;
   onClose: () => void;
 }
 
@@ -27,8 +30,14 @@ function rewardMatter(quest: QuestDef, stageId: number): number {
   return Math.floor(anchor * (quest.reward.matterAnchorFrac ?? 0));
 }
 
-export function QuestPanel({ state, language, onClaim, onClose }: QuestPanelProps) {
+export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClose }: QuestPanelProps) {
   const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+  // v27 daily attendance: cycleDay = the next reward index (0-6); ✓ for passed days.
+  const attClaimedToday = state.attendanceClaimedDate === toDateKey(Date.now());
+  const attCycleDay = state.attendanceStreak % ATTENDANCE_REWARDS.length;
+  const attReward = ATTENDANCE_REWARDS[attCycleDay];
+  const attAnchor = ENTITY_COST_ANCHORS[stageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
+  const attMatter = Math.ceil(attReward.matterAnchorMult * attAnchor);
   const quests = state.activeQuests
     .map((id) => getQuest(id))
     .filter((q): q is QuestDef => q !== undefined);
@@ -45,6 +54,40 @@ export function QuestPanel({ state, language, onClaim, onClose }: QuestPanelProp
             {t(language, 'questCompleted').replace('{n}', String(state.completedQuestIds.length))}
           </span>
           <button type="button" className="quest-panel__close" onClick={onClose} aria-label={t(language, 'fuseClose')}>✕</button>
+        </div>
+
+        {/* v27: daily attendance — a repeating 7-day check-in (day 7 = gift, then loops). */}
+        <div className="attendance">
+          <div className="attendance__head">
+            <span className="attendance__title">{t(language, 'attendanceTitle')}</span>
+          </div>
+          <div className="attendance__row">
+            {ATTENDANCE_REWARDS.map((r, i) => {
+              const claimed = i < attCycleDay;
+              const current = i === attCycleDay && !attClaimedToday;
+              const gift = i === ATTENDANCE_REWARDS.length - 1;
+              return (
+                <div
+                  key={i}
+                  className={`attendance__day ${claimed ? 'attendance__day--claimed' : ''} ${current ? 'attendance__day--current' : ''} ${gift ? 'attendance__day--gift' : ''}`}
+                >
+                  <span className="attendance__day-n">{`D${i + 1}`}</span>
+                  <span className="attendance__day-reward">{gift ? '🎁' : `💎${r.stones}`}</span>
+                  {claimed ? <span className="attendance__day-check">✓</span> : null}
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="attendance__claim"
+            disabled={attClaimedToday}
+            onClick={onClaimAttendance}
+          >
+            {attClaimedToday
+              ? t(language, 'attendanceClaimedToday')
+              : `${t(language, 'attendanceClaim')} · ⚛${formatGameNumberShort(attMatter)} 💎${attReward.stones}`}
+          </button>
         </div>
 
         {quests.length === 0 ? (

@@ -258,6 +258,8 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     // to a fresh stage-1 set (excluding the carried completed ones).
     completedQuestIds: state.completedQuestIds,
     favoriteEntityIds: state.favoriteEntityIds,
+    attendanceStreak: state.attendanceStreak,
+    attendanceClaimedDate: state.attendanceClaimedDate,
     activeQuests: pickActiveQuests(state.completedQuestIds, 1),
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,

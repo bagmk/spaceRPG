@@ -34,7 +34,7 @@ import {
 } from './reducers/stage';
 import { handleBuyCopyToken, handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
-import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox } from './reducers/shop';
+import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox, handleClaimAttendance } from './reducers/shop';
 import {
   handleAdminNextStage,
   handleAdminPrevStage,
@@ -152,6 +152,7 @@ export type GameAction =
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
   | { type: 'BUY_ENHANCE_STONES'; count: number }
+  | { type: 'CLAIM_ATTENDANCE'; now: number }
   | { type: 'BUY_DAILY_ITEM'; slot: number; now: number }
   | { type: 'REFRESH_DAILY_SHOP'; now: number }
   // #43 gacha: rolls injected at dispatch (Math.random()) so the reducer stays pure.
@@ -219,6 +220,8 @@ export function toPersistentState(state: GameState): PersistentGameState {
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
     favoriteEntityIds: state.favoriteEntityIds,
+    attendanceStreak: state.attendanceStreak,
+    attendanceClaimedDate: state.attendanceClaimedDate,
     dailyShopDateKey: state.dailyShopDateKey,
     dailyShopRefreshCount: state.dailyShopRefreshCount,
     dailyShopPurchased: state.dailyShopPurchased,
@@ -246,6 +249,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CLAIM_AD_REWARD':       return handleClaimAdReward(state, action);
     case 'RESUME_BOOSTS':         return handleResumeBoosts(state, action);
     case 'BUY_ENHANCE_STONES':    return handleBuyEnhanceStones(state, action);
+    case 'CLAIM_ATTENDANCE':      return handleClaimAttendance(state, action);
     case 'BUY_DAILY_ITEM':        return handleBuyDailyItem(state, action);
     case 'REFRESH_DAILY_SHOP':    return handleRefreshDailyShop(state, action);
     case 'OPEN_GACHA_BOX':        return handleOpenGachaBox(state, action);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { getQuest, getQuestProgress } from '../quests';
-import { migrateToCurrent, createSaveSnapshot } from '../storage';
+import { migrateToCurrent, createSaveSnapshot, SAVE_SCHEMA_VERSION } from '../storage';
 import { getEntitiesForStage } from '../entities/stageItems';
 
 describe('🅠5 quests', () => {
@@ -94,7 +94,7 @@ describe('🅠5 quests', () => {
       comboThisStage: 55,
     };
     const snapshot = createSaveSnapshot(base);
-    expect(snapshot.version).toBe(26);
+    expect(snapshot.version).toBe(SAVE_SCHEMA_VERSION);
     const migrated = migrateToCurrent(snapshot);
     expect(migrated).not.toBeNull();
     // claimed milestones are once-only and must survive a load verbatim.

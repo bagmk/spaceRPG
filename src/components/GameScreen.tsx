@@ -1165,6 +1165,7 @@ export function GameScreen({
           state={state}
           language={language}
           onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playQuestClaim(); }}
+          onClaimAttendance={() => { dispatch({ type: 'CLAIM_ATTENDANCE', now: Date.now() }); soundManager?.playQuestClaim(); }}
           onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}

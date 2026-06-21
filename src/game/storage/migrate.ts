@@ -284,6 +284,8 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     activeQuests: [],
     completedQuestIds: [],
     favoriteEntityIds: [],
+    attendanceStreak: 0,
+    attendanceClaimedDate: '',
     dailyShopDateKey: '',
     dailyShopRefreshCount: 0,
     dailyShopPurchased: [],
@@ -425,6 +427,8 @@ export function validateV5(
     completedQuestIds: isStringArray((parsed as any).completedQuestIds) ? (parsed as any).completedQuestIds : [],
     // v26 favorites — WHITELIST: omit and it's silently dropped on load.
     favoriteEntityIds: isStringArray((parsed as any).favoriteEntityIds) ? (parsed as any).favoriteEntityIds : [],
+    attendanceStreak: isFiniteNumber((parsed as any).attendanceStreak) ? Math.max(0, Math.floor((parsed as any).attendanceStreak)) : 0,
+    attendanceClaimedDate: typeof (parsed as any).attendanceClaimedDate === 'string' ? (parsed as any).attendanceClaimedDate : '',
     // v21 daily shop — preserved if present; the roster regenerates on the next
     // shop open (date rollover). WHITELIST: omit a field here and it's silently
     // dropped on every load + cloud pull.

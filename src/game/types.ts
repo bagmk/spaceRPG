@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 26;
+  version: 27;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -298,6 +298,10 @@ export interface SaveState {
   /** Overhaul-4 (v26): favorited entity ids (★). Their copies are protected from
    *  Fuse-All (and, once duplicate-collection ships, from pooled enhance fodder). */
   favoriteEntityIds: string[];
+  /** Daily attendance (v27): total days claimed (cycle day = streak % 7). */
+  attendanceStreak: number;
+  /** Daily attendance (v27): local date-key of the last claim; ''=never claimed. */
+  attendanceClaimedDate: string;
   /** Daily shop (v21): local date-key (yyyy-mm-dd) of the current roster; ''=fresh. */
   dailyShopDateKey: string;
   /** Daily shop (v21): re-rolls done today — folds into the roster seed + refresh cost. */

@@ -12,7 +12,7 @@ import {
   gachaBoxMatterCost,
   weightedRarityPick,
 } from '../shop/pricing';
-import { GACHA_BOXES, RARITY_STAGE_GATES, gachaItemCount, GACHA_STONES_BY_RANK } from '../balance';
+import { GACHA_BOXES, RARITY_STAGE_GATES, gachaItemCount, GACHA_STONES_BY_RANK, ATTENDANCE_REWARDS, ENTITY_COST_ANCHORS } from '../balance';
 import type { GachaPullItem } from '../types/events';
 import { addToInventory, addToAlmanac, pickDropStage, pickEntityByRarity } from '../entities/drops';
 import { rollQualityScore } from '../entities/quality';
@@ -31,6 +31,28 @@ type BuyDailyItemAction = Extract<GameAction, { type: 'BUY_DAILY_ITEM' }>;
 type RefreshDailyShopAction = Extract<GameAction, { type: 'REFRESH_DAILY_SHOP' }>;
 type SyncDailyShopAction = Extract<GameAction, { type: 'SYNC_DAILY_SHOP' }>;
 type OpenGachaBoxAction = Extract<GameAction, { type: 'OPEN_GACHA_BOX' }>;
+type ClaimAttendanceAction = Extract<GameAction, { type: 'CLAIM_ATTENDANCE' }>;
+
+/**
+ * CLAIM_ATTENDANCE (출석체크, v27): grant today's reward in the repeating 7-day
+ * cycle (cycle day = streak % 7), then advance the streak + stamp today's date so
+ * it can't be claimed twice in one local day. Forgiving — missing a day doesn't
+ * reset the streak (the cycle just advances on the next claim).
+ */
+export function handleClaimAttendance(state: GameState, action: ClaimAttendanceAction): GameState {
+  const today = toDateKey(action.now);
+  if (state.attendanceClaimedDate === today) return state; // already claimed today
+  const reward = ATTENDANCE_REWARDS[state.attendanceStreak % ATTENDANCE_REWARDS.length];
+  const playerStageId = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
+  const matter = Math.ceil(reward.matterAnchorMult * (ENTITY_COST_ANCHORS[playerStageId as keyof typeof ENTITY_COST_ANCHORS] ?? 1));
+  return {
+    ...state,
+    quanta: state.quanta + matter,
+    enhanceStones: state.enhanceStones + reward.stones,
+    attendanceStreak: state.attendanceStreak + 1,
+    attendanceClaimedDate: today,
+  };
+}
 
 const RARITY_LADDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 

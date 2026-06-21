@@ -168,3 +168,36 @@ describe('boost background pause (active-time)', () => {
     expect(resumed.shopBoosts[0].expiresAt).toBe(expiryBefore + 45_000);
   });
 });
+
+describe('daily attendance (출석체크, v27)', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const day = (n: number) => 1_700_000_000_000 + n * DAY; // distinct local days
+
+  it('claim grants the cycle reward, advances the streak, and stamps today', () => {
+    const s = s3();
+    expect(s.attendanceStreak).toBe(0);
+    const after = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(0) });
+    expect(after.attendanceStreak).toBe(1);
+    expect(after.attendanceClaimedDate).toBe(toDateKey(day(0)));
+    expect(after.enhanceStones).toBeGreaterThan(s.enhanceStones); // stones granted
+    expect(after.quanta).toBeGreaterThan(s.quanta);               // matter granted
+  });
+
+  it('cannot claim twice in the same local day', () => {
+    const once = gameReducer(s3(), { type: 'CLAIM_ATTENDANCE', now: day(0) });
+    const twice = gameReducer(once, { type: 'CLAIM_ATTENDANCE', now: day(0) + 3600_000 });
+    expect(twice.attendanceStreak).toBe(once.attendanceStreak); // no change
+    expect(twice.quanta).toBe(once.quanta);
+    expect(twice.enhanceStones).toBe(once.enhanceStones);
+  });
+
+  it('claims on consecutive days advance, and the 7-day cycle loops', () => {
+    let s = s3();
+    for (let d = 0; d < 7; d++) s = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(d) });
+    expect(s.attendanceStreak).toBe(7);          // 7 claims
+    expect(s.attendanceStreak % 7).toBe(0);      // cycle wrapped back to day 1
+    // day 8 keeps giving (loops) — claims again fine
+    const d8 = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(7) });
+    expect(d8.attendanceStreak).toBe(8);
+  });
+});

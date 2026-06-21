@@ -139,6 +139,8 @@ export function createInitialGameState(now: number): GameState {
     activeQuests: pickActiveQuests([], 1),
     completedQuestIds: [],
     favoriteEntityIds: [],
+    attendanceStreak: 0,
+    attendanceClaimedDate: '',
     dailyShopDateKey: '',
     dailyShopRefreshCount: 0,
     dailyShopPurchased: [],

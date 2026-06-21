@@ -822,7 +822,25 @@ export const SHOP_STONE_PRICE_FRAC = 0.18;
 /** Daily-refresh matter cost = anchor × this[refreshCount] (clamped), escalating. */
 export const SHOP_REFRESH_FRAC: number[] = [0.05, 0.15, 0.4, 1.0];
 
-/** Daily shop: 8 entity offers/day, rarity by weighted odds (gate-clamped by stage). */
+/**
+ * Daily attendance (출석체크, v27): a repeating 7-day check-in. One claim per local
+ * day; the cycle day = `attendanceStreak % 7`, so after day 7 it loops (a reward
+ * every day forever), with day 7 the gift. Matter is granted as `matterAnchorMult ×
+ * ENTITY_COST_ANCHORS[playerStage]` so it stays stage-relevant; 강화석 is flat. These
+ * are occasional login bonuses (NOT continuous income), so the gear-only economy +
+ * entropy gate are unaffected.
+ */
+export const ATTENDANCE_REWARDS: { matterAnchorMult: number; stones: number }[] = [
+  { matterAnchorMult: 0.3, stones: 1 },  // Day 1
+  { matterAnchorMult: 0.5, stones: 2 },  // Day 2
+  { matterAnchorMult: 0.8, stones: 2 },  // Day 3
+  { matterAnchorMult: 1.0, stones: 3 },  // Day 4
+  { matterAnchorMult: 1.4, stones: 4 },  // Day 5
+  { matterAnchorMult: 1.8, stones: 5 },  // Day 6
+  { matterAnchorMult: 3.0, stones: 12 }, // Day 7 — the gift
+];
+
+/** Daily shop: entity offers/day, rarity by weighted odds (gate-clamped by stage). */
 export const DAILY_SHOP_SLOTS = 6; // Overhaul-4: tighter, cleaner daily grid (2×3) per user.
 export const DAILY_SHOP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
   common: 52, rare: 30, epic: 14, legendary: 4, mythic: 0,
