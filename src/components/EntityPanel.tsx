@@ -1254,23 +1254,34 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 .replace('{lines}', String(bingo.completedLines.length))
             : t(language, 'hexBonusNone');
 
+          // H redesign: the LEFT stat-stack — only the stats you actually HAVE
+          // (click/auto always; crit chance+mult only once you have crit gear).
+          // Replaces the removed icon-guide legend + click/auto readout cards.
+          const statStack: { key: string; icon: string; color: string; label: string; value: string }[] = [
+            { key: 'click', icon: EFFECT_TRAIT.click.icon, color: EFFECT_TRAIT.click.accent, label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)}${t(language, 'hudPerClick')}` },
+            { key: 'auto', icon: EFFECT_TRAIT.auto.icon, color: EFFECT_TRAIT.auto.accent, label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}${t(language, 'effectAutoRatePerSec')}` },
+          ];
+          if (stats.critChance > 0) {
+            statStack.push({ key: 'critC', icon: EFFECT_TRAIT.crit.icon, color: EFFECT_TRAIT.crit.accent, label: t(language, 'effectCritChance'), value: `${Math.round(stats.critChance * 100)}%` });
+            statStack.push({ key: 'critM', icon: SUBSTAT_TRAIT.critMult, color: EFFECT_TRAIT.crit.accent, label: t(language, 'effectCritMult'), value: `×${stats.critMult.toFixed(1)}` });
+          }
+
           return (
             <div className="equip-page cc-scroll">
               {hintShow['equip'] ? <div className="equip-purpose">{t(language, 'equipPurpose')}</div> : null}
-              <TraitLegend language={language} />
 
-              {/* Hero values for both lanes (click + auto) — compact, above the hex. */}
-              <div className="hex-heroes">
-                {shownCats.map((cat) => {
-                  const hero = heroFor(cat);
-                  return (
-                    <div className="hex-hero" key={cat}>
-                      <span className="equip-group__label">{hero.label}</span>
-                      <strong className="equip-group__value">{hero.value}</strong>
+              {/* H redesign: left owned-stats stack + hexagon on the right — replaces
+                  the icon-guide legend + the click/auto readout cards. */}
+              <div className="equip-loadout">
+                <aside className="equip-statstack" aria-label={t(language, 'effectClickPower')}>
+                  {statStack.map((s) => (
+                    <div className="equip-statstack__row" key={s.key}>
+                      <span className="equip-statstack__icon" style={{ color: s.color }} aria-hidden="true">{s.icon}</span>
+                      <span className="equip-statstack__label">{s.label}</span>
+                      <strong className="equip-statstack__value">{s.value}</strong>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </aside>
 
               {/* #44 HEXAGON loadout — a TRUE connected hexagon: an SVG link layer
                   (6 ring edges + 6 center spokes) sits behind 7 absolutely-placed
@@ -1311,6 +1322,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 </svg>
                 {[0, 1, 2, 3, 4, 5].map((idx) => <Fragment key={idx}>{renderHexOuter(idx)}</Fragment>)}
                 {renderHexCenter()}
+              </div>
               </div>
               <div className={`hex-bonus ${bingo.completedLines.length > 0 ? 'hex-bonus--active' : ''}`}>{bonusReadout}</div>
 

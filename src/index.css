@@ -793,37 +793,38 @@ button.hud-stage-title--clickable:hover {
    7 slots in a hex: ring order 0,1,2 (click) / 3,4,5 (rift) clockwise + center
    wild (6). The 3×3 area map keeps opposite pairs (0↔3, 1↔4, 2↔5) diametric so
    the bingo lines from HEX_BINGO_LINES read as straight lines through the hex. */
-.hex-heroes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  /* Pin the click/auto power readout to the top of the scrolling equip page so
-     it stays visible while you scroll the hexagon + inventory below and place
-     cards — power updates are visible without scrolling back up. Bleeds over the
-     .equip-page 12px side padding with an opaque bg so scrolled content can't
-     show through behind it. */
-  position: sticky;
-  /* Pin flush to the scroll-body's top — the negative offset + matching padding
-     cancel the body's top padding so no scrolled content peeks above the bar. */
-  top: -16px;
-  z-index: 6;
-  margin: -16px -12px 4px;
-  padding: 16px 12px 8px;
-  background: rgba(10, 12, 20, 0.97);
-  backdrop-filter: blur(3px);
-  box-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.7);
+/* H redesign (Overhaul-4 P3): the equip loadout row — a LEFT owned-stats stack +
+   the hexagon on the right. Replaces the old icon-guide legend + the click/auto
+   readout cards (.hex-heroes), so you see your live stats AND place gear in one view. */
+.equip-loadout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 4px;
 }
-.hex-hero {
+.equip-statstack {
+  flex: 0 0 auto;
+  width: clamp(98px, 33%, 142px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.02);
-  text-align: center;
+  gap: 7px;
 }
+.equip-statstack__row {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-areas: "icon label" "icon value";
+  column-gap: 7px;
+  align-items: center;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.equip-statstack__icon { grid-area: icon; font-size: 15px; align-self: center; }
+.equip-statstack__label { grid-area: label; font-size: 10px; color: #8fa0b8; line-height: 1.15; }
+.equip-statstack__value { grid-area: value; font-family: var(--mono); font-size: 13px; font-weight: 700; color: #eef2fa; line-height: 1.2; }
+/* In the loadout row the hexagon flexes to fill the space beside the stat stack. */
+.equip-loadout .hex-board { flex: 1 1 auto; max-width: none; min-width: 0; margin: 0; }
 /* (Overhaul-3 P3/P4: dead .hex-grid removed — replaced by .hex-board below.) */
 /* Connected hexagon (Overhaul-3): a square board with an SVG link layer (6 ring
    edges + 6 center spokes) behind 7 absolutely-placed slots on regular-hexagon
