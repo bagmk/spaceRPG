@@ -152,7 +152,9 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   // P6: count is the total of all flat copies of this entity (each count 1).
   const currentCount = getOwnedEntityCount(state.inventory, entity);
 
-  // Max count check
+  // Max count check — Overhaul-4 P1: this cap is BUY-for-collection ONLY. Grants/mints
+  // (drops, gacha, fusion output, the copy-token) go through addToInventory and are
+  // intentionally uncapped, so high-rarity duplicate-collection leveling stays possible.
   if (entity.maxCount > 0 && currentCount >= entity.maxCount) return state;
 
   // Anchor lock — non-anchor entities on the same stage are blocked until

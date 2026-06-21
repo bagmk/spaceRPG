@@ -64,8 +64,10 @@ drops.ts + codex badge).
   empty-stays-empty, single-corrupt-copy dropped-not-wiped). Hardened
   `convertEntityModelV14` to `.filter(isEntityInstance)` (array-ness = v14
   discriminator). No save bump. 350 tests green.
-- **P1** maxCount unblock: route mint/grant through `addToInventory`; test a 2nd
-  legendary grant succeeds. No save bump.
+- **P1 ✅ DONE** maxCount unblock: confirmed `addToInventory` is already uncapped
+  (always appends a flat copy); `maxCount` gates only `handlePurchaseEntity` (buy).
+  Pinned with a test (a maxCount=1 legendary grants 3 copies via addToInventory) +
+  invariant comments on both. No save bump. 351 tests green.
 - **P2** C favorite/lock (save **v26**): `EntityInstance.locked?` → `isEntityInstance`
   guard + clampInstance passthrough; bump v26 + `|| v===26` SAME commit; one
   `isProtected(instance)` predicate; wire fusion spare-selection through it; lock UI

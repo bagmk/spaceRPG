@@ -13,7 +13,7 @@ import {
   DROP_CHANCE_COLLISION,
   DROP_CHANCE_CRIT_MULT,
 } from '../balance';
-import { getEntitiesForStage } from '../entities/stageItems';
+import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { gameReducer, createInitialGameState } from '../reducer';
 
 describe('entity drops', () => {
@@ -52,6 +52,21 @@ describe('entity drops', () => {
     expect(inv2).toHaveLength(2);
     expect(inv2.every((e) => e.entityId === 'e1' && e.count === 1 && e.level === 1)).toBe(true);
     expect(new Set(inv2.map((e) => e.instanceId)).size).toBe(2); // distinct copies
+  });
+
+  // Overhaul-4 P1: copy-mint / grant must be UNCAPPED. maxCount (legendary/mythic = 1)
+  // gates only the buy-for-collection path (handlePurchaseEntity); the duplicate-
+  // collection enhance + its matter/강화석 copy-token mint route through addToInventory,
+  // which must keep granting copies past maxCount so high-rarity leveling is possible.
+  it('P1: addToInventory grants copies of a maxCount=1 legendary beyond its cap (mint is uncapped)', () => {
+    const legendary = STAGE_ENTITIES.find((e) => e.rarity === 'legendary' && e.maxCount === 1);
+    expect(legendary, 'a maxCount=1 legendary exists').toBeTruthy();
+    let inv = addToInventory([], legendary!.id);
+    inv = addToInventory(inv, legendary!.id);
+    inv = addToInventory(inv, legendary!.id);
+    const copies = inv.filter((e) => e.entityId === legendary!.id);
+    expect(copies).toHaveLength(3); // 3 copies despite maxCount 1
+    expect(new Set(copies.map((e) => e.instanceId)).size).toBe(3);
   });
 
   it('addToAlmanac is idempotent per entity', () => {

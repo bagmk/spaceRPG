@@ -208,6 +208,11 @@ export function addToInventory(
 ): EntityInstance[] {
   // P6: every acquired copy is its OWN flat entry (instanceId, level 1, count 1).
   // No stacking — per-copy level/placement is the whole point of the v25 model.
+  // Overhaul-4 P1: this is the UNCAPPED grant/mint path — it intentionally ignores
+  // maxCount (which gates only buy-for-collection in handlePurchaseEntity). Drops,
+  // gacha, fusion output AND the duplicate-collection copy-token mint all flow through
+  // here, so a maxCount=1 legendary can still accumulate the spare copies its leveling
+  // needs. Never re-introduce a maxCount check here.
   return [...inventory, makeInstance(entityId, quality !== undefined ? { quality } : {})];
 }
 
