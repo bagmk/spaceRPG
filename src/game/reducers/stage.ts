@@ -257,6 +257,7 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     // 🅠5: completed quests are once-only (survive prestige); active quests reset
     // to a fresh stage-1 set (excluding the carried completed ones).
     completedQuestIds: state.completedQuestIds,
+    favoriteEntityIds: state.favoriteEntityIds,
     activeQuests: pickActiveQuests(state.completedQuestIds, 1),
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,

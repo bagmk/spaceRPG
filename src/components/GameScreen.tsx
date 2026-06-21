@@ -868,6 +868,8 @@ export function GameScreen({
             }}
             onClearFusionEvent={(id) => dispatch({ type: 'CLEAR_FUSION_EVENT', id })}
             onClearEnhanceEvent={(id) => dispatch({ type: 'CLEAR_ENHANCE_EVENT', id })}
+            favoriteEntityIds={state.favoriteEntityIds}
+            onToggleFavorite={(entityId) => dispatch({ type: 'TOGGLE_FAVORITE', entityId })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
             onClose={() => {

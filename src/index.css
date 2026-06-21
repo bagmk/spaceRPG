@@ -14445,9 +14445,10 @@ button.stat-header-item {
 .owned-card-wrap { position: relative; display: flex; }
 .owned-card-wrap > .owned-card { flex: 1; width: 100%; }
 .owned-card-wrap--locked > .owned-card { opacity: 0.4; filter: grayscale(0.6); }
-/* #41: ✕ corner toggle (replaces the confusing 🔒/🔓 padlock) to exclude a stack
-   from Fuse-All. Subtle until hovered/active. */
-.owned-card__exclude {
+
+/* Overhaul-4 (v26): ★ favorite corner toggle — gold, persistent. Protects an item's
+   copies from Fuse-All. Reuses the exclude corner geometry but reads positive. */
+.owned-card__fav {
   position: absolute;
   top: -5px;
   right: -5px;
@@ -14457,40 +14458,28 @@ button.stat-header-item {
   place-items: center;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 215, 130, 0.3);
   background: rgba(10, 10, 16, 0.85);
-  color: #cfd6e6;
-  font-size: 10px;
+  color: #ffd98a;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.35;
+  opacity: 0.4;
   transition: opacity 0.15s, transform 0.12s, background 0.15s;
   z-index: 2;
 }
-.owned-card-wrap:hover .owned-card__exclude { opacity: 0.8; }
-.owned-card__exclude--on {
+.owned-card-wrap:hover .owned-card__fav { opacity: 0.85; }
+.owned-card__fav--on {
   opacity: 1;
-  border-color: color-mix(in srgb, #ff7a59 60%, transparent);
-  background: rgba(150, 40, 30, 0.92);
-  color: #ffd2c8;
+  border-color: rgba(255, 200, 90, 0.7);
+  background: rgba(120, 90, 20, 0.92);
+  color: #ffe6a8;
 }
-.owned-card__exclude:active { transform: scale(0.9); }
-/* "excluded" badge across the card body when locked out of Fuse-All. */
-.owned-card__excluded {
-  position: absolute;
-  bottom: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  border-radius: 5px;
-  color: #ffc7bd;
-  background: rgba(120, 30, 24, 0.75);
-  pointer-events: none;
+/* Favorited cards get a warm border accent (never dimmed — favorite is positive). */
+.owned-card-wrap--fav > .owned-card {
+  border-color: rgba(255, 200, 90, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 200, 90, 0.25) inset;
 }
-
 .fusion-charge__skip {
   margin-top: 16px;
   padding: 7px 18px;

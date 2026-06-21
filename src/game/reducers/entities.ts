@@ -573,3 +573,24 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'break', level, stonesEarned },
   }));
 }
+
+/**
+ * Overhaul-4 (v26): toggle an entity's ★ favorite. Favorited entities' copies are
+ * protected from Fuse-All (and, once duplicate-collection ships, pooled enhance
+ * fodder). Keyed by entityId (the inventory UI groups by item type), so one ★
+ * protects every spare of that item.
+ */
+export function handleToggleFavorite(
+  state: GameState,
+  action: Extract<GameAction, { type: 'TOGGLE_FAVORITE' }>,
+): GameState {
+  const set = new Set(state.favoriteEntityIds);
+  if (set.has(action.entityId)) set.delete(action.entityId);
+  else set.add(action.entityId);
+  return { ...state, favoriteEntityIds: [...set] };
+}
+
+/** Overhaul-4: is this entity favorited (★)? Single source of truth for the lock. */
+export function isFavoriteEntity(state: Pick<GameState, 'favoriteEntityIds'>, entityId: string): boolean {
+  return state.favoriteEntityIds.includes(entityId);
+}

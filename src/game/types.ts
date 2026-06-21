@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 25;
+  version: 26;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -295,6 +295,9 @@ export interface SaveState {
   activeQuests: string[];
   /** 🅠5 (v20): claimed quest ids — survive prestige so quests are once-only. */
   completedQuestIds: string[];
+  /** Overhaul-4 (v26): favorited entity ids (★). Their copies are protected from
+   *  Fuse-All (and, once duplicate-collection ships, from pooled enhance fodder). */
+  favoriteEntityIds: string[];
   /** Daily shop (v21): local date-key (yyyy-mm-dd) of the current roster; ''=fresh. */
   dailyShopDateKey: string;
   /** Daily shop (v21): re-rolls done today — folds into the roster seed + refresh cost. */

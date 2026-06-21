@@ -127,9 +127,9 @@ export const STRINGS = {
   fuseClose:        { en: 'Close', ko: '닫기' },
   fuseAll:          { en: 'Fuse All', ko: '전체 융합' },
   fuseAllNone:      { en: 'Fuse All — need 3 of a kind', ko: '전체 융합 — 같은 등급 3개 필요' },
-  fuseExcludeBadge: { en: 'excluded', ko: '제외됨' },
   fuseSkip:         { en: 'Skip', ko: '건너뛰기' },
-  fuseExcludeToggle:{ en: 'Lock out of Fuse All', ko: '전체 융합에서 제외' },
+  // The ★ itself conveys lock — no separate "favorite" label (user). Aria-only.
+  favoriteToggle:   { en: 'Lock — protect from Fuse All', ko: '잠금 — 전체 융합에서 보호' },
   fuseEquippedReserved:{ en: 'Equipped', ko: '장착' },
   questTitle:       { en: 'Quests', ko: '퀘스트' },
   questClaim:       { en: 'Claim', ko: '수령' },

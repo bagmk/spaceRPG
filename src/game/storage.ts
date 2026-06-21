@@ -53,8 +53,9 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
 
 /** Single source of truth for the save schema version (local + cloud).
  *  v23: per-item quality (가우시언 테일, #50). v24: hexagon center/wild slot
- *  (#44) — an additive `wildSlot` string, default '' for pre-v24 saves. */
-export const SAVE_SCHEMA_VERSION = 25;
+ *  (#44, additive `wildSlot`). v25: flat per-copy inventory (instanceId). v26:
+ *  favoriteEntityIds (★ lock) — additive string[], default [] for pre-v26 saves. */
+export const SAVE_SCHEMA_VERSION = 26;
 
 /** P6: per-entity ceiling when exploding a count-stack into flat copies, for
  *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
@@ -265,6 +266,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     enhanceStones: state.enhanceStones,
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
+    favoriteEntityIds: state.favoriteEntityIds,
     dailyShopDateKey: state.dailyShopDateKey,
     dailyShopRefreshCount: state.dailyShopRefreshCount,
     dailyShopPurchased: state.dailyShopPurchased,
@@ -460,6 +462,7 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
     enhanceStones,
     activeQuests,
     completedQuestIds,
+    favoriteEntityIds: state.favoriteEntityIds ?? [],
     endingProgressFlags: {
       ...state.endingProgressFlags,
       criticalUpgradedThisUniverse,
@@ -568,13 +571,15 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25) {
-      // v14..v23 share a field schema (v17 dropped the legacy skill fields;
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26) {
+      // v14..v26 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added
       // the per-stage milestone counters; v23 added the per-item `quality` field
       // on inventory entries — a nested EntityInstance field that passes through
-      // validateV5 untouched, so pre-v23 saves simply keep it undefined/neutral).
+      // validateV5 untouched, so pre-v23 saves simply keep it undefined/neutral;
+      // v24 added the hexagon wildSlot; v25 the flat per-copy inventory; v26 the
+      // favoriteEntityIds list — all whitelisted/defaulted in validateV5).
       // v15 decoupled entity ids; v16 re-anchored gear power; v17 removed the
       // skill tree (finalizeV17 derives flags, remaps entropy, strips fields,
       // and seeds the v18 codex/hint fields for pre-v18 saves).

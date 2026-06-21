@@ -68,11 +68,18 @@ drops.ts + codex badge).
   (always appends a flat copy); `maxCount` gates only `handlePurchaseEntity` (buy).
   Pinned with a test (a maxCount=1 legendary grants 3 copies via addToInventory) +
   invariant comments on both. No save bump. 351 tests green.
-- **P2** C favorite/lock (save **v26**): `EntityInstance.locked?` → `isEntityInstance`
-  guard + clampInstance passthrough; bump v26 + `|| v===26` SAME commit; one
-  `isProtected(instance)` predicate; wire fusion spare-selection through it; lock UI
-  on the owned-card; remove "전체 강화에서 제외" toggle (replaced by lock); move
-  lock to fusion window click; remove "가능한 만큼 전체 강화" button.
+- **P2 ✅ DONE** favorite/lock = ONE concept (save **v26**). Implemented as a
+  per-ENTITY `favoriteEntityIds: string[]` (matches the grouped owned-card UI + the
+  user's "favorite the item" intent; sidesteps the per-instance isEntityInstance wipe
+  risk) — NOT the per-instance `locked` originally sketched. ★ on the fuse owned-card
+  toggles it (TOGGLE_FAVORITE → handleToggleFavorite); favorited items are skipped by
+  Fuse-All (drawAllTrios) and persist across reload + prestige. Replaced the transient
+  ✕ excludedIds with the persistent ★; NO visible "즐겨찾기" text (the ★ conveys it).
+  Full save plumbing (v26 + `|| v===26` + validateV5 whitelist + all carry paths);
+  dead exclude i18n/CSS removed. Adversarial save-migration review = SHIP IT. 354
+  tests. NOTE: "전체 강화에서 제외" toggle + "가능한 만큼 전체 강화" button removal
+  deferred to **P7** (the enhance rework) to avoid mid-state churn; in P7 ★ also
+  protects from pooled enhance fodder.
 - **P3** H equip slot-detail layout (presentation): settle slot-detail structure;
   build the shared `.collection-bar` component. No save bump.
 - **P4** Shop redesign (presentation): grade-color cards (era chip, 보유 N chip,

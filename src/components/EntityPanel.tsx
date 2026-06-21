@@ -386,6 +386,9 @@ interface Props {
   onFuseBatch: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
   onClearEnhanceEvent?: (id: number) => void;
+  /** Overhaul-4 (v26): favorited entity ids (★) — protected from Fuse-All. */
+  favoriteEntityIds?: string[];
+  onToggleFavorite?: (entityId: string) => void;
   onClose: () => void;
   onStageSelect?: (stageId: number) => void;
   onUITap?: () => void;
@@ -395,7 +398,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -440,8 +443,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // id being enhanced so the charge core can show its glyph.
   const [enhancing, setEnhancing] = useState<string | null>(null);
   const enhanceTimerRef = useRef<number | null>(null);
-  // Fuse-All exclude: stacks the player locked out of the batch.
-  const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
+  // Overhaul-4 (v26): Fuse-All protection is now the PERSISTENT ★ favorite
+  // (favoriteEntityIds prop) — the old per-session excludedIds Set was replaced.
   // #51: Enhance-All exclude — equipped items the player has shielded from the
   // bulk 강화 (since #47 enhance can DESTROY an item in the risk phase, you want
   // to keep your best gear out of the spray-and-pray).
@@ -561,7 +564,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       const ids: string[] = [];
       for (const e of inventory) {
         // P6 flat: one copy per entry; skip equipped copies + excluded entity types.
-        if (e.count <= 0 || excludedIds.has(e.entityId)) continue;
+        // Overhaul-4: ★ favorited entities are protected from Fuse-All entirely.
+        if (e.count <= 0 || favoriteEntityIds.includes(e.entityId)) continue;
         if (e.instanceId && equippedIdSet.has(e.instanceId)) continue;
         const ent = findEntityById(e.entityId);
         if (!ent || ent.rarity !== r) continue;
@@ -586,15 +590,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onUITap?.();
     fuseTimerRef.current = window.setTimeout(commitFuse, fuseChargeMs());
   };
-  const toggleExclude = (id: string) => {
-    setExcludedIds((cur) => {
-      const next = new Set(cur);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-    onUITap?.();
-  };
-
   // 🅠4: repeat the last fuse (single or batch) with freshly-drawn copies.
   const retryFuse = () => {
     if (!lastFuse || !lastFusionEvent) return;
@@ -1580,11 +1575,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         fuseInputs.length >= FUSION_INPUT_COUNT ||
                         usable <= usedCopies ||
                         (trayRarity !== undefined && entity.rarity !== trayRarity);
-                      const locked = excludedIds.has(entity.id);
+                      const fav = favoriteEntityIds.includes(entity.id);
                       return (
                         <div
                           key={entity.id}
-                          className={`owned-card-wrap ${locked ? 'owned-card-wrap--locked' : ''}`}
+                          className={`owned-card-wrap ${fav ? 'owned-card-wrap--fav' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
                         >
                           <button
@@ -1598,17 +1593,18 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             <span className="owned-card__name">{entityName(entity, language)}</span>
                             <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
                             {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
-                            {locked ? <span className="owned-card__excluded">{t(language, 'fuseExcludeBadge')}</span> : null}
                           </button>
-                          {/* #41: ✕ corner toggle to exclude from Fuse-All (was a confusing 🔒/🔓 padlock). */}
+                          {/* Overhaul-4 (v26): ★ favorite toggle — protects this item's
+                              copies from Fuse-All (and, later, pooled enhance fodder).
+                              Persistent (saved), replacing the old per-session ✕ exclude. */}
                           <button
                             type="button"
-                            className={`owned-card__exclude ${locked ? 'owned-card__exclude--on' : ''}`}
-                            aria-label={t(language, 'fuseExcludeToggle')}
-                            title={t(language, 'fuseExcludeToggle')}
-                            onClick={() => toggleExclude(entity.id)}
+                            className={`owned-card__fav ${fav ? 'owned-card__fav--on' : ''}`}
+                            aria-label={t(language, 'favoriteToggle')}
+                            title={t(language, 'favoriteToggle')}
+                            onClick={() => { onToggleFavorite?.(entity.id); onUITap?.(); }}
                           >
-                            ✕
+                            {fav ? '★' : '☆'}
                           </button>
                         </div>
                       );

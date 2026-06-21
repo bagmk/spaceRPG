@@ -32,7 +32,7 @@ import {
   handleCompleteEnding,
   handlePrestige,
 } from './reducers/stage';
-import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleUnequipEntity } from './reducers/entities';
+import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox } from './reducers/shop';
 import {
@@ -142,6 +142,7 @@ export type GameAction =
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
   | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number; qualityRoll?: number }[] }
   | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; stoneRoll?: number; protect?: boolean }
+  | { type: 'TOGGLE_FAVORITE'; entityId: string }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
   | { type: 'CLEAR_ENHANCE_EVENT'; id: number }
@@ -216,6 +217,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     enhanceStones: state.enhanceStones,
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
+    favoriteEntityIds: state.favoriteEntityIds,
     dailyShopDateKey: state.dailyShopDateKey,
     dailyShopRefreshCount: state.dailyShopRefreshCount,
     dailyShopPurchased: state.dailyShopPurchased,
@@ -272,6 +274,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'FUSE_BATCH':            return handleFuseBatch(state, action);
     case 'CLAIM_QUEST':           return handleClaimQuest(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
+    case 'TOGGLE_FAVORITE':       return handleToggleFavorite(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);
     case 'CLEAR_QUEST_CLAIM_EVENT': return handleClearQuestClaimEvent(state, action);
