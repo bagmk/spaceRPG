@@ -1238,6 +1238,60 @@ button.hud-stage-title--clickable:hover {
 }
 .entity-fs__close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 
+/* (?) rules help button + overlay (user request) */
+.entity-fs__help {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(126, 200, 255, 0.4);
+  background: rgba(126, 200, 255, 0.08);
+  color: #bfe2ff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.entity-fs__help:hover { background: rgba(126, 200, 255, 0.18); color: #fff; }
+.entity-help-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 3, 7, 0.6);
+  backdrop-filter: blur(4px);
+  animation: enhance-result-fade 0.16s ease-out;
+}
+.entity-help-card {
+  position: relative;
+  width: min(86vw, 380px);
+  max-height: 78vh;
+  overflow-y: auto;
+  padding: 20px 20px 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(126, 200, 255, 0.3);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(126, 200, 255, 0.12), transparent 60%),
+    #0a0d16;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
+  animation: enhance-result-pop 0.24s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+.entity-help-card__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: none;
+  color: #8da0ba;
+  font-size: 20px;
+  cursor: pointer;
+}
+.entity-help-card__title { margin: 2px 24px 14px 2px; font-size: 15px; font-weight: 700; color: #eaf0fb; }
+.entity-help-card__list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 11px; }
+.entity-help-card__list li { font-size: 13px; line-height: 1.5; color: #c4cfe2; }
+.entity-help-card__list li::marker { color: #7fd8ff; font-weight: 700; }
+
 .entity-fs__body {
   flex: 1;
   overflow-y: auto;

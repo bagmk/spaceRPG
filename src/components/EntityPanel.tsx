@@ -399,6 +399,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
+  // (?) rules overlay — the equip/fusion systems are intricate, so a single help
+  // button per page spells out the rules on demand (user request).
+  const [helpOpen, setHelpOpen] = useState(false);
   const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
   // 🅠6 (req ⑫): 전체/클릭/오토 filter — 'all' shows both slot groups (6 slots) at once.
   const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
@@ -829,6 +832,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <span>{t(language, 'hudStones')}</span>
               <strong>◆{formatEntityCost(enhanceStones)}</strong>
             </div>
+          ) : null}
+          {tab !== 'lab' ? (
+            <button
+              type="button"
+              className="entity-fs__help"
+              aria-label={t(language, 'panelHelp')}
+              title={t(language, 'panelHelp')}
+              onClick={() => { setHelpOpen(true); onUITap?.(); }}
+            >
+              ?
+            </button>
           ) : null}
           <button className="entity-fs__close" aria-label={t(language, 'panelClose')} onClick={onClose}>✕</button>
         </header>
@@ -1776,6 +1790,24 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           </div>
         );
       })() : null}
+      {/* (?) rules overlay — explains the equip / fusion systems on demand (user
+          request: these screens are intricate, so one help button spells out the rules). */}
+      {helpOpen ? (
+        <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={() => setHelpOpen(false)}>
+          <article className="entity-help-card cc-scroll" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="entity-help-card__close" aria-label={t(language, 'panelClose')} onClick={() => setHelpOpen(false)}>×</button>
+            <h3 className="entity-help-card__title">{`${tab === 'fuse' ? t(language, 'fuseTitle') : t(language, 'entityEquip')} · ${t(language, 'panelHelp')}`}</h3>
+            <ol className="entity-help-card__list">
+              {(tab === 'fuse'
+                ? (['helpFuseRule1', 'helpFuseRule2', 'helpFuseRule3', 'helpFuseRule4'] as const)
+                : (['helpEquipRule1', 'helpEquipRule2', 'helpEquipRule3', 'helpEquipRule4'] as const)
+              ).map((k) => (
+                <li key={k}>{t(language, k)}</li>
+              ))}
+            </ol>
+          </article>
+        </div>
+      ) : null}
       {/* 강화 result CARD (user feedback): a proper card-sized popup — outcome banner +
           the item's glyph + (on success) the primary stat BEFORE → AFTER, level, and
           matter payback; on a destroy, a shattered glyph + the 강화석 minted. Replaces
