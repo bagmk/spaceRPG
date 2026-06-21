@@ -99,6 +99,8 @@ export interface EnhanceEvent {
   payout?: number;
   /** #47: 강화석 minted when a failed unprotected attempt destroys a copy (0 otherwise). */
   stonesEarned?: number;
+  /** P7b: spare copies merged in this enhance (the copy-collection mechanic). */
+  mergedCount?: number;
 }
 
 /** One entity in a gacha haul. */

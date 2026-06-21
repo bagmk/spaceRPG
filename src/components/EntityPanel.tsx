@@ -26,7 +26,7 @@ import {
 import { computeHexBingo } from '../game/entities/hexBingo';
 import { getAutoOutputAnchor, getEffectiveCount, getEnhanceGeoLevelMult, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
-import { getEnhanceCost, getEnhanceLevelCap, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
+import { getEnhanceLevelCap, needCopiesForLevel, getCopyTokenCost } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
@@ -401,7 +401,9 @@ interface Props {
   /** #44: equip into the hexagon CENTER (wild) slot — dispatches EQUIP_ENTITY {wild:true}. */
   onEquipWild?: (entityId: string) => void;
   onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
-  onEnhance: (entityId: string, protect?: boolean) => void;
+  onEnhance: (instanceId: string) => void;
+  /** P7b: mint a spare copy of an item with 물질/강화석 (the merge escape valve). */
+  onBuyCopyToken?: (entityId: string, currency: 'matter' | 'stone') => void;
   onFuse: (inputEntityIds: string[]) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
   onFuseBatch: (inputEntityIds: string[]) => void;
@@ -419,7 +421,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onBuyCopyToken, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -445,7 +447,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // #44: the hexagon CENTER (wild) slot has its own picker (any category) since
   // it isn't tied to the click/rift equipCat+slotIndex addressing of the outer 6.
   const [pickingWild, setPickingWild] = useState(false);
-  const [protectEnhance, setProtectEnhance] = useState(false);
   // 🅠7: enhancement unlocks at S3 (S1 = collect/codex, S2 = equip/fuse).
   const enhanceUnlocked = currentStageId >= ENHANCE_UNLOCK_STAGE_ID;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
@@ -502,13 +503,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
   // #42-fix: enhance through a brief "강화 중…" beat (parity with fusion). The
   // outcome (성공/실패/파괴) then surfaces via the inline enhance toast.
-  const triggerEnhance = (id: string, protect: boolean) => {
+  const triggerEnhance = (id: string) => {
     if (enhancing) return;
     setEnhancing(id);
     onUITap?.();
     enhanceTimerRef.current = window.setTimeout(() => {
       setEnhancing(null);
-      onEnhance(id, protect);
+      onEnhance(id);
     }, 550 + Math.random() * 450); // ~0.55–1.0s, slightly random
   };
 
@@ -1841,8 +1842,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {ev.outcome !== 'break' ? (
                 <div className="enhance-result-card__lv">{`Lv.${ev.prevLevel ?? ev.level} → Lv.${ev.level}`}</div>
               ) : null}
-              {ev.outcome === 'break' && (ev.stonesEarned ?? 0) > 0 ? (
-                <div className="enhance-result-card__payout enhance-result-card__payout--stones">{`◆ ${ev.stonesEarned} ${t(language, 'hudStones')}`}</div>
+              {ev.outcome === 'up' && (ev.mergedCount ?? 0) > 0 ? (
+                <div className="enhance-result-card__payout">{`🧬 ${t(language, 'enhanceMerged').replace('{n}', String(ev.mergedCount))}`}</div>
               ) : null}
             </article>
           </div>
@@ -1870,12 +1871,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const lvl = entry?.level ?? 1;
         const cap = getEnhanceLevelCap(ent);
         const atCap = lvl >= cap;
-        const stonePhase = isEnhanceStonePhase(lvl);
-        const matterCost = getEnhanceCost(ent, lvl, currentStageId);
-        const protectCost = getEnhanceProtectStoneCost(ent, lvl);
-        const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
-        // #47: normal enhance is matter-only; 강화석 is needed only when protecting.
-        const affordable = !atCap && quanta >= matterCost && (stonePhase && protectEnhance ? enhanceStones >= protectCost : true);
+        // P7b: level by MERGING spare copies of this item. need(L) copies per level;
+        // fodder = its copies that aren't the anchor and aren't equipped elsewhere.
+        const need = needCopiesForLevel(lvl);
+        const gearIdSet = new Set([...equippedSlots, ...riftSlots, wildSlot].filter(Boolean) as string[]);
+        const spares = inventory
+          .filter((e) => e.entityId === ent.id && e.instanceId !== slotVal && !gearIdSet.has(e.instanceId ?? ''))
+          .reduce((s, e) => s + (e.count ?? 1), 0);
+        const canMerge = !atCap && spares >= need;
+        const tokenCost = getCopyTokenCost(ent);
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setInspectedSlot(null); }}>
@@ -1904,21 +1908,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   })}
                 </div>
               ) : null}
-              {stonePhase && !atCap ? (
-                <button
-                  type="button"
-                  className={`slot-detail__protect ${protectEnhance ? 'slot-detail__protect--on' : ''}`}
-                  onClick={() => { setProtectEnhance((v) => !v); onUITap?.(); }}
-                >
-                  {`${protectEnhance ? '☑' : '☐'} ${t(language, 'enhanceProtect')} ◆${formatEntityCost(protectCost)}`}
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
-                style={affordable && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-                disabled={!affordable || !enhanceUnlocked || enhancing !== null}
-                onClick={() => triggerEnhance(slotVal, stonePhase ? protectEnhance : false)}
+                style={canMerge && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+                disabled={!canMerge || !enhanceUnlocked || enhancing !== null}
+                onClick={() => triggerEnhance(slotVal)}
               >
                 {!enhanceUnlocked
                   ? `🔒 ${t(language, 'enhanceLabel')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`
@@ -1928,13 +1923,21 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       <>
                         <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
-                        <span className="enhance-btn__cost">{`⚛${formatEntityCost(matterCost)}`}</span>
-                        {stonePhase ? (
-                          <span className="enhance-btn__fail">{t(language, 'enhanceFailLabel').replace('{n}', String(failPct))}</span>
-                        ) : null}
+                        <span className="enhance-btn__cost">{`🧬 ${spares}/${need}`}</span>
                       </>
                     )}
               </button>
+              {!atCap && onBuyCopyToken ? (
+                <div className="slot-detail__token">
+                  <span className="slot-detail__token-label">{t(language, 'copyTokenBuy')}</span>
+                  <button type="button" className="slot-detail__token-btn" disabled={quanta < tokenCost.matter} onClick={() => { onBuyCopyToken(ent.id, 'matter'); onUITap?.(); }}>
+                    {`⚛${formatEntityCost(tokenCost.matter)}`}
+                  </button>
+                  <button type="button" className="slot-detail__token-btn" disabled={enhanceStones < tokenCost.stones} onClick={() => { onBuyCopyToken(ent.id, 'stone'); onUITap?.(); }}>
+                    {`◆${tokenCost.stones}`}
+                  </button>
+                </div>
+              ) : null}
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
                   {t(language, 'equipSwap')}

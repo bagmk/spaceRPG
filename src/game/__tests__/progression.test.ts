@@ -149,18 +149,22 @@ describe('rarity gates', () => {
 describe('enhancement (강화소)', () => {
   const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
 
-  it('spends quanta and raises the stack level', () => {
-    const cost = getEnhanceCost(entity, 1, 1);
+  it('P7b: merges need(L) spare copies to raise the anchor a level (no matter cost)', () => {
     const state: GameState = {
       ...createInitialGameState(0),
-      quanta: cost + 10,
-      inventory: [{ entityId: entity.id, count: 1, level: 1 }],
+      quanta: 0, // no matter — merging is free, it consumes copies
+      inventory: [
+        { entityId: entity.id, instanceId: 'a', count: 1, level: 1 },
+        { entityId: entity.id, instanceId: 'f1', count: 1, level: 1 },
+        { entityId: entity.id, instanceId: 'f2', count: 1, level: 1 },
+        { entityId: entity.id, instanceId: 'f3', count: 1, level: 1 }, // need(1)=3 fodder
+      ],
     };
-    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
-    expect(next.inventory[0].level).toBe(2);
-    // #40: a successful enhance now also pays back a small matter fraction.
-    const payout = Math.ceil(cost * ENHANCE_MATTER_PAYOUT_SUCCESS);
-    expect(next.quanta).toBeCloseTo(state.quanta - cost + payout, 5);
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(2);
+    expect(next.inventory.length).toBe(1); // the 3 spares were consumed
+    expect(next.quanta).toBe(0); // free
+    expect(next.lastEnhanceEvent?.mergedCount).toBe(3);
   });
 
   it('rejects when poor or at the rarity level cap', () => {
@@ -178,6 +182,17 @@ describe('enhancement (강화소)', () => {
     };
     expect(gameReducer(capped, { type: 'ENHANCE_ENTITY', instanceId: entity.id }).inventory[0].level)
       .toBe(ENHANCE_LEVEL_CAPS.common);
+  });
+
+  it('P7b: BUY_COPY_TOKEN mints a spare copy with matter (uncapped)', () => {
+    const state: GameState = {
+      ...createInitialGameState(0),
+      quanta: 1e9,
+      inventory: [{ entityId: entity.id, instanceId: 'a', count: 1, level: 1 }],
+    };
+    const next = gameReducer(state, { type: 'BUY_COPY_TOKEN', entityId: entity.id, currency: 'matter' });
+    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(2); // +1 spare copy
+    expect(next.quanta).toBeLessThan(state.quanta); // matter spent
   });
 
   it('level cap helper follows rarity', () => {
@@ -214,19 +229,32 @@ describe('gear system (category purity + refunds)', () => {
     expect(mods.autoRateMult).toBe(1);
   });
 
-  it('ENHANCE_ENTITY accumulates invested quanta on the stack', () => {
+  it('P7b: one merge greedily spends the pool to the highest affordable level', () => {
     const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
-    const cost1 = getEnhanceCost(entity, 1, 1);
-    const cost2 = getEnhanceCost(entity, 2, 1);
-    let state: GameState = {
+    // Lv1→2 needs 3, Lv2→3 needs 5 → 8 spare copies lift the anchor two levels at once.
+    const fodder = Array.from({ length: 8 }, (_, k) => ({ entityId: entity.id, instanceId: `f${k}`, count: 1, level: 1 }));
+    const state: GameState = {
       ...createInitialGameState(0),
-      quanta: cost1 + cost2 + 10,
-      inventory: [{ entityId: entity.id, count: 1, level: 1 }],
+      inventory: [{ entityId: entity.id, instanceId: 'a', count: 1, level: 1 }, ...fodder],
     };
-    state = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
-    state = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: entity.id });
-    expect(state.inventory[0].level).toBe(3);
-    expect(state.inventory[0].invested).toBeCloseTo(cost1 + cost2, 5);
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(3);
+    expect(next.inventory.length).toBe(1); // all 8 fodder consumed
+    expect(next.lastEnhanceEvent?.mergedCount).toBe(8);
+  });
+
+  it('P7b: not enough spare copies → enhance is a no-op', () => {
+    const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
+    const state: GameState = {
+      ...createInitialGameState(0),
+      inventory: [
+        { entityId: entity.id, instanceId: 'a', count: 1, level: 1 },
+        { entityId: entity.id, instanceId: 'f1', count: 1, level: 1 }, // only 1 spare, need 3
+      ],
+    };
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(1);
+    expect(next.inventory.length).toBe(2); // nothing consumed
   });
 
   it('fusing enhanced copies refunds part of the investment (UI estimate matches payout)', () => {

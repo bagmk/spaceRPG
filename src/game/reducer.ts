@@ -32,7 +32,7 @@ import {
   handleCompleteEnding,
   handlePrestige,
 } from './reducers/stage';
-import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
+import { handleBuyCopyToken, handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox } from './reducers/shop';
 import {
@@ -141,7 +141,8 @@ export type GameAction =
   // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
   | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number; qualityRoll?: number }[] }
-  | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; stoneRoll?: number; protect?: boolean }
+  | { type: 'ENHANCE_ENTITY'; instanceId: string }
+  | { type: 'BUY_COPY_TOKEN'; entityId: string; currency: 'matter' | 'stone' }
   | { type: 'TOGGLE_FAVORITE'; entityId: string }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
@@ -274,6 +275,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'FUSE_BATCH':            return handleFuseBatch(state, action);
     case 'CLAIM_QUEST':           return handleClaimQuest(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
+    case 'BUY_COPY_TOKEN':        return handleBuyCopyToken(state, action);
     case 'TOGGLE_FAVORITE':       return handleToggleFavorite(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);

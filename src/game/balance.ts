@@ -559,6 +559,22 @@ export const ENHANCE_REFUND_RATE = 0.6;
 export const ENH_DUP_BASE = 3;
 export const ENH_DUP_STEP = 2;
 
+/**
+ * Copy-token (P7b escape valve): buy ONE spare copy of an item to feed the merge,
+ * for players whose drop luck is dry. Matter price anchors to the ITEM's own
+ * baseCost (× factor), so it scales with the item not the player stage AND roughly
+ * REPLACES the old per-level enhance matter sink — keeping the matter economy (and
+ * the entropy gate) ~unchanged. 강화석 is the flat per-rarity premium fast-track.
+ */
+export const COPY_TOKEN_MATTER_FACTOR = 1.5;
+export const COPY_TOKEN_STONE_COST: Record<EntityRarity, number> = {
+  common: 1,
+  rare: 2,
+  epic: 4,
+  legendary: 8,
+  mythic: 16,
+};
+
 // ── 강화 risk phase (#47) — every enhance costs MATTER ONLY. From this level up
 //    an attempt can FAIL; a failed UNPROTECTED attempt DESTROYS one copy and mints
 //    a RANDOM amount of 강화석 (no level-down). 강화석 is spent ONLY by 보호(protect),

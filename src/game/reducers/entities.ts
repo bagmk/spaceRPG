@@ -2,7 +2,7 @@ import type { GameState, FusionResultCard } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
-import { addToAlmanac, pickDropStage } from '../entities/drops';
+import { addToAlmanac, addToInventory, pickDropStage } from '../entities/drops';
 import { makeInstance, pickFreeCopyId, reservedInstanceIds } from '../entities/instances';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
 import {
@@ -15,12 +15,9 @@ import {
   validateFusionInputs,
 } from '../entities/fusion';
 import {
-  getEnhanceCost,
   getEnhanceLevelCap,
-  getEnhanceProtectStoneCost,
-  getEnhanceFailChance,
-  isEnhanceStonePhase,
-  getEnhanceBreakStoneReward,
+  applyMergeCopies,
+  getCopyTokenCost,
 } from '../entities/enhance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
@@ -29,8 +26,6 @@ import {
   FUSION_BURST_REF_COST_FRAC,
   FUSION_INPUT_COUNT,
   RARITY_STAGE_GATES,
-  ENHANCE_MATTER_PAYOUT_SUCCESS,
-  ENHANCE_MATTER_PAYOUT_FAIL,
   FUSION_FAIL_STONES_BY_TIER,
   FUSION_SAME_ENTITY_UP_BONUS,
   FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
@@ -52,6 +47,7 @@ type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
 type FuseAction = Extract<GameAction, { type: 'FUSE_ENTITIES' }>;
 type FuseBatchAction = Extract<GameAction, { type: 'FUSE_BATCH' }>;
 type EnhanceAction = Extract<GameAction, { type: 'ENHANCE_ENTITY' }>;
+type BuyCopyTokenAction = Extract<GameAction, { type: 'BUY_COPY_TOKEN' }>;
 
 /** Raise slot counts when stage/almanac progress earns new slots (never lowers). */
 export function syncSlotUnlocks(state: GameState): GameState {
@@ -468,113 +464,99 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
 }
 
 /**
- * ENHANCE_ENTITY (강화소): level an owned stack directly. The base cost is MATTER
- * ONLY at every level (stage-independent). Lv1→3 always succeed; from Lv3 an
- * attempt CAN FAIL (#47) — a failed UNPROTECTED attempt DESTROYS one copy and
- * mints a RANDOM amount of 강화석 (no level-down). 강화석 is spent only to
- * 보호(protect), which negates the loss on a failed attempt.
+ * ENHANCE_ENTITY (강화소): Overhaul-4 P7b — level a copy by MERGING spare duplicate
+ * copies of the SAME item (collect, don't pay). Anchor = the equipped copy of that
+ * entity if one is equipped, else its highest-level copy. Fodder = its OTHER copies
+ * (spares), excluding the anchor and any equipped copy; consumed lowest-level then
+ * lowest-quality first, greedily spending need(L)=3,5,7… per level up to the rarity
+ * cap. The anchor inherits the best quality among itself + everything consumed. No
+ * matter cost, no failure. (★ favorite is a Fuse-All guard only — merging is a
+ * deliberate single-item action, so an item's own spares are fair fodder.)
  */
 export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
     return state;
   }
-  // P6: enhance a SPECIFIC copy by instanceId (the equipped slot's value). Falls
-  // back to the first copy of an entityId for any legacy/test caller.
-  const targetId = action.instanceId;
-  let owned = state.inventory.find((e) => e.instanceId === targetId);
-  if (!owned) {
-    const fallbackEnt = findEntityById(targetId);
-    owned = fallbackEnt ? state.inventory.find((e) => entityMatchesId(fallbackEnt, e.entityId) && e.count > 0) : undefined;
+  const equippedIds = new Set(
+    [...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[],
+  );
+  // Resolve the anchor copy: by instanceId, else (entityId fallback) the equipped
+  // copy of that entity, else its highest-level copy.
+  let anchor = state.inventory.find((e) => e.instanceId === action.instanceId);
+  let entity = anchor ? findEntityById(anchor.entityId) : undefined;
+  if (!anchor) {
+    const ent = findEntityById(action.instanceId);
+    if (ent) {
+      const copies = state.inventory.filter((e) => entityMatchesId(ent, e.entityId));
+      anchor = copies.find((e) => equippedIds.has(e.instanceId ?? '')) ?? [...copies].sort((a, b) => b.level - a.level)[0];
+      entity = ent;
+    }
   }
-  if (!owned || owned.count <= 0) return state;
-  const entity = findEntityById(owned.entityId);
-  if (!entity) return state;
-  const ownedKey = owned; // capture for per-copy matching in the maps below
-  const matchesOwned = (e: typeof owned) =>
-    ownedKey.instanceId ? e!.instanceId === ownedKey.instanceId : e === ownedKey;
-  const level = owned.level;
-  if (level >= getEnhanceLevelCap(entity)) return state;
+  if (!anchor || !entity) return state;
+
+  const cap = getEnhanceLevelCap(entity);
+  if (anchor.level >= cap) return state;
+  const anchorId = anchor.instanceId;
+
+  // Fodder = same-entity spares (not the anchor, not equipped), weakest first.
+  const fodder = state.inventory
+    .filter((e) => e.entityId === anchor!.entityId && e.instanceId !== anchorId && !equippedIds.has(e.instanceId ?? ''))
+    .sort((a, b) => a.level - b.level || (a.quality ?? 1) - (b.quality ?? 1));
+  const spares = fodder.reduce((s, e) => s + (e.count ?? 1), 0);
+
+  const merge = applyMergeCopies(anchor.level, spares, cap);
+  if (merge.levelsGained <= 0) return state; // not enough copies for even one level
+
+  const consumedInstances = fodder.slice(0, merge.consumed); // each flat copy = 1
+  const consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
+  const mergedQuality = consumedInstances.reduce<number | undefined>((q, e) => bestQuality(q, e.quality), anchor.quality);
 
   const eventId = nextEventId(state);
-  const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
-
-  // ── Matter phase (Lv < 3): pay quanta, always succeeds. ──
-  if (!isEnhanceStonePhase(level)) {
-    const cost = getEnhanceCost(entity, level, stageId);
-    if (state.quanta < cost) return state;
-    const payout = Math.ceil(cost * ENHANCE_MATTER_PAYOUT_SUCCESS); // #40: every attempt pays a little back
-    return withCurrentUniverseEndingProgress({
-      ...state,
-      quanta: state.quanta - cost + payout,
-      eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, instanceId: owned.instanceId, outcome: 'up', level: level + 1, prevLevel: level, payout },
-      inventory: state.inventory.map((e) =>
-        matchesOwned(e)
-          ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + cost }
-          : e,
-      ),
+  const nextInventory = state.inventory
+    .filter((e) => !consumedIds.has(e.instanceId))
+    .map((e) => {
+      if (e.instanceId !== anchorId) return e;
+      const next = { ...e, level: merge.newLevel };
+      if (mergedQuality !== undefined) next.quality = mergedQuality;
+      return next;
     });
-  }
-
-  // ── Risk phase (Lv ≥ 3, #47): MATTER-only base cost, can fail. 강화석 is spent
-  //    ONLY to 보호(protect). A failed unprotected attempt destroys one copy and
-  //    mints random 강화석 (no level-down). ──
-  const protect = action.protect === true;
-  const matterCost = getEnhanceCost(entity, level, stageId);
-  const protectCost = protect ? getEnhanceProtectStoneCost(entity, level) : 0;
-  // Need matter for the attempt, and stones only if protecting.
-  if (state.quanta < matterCost || state.enhanceStones < protectCost) return state;
-
-  const failChance = getEnhanceFailChance(level);
-  const succeeded = (action.failRoll ?? 1) >= failChance;
-
-  // ── Success: matter-only cost, level up, small matter payback. ──
-  if (succeeded) {
-    const payout = Math.ceil(matterCost * ENHANCE_MATTER_PAYOUT_SUCCESS);
-    return withCurrentUniverseEndingProgress({
-      ...state,
-      quanta: state.quanta - matterCost + payout,
-      enhanceStones: state.enhanceStones - protectCost, // 0 unless protecting
-      eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, instanceId: owned.instanceId, outcome: 'up', level: level + 1, prevLevel: level, payout },
-      inventory: state.inventory.map((e) =>
-        matchesOwned(e) ? { ...e, level: e.level + 1, invested: (e.invested ?? 0) + matterCost } : e,
-      ),
-    });
-  }
-
-  // ── Failed + 보호: loss negated. Protect stones spent, matter spent (consolation payout). ──
-  if (protect) {
-    const payout = Math.ceil(matterCost * ENHANCE_MATTER_PAYOUT_FAIL);
-    return withCurrentUniverseEndingProgress({
-      ...state,
-      quanta: state.quanta - matterCost + payout,
-      enhanceStones: Math.max(0, state.enhanceStones - protectCost),
-      eventCounter: eventId,
-      lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'protected', level, payout },
-    });
-  }
-
-  // ── Failed unprotected: DESTROY one copy + mint random 강화석. No matter charged
-  //    (the lost item IS the cost); the card shows only the 강화석 gained. ──
-  // P6: destroy THAT specific copy (flat) + clear it from any slot it occupied.
-  const stonesEarned = getEnhanceBreakStoneReward(entity, action.stoneRoll ?? 0.5);
-  const destroyKey = ownedKey.instanceId ?? ownedKey.entityId;
-  const nextInventory = state.inventory.filter((e) => !matchesOwned(e));
-  const nextState: GameState = {
-    ...state,
-    enhanceStones: state.enhanceStones + stonesEarned,
-    equippedSlots: state.equippedSlots.filter((id) => id !== destroyKey),
-    riftSlots: state.riftSlots.filter((id) => id !== destroyKey),
-    wildSlot: state.wildSlot === destroyKey ? '' : state.wildSlot,
-  };
 
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
-    ...nextState,
+    ...state,
+    // Defensive: scrub any consumed id from a slot (shouldn't be equipped, but safe).
+    equippedSlots: state.equippedSlots.filter((id) => !consumedIds.has(id)),
+    riftSlots: state.riftSlots.filter((id) => !consumedIds.has(id)),
+    wildSlot: consumedIds.has(state.wildSlot) ? '' : state.wildSlot,
     inventory: nextInventory,
     eventCounter: eventId,
-    lastEnhanceEvent: { id: eventId, entityId: owned.entityId, outcome: 'break', level, stonesEarned },
+    lastEnhanceEvent: {
+      id: eventId,
+      entityId: anchor.entityId,
+      instanceId: anchorId,
+      outcome: 'up',
+      level: merge.newLevel,
+      prevLevel: anchor.level,
+      mergedCount: merge.consumed,
+    },
   }));
+}
+
+/**
+ * BUY_COPY_TOKEN (P7b escape valve): mint ONE spare copy of an item with 물질 or
+ * 강화석, for players whose drops are dry on a needed merge. Routed through the
+ * UNCAPPED addToInventory (never the maxCount-gated buy path).
+ */
+export function handleBuyCopyToken(state: GameState, action: BuyCopyTokenAction): GameState {
+  if (state.completedRun || state.imploding || state.selectedEndingId !== null) return state;
+  const entity = findEntityById(action.entityId);
+  if (!entity) return state;
+  const cost = getCopyTokenCost(entity);
+  if (action.currency === 'stone') {
+    if (state.enhanceStones < cost.stones) return state;
+    return syncSlotUnlocks({ ...state, enhanceStones: state.enhanceStones - cost.stones, inventory: addToInventory(state.inventory, entity.id) });
+  }
+  if (state.quanta < cost.matter) return state;
+  return syncSlotUnlocks({ ...state, quanta: state.quanta - cost.matter, inventory: addToInventory(state.inventory, entity.id) });
 }
 
 /**

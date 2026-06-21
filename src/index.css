@@ -1722,18 +1722,29 @@ button.hud-stage-title--clickable:hover {
 
 /* ════ P1: 강화석 wallet pill, protect toggle, enhance flash ════ */
 .entity-fs__wallet--stones strong { color: #9fd0ff; }
-.slot-detail__protect {
+/* P7b: copy-token buy row (the merge escape valve) under the enhance button. */
+.slot-detail__token {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
-  padding: 8px;
-  border: 1px solid rgba(159, 208, 255, 0.35);
-  border-radius: 9px;
-  background: rgba(159, 208, 255, 0.06);
-  color: #cfe2ff;
+  margin-top: 4px;
+}
+.slot-detail__token-label { font-size: 11px; color: rgba(245, 247, 250, 0.55); margin-right: auto; }
+.slot-detail__token-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #bb8cff 45%, transparent);
+  background: color-mix(in srgb, #bb8cff 12%, transparent);
+  color: #d9c6ff;
   font: inherit;
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
 }
-.slot-detail__protect--on { background: rgba(159, 208, 255, 0.2); border-color: rgba(159, 208, 255, 0.6); color: #fff; }
+.slot-detail__token-btn:not(:disabled):hover { background: color-mix(in srgb, #bb8cff 22%, transparent); }
+.slot-detail__token-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 /* #51: "전체 강화 제외" toggle — muted by default, amber when active. */
 .slot-detail__skip {
   width: 100%;

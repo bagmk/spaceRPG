@@ -153,6 +153,8 @@ export const STRINGS = {
   hudStones:        { en: 'Stones', ko: '강화석' },
   enhanceFailLabel: { en: 'fail {n}%', ko: '실패 {n}%' },
   enhanceProtect:   { en: 'Protect', ko: '보호 강화' },
+  enhanceMerged:    { en: 'merged {n}', ko: '{n}개 병합' },
+  copyTokenBuy:     { en: 'Buy copy', ko: '복제 구매' },
   qualityTail:          { en: 'Pristine', ko: '명품' },
   enhanceOutcomeUp:    { en: 'ENHANCED!', ko: '강화 성공!' },
   enhanceOutcomeDown:  { en: 'Downgraded', ko: '강등…' },
