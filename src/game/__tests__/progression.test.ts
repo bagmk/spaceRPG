@@ -20,6 +20,7 @@ import {
 import { getEquipCategory } from '../entities/types';
 import {
   applyFusionOutput,
+  consumeFusionInputs,
   getExpectedFusionRefund,
   pickFusionOutput,
 } from '../entities/fusion';
@@ -293,6 +294,28 @@ describe('gear system (category purity + refunds)', () => {
     // existing stack is returned untouched (still at the cap level).
     expect(result.capRefund).toBeGreaterThan(0);
     expect(result.inventory[0].level).toBe(ENHANCE_LEVEL_CAPS.common);
+  });
+
+  it('P7b: fusion output carries the lowest consumed input level', () => {
+    const commons = getEntitiesForStage(1).filter((e) => e.rarity === 'common');
+    const a = commons[0];
+    const b = commons[1] ?? commons[0];
+    // consume copies at levels [3, 5, 2] → minLevel 2 (lowest-first picks them all)
+    const inv = [
+      { entityId: a.id, instanceId: 'x1', count: 1, level: 3 },
+      { entityId: a.id, instanceId: 'x2', count: 1, level: 5 },
+      { entityId: b.id, instanceId: 'y1', count: 1, level: 2 },
+    ];
+    const { minLevel } = consumeFusionInputs(inv, [a.id, a.id, b.id]);
+    expect(minLevel).toBe(2);
+    // a freshly-minted output carries that level instead of resetting to Lv1
+    const out = applyFusionOutput([], commons[2] ?? a, 1, undefined, minLevel);
+    expect(out.inventory[out.inventory.length - 1].level).toBe(2);
+    // …and Lv1 inputs still mint a plain Lv1 output (no inflation)
+    const flat = consumeFusionInputs([
+      { entityId: a.id, instanceId: 'z1', count: 1, level: 1 },
+    ], [a.id]);
+    expect(flat.minLevel).toBe(1);
   });
 
   it('same-category inputs guarantee a same-category fusion output', () => {

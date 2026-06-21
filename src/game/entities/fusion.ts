@@ -267,6 +267,9 @@ export interface ConsumeResult {
   refund: number;
   /** 강화석 refund from consumed stacks' stone-phase investment (P1). */
   stoneRefund: number;
+  /** P7b: lowest level among the consumed copies (1 if none) — the fusion output
+   *  carries this so merge-leveling isn't fully lost when fusing up a rarity. */
+  minLevel: number;
 }
 
 /** Consume the input copies. P6 flat: emptied entries are dropped, not kept. */
@@ -283,6 +286,7 @@ export function consumeFusionInputs(
   const taken = new Map<EntityInstance, number>();
   let refund = 0;
   let stoneRefund = 0;
+  let minLevel = Infinity; // P7b: track the weakest consumed level for the output
   for (const [entityId, want] of needed) {
     let remaining = want;
     const candidates = inventory
@@ -296,6 +300,7 @@ export function consumeFusionInputs(
       const take = Math.min(avail, remaining);
       remaining -= take;
       taken.set(c, already + take);
+      minLevel = Math.min(minLevel, c.level ?? 1);
       const frac = take / c.count;
       refund += (c.invested ?? 0) * frac * ENHANCE_REFUND_RATE;
       stoneRefund += (c.investedStones ?? 0) * frac * ENHANCE_STONE_REFUND_RATE;
@@ -315,7 +320,7 @@ export function consumeFusionInputs(
       investedStones: Math.max(0, (e.investedStones ?? 0) * frac),
     });
   }
-  return { inventory: next, refund: Math.floor(refund), stoneRefund: Math.floor(stoneRefund) };
+  return { inventory: next, refund: Math.floor(refund), stoneRefund: Math.floor(stoneRefund), minLevel: Number.isFinite(minLevel) ? minLevel : 1 };
 }
 
 export interface FusionOutputResult {
@@ -326,18 +331,20 @@ export interface FusionOutputResult {
 }
 
 /**
- * Add the fusion output: stack a copy, or refund quanta when already at max
- * count. Fusion is rarity-up OR break only — it must NEVER level up / enhance an
- * item (that is the 강화 system's job; mixing them confused players who saw a
- * common "등급업" that was actually a hidden level-up). So an over-cap duplicate
- * always pays capRefund. The refund uses the same stage-independent base as
- * fusion/enhance costs, so it can never exceed what fusing the item ever costs.
+ * Add the fusion output: mint a copy, or refund quanta when already at max count.
+ * P7b: the output CARRIES a level (`level` = the lowest consumed input level) so
+ * merge-leveling isn't fully lost when you fuse up a rarity. (Output rarity ≥ input
+ * rarity ⇒ output cap ≥ input cap ≥ this level, so no clamp is needed.) This is a
+ * deliberate, conservative carry — never an inflation, and the rarity still changes,
+ * so it can't be mistaken for the old "hidden level-up on fusion" confusion. An
+ * over-cap duplicate still pays capRefund (stage-independent base).
  */
 export function applyFusionOutput(
   inventory: EntityInstance[],
   output: StageEntity,
   _playerStageId?: number,
   quality?: number,
+  level?: number,
 ): FusionOutputResult {
   // P6: count total flat copies; at the cap, refund instead of minting another.
   const ownedCount = inventory.reduce((s, e) => (e.entityId === output.id ? s + e.count : s), 0);
@@ -347,8 +354,11 @@ export function applyFusionOutput(
       capRefund: Math.ceil(FUSION_ENHANCE_COST_BASE * ENTITY_BASE_COST_FACTOR[output.rarity] * FUSION_CAP_DUP_REFUND_FRAC),
     };
   }
+  const fields: Partial<EntityInstance> = {};
+  if (quality !== undefined) fields.quality = quality;
+  if (level !== undefined && level > 1) fields.level = level;
   return {
-    inventory: [...inventory, makeInstance(output.id, quality !== undefined ? { quality } : {})],
+    inventory: [...inventory, makeInstance(output.id, fields)],
     capRefund: 0,
   };
 }

@@ -272,12 +272,13 @@ function fuseOnce(
   // P6: never consume an equipped copy — pass the reserved instanceIds so the
   // forge picks only spare (un-equipped) copies.
   const fuseReserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
-  const { inventory: consumed, refund: enhanceRefund, stoneRefund } = consumeFusionInputs(state.inventory, inputEntityIds, fuseReserved);
+  const { inventory: consumed, refund: enhanceRefund, stoneRefund, minLevel: fusedLevel } = consumeFusionInputs(state.inventory, inputEntityIds, fuseReserved);
   // #50: the fused output rolls quality too — fusion is the headline "pull", so a
   // lucky tail here is the most exciting place to land a gold item.
   const fusedQuality =
     rolls.qualityRoll !== undefined ? rollQualityScore(rolls.qualityRoll, rolls.pickRoll) : undefined;
-  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality);
+  // P7b: the output carries the lowest consumed level so merge-leveling survives a fuse-up.
+  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality, fusedLevel);
   const totalRefund = enhanceRefund + capRefund;
   // RARITY-UP IS THE ACTUAL OUTPUT vs INPUT (#42-fix): rollFusionRarity can roll
   // "up" but pickFusionOutput falls back to a lower rarity when the rolled output

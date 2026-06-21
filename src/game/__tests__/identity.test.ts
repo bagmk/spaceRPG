@@ -4,6 +4,7 @@ import { getEquipCategory } from '../entities/types';
 import { getFamily } from '../entities/families';
 import { CODEX_SETS, getSubsetMembers, collectedIdSet, isSubsetComplete } from '../entities/codexSets';
 import { getActiveModifiers } from '../skills/effects';
+import { CODEX_REWARD_MULT } from '../balance';
 import type { EntityEffectType } from '../entities/types';
 
 /**
@@ -253,9 +254,11 @@ describe('codex thematic sets', () => {
     const base = getActiveModifiers(ctx, [], undefined, {});
     const earned = getActiveModifiers(ctx, [], undefined, { 1: stage1Ids });
 
-    // Genesis "first_light" subset (+6% drop) and the set reward (+8% drop) both fire,
-    // each scaled by CODEX_REWARD_MULT 1.5 (rounded) → +9% subset and +12% set (🅠1).
+    // Genesis "first_light" subset (+6% drop base) and the set reward (+8% base) both
+    // fire, each scaled by CODEX_REWARD_MULT (rounded) — derived so the bump is robust.
+    const subPct = Math.round(6 * CODEX_REWARD_MULT) / 100;
+    const setPct = Math.round(8 * CODEX_REWARD_MULT) / 100;
     expect(earned.dropChanceMult).toBeGreaterThan(base.dropChanceMult);
-    expect(earned.dropChanceMult).toBeCloseTo(base.dropChanceMult * 1.09 * 1.12, 6);
+    expect(earned.dropChanceMult).toBeCloseTo(base.dropChanceMult * (1 + subPct) * (1 + setPct), 6);
   });
 });

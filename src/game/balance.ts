@@ -315,7 +315,7 @@ export const CODEX_MASS_BONUS = 2.0;
  * shown bonus always equals the applied bonus (label == applied). Set/subset
  * bonuses still trigger only on full completion (locked decision unchanged).
  */
-export const CODEX_REWARD_MULT = 1.5;
+export const CODEX_REWARD_MULT = 2.0; // Overhaul-4: completing collections should feel rewarding (was 1.5 → bigger payoff; label==applied stays in sync).
 
 /** Entropy gained per quanta earned by clicking (active play drives progress). */
 export const ENTROPY_W_CLICK = 0.6;
