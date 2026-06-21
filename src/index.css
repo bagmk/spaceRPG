@@ -14813,9 +14813,14 @@ button.stat-header-item {
   font: inherit;
   cursor: pointer;
   text-align: center;
-  transition: filter 0.15s, transform 0.12s;
+  transition: filter 0.15s, transform 0.12s, box-shadow 0.15s, border-color 0.15s;
 }
-.shop-item-card:not(:disabled):hover { filter: brightness(1.15); }
+.shop-item-card:not(:disabled):hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--rarity-color, #8090b0) 78%, transparent);
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--rarity-color, #8090b0) 55%, transparent);
+}
 .shop-item-card:not(:disabled):active { transform: scale(0.97); }
 .shop-item-card:disabled { opacity: 0.5; cursor: not-allowed; }
 .shop-item-card--sold { opacity: 0.35; filter: grayscale(0.6); }

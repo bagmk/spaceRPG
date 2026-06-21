@@ -30,7 +30,7 @@ import { isTailQuality } from '../game/entities/quality';
 import type { EntityRarity } from '../game/entities/types';
 import type { GearPower } from '../game/entities/substats';
 import { EntityGlyph } from './EntityGlyph';
-import { effectValueLabel, SpecChip, TraitBadge } from './EntityPanel';
+import { effectValueLabel, SpecChip, TraitBadge, TRAIT_ICON_TONE } from './EntityPanel';
 import type { GameState, ShopBoostCategory } from '../game/types';
 import { t, type Lang } from '../i18n';
 
@@ -272,7 +272,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   <span className="shop-item-card__rarity" style={{ color: rc }}>{t(language, RARITY_LABEL_KEY[offer.rarity])}</span>
                   {ent ? <EntityGlyph entity={ent} color={rc} /> : null}
                   <span className="shop-item-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
-                  {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={tr.accent} /> : null}
+                  {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={TRAIT_ICON_TONE} /> : null}
                   <span className="shop-item-card__cost">
                     {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
                   </span>

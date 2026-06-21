@@ -55,7 +55,7 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
  * borders/glyphs). Effect/trait ICONS + spec chips render in ONE neutral tone so
  * the screens aren't a rainbow — the icon SHAPE (●■★◆✚▲) still tells the type.
  */
-const TRAIT_ICON_TONE = '#aeb8cc';
+export const TRAIT_ICON_TONE = '#aeb8cc';
 
 const SUBSTAT_LABEL_KEY: Record<SecondaryStatType, Parameters<typeof t>[1]> = {
   critChance: 'effectCritChance',
