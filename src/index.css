@@ -14720,36 +14720,38 @@ button.stat-header-item {
 /* #43: single-page shop — each group sits in its own "게시판" board so the daily
    shop reads distinctly from packs/gacha/boosts. */
 .shop-board {
-  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 32%, transparent);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 16px;
-  background: color-mix(in srgb, var(--stage-accent, #8090b0) 6%, #0b0e18);
+  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 20%, transparent);
+  border-radius: 16px;
+  padding: 12px 12px 16px;
+  margin-bottom: 14px;
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 5%, #0b0e18);
 }
+/* Overhaul-4: centered pill section header (clean idle-game look). The optional
+   action (e.g. daily refresh) floats to the right via absolute positioning. */
 .shop-board__head {
+  position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  min-height: 30px;
+  margin-bottom: 12px;
 }
 .shop-board__title {
-  font-family: var(--mono);
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 30%, transparent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--stage-accent, #8090b0) 60%, #f5f7fa);
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--stage-accent, #8090b0) 42%, #f5f7fa);
 }
 .shop-board--daily {
-  border-width: 2px;
-  border-color: color-mix(in srgb, var(--stage-accent, #8090b0) 55%, transparent);
-  background:
-    repeating-linear-gradient(45deg, transparent, transparent 9px, color-mix(in srgb, var(--stage-accent, #8090b0) 4%, transparent) 9px, color-mix(in srgb, var(--stage-accent, #8090b0) 4%, transparent) 10px),
-    color-mix(in srgb, var(--stage-accent, #8090b0) 9%, #0b0e18);
+  border-color: color-mix(in srgb, var(--stage-accent, #8090b0) 38%, transparent);
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 8%, #0b0e18);
 }
 .shop-board--feature {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--stage-accent, #8090b0) 26%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--stage-accent, #8090b0) 22%, transparent);
 }
 .shop-fs__body {
   flex: 1;
@@ -14775,11 +14777,14 @@ button.stat-header-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 12px 8px 10px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 50%, transparent);
-  background: color-mix(in srgb, var(--rarity-color, #8090b0) 10%, rgba(12, 12, 18, 0.72));
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 45%, transparent);
+  /* soft light-from-top grade wash → premium idle-card look */
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--rarity-color, #8090b0) 22%, transparent), transparent 62%),
+    color-mix(in srgb, var(--rarity-color, #8090b0) 8%, rgba(12, 12, 18, 0.78));
   color: var(--fg);
   font: inherit;
   cursor: pointer;
@@ -14796,15 +14801,19 @@ button.stat-header-item {
 .shop-card:not(:disabled):active { transform: scale(0.97); }
 .shop-card:disabled { opacity: 0.5; cursor: not-allowed; }
 .shop-card__price {
-  margin-top: 2px;
-  padding: 3px 10px;
-  border-radius: 999px;
+  margin-top: auto;
+  align-self: stretch;
+  padding: 5px 8px;
+  border-radius: 9px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 800;
-  color: color-mix(in srgb, var(--rarity-color, #cfd6e6) 70%, #f3f1ec);
-  background: color-mix(in srgb, var(--rarity-color, #8090b0) 16%, rgba(255, 255, 255, 0.05));
-  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 30%, transparent);
+  color: color-mix(in srgb, var(--rarity-color, #cfd6e6) 78%, #f3f1ec);
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 20%, rgba(255, 255, 255, 0.04));
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 36%, transparent);
+}
+.shop-card:not(:disabled):hover .shop-card__price {
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 30%, rgba(255, 255, 255, 0.05));
 }
 /* Stone card: only the bit .shop-card doesn't cover (it sits in a flex row). */
 .shop-stone-card { flex: 1; }
@@ -14823,16 +14832,21 @@ button.stat-header-item {
 .shop-fs__daily-head { display: flex; align-items: center; gap: 12px; }
 .shop-fs__daily-head .shop-fs__section-title { flex: 1; }
 .shop-fs__refresh {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--fg);
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 38%, transparent);
+  background: color-mix(in srgb, var(--stage-accent, #8090b0) 14%, transparent);
+  color: #f0f3f8;
   font: inherit;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
-.shop-fs__refresh:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+.shop-fs__refresh:not(:disabled):hover { background: color-mix(in srgb, var(--stage-accent, #8090b0) 24%, transparent); }
 .shop-fs__refresh:disabled { opacity: 0.4; cursor: not-allowed; }
 .shop-fs__daily-grid {
   display: grid;

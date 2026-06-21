@@ -823,7 +823,7 @@ export const SHOP_STONE_PRICE_FRAC = 0.18;
 export const SHOP_REFRESH_FRAC: number[] = [0.05, 0.15, 0.4, 1.0];
 
 /** Daily shop: 8 entity offers/day, rarity by weighted odds (gate-clamped by stage). */
-export const DAILY_SHOP_SLOTS = 8;
+export const DAILY_SHOP_SLOTS = 6; // Overhaul-4: tighter, cleaner daily grid (2×3) per user.
 export const DAILY_SHOP_RARITY_WEIGHTS: Record<EntityRarity, number> = {
   common: 52, rare: 30, epic: 14, legendary: 4, mythic: 0,
 };
