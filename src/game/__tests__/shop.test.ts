@@ -172,32 +172,47 @@ describe('boost background pause (active-time)', () => {
 describe('daily attendance (출석체크, v27)', () => {
   const DAY = 24 * 60 * 60 * 1000;
   const day = (n: number) => 1_700_000_000_000 + n * DAY; // distinct local days
+  const rolls = Array.from({ length: 10 }, () => ({ rarityRoll: 0.5, stageRoll: 0.5, pickRoll: 0.5, q1: 0.5, q2: 0.5 }));
+  const claim = (s: ReturnType<typeof s3>, n: number) => gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(n), rolls });
 
-  it('claim grants the cycle reward, advances the streak, and stamps today', () => {
+  it('day 1 grants stage-relative MATTER (no diamonds), advances streak, stamps today', () => {
     const s = s3();
     expect(s.attendanceStreak).toBe(0);
-    const after = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(0) });
+    const after = claim(s, 0);
     expect(after.attendanceStreak).toBe(1);
     expect(after.attendanceClaimedDate).toBe(toDateKey(day(0)));
-    expect(after.enhanceStones).toBeGreaterThan(s.enhanceStones); // stones granted
-    expect(after.quanta).toBeGreaterThan(s.quanta);               // matter granted
+    expect(after.quanta).toBeGreaterThan(s.quanta);          // matter granted
+    expect(after.enhanceStones).toBe(s.enhanceStones);       // day 1 = matter only
+  });
+
+  it('day 3 grants diamonds (강화석 ≥ 20)', () => {
+    let s = s3();
+    s = claim(s, 0); // day1 matter
+    s = claim(s, 1); // day2 matter
+    const before = s.enhanceStones;
+    s = claim(s, 2); // day3 = 다이아
+    expect(s.enhanceStones - before).toBeGreaterThanOrEqual(20);
   });
 
   it('cannot claim twice in the same local day', () => {
-    const once = gameReducer(s3(), { type: 'CLAIM_ATTENDANCE', now: day(0) });
-    const twice = gameReducer(once, { type: 'CLAIM_ATTENDANCE', now: day(0) + 3600_000 });
-    expect(twice.attendanceStreak).toBe(once.attendanceStreak); // no change
+    const once = claim(s3(), 0);
+    const twice = gameReducer(once, { type: 'CLAIM_ATTENDANCE', now: day(0) + 3600_000, rolls });
+    expect(twice.attendanceStreak).toBe(once.attendanceStreak);
     expect(twice.quanta).toBe(once.quanta);
     expect(twice.enhanceStones).toBe(once.enhanceStones);
   });
 
-  it('claims on consecutive days advance, and the 7-day cycle loops', () => {
+  it('day 7 grants a free gacha box (inventory grows + a reveal event) and the cycle loops', () => {
     let s = s3();
-    for (let d = 0; d < 7; d++) s = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(d) });
-    expect(s.attendanceStreak).toBe(7);          // 7 claims
-    expect(s.attendanceStreak % 7).toBe(0);      // cycle wrapped back to day 1
-    // day 8 keeps giving (loops) — claims again fine
-    const d8 = gameReducer(s, { type: 'CLAIM_ATTENDANCE', now: day(7) });
+    for (let d = 0; d < 6; d++) s = claim(s, d); // days 1–6
+    const invBefore = s.inventory.length;
+    s = claim(s, 6); // day 7 = box gift
+    expect(s.attendanceStreak).toBe(7);
+    expect(s.attendanceStreak % 7).toBe(0);           // cycle wrapped
+    expect(s.inventory.length).toBeGreaterThan(invBefore); // box items granted
+    expect(s.lastGachaEvent?.items.length).toBeGreaterThan(0);
+    // day 8 keeps giving (loops back to day 1 matter)
+    const d8 = claim(s, 7);
     expect(d8.attendanceStreak).toBe(8);
   });
 });

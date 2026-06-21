@@ -152,7 +152,7 @@ export type GameAction =
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
   | { type: 'BUY_ENHANCE_STONES'; count: number }
-  | { type: 'CLAIM_ATTENDANCE'; now: number }
+  | { type: 'CLAIM_ATTENDANCE'; now: number; rolls: Array<{ rarityRoll: number; stageRoll: number; pickRoll: number; q1: number; q2: number }> }
   | { type: 'BUY_DAILY_ITEM'; slot: number; now: number }
   | { type: 'REFRESH_DAILY_SHOP'; now: number }
   // #43 gacha: rolls injected at dispatch (Math.random()) so the reducer stays pure.

@@ -145,6 +145,7 @@ export const STRINGS = {
   attendanceTitle:  { en: 'Daily Check-in', ko: '출석 체크' },
   attendanceClaim:  { en: 'Check in', ko: '출석하기' },
   attendanceClaimedToday: { en: 'Checked in today ✓', ko: '오늘 출석 완료 ✓' },
+  attendanceBoxGift: { en: 'Nebula Box', ko: '성운 상자' },
   lockUntilStage:   { en: 'Unlocks at Stage {n}', ko: '스테이지 {n}에서 해제' },
   questMilestoneToast:    { en: 'Era record ready', ko: '시대기록 해금 가능' },
   questMilestoneToastCta: { en: 'Tap to claim', ko: '탭하여 수령' },

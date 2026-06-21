@@ -830,14 +830,14 @@ export const SHOP_REFRESH_FRAC: number[] = [0.05, 0.15, 0.4, 1.0];
  * are occasional login bonuses (NOT continuous income), so the gear-only economy +
  * entropy gate are unaffected.
  */
-export const ATTENDANCE_REWARDS: { matterAnchorMult: number; stones: number }[] = [
-  { matterAnchorMult: 0.3, stones: 1 },  // Day 1
-  { matterAnchorMult: 0.5, stones: 2 },  // Day 2
-  { matterAnchorMult: 0.8, stones: 2 },  // Day 3
-  { matterAnchorMult: 1.0, stones: 3 },  // Day 4
-  { matterAnchorMult: 1.4, stones: 4 },  // Day 5
-  { matterAnchorMult: 1.8, stones: 5 },  // Day 6
-  { matterAnchorMult: 3.0, stones: 12 }, // Day 7 — the gift
+export const ATTENDANCE_REWARDS: { matterAnchorMult: number; stones: number; gachaBoxId?: string }[] = [
+  { matterAnchorMult: 0.6, stones: 0 },                  // Day 1 — stage-relative matter
+  { matterAnchorMult: 1.0, stones: 0 },                  // Day 2 — stage-relative matter
+  { matterAnchorMult: 0, stones: 20 },                   // Day 3 — 강화석(다이아)
+  { matterAnchorMult: 0, stones: 30 },                   // Day 4
+  { matterAnchorMult: 0, stones: 45 },                   // Day 5
+  { matterAnchorMult: 0, stones: 60 },                   // Day 6
+  { matterAnchorMult: 0, stones: 0, gachaBoxId: 'box_bright' }, // Day 7 — a free 찬란한 성운 box
 ];
 
 /** Daily shop: entity offers/day, rarity by weighted odds (gate-clamped by stage). */

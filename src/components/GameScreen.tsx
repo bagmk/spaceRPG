@@ -1165,7 +1165,7 @@ export function GameScreen({
           state={state}
           language={language}
           onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playQuestClaim(); }}
-          onClaimAttendance={() => { dispatch({ type: 'CLAIM_ATTENDANCE', now: Date.now() }); soundManager?.playQuestClaim(); }}
+          onClaimAttendance={() => { dispatch({ type: 'CLAIM_ATTENDANCE', now: Date.now(), rolls: Array.from({ length: 10 }, () => ({ rarityRoll: Math.random(), stageRoll: Math.random(), pickRoll: Math.random(), q1: Math.random(), q2: Math.random() })) }); soundManager?.playQuestClaim(); }}
           onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}

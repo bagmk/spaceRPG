@@ -43,15 +43,35 @@ export function handleClaimAttendance(state: GameState, action: ClaimAttendanceA
   const today = toDateKey(action.now);
   if (state.attendanceClaimedDate === today) return state; // already claimed today
   const reward = ATTENDANCE_REWARDS[state.attendanceStreak % ATTENDANCE_REWARDS.length];
-  const playerStageId = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
-  const matter = Math.ceil(reward.matterAnchorMult * (ENTITY_COST_ANCHORS[playerStageId as keyof typeof ENTITY_COST_ANCHORS] ?? 1));
-  return {
+  const stage = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
+  const matter = Math.ceil(reward.matterAnchorMult * (ENTITY_COST_ANCHORS[stage as keyof typeof ENTITY_COST_ANCHORS] ?? 1));
+  let next: GameState = {
     ...state,
     quanta: state.quanta + matter,
     enhanceStones: state.enhanceStones + reward.stones,
     attendanceStreak: state.attendanceStreak + 1,
     attendanceClaimedDate: today,
   };
+  // Day-7 gift: a FREE gacha box (the shop "package") — roll its haul + show the
+  // reveal (rollBoxHaul is hoisted below; rolls ride the action like OPEN_GACHA_BOX).
+  if (reward.gachaBoxId) {
+    const box = GACHA_BOXES.find((b) => b.id === reward.gachaBoxId);
+    if (box && action.rolls.length > 0) {
+      const haul = rollBoxHaul(next, box, action.rolls);
+      if (haul.items.length > 0) {
+        const eventId = nextEventId(next);
+        next = {
+          ...next,
+          inventory: haul.inventory,
+          almanacCollected: haul.almanacCollected,
+          enhanceStones: Math.max(0, next.enhanceStones + haul.stonesEarned),
+          eventCounter: eventId,
+          lastGachaEvent: { id: eventId, items: haul.items, stonesEarned: haul.stonesEarned, boxId: box.id },
+        };
+      }
+    }
+  }
+  return next;
 }
 
 const RARITY_LADDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
@@ -180,24 +200,18 @@ export function handleSyncDailyShop(state: GameState, action: SyncDailyShopActio
  * the #50 quality roll, add it to inventory/almanac, and stash a transient
  * lastGachaEvent for the single-card reveal. A pure MATTER sink — unlimited.
  */
-export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction): GameState {
-  if (!isCashShopUnlocked(state)) return state;
-  const box = GACHA_BOXES.find((b) => b.id === action.boxId);
-  if (!box) return state;
+/**
+ * Roll a box's HAUL of gachaItemCount(rank) entities + flat 강화석 (each item rolls
+ * independently from the box odds; rolls injected at dispatch). Pure — NO cost or
+ * unlock check; shared by paid opens AND the free day-7 attendance gift.
+ */
+function rollBoxHaul(state: GameState, box: typeof GACHA_BOXES[number], rolls: OpenGachaBoxAction['rolls']) {
   const stage = playerStageId(state);
-  const cost = gachaBoxMatterCost(box.id, stage);
-  if (cost <= 0 || state.quanta < cost) return state;
-
-  // A7: a box yields a HAUL of gachaItemCount(rank) entities + 강화석. Each item
-  // rolls independently from the box odds (one roll set per item, injected at dispatch).
-  const wantCount = gachaItemCount(box.rank);
-  const rolls = action.rolls.slice(0, wantCount);
-  if (rolls.length === 0) return state;
-
+  const used = rolls.slice(0, gachaItemCount(box.rank));
   let inventory = state.inventory;
   let almanacCollected = state.almanacCollected;
   const items: GachaPullItem[] = [];
-  for (const r of rolls) {
+  for (const r of used) {
     const rolledRarity = clampRarityToStage(weightedRarityPick(box.odds, r.rarityRoll), stage);
     const poolStage = pickDropStage(stage, r.stageRoll, state.almanacCollected);
     const entity =
@@ -209,18 +223,28 @@ export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction)
     almanacCollected = addToAlmanac(almanacCollected, entity.stageId, entity.id);
     items.push({ entityId: entity.id, quality });
   }
-  if (items.length === 0) return state;
+  return { inventory, almanacCollected, items, stonesEarned: GACHA_STONES_BY_RANK[box.rank] ?? 0 };
+}
 
-  const stonesEarned = GACHA_STONES_BY_RANK[box.rank] ?? 0;
+export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction): GameState {
+  if (!isCashShopUnlocked(state)) return state;
+  const box = GACHA_BOXES.find((b) => b.id === action.boxId);
+  if (!box) return state;
+  const cost = gachaBoxMatterCost(box.id, playerStageId(state));
+  if (cost <= 0 || state.quanta < cost) return state;
+  if (action.rolls.length === 0) return state;
+
+  const haul = rollBoxHaul(state, box, action.rolls);
+  if (haul.items.length === 0) return state;
   const eventId = nextEventId(state);
   return {
     ...state,
     quanta: state.quanta - cost,
-    inventory,
-    almanacCollected,
-    enhanceStones: Math.max(0, state.enhanceStones + stonesEarned),
+    inventory: haul.inventory,
+    almanacCollected: haul.almanacCollected,
+    enhanceStones: Math.max(0, state.enhanceStones + haul.stonesEarned),
     eventCounter: eventId,
-    lastGachaEvent: { id: eventId, items, stonesEarned, boxId: box.id },
+    lastGachaEvent: { id: eventId, items: haul.items, stonesEarned: haul.stonesEarned, boxId: box.id },
   };
 }
 
