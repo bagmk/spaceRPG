@@ -47,6 +47,15 @@ export interface Modifiers {
   autoRateMult: number;
   autoRateAdd: number;
   autoRateFlatAdd: number;
+  /**
+   * GEAR-ONLY ECONOMY CRANK (2026-06-21): the TAME (pre-crank) auto flat add that
+   * feeds the ENTROPY gate ONLY — keeps progression pacing exactly as calibrated
+   * while autoRateFlatAdd carries the player-stage-anchored WALLET income crank.
+   * Decouples auto wallet income (affords the shop) from auto entropy (progression),
+   * the same way clickMatterMult decouples click matter from click entropy. The
+   * entropy tick reads THIS, never the cranked autoRateFlatAdd. Default 0.
+   */
+  autoEntropyFlatAdd: number;
   critChanceAdd: number;
   critChanceCapAdd: number;
   critMultMult: number;
@@ -92,6 +101,7 @@ export function defaultModifiers(): Modifiers {
     autoRateMult: 1,
     autoRateAdd: 0,
     autoRateFlatAdd: 0,
+    autoEntropyFlatAdd: 0,
     critChanceAdd: 0,
     critChanceCapAdd: 0,
     critMultMult: 1,

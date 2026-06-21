@@ -5,6 +5,7 @@ import { COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
 import {
   safeAdd,
   getAutoRate,
+  getAutoEntropyRate,
   getComboMult,
   getCosmicTimeFillRate,
   getCritChance,
@@ -85,16 +86,23 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
   const progress = getProgress(state.quanta, effectiveThreshold);
   const baseAuto = getAutoRate(modifiers);
+  // GEAR-ONLY ECONOMY CRANK (2026-06-21): the TAME (pre-crank) auto rate feeds the
+  // ENTROPY gate so progression pacing is unchanged; the cranked baseAuto feeds the
+  // WALLET so auto income affords the shop. Mirrors clickMatterMult ↔ entropy split.
+  const baseAutoEntropy = getAutoEntropyRate(modifiers);
   const matterBoost = getActiveShopBoostMultiplier(activeBoosts, 'matter', action.now);
   const timeBoost = getActiveShopBoostMultiplier(activeBoosts, 'time', action.now);
   const simulatedDtSec = (action.dt / 1000) * timeBoost;
-  const stageAutoBonus =
+  const autoBonusFactor =
     stage.mechanic === 'reionization'
-      ? baseAuto * state.mechanicCharge * 0.5
+      ? state.mechanicCharge * 0.5
       : stage.mechanic === 'first_stars'
-        ? baseAuto * Math.min(1.5, state.mechanicCharge * 0.12)
+        ? Math.min(1.5, state.mechanicCharge * 0.12)
         : 0;
+  const stageAutoBonus = baseAuto * autoBonusFactor;
   const gained = canAccrue ? (baseAuto + stageAutoBonus) * simulatedDtSec * matterBoost : 0;
+  // Tame auto matter delta for the entropy gate (same bonus factor, tame base).
+  const gainedEntropy = canAccrue ? (baseAutoEntropy * (1 + autoBonusFactor)) * simulatedDtSec * matterBoost : 0;
   // Fill time gauge at gaugeRate%/s regardless of the absolute cosmic-time span.
   // This prevents mid-game stages (6+) from becoming impossible to complete.
   const gaugeRate = getCosmicTimeFillRate(modifiers, 1, state.stageIdx + 1);
@@ -123,7 +131,8 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   const quantaDelta = walletAuto + tickQuantaDelta;
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
-  const tameAutoNextQuanta = safeAdd(state.quanta, gained + tickQuantaDelta);
+  // Entropy rides the TAME auto delta (gainedEntropy), NOT the cranked wallet `gained`.
+  const tameAutoNextQuanta = safeAdd(state.quanta, gainedEntropy + tickQuantaDelta);
   const entropyFromMatter = canAccrue
     ? getEntropyFromMatterGain(state.quanta, tameAutoNextQuanta, effectiveThreshold, 'auto') *
       entropyEchoMult * modifiers.entropyGainMult

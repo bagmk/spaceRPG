@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DROP_CURRENT_STAGE_WEIGHT, ENTITY_COST_ANCHORS, ENTITY_BASE_COST_FACTOR, FUSION_BURST_REF_COST_FRAC } from '../balance';
 import { pickDropStage, pickEntityByRarity, rollEntityDrop } from '../entities/drops';
 import { consumeFusionInputs, getFusionQuantaCost, pickFusionOutput } from '../entities/fusion';
-import { getEffectiveCount, getAutoOutputAnchor } from '../entities/effects';
+import { getEffectiveCount, getAutoOutputAnchor, getTameAutoOutputAnchor } from '../entities/effects';
 import { getEntityCost, getPlayerAnchoredBaseCost } from '../entities/types';
 import { getEnhanceCost } from '../entities/enhance';
 import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
@@ -89,16 +89,23 @@ describe('Phase 4-1: economy re-anchors', () => {
     expect(getEnhanceCost(s1Legendary, 1, 16)).toBe(getEnhanceCost(s1Legendary, 1, 1));
   });
 
-  it('auto anchor is fixed across player stages (P0: per-stage scaling removed)', () => {
+  it('auto WALLET anchor tracks the player stage; the TAME entropy anchor stays fixed', () => {
+    // GEAR-ONLY ECONOMY CRANK (2026-06-21): the dead late-game auto channel is fixed.
+    // The WALLET anchor (getAutoOutputAnchor) NOW scales with the player-stage cost
+    // anchor so auto income affords the shop ladder; the ENTROPY-feeding anchor
+    // (getTameAutoOutputAnchor) stays stage-1-pinned so progression pacing is unchanged.
     const s1Auto = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'auto')!;
     const atP1 = getAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 });
     const atP5 = getAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 });
-    // base^E collapsed to 1.0 — the anchor no longer grows with the player stage.
-    expect(atP5 / atP1).toBeCloseTo(1, 5);
-    // A late-origin item is likewise stage-invariant now.
+    // Wallet anchor grows with the player anchor ladder (anchor[5]/anchor[1]).
+    expect(atP5 / atP1).toBeCloseTo(ENTITY_COST_ANCHORS[5] / ENTITY_COST_ANCHORS[1], 5);
+    // The TAME entropy anchor is player-stage-invariant (gate untouched).
+    expect(getTameAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 }))
+      .toBeCloseTo(getTameAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 }), 5);
+    // A late-origin item: its tame entropy anchor is likewise player-stage-invariant.
     const s13Auto = STAGE_ENTITIES.find((e) => e.stageId === 13 && e.effect.type === 'auto')!;
-    expect(getAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }))
-      .toBeCloseTo(getAutoOutputAnchor(s13Auto, { stageId: 13, gateProgress01: 0 }), 5);
+    expect(getTameAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }))
+      .toBeCloseTo(getTameAutoOutputAnchor(s13Auto, { stageId: 13, gateProgress01: 0 }), 5);
   });
 
   it('P6: fusing away every copy drops the entry entirely (no near-free permanent levels)', () => {

@@ -24,7 +24,7 @@ import {
   type SecondaryStatType,
 } from '../game/balance';
 import { computeHexBingo } from '../game/entities/hexBingo';
-import { getAutoOutputAnchor, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
+import { getAutoOutputAnchor, getEffectiveCount, getEnhanceGeoLevelMult, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
@@ -100,10 +100,13 @@ function formatPct(value: number): string {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
-// Labels share the EXACT applied formula (entities/effects.ts) — anchor + soft-capped count + level.
+// Labels share the EXACT applied formula (entities/effects.ts) — anchor + soft-capped
+// count + GEOMETRIC level term (getEnhanceGeoLevelMult). GEAR-ONLY ECONOMY CRANK
+// (2026-06-21): mirrors the auto branch's switch to player-stage anchor + geo level.
 function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1, carried = false): number {
   const effCount = getEffectiveCount(count, entity.maxCount, false);
-  return Math.max(0, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * getLevelMult(level)) / 100);
+  const geoLevelMult = getEnhanceGeoLevelMult(entity.rarity, level);
+  return Math.max(0, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {

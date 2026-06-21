@@ -40,7 +40,7 @@ import {
   HEX_WILD_UNLOCK_STAGE,
 } from '../balance';
 import { getEntityCost } from '../entities/types';
-import { getAutoRate, getEntropyGateFloor, safeAdd } from '../formulas';
+import { getAutoEntropyRate, getEntropyGateFloor, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
@@ -304,7 +304,10 @@ function fuseOnce(
   const burstRefCost = FUSION_ENHANCE_COST_BASE * FUSION_BURST_REF_COST_FRAC;
   const burstCostScale = burstRefCost > 0 ? Math.min(1, cost / burstRefCost) : 1;
   const rawBurst =
-    getFusionEntropyBurst(getAdjustedClickPower(state), getAutoRate(fusionModifiers)) *
+    // GEAR-ONLY ECONOMY CRANK (2026-06-21): the burst's auto reference uses the TAME
+    // (pre-crank) auto rate so the player-stage wallet crank never inflates the
+    // entropy burst (gate untouched; also still span-capped below).
+    getFusionEntropyBurst(getAdjustedClickPower(state), getAutoEntropyRate(fusionModifiers)) *
     fusionModifiers.fusionBurstMult *
     entropyEchoMult *
     burstCostScale *

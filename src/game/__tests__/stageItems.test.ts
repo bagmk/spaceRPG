@@ -3,7 +3,7 @@ import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE, AUTO_GEAR_INCOME_SCALE } from '../balance';
 import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -218,11 +218,14 @@ describe('stage entity definitions', () => {
     // Player on the Sun's own stage (10): E = max(9, 9) = 9 — origin parity.
     applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }], { stageId: 10, gateProgress01: 0 });
 
-    // Auto output anchor: rarity weight within the origin stage times the
-    // shared player-anchored growth curve — NOT multiplied by autoRateMult.
+    // GEAR-ONLY ECONOMY CRANK (2026-06-21): the auto WALLET flat add is the
+    // PLAYER-stage-anchored income (getAutoOutputAnchor), still NOT multiplied by
+    // autoRateMult (the property this test guards). At player stage 10 the rarity
+    // weight's stage-10 anchor cancels, leaving sun.baseCost × SCALE × value/100.
     const expectedFlat =
       (sun.baseCost / ENTITY_COST_ANCHORS[10]) *
-      ENTITY_COST_ANCHORS[1] *
+      ENTITY_COST_ANCHORS[10] *
+      AUTO_GEAR_INCOME_SCALE *
       Math.pow(AUTO_STAGE_POWER_BASE, 9) *
       (sun.effect.value / 100);
     expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(expectedFlat, 0);

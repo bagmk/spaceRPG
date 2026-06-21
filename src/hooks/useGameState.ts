@@ -4,6 +4,7 @@ import { clearSave, loadGame, SAVE_BACKUP_V16_KEY, saveGame } from '../game/stor
 import { TUNING } from '../game/constants';
 import {
   getAutoRate,
+  getAutoEntropyRate,
   getCosmicTimeFillRate,
   getEffectiveThreshold,
   getEntropyFromMatterGain,
@@ -129,7 +130,13 @@ export function useGameState(): UseGameStateResult {
       const nextQuanta = safeAdd(baseState.quanta, gained);
       const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
       const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
-      const autoEntropy = getEntropyFromMatterGain(baseState.quanta, nextQuanta, effectiveThreshold, 'auto') * entropyEchoMult * modifiers.entropyGainMult;
+      // GEAR-ONLY ECONOMY CRANK (2026-06-21): offline entropy rides the TAME auto
+      // rate (getAutoEntropyRate), not the cranked wallet rate — so the player-stage
+      // auto income crank affords the shop offline too WITHOUT accelerating the gate
+      // (progression pacing unchanged, mirrors the live tick split).
+      const tameGained = getAutoEntropyRate(modifiers) * boostedMatterSec * offlineMultiplier;
+      const tameNextQuanta = safeAdd(baseState.quanta, tameGained);
+      const autoEntropy = getEntropyFromMatterGain(baseState.quanta, tameNextQuanta, effectiveThreshold, 'auto') * entropyEchoMult * modifiers.entropyGainMult;
       // Offline entropy floor (Phase 4-4 idle floor): a no-auto build (e.g.
       // click-only, no rift gear) still inches the gate forward. Floor =
       // OFFLINE_ENTROPY_FLOOR_FRAC of the current stage's gate span per full

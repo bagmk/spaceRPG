@@ -304,6 +304,18 @@ export function getAutoRate(mods: Modifiers): number {
   return Math.max(0, ((AUTO_RATE_BASE + mods.autoRateAdd) * mods.autoRateMult + mods.autoRateFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
 }
 
+/**
+ * GEAR-ONLY ECONOMY CRANK (2026-06-21): the TAME auto rate that feeds the ENTROPY
+ * gate. Identical to getAutoRate EXCEPT the gear flat add uses autoEntropyFlatAdd
+ * (the pre-crank, stage-1-pinned value) instead of the cranked autoRateFlatAdd —
+ * so progression pacing is exactly as calibrated while the wallet (getAutoRate)
+ * carries the player-stage income crank. Base auto + auto-speed are identical in
+ * both, so a gearless / pre-crank loadout has getAutoEntropyRate === getAutoRate.
+ */
+export function getAutoEntropyRate(mods: Modifiers): number {
+  return Math.max(0, ((AUTO_RATE_BASE + mods.autoRateAdd) * mods.autoRateMult + mods.autoEntropyFlatAdd * mods.autoFlatMult) * AUTO_OUTPUT_MULTIPLIER);
+}
+
 export function getCritMultiplier(mods: Modifiers): number {
   return 1.5 * mods.critMultMult * mods.apexMult;
 }

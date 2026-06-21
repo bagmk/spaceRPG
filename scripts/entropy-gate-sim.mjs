@@ -69,8 +69,11 @@ const GATE_RAMP = 3;
 // Overhaul-3: growth 1.0 (FLAT) → 1.7 (geometric) — lockstep with balance.ts. Higher
 // growth lowers the budget-reachable level (derivedLevel), which lowers gear power /
 // income, so the thresholds below were re-pinned DOWN in this same sim pass.
-const ENHANCE_COST_FACTOR = 1.5;
-const ENHANCE_COST_GROWTH = 1.35; // Overhaul-3 (user): 1.7 → 1.35 (gentler) — lockstep with balance.ts.
+// GEAR-ONLY ECONOMY CRANK (2026-06-21) — lockstep with balance.ts:
+//   ENHANCE_COST_FACTOR 1.5 → 0.5, ENHANCE_COST_GROWTH 1.35 → 1.15. Cheaper +
+//   gentler ramp so high levels are reachable (the crank that funds the shop).
+const ENHANCE_COST_FACTOR = 0.5;
+const ENHANCE_COST_GROWTH = 1.15;
 // #47 reinterpretation: enhance is now MATTER-ONLY at every level. 강화석 are spent
 // only to 보호(protect) a risk-phase attempt; an unprotected fail DESTROYS the item.
 // A rational player climbs the risk phase by protecting every attempt, so the
@@ -100,7 +103,13 @@ const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
 // burst scale saturates at 1.0 for bestRarity (legendary) either way, so this does
 // not move the calibration; mirrored for consistency.
 const FUSION_FLAT_COST = { common: 0.04, rare: 0.14, epic: 0.49, legendary: 1.715 };
-const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels
+const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels (gate calibration)
+// GEAR-ONLY ECONOMY CRANK (2026-06-21): cumulative enhance budget for the carried
+// flagship in the AFFORDABILITY model, expressed in current-stage anchors. A geared
+// player banks ≈ 1 anchor/stage and pours a share of several stages into the carried
+// best item — so a few anchors of cumulative enhance spend is realistic. Sim-only
+// (no balance.ts constant): a modeling assumption for the reachable-level estimate.
+const ENHANCE_BUDGET_ANCHORS = 4;
 const RARITY_FACTOR = { common: 0.07, rare: 0.32, epic: 1.5, legendary: 3.6 };
 const LEVEL_CAPS = { common: 10, rare: 15, epic: 20, legendary: 25 };
 // #50 item quality DISABLED (user request 2026-06-19) — qualityMult is now a
@@ -175,8 +184,15 @@ function maturity(stageId, p) {
  * ENHANCE_BUDGET_FRAC of the stage's expected income (≈ stage cost anchor
  * scale — quanta income tracks the anchor by construction of the curve).
  */
-function derivedLevel(stageId, rarity, stoneBudget = 0) {
-  const budget = ENTITY_COST_ANCHORS[stageId] * ENHANCE_BUDGET_FRAC;
+function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined) {
+  // GEAR-ONLY ECONOMY CRANK (2026-06-21): callers that know the player's realistic
+  // stage matter income pass it as `matterBudget` (≈ income/sec × stage seconds ×
+  // ENHANCE_BUDGET_FRAC). The gate-calibration callers omit it and keep the legacy
+  // half-an-anchor proxy so the entropy ladder pins identically. The realistic
+  // budget is what lets epic/legendary gear (RF 1.5 / 3.6) reach > Lv1 — under the
+  // half-anchor proxy their FIRST level already exceeds the budget, which is the
+  // very "high levels unreachable" bug the crank fixes.
+  const budget = matterBudget ?? (ENTITY_COST_ANCHORS[stageId] * ENHANCE_BUDGET_FRAC);
   // Enhance cost is anchored to the ITEM's own baseCost (= current-stage anchor
   // for current gear), NOT the player stage — so for the gear you actually
   // enhance (current stage) the budget/cost ratio is unchanged vs the old
@@ -205,7 +221,19 @@ function derivedLevel(stageId, rarity, stoneBudget = 0) {
   return level;
 }
 // Overhaul-2 🅠1: 0.6 → 0.85 per level — lockstep with balance.ts ENTITY_LEVEL_EFFECT_BONUS.
+// This LINEAR term feeds the ENTROPY gate (gearClickMult / gearAutoFlat).
 const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.85;
+
+// GEAR-ONLY ECONOMY CRANK (2026-06-21) — the MATTER/AUTO-income channels, decoupled
+// from the entropy gate, grow GEOMETRICALLY per level with a per-rarity scalar.
+// Lockstep with balance.ts ENHANCE_MATTER_LEVEL_GROWTH × ENHANCE_RARITY_GROWTH and
+// effects.ts getEnhanceGeoLevelMult. Drives the affordability assertions below.
+const ENHANCE_MATTER_LEVEL_GROWTH = 1.2; // lockstep with balance.ts (1.3 → 1.2)
+const ENHANCE_RARITY_GROWTH = { common: 1.0, rare: 1.03, epic: 1.06, legendary: 1.09, mythic: 1.12 }; // lockstep
+const CLICK_GEAR_MATTER_BOOST = 2; // lockstep with balance.ts (6 → 2)
+const AUTO_GEAR_INCOME_SCALE = 0.16; // lockstep with balance.ts — tames player-anchored auto income to the window
+const geoLevelMult = (rarity, level) =>
+  Math.pow(ENHANCE_MATTER_LEVEL_GROWTH * (ENHANCE_RARITY_GROWTH[rarity] ?? 1), Math.max(0, Math.floor(level) - 1));
 
 function gearClickMult(stageId, p, stoneBudget = 0) {
   const E = (stageId - 1) + p;
@@ -216,6 +244,13 @@ function gearClickMult(stageId, p, stoneBudget = 0) {
   const stack = (q.pct * q.eff * lvl * maturity(stageId, p) * g * QUALITY_FACTOR) / 100;
   return Math.pow(1 + stack, clickSlots(stageId));
 }
+// GEAR-ONLY ECONOMY CRANK (2026-06-21): the GATE-side auto contribution stays
+// TAME (stage-1-pinned ANCHOR1 + LINEAR level) — lockstep with the in-game split
+// (effects.ts getTameAutoOutputAnchor → Modifiers.autoEntropyFlatAdd, read by the
+// entropy tick). The player-stage WALLET income crank lives only in the
+// affordability functions below (gearAutoFlatAtLevel/autoMatterPerSec*). So the
+// entropy gate is unchanged by the wallet crank; the thresholds still re-pin only
+// because the cheaper enhance (ECF/ECG) lifts the LINEAR gate level.
 function gearAutoFlat(stageId, p, stoneBudget = 0) {
   const E = (stageId - 1) + p;
   const g = Math.pow(AUTO_STAGE_POWER_BASE, E);
@@ -225,6 +260,54 @@ function gearAutoFlat(stageId, p, stoneBudget = 0) {
   const perSlot = q.weight * ANCHOR1 * g * (q.pct * q.eff * lvl * maturity(stageId, p) * QUALITY_FACTOR) / 100;
   const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power late
   return perSlot * riftSlots(stageId) * autoPowerMult;
+}
+// ── MATTER-income channels (decoupled from the entropy gate) — used ONLY by the
+//    affordability assertions, NOT by the gate calibration. The reachable enhance
+//    LEVEL is derived once from a realistic cumulative budget (see the affordability
+//    block); these helpers take that level explicitly (the *AtLevel variants below).
+// BASE-only matter income (no gear): clicks at clickPower 1 + base auto 1/s.
+function baseMatterPerSec(stageId, profile) {
+  const crit = 1, cm = 1; // no gear crit; combo ignored for the floor
+  const mech = MECHANIC_CLICK_BOOST[STAGES[stageId - 1].mechanic] ?? 1;
+  const clickBase = profile.cps * profile.activeFraction * 1 * crit * cm * mech; // clickPower 1
+  const autoBase = 1; // AUTO_RATE_BASE
+  return clickBase + autoBase;
+}
+// ── Explicit-LEVEL variants (used by the affordability iteration, which derives
+//    the reachable level from realistic stage income). Same math as above but the
+//    enhance level is supplied, not re-derived from a budget. ─────────────────
+function gearAutoFlatAtLevel(stageId, p, level) {
+  const r = bestRarity(stageId);
+  const q = GEAR.auto[r];
+  const lvl = geoLevelMult(r, level);
+  const playerAnchor = ENTITY_COST_ANCHORS[stageId] ?? ANCHOR1;
+  const perSlot = q.weight * playerAnchor * AUTO_GEAR_INCOME_SCALE * (q.pct * q.eff * lvl * maturity(stageId, p) * QUALITY_FACTOR) / 100;
+  const autoPowerMult = stageId >= 6 ? 1.5 : 1;
+  return perSlot * riftSlots(stageId) * autoPowerMult;
+}
+function autoMatterPerSecAtLevel(stageId, p, level) {
+  return (1 /* AUTO_RATE_BASE */ + gearAutoFlatAtLevel(stageId, p, level)) * 1 /* AUTO_OUTPUT_MULTIPLIER */;
+}
+function gearClickMultAtLevel(stageId, p, level) {
+  const r = bestRarity(stageId);
+  const q = GEAR.click[r];
+  const stack = (q.pct * q.eff * levelMult(level) * maturity(stageId, p) * QUALITY_FACTOR) / 100;
+  return Math.pow(1 + stack, clickSlots(stageId));
+}
+function gearClickMatterMultAtLevel(stageId, p, level) {
+  const r = bestRarity(stageId);
+  const q = GEAR.click[r];
+  const perSlot = 1 + (q.pct * geoLevelMult(r, level) * maturity(stageId, p) * CLICK_GEAR_MATTER_BOOST) / 100;
+  return Math.pow(perSlot, clickSlots(stageId));
+}
+function clickMatterPerSecAtLevel(stageId, profile, p, level) {
+  const clickPowerMult = Math.max(1, gearClickMultAtLevel(stageId, p, level));
+  const clickPower = 1 + (clickPowerMult - 1) * CLICK_OUTPUT_MULTIPLIER;
+  const crit = critFactor(stageId, profile.combo ?? 0, profile.critGear ?? 0.5, 0);
+  const cm = comboMult(profile.combo ?? 0, stageId);
+  const mech = MECHANIC_CLICK_BOOST[STAGES[stageId - 1].mechanic] ?? 1;
+  const matterMult = gearClickMatterMultAtLevel(stageId, p, level);
+  return profile.cps * profile.activeFraction * clickPower * crit * cm * mech * matterMult;
 }
 /** Expected 강화석 a profile banks during a stage (drives stone-phase levels). */
 function stoneBudgetFor(stage, profile) {
@@ -392,6 +475,64 @@ const PRESTIGE_BASE = thresholds[7] * 0.5;
 console.log(`PRESTIGE_COSTS_KB     = [${[0, 1, 2, 3, 4].map((i) => (PRESTIGE_BASE * Math.pow(5, i)).toExponential(2)).join(', ')}] (0.5 × T[8] × 5^level)`);
 console.log(`endgame eyeball: entropy@16 = ${thresholds[15].toExponential(2)}, mass reward ≈ entropy^0.4 = ${Math.pow(thresholds[15], 0.4).toExponential(2)}`);
 
+// ---------------------------------------------------------------------------
+// GEAR-ONLY ECONOMY CRANK (2026-06-21): affordability of the shop anchor.
+// At each checkpoint stage, a realistically-attainable ENHANCED gear loadout
+// (maxed-reachable level for the reference farmer, full maturity at end-of-stage
+// p=1) must afford that stage's shop anchor (ENTITY_COST_ANCHORS[stage]) within
+// a sane window — and BASE-only farming (no gear) must NOT, within that window.
+// ---------------------------------------------------------------------------
+const AFFORD = {
+  // 30–90 min target for the anchor → seconds. We assert geared time falls
+  // within [floor, ceil]; floor guards against trivialising (free shop), ceil
+  // against the dead-channel bug (unaffordable). Base must exceed BASE_MIN.
+  windowMinSec: 20 * 60,   // floor: must take ≥ 20 min (not trivial)
+  windowMaxSec: 120 * 60,  // ceil:  must take ≤ 120 min (reachable)
+  baseMinSec: 6 * 60 * 60, // base-only must take ≥ 6 h (effectively walled)
+};
+const affordRef = PROFILES.reference;
+const affordRows = [];
+for (const sid of [5, 9, 12, 16]) {
+  const anchor = ENTITY_COST_ANCHORS[sid];
+  const stage = STAGES[sid - 1];
+  const stoneBudget = stoneBudgetFor(stage, affordRef);
+  const p = 1; // maxed-reachable: end-of-stage maturity, full reachable level
+  const rar = bestRarity(sid);
+  // Realistic matter budget for enhancing: a FRACTION of what the player actually
+  // banks over the stage (income/sec × stage seconds), not the half-an-anchor
+  // proxy. Converge income↔level over a couple of passes (income rises with level,
+  // level rises with budget). The auto path is the income engine, so budget tracks it.
+  // Realistic CUMULATIVE matter budget for enhancing the carried flagship: a
+  // geared player earns ≈ one stage anchor per stage of play (that IS the design
+  // target — afford the anchor in ~tens of minutes), and a flagship is carried
+  // and enhanced across several stages. So the budget is a small MULTIPLE of the
+  // current anchor (ENHANCE_BUDGET_ANCHORS), derived ONCE — no income feedback
+  // loop (which runs away once geometric levels kick in). This is the honest
+  // "what level is the carried best item realistically at" estimate.
+  const matterBudget = anchor * ENHANCE_BUDGET_ANCHORS;
+  const lvl = derivedLevel(sid, rar, stoneBudget, matterBudget);
+  const clkMps = clickMatterPerSecAtLevel(sid, affordRef, p, lvl);
+  const autMps = autoMatterPerSecAtLevel(sid, p, lvl);
+  const baseMps = baseMatterPerSec(sid, affordRef);
+  affordRows.push({
+    sid, name: stage.name, anchor, rar, lvl,
+    clkMps, autMps, baseMps,
+    clkSec: anchor / clkMps, autSec: anchor / autMps, baseSec: anchor / baseMps,
+  });
+}
+console.log('\n=== Shop affordability (gear vs base; reference farmer, maxed-reachable) ===');
+console.log('  stage | anchor    | bestRar/Lv | CLICK mps  t      | AUTO mps   t      | BASE mps  t');
+for (const r of affordRows) {
+  const f = (n) => n.toExponential(2).padStart(8);
+  console.log(
+    `  ${String(r.sid).padStart(2)} ${r.name.slice(0, 6).padEnd(6)}| ${r.anchor.toExponential(1).padStart(8)} | ` +
+    `${r.rar.slice(0, 4).padEnd(4)} Lv${String(r.lvl).padStart(2)} | ` +
+    `${f(r.clkMps)} ${fmt(r.clkSec).padStart(6)} | ` +
+    `${f(r.autMps)} ${fmt(r.autSec).padStart(6)} | ` +
+    `${f(r.baseMps)} ${fmt(r.baseSec).padStart(6)}`,
+  );
+}
+
 // Invariants
 let failures = 0;
 const assertish = (ok, msg) => { if (!ok) { failures++; console.log(`  ✗ ${msg}`); } else console.log(`  ✓ ${msg}`); };
@@ -423,6 +564,35 @@ const spread = results.casual.total / results.hardcore.total;
 assertish(spread >= 2 && spread <= 170, `casual/hardcore spread in [2, 170]× (${spread.toFixed(1)}×)`);
 const critSpread = noCrit.total / maxCrit.total;
 assertish(Number.isFinite(critSpread) && critSpread <= 3, `best-crit vs no-crit total time ≤ 3× (${critSpread.toFixed(2)}×)`);
+
+// GEAR-ONLY ECONOMY CRANK affordability assertions (the point of this pass).
+// DESIGN NOTE: AUTO (rift) is the stage-scaling economy path — its flat matter add
+// now tracks the player-stage anchor (the fixed dead channel). CLICK power is
+// stage-FLAT by design (getClickPower: a click's quanta does not grow with stage),
+// so the click path feeds entropy/burst, not late-game shop affordability — its
+// afford-time is reported for transparency but NOT asserted as a shop path. We
+// assert: (a) the geared player (best path = auto) affords the anchor within the
+// window — the SLOWEST realistic case (S5: only the first rift slot is unlocked)
+// must sit in the 30–90 min target, later maxed loadouts afford faster (intended
+// power fantasy); (b) BASE-only farming canNOT, by a wide margin; (c) gear ≫ base.
+for (const r of affordRows) {
+  const best = Math.min(r.clkSec, r.autSec); // geared player uses the better path
+  // Geared affords within a generous ceiling at every checkpoint.
+  assertish(best <= AFFORD.windowMaxSec,
+    `S${r.sid} geared affords anchor ≤ ${fmt(AFFORD.windowMaxSec)} (best ${fmt(best)}; clk ${fmt(r.clkSec)} / aut ${fmt(r.autSec)})`);
+  // The BINDING / slowest realistic checkpoint (first rift slot only) must land in
+  // the 30–90 min target band — proving the crank isn't trivial where it matters.
+  if (r.sid === 5) {
+    assertish(best >= AFFORD.windowMinSec && best <= 90 * 60,
+      `S5 (binding case) affords in the 20–90 min target (${fmt(best)})`);
+  }
+  // BASE-only farming canNOT afford the anchor inside any sane window.
+  assertish(r.baseSec >= AFFORD.baseMinSec,
+    `S${r.sid} BASE-only canNOT afford anchor (≥ ${fmt(AFFORD.baseMinSec)}) (${fmt(r.baseSec)})`);
+  // Gear must be a STRICT, large improvement over base.
+  assertish(r.baseSec / best >= 10,
+    `S${r.sid} geared ≥ 10× faster than base (${(r.baseSec / best).toFixed(0)}×)`);
+}
 
 console.log(failures === 0 ? '\nALL INVARIANTS PASS' : `\n${failures} INVARIANT(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);

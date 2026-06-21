@@ -160,8 +160,36 @@ export const AUTO_OUTPUT_MULTIPLIER = 1;
  * common ≈ ×1.9, a maxed one ≈ ×30, three maxed ≈ ×30k+) while the entropy gate
  * stays exactly as calibrated — NO re-sim, no pacing change. Tune freely: this
  * is pure power fantasy / matter abundance, decoupled from progression pacing.
+ *
+ * GEAR-ONLY ECONOMY CRANK (2026-06-21): 6 → 2. The per-slot multiplicative cliff
+ * was too steep once ENHANCE_MATTER_LEVEL_GROWTH × ENHANCE_RARITY_GROWTH make the
+ * per-level matter term geometric — at 6 a 3-slot maxed click loadout blew past
+ * "수십배" into ×millions. 2 keeps the per-LEVEL growth doing the heavy lifting
+ * (the geo term reaches tens of × at reachable levels) while taming the slot-count
+ * multiply so the click path and the (now-fixed) auto path stay the same order of
+ * magnitude. Still off-gate matter only — no re-sim needed for THIS knob.
  */
-export const CLICK_GEAR_MATTER_BOOST = 6;
+export const CLICK_GEAR_MATTER_BOOST = 2;
+/**
+ * GEAR-ONLY ECONOMY CRANK (2026-06-21): single scale knob on the now-fixed,
+ * player-stage-anchored auto FLAT income (getAutoOutputAnchor). The raw
+ * player-anchor contribution would let one rift slot earn an anchor's worth of
+ * matter in seconds (the anchor ladder is ~15–20×/stage, so anchoring per-second
+ * to it is far too rich). This scale pulls auto income down so a maxed rift
+ * loadout affords the stage anchor in the ~30–90 min target band — comparable to
+ * the click path's burst economy — while still TRACKING the shop ladder (the bug
+ * fix: income now grows with the stage instead of being pinned to S1). Calibrated
+ * with scripts/entropy-gate-sim.mjs (affordability assertions). Feeds entropy only
+ * via the tiny wAuto weight, so thresholds are re-pinned in lockstep.
+ *
+ * Calibrated so the SLOWEST realistic case — arriving at a stage with only the
+ * first rift slot + rare gear (slot 2 gates at S7) — affords that stage's anchor
+ * in ~40–50 min (in the 30–90 min target). Later stages with 2–3 leveled
+ * epic/legendary rift slots afford much faster (the intended maxed-loadout power
+ * fantasy). AUTO is the stage-scaling economy path; CLICK power is stage-flat by
+ * design (getClickPower), so click feeds entropy/burst, not late shop affordability.
+ */
+export const AUTO_GEAR_INCOME_SCALE = 0.16;
 /**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the
@@ -207,32 +235,31 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  // Overhaul-3 recalibration (scripts/entropy-gate-sim.mjs, reference pinned to
-  // realPlayTargetSec, ALL INVARIANTS PASS): reflects #39 stage-gated slot
-  // pacing (click slot2@S5/slot3@S9, rift slot2@S7/slot3@S12) and #40 Lv3 stone
-  // threshold. #50 item quality REMOVED (2026-06-19). STACKING REWORK (2026-06-19):
-  // a gear's power no longer scales with owned duplicate count (getEffectiveCount→1;
-  // sim GEAR eff→1) — power rides rarity + LEVEL + equipped slots only. That dropped
-  // modeled gear power, so the ladder is recalibrated DOWN here. The explosive click
-  // MATTER multiplier (#39) is decoupled from entropy and does NOT enter this
-  // calibration. Re-run the sim after touching gear curve / slots / costs / level /
-  // count and re-paste; the v16 ladder stays FROZEN in storage/migrate.ts.
+  // GEAR-ONLY ECONOMY CRANK recalibration (2026-06-21, scripts/entropy-gate-sim.mjs,
+  // reference pinned to realPlayTargetSec, ALL INVARIANTS PASS). The crank's WALLET
+  // income (player-stage-anchored auto) is decoupled from the entropy gate via the
+  // tame autoEntropyFlatAdd channel, so it does NOT enter this calibration — the
+  // ladder shifts only because the cheaper enhance (ENHANCE_COST_FACTOR 0.5 /
+  // GROWTH 1.15) lifts the LINEAR per-level gate term slightly. Values are nearly
+  // identical to the prior ladder (≤ ~10% drift). Re-run the sim after touching
+  // gear curve / slots / costs / level / count and re-paste; the v16 ladder stays
+  // FROZEN in storage/migrate.ts.
   1: 1.467e3,
   2: 9.446e3,
   3: 2.944e4,
   4: 6.367e4,
-  5: 1.196e5,
-  6: 2.840e5,
-  7: 6.186e5,
-  8: 1.319e6,
-  9: 2.440e6,
-  10: 4.073e6,
-  11: 6.781e6,
-  12: 1.088e7,
-  13: 1.550e7,
-  14: 4.943e7,
-  15: 1.381e8,
-  16: 1.729e8,
+  5: 1.301e5,
+  6: 3.712e5,
+  7: 9.441e5,
+  8: 2.239e6,
+  9: 3.360e6,
+  10: 4.989e6,
+  11: 7.696e6,
+  12: 1.179e7,
+  13: 1.641e7,
+  14: 5.035e7,
+  15: 1.390e8,
+  16: 1.739e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -470,8 +497,14 @@ export const RARITY_GATE_RAMP_STAGES = 3;
 
 // ── Enhancement (강화소) ─────────────────────────────────────────────────────
 
-/** First enhance costs this multiple of the item's base cost. */
-export const ENHANCE_COST_FACTOR = 1.5;
+/** First enhance costs this multiple of the item's base cost. GEAR-ONLY ECONOMY
+ *  CRANK (2026-06-21): 1.5 → 0.5. Enhance cost rides the item's baseCost, which
+ *  is anchored to the SAME ENTITY_COST_ANCHORS ladder the shop prices ride — so a
+ *  high-multiple first level made the early enhance levels nearly as dear as the
+ *  shop item itself, walling the very crank that's supposed to fund the shop.
+ *  0.5 makes a meaningful enhanced loadout reachable so the gear path actually
+ *  out-earns base farming. Re-pinned via scripts/entropy-gate-sim.mjs. */
+export const ENHANCE_COST_FACTOR = 0.5;
 /** Each further level multiplies the enhance cost by this. Overhaul-3: 1.0 (flat)
  *  → 1.7 (geometric). Per-level matter cost = baseCost × 1.5 × 1.7^(level-1), so
  *  Lv1→2 = 1.5×base, cumulative-to-Lv10 ≈ 322×base, to-Lv20 ≈ 9,400×base. Since
@@ -481,8 +514,14 @@ export const ENHANCE_COST_FACTOR = 1.5;
  *  lowers the budget-reachable level, so ENTROPY_THRESHOLDS were re-pinned via the
  *  sim in lockstep (ENHANCE_COST_GROWTH mirrored at scripts/entropy-gate-sim.mjs).
  *  Overhaul-3 (user 2026-06-19): 1.7 felt too steep → 1.35 (gentler ramp; cum-to-
- *  Lv10 ≈ 27×base, to-Lv20 ≈ 109×base — still escalating but affordable). */
-export const ENHANCE_COST_GROWTH = 1.35;
+ *  Lv10 ≈ 27×base, to-Lv20 ≈ 109×base — still escalating but affordable).
+ *  GEAR-ONLY ECONOMY CRANK (2026-06-21): 1.35 → 1.15 — the geometric per-level
+ *  POWER (ENHANCE_MATTER_LEVEL_GROWTH × ENHANCE_RARITY_GROWTH, ~1.25–2.0/level)
+ *  now outpaces a 1.35 cost ramp only briefly, so high levels stayed unreachable
+ *  in practice. 1.15 (cum-to-Lv10 ≈ 10×base, to-Lv20 ≈ 47×base at FACTOR 0.5)
+ *  keeps the ramp escalating but lets the player actually CLIMB into the "수십배"
+ *  band the crank is meant to deliver. Re-pinned via scripts/entropy-gate-sim.mjs. */
+export const ENHANCE_COST_GROWTH = 1.15;
 /** Level caps by rarity (levels come from enhancement AND fusion duplicates). */
 export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
   common: 10,
@@ -534,10 +573,42 @@ export const ENHANCE_PROTECT_STONE_MULT = 1.0;
  * Geometric per-level growth for the MATTER-ONLY click multiplier (#40). Each
  * click-gear level multiplies its clickMatterMult contribution by this — so
  * enhancing a click item "진짜 세진다" (geometric, not the tame linear curve).
- * Applied ONLY in the decoupled matter channel (effects.ts), so it never feeds
- * entropy and needs no re-sim. The entropy-side level term stays linear.
+ * Applied in the decoupled matter channel AND (GEAR-ONLY ECONOMY CRANK 2026-06-21)
+ * the now-fixed auto channel, so it never feeds the entropy gate and needs no
+ * re-sim FOR THE MATTER MAGNITUDE itself. The entropy-side level term stays linear.
+ *
+ * CRANK (2026-06-21): 1.3 → 1.20. The cheaper, gentler enhance-cost crank
+ * (ENHANCE_COST_FACTOR 0.5 / GROWTH 1.15) makes HIGH levels reachable (epic ~Lv15,
+ * legendary ~Lv22), so a steep geo base would explode the matter/auto income many
+ * orders past the shop anchor (sim verified). 1.20 keeps the per-level "수십배"
+ * climb landing in the "tens-to-low-hundreds ×" band AT the reachable level for
+ * each rarity (geoBase = this × ENHANCE_RARITY_GROWTH) while keeping a maxed
+ * loadout's income comparable to — not millions of × past — the shop anchor.
  */
-export const ENHANCE_MATTER_LEVEL_GROWTH = 1.3;
+export const ENHANCE_MATTER_LEVEL_GROWTH = 1.2;
+
+/**
+ * Per-rarity multiplier ON the geometric enhance-power base (GEAR-ONLY ECONOMY
+ * CRANK 2026-06-21). Higher rarities level STEEPER: the effective per-level
+ * growth for the matter AND auto channels is
+ *   geoBase = ENHANCE_MATTER_LEVEL_GROWTH × ENHANCE_RARITY_GROWTH[rarity].
+ * So per-level power growth is common 1.20× · rare 1.236× · epic 1.272× ·
+ * legendary 1.308× · mythic 1.344×. NOTE: the user's first-pass suggestion was a
+ * steeper ladder (1.0/1.12/1.26/1.42/1.58); that was tamed here because the cost
+ * crank makes legendary reach ~Lv22, where the steeper ladder gave ×171,000 per
+ * item — many orders past the shop anchor (the affordability window blows out).
+ * This gentler ladder still makes each rarity hit the "수십배" band at ITS
+ * reachable level — common Lv10 ≈ ×5, epic Lv15 ≈ ×29, legendary Lv22 ≈ ×281 —
+ * AND keeps "higher rarity = steeper" (RG strictly increasing). Decoupled from
+ * the entropy gate (matter + flat-auto only); the sim models it for affordability.
+ */
+export const ENHANCE_RARITY_GROWTH: Record<EntityRarity, number> = {
+  common: 1.0,
+  rare: 1.03,
+  epic: 1.06,
+  legendary: 1.09,
+  mythic: 1.12,
+};
 /** Matter handed back on a successful enhance, as a fraction of the matter cost
  *  (#40 — every attempt should feel rewarding, not purely a sink). */
 export const ENHANCE_MATTER_PAYOUT_SUCCESS = 0.25;

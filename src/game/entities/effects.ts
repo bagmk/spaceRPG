@@ -3,10 +3,12 @@
 import type { Modifiers } from '../skills/effects';
 import type { EntityInstance, StageEntity } from './types';
 import {
+  AUTO_GEAR_INCOME_SCALE,
   AUTO_STAGE_POWER_BASE,
   CODEX_REWARD_MULT,
   CLICK_GEAR_MATTER_BOOST,
   ENHANCE_MATTER_LEVEL_GROWTH,
+  ENHANCE_RARITY_GROWTH,
   ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
@@ -14,6 +16,7 @@ import {
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
 } from '../balance';
+import type { EntityRarity } from './types';
 import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
 import { getGearPowerExponent, getGearPowerMult, getSecondaryStats, type GearPower } from './substats';
 import { qualityMult } from './quality';
@@ -71,12 +74,48 @@ export function getEffectiveCount(count: number, maxCount: number, isTime: boole
 }
 
 /**
- * Rift/auto output anchor: the entity's rarity weight within its origin stage
- * (baseCost ÷ origin cost anchor) times the SHARED gear power curve — the
- * exponent follows the player's progression (Phase 4-1 stage independence),
- * so rift gear from any stage stays viable.
+ * Geometric per-level enhance growth, shared by the MATTER click channel and the
+ * (GEAR-ONLY ECONOMY CRANK 2026-06-21) now-fixed AUTO channel so both feel the
+ * same "수십배" climb. geoBase = ENHANCE_MATTER_LEVEL_GROWTH × the per-rarity
+ * scalar, so legendary/mythic level steeper. Equals 1 at Lv1.
+ */
+export function getEnhanceGeoLevelMult(rarity: EntityRarity, level: number): number {
+  const geoBase = ENHANCE_MATTER_LEVEL_GROWTH * (ENHANCE_RARITY_GROWTH[rarity] ?? 1);
+  return Math.pow(geoBase, Math.max(0, Math.floor(level) - 1));
+}
+
+/**
+ * Rift/auto output anchor.
+ *
+ * GEAR-ONLY ECONOMY CRANK (2026-06-21): the FIXED auto-channel bug. This used to
+ * multiply by ENTITY_COST_ANCHORS[1] (=1725) — a STAGE-1 constant — so a rift
+ * loadout's matter/sec stayed pinned to early-game magnitudes while shop prices
+ * climbed ~15–20×/stage, leaving auto a dead path to afford anything past S3-4.
+ * Now the anchor rides the PLAYER's current stage anchor (ENTITY_COST_ANCHORS
+ * [power.stageId]) so auto income tracks the shop ladder and a maxed auto loadout
+ * affords stage N's shop — comparable to the click path. The entity's rarity
+ * weight (baseCost ÷ its origin cost anchor) is preserved so rarity still ranks
+ * rift gear. The geometric LEVEL term is applied separately by the caller (auto
+ * branch + label) via getEnhanceGeoLevelMult so it can't double-count here.
+ * AUTO_STAGE_POWER_BASE stays 1.0 (P0 neutralised), kept for lockstep.
  */
 export function getAutoOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
+  const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
+  const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
+  const playerStage = Math.max(1, Math.floor(power.stageId)) as keyof typeof ENTITY_COST_ANCHORS;
+  const playerAnchor = ENTITY_COST_ANCHORS[playerStage] ?? ENTITY_COST_ANCHORS[1];
+  return rarityWeight * playerAnchor * AUTO_GEAR_INCOME_SCALE
+    * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
+}
+
+/**
+ * TAME (pre-crank) auto anchor — the ORIGINAL stage-1-pinned model. Feeds the
+ * ENTROPY gate only (Modifiers.autoEntropyFlatAdd), so progression pacing is
+ * EXACTLY as calibrated (no gate re-sim) while getAutoOutputAnchor's player-stage
+ * crank flows to the WALLET (autoRateFlatAdd). The split mirrors how clickMatterMult
+ * keeps the explosive click matter off the entropy gate.
+ */
+export function getTameAutoOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
   const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
   const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
   return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
@@ -109,12 +148,24 @@ export function applyEntityModifiers(
     const total = value * count * levelMult * qMult;
     // Matter-only channel (#40): levels grow GEOMETRICALLY here so enhancing a
     // click item feels explosive — decoupled from `total` (which stays linear and
-    // feeds the entropy gate). Equal to `total` at Lv1.
-    const matterTotal = value * count * Math.pow(ENHANCE_MATTER_LEVEL_GROWTH, Math.max(0, (entry.level ?? 1) - 1)) * qMult;
+    // feeds the entropy gate). GEAR-ONLY ECONOMY CRANK (2026-06-21): the geo base
+    // now folds in the per-rarity ENHANCE_RARITY_GROWTH scalar (getEnhanceGeoLevelMult)
+    // so higher rarities level steeper. Equal to `total` at Lv1.
+    const geoLevelMult = getEnhanceGeoLevelMult(entity.rarity, entry.level ?? 1);
+    const matterTotal = value * count * geoLevelMult * qMult;
 
     switch (type) {
       case 'auto':
-        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power, carried) * (total / 100));
+        // GEAR-ONLY ECONOMY CRANK (2026-06-21): the auto channel is split so the
+        // dead-late-game bug is fixed for the WALLET without touching progression.
+        //  • WALLET (autoRateFlatAdd): player-stage-anchored (getAutoOutputAnchor)
+        //    + GEOMETRIC per-level/per-rarity climb (geoLevelMult) — so a maxed rift
+        //    loadout's matter/sec tracks the shop ladder and affords stage N's shop.
+        //  • ENTROPY (autoEntropyFlatAdd): the TAME, stage-1-pinned, linear-level
+        //    value — so the entropy gate stays EXACTLY as calibrated (no re-sim, all
+        //    pacing invariants hold). Mirrors clickMatterMult ↔ clickPowerMult.
+        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':
         // Auto Power — % multiplier on entity flat-auto. Isolated modifier so
