@@ -1789,7 +1789,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
       {/* (?) rules overlay — explains the equip / fusion systems on demand (user
           request: these screens are intricate, so one help button spells out the rules). */}
       {helpOpen ? (
-        <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={() => setHelpOpen(false)}>
+        <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setHelpOpen(false); }}>
           <article className="entity-help-card cc-scroll" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="entity-help-card__close" aria-label={t(language, 'panelClose')} onClick={() => setHelpOpen(false)}>×</button>
             <h3 className="entity-help-card__title">{`${tab === 'fuse' ? t(language, 'fuseTitle') : t(language, 'entityEquip')} · ${t(language, 'panelHelp')}`}</h3>
@@ -1828,7 +1828,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           beforeVal = before.value; afterVal = after.value; statLabel = after.label;
         }
         return (
-          <div className="enhance-result-layer" role="status" onClick={() => onClearEnhanceEvent?.(ev.id)}>
+          <div className="enhance-result-layer" role="status" onClick={(e) => { e.stopPropagation(); onClearEnhanceEvent?.(ev.id); }}>
             <article
               className={`enhance-result-card enhance-result-card--${ev.outcome}`}
               style={{ '--flash-color': col } as CSSProperties}
@@ -1892,7 +1892,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const affordable = !atCap && quanta >= matterCost && (stonePhase && protectEnhance ? enhanceStones >= protectCost : true);
         const rc = RARITY_COLORS[ent.rarity];
         return (
-          <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={() => setInspectedSlot(null)}>
+          <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setInspectedSlot(null); }}>
             <article className={`entity-detail-card cc-scroll entity-detail-card--${ent.rarity} ${isTailQuality(entry?.quality) ? 'entity-detail-card--tail' : ''}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
               <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={() => setInspectedSlot(null)}>×</button>
               <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
