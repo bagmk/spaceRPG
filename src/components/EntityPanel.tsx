@@ -289,6 +289,26 @@ export function SpecChip({ icon, value, label, accent, primary = false }: { icon
   );
 }
 
+/**
+ * Overhaul-4 P8: duplicate-collection progress on an owned card. Shows how many
+ * SPARE copies (total − the kept anchor) you have toward the next merge level
+ * — need(L) copies — so you can see at a glance what's ready to enhance. Full +
+ * highlighted when mergeable; a "MAX" sliver at the level cap.
+ */
+function CollectionBar({ entity, level, copies }: { entity: StageEntity; level: number; copies: number }) {
+  const cap = getEnhanceLevelCap(entity);
+  if (level >= cap) return <span className="collection-bar collection-bar--max">MAX</span>;
+  const need = needCopiesForLevel(level);
+  const spares = Math.max(0, copies - 1); // one copy is the kept anchor, not fodder
+  const ready = spares >= need;
+  return (
+    <span className={`collection-bar ${ready ? 'collection-bar--ready' : ''}`} aria-label={`${spares}/${need}`}>
+      <span className="collection-bar__fill" style={{ width: `${Math.min(1, spares / need) * 100}%` }} />
+      <span className="collection-bar__label">{`🧬 ${spares}/${need}`}</span>
+    </span>
+  );
+}
+
 // The trait shapes the player actually meets, with a short label — shown as a
 // legend strip in the equip/fusion screens so ●/■/★/◆/✚ are self-explanatory.
 const TRAIT_LEGEND: { type: keyof typeof EFFECT_TRAIT; labelKey: Parameters<typeof t>[1] }[] = [
@@ -1412,6 +1432,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             {`Lv.${entry.level} · ${entry.count}/${entity.maxCount}`}
                             {entry.level < getEnhanceLevelCap(entity) ? <span className="owned-card__up"> ⬆</span> : null}
                           </span>
+                          <CollectionBar entity={entity} level={entry.level} copies={copiesOf(entity.id)} />
                         </button>
                       );
                     })}
@@ -1581,6 +1602,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             <span className="owned-card__name">{entityName(entity, language)}</span>
                             <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
                             {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
+                            <CollectionBar entity={entity} level={entry.level} copies={copiesOf(entity.id)} />
                           </button>
                           {/* Overhaul-4 (v26): ★ favorite toggle — protects this item's
                               copies from Fuse-All (and, later, pooled enhance fodder).
