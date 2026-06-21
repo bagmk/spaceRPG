@@ -123,6 +123,7 @@ shop affordability, not just gate timing.
   into pickDropStage backfill (KEEP the loop bound as the hard gate; affinity is a
   weight w/ FLOOR>0 so every later stage can still drop it), re-derive the shifted
   `stageIndependence.test.ts` assertions, balance.ts coupling comment. No save bump.
+- **P7a ✅ DONE (29f970c) — gear-only economy crank (no save bump).** Quick crank chosen over the full dup-collection rework (user). Root causes fixed: enhance cost rode the shop anchor (unreachable levels) → ENHANCE_COST_FACTOR 1.5→0.5, GROWTH 1.35→1.15; per-rarity steepness ENHANCE_RARITY_GROWTH (common1.0…mythic1.12) + MATTER_LEVEL_GROWTH 1.3→1.2; cliff tame CLICK_GEAR_MATTER_BOOST 6→2; DEAD AUTO channel fixed — getAutoOutputAnchor now player-stage-anchored × AUTO_GEAR_INCOME_SCALE 0.16 + geo level climb (WALLET), with a TAME stage-1 split feeding the entropy gate (new transient Modifiers.autoEntropyFlatAdd / getTameAutoOutputAnchor / getAutoEntropyRate) so gate pacing is unchanged. Sim extended w/ per-stage affordability asserts + ENTROPY_THRESHOLDS recalibrated. 354 tests, sim ALL PASS. P7b (dup-collection enhance, save v27) still PENDING — the cost-via-copies model would supersede the money-cost reachability band-aid; revisit when the user wants it.
 - **P7** ENHANCE duplicate-collection (save **v27**): replace matter/risk branches
   with the merge branch (consume `need(L)` spares — pooled same-rarity+stage per
   decision #1; anchor = equipped instanceId else highest-level; purge ALL consumed
