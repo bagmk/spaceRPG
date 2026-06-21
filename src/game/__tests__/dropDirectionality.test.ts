@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { rollEntityDrop } from '../entities/drops';
+import { rollEntityDrop, getBestDropStage } from '../entities/drops';
 import { generateDailyShop } from '../shop/daily';
 import { findEntityById, STAGE_ENTITIES } from '../entities/stageItems';
-import { GACHA_BOXES } from '../balance';
+import { GACHA_BOXES, RARITY_STAGE_GATES } from '../balance';
 import { createInitialGameState, gameReducer } from '../reducer';
 import type { GameState } from '../types';
 
@@ -82,5 +82,36 @@ describe('directional invariant — nothing from a future stage leaks early', ()
       expect(e.stageId).toBeGreaterThanOrEqual(1);
       expect(e.stageId).toBeLessThanOrEqual(MAX_STAGE);
     }
+  });
+});
+
+describe('getBestDropStage — codex "best drop S{n}" badge source', () => {
+  it('is max(home stage, rarity gate) when field-droppable, null when never (mythic)', () => {
+    for (const e of STAGE_ENTITIES) {
+      const best = getBestDropStage(e);
+      const gate = RARITY_STAGE_GATES[e.rarity] ?? 1;
+      const want = Math.max(e.stageId, gate);
+      if (want > MAX_STAGE) {
+        expect(best).toBeNull(); // never field-drops (gate sentinel) → no drop stage
+      } else {
+        expect(best).toBe(want);
+        expect(best).toBeGreaterThanOrEqual(e.stageId); // never earlier than home
+        expect(best).toBeGreaterThanOrEqual(gate);      // never before its rarity gate
+        expect(best!).toBeLessThanOrEqual(MAX_STAGE);
+      }
+    }
+  });
+
+  it('pushes gated early-born high rarities to their gate (best ≠ home for the gated set)', () => {
+    const gated = STAGE_ENTITIES.filter((e) => { const b = getBestDropStage(e); return b !== null && b > e.stageId; });
+    // every such entity is a rarity whose gate sits past its home stage
+    for (const e of gated) expect(RARITY_STAGE_GATES[e.rarity]).toBeGreaterThan(e.stageId);
+    // a best-≠-home set must exist (the badge would be pointless otherwise)
+    expect(gated.length).toBeGreaterThan(0);
+  });
+
+  it('mythic entities never field-drop → getBestDropStage is null', () => {
+    const mythics = STAGE_ENTITIES.filter((e) => e.rarity === 'mythic');
+    for (const e of mythics) expect(getBestDropStage(e)).toBeNull();
   });
 });

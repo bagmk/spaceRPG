@@ -46,6 +46,24 @@ export function getClickDropChance(isCrit: boolean): number {
   return DROP_CHANCE_BASE * (isCrit ? DROP_CHANCE_CRIT_MULT : 1);
 }
 
+/** The fixed last stage of the cosmology arc — rarity gates beyond it (mythic's
+ *  999 sentinel) mean "never field-drops" (fusion / gacha only). */
+const LAST_FIELD_STAGE = 16;
+
+/**
+ * The earliest stage at which an entity can actually drop = its home stage,
+ * pushed up to its rarity gate if the gate is later (a legendary "born" in an
+ * early stage can't drop until RARITY_STAGE_GATES.legendary). Returns `null` for
+ * rarities that never field-drop (mythic). This is the single source for the
+ * codex "best drop stage S{n}" badge — for the gated set the best stage ≠ the
+ * home stage, so a naive `entity.stageId` would be wrong.
+ */
+export function getBestDropStage(entity: StageEntity): number | null {
+  const gate = RARITY_STAGE_GATES[entity.rarity] ?? 1;
+  const best = Math.max(entity.stageId, gate);
+  return best > LAST_FIELD_STAGE ? null : best;
+}
+
 /**
  * Rarity gate ramp: 0 before the gate stage, then a linear climb to full
  * weight over RARITY_GATE_RAMP_STAGES — epics trickle in at stage 7 and are

@@ -28,6 +28,7 @@ import { getAutoOutputAnchor, getEffectiveCount, getEnhanceGeoLevelMult, getEqui
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceCost, getEnhanceLevelCap, getEnhanceProtectStoneCost, getEnhanceFailChance, isEnhanceStonePhase } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
+import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
 import { familyLabel, familyRole } from '../game/entities/families';
 import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
@@ -986,9 +987,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                       {t(language, SUBSTAT_LABEL_KEY[signature.type])}
                                     </span>
                                   ) : null}
-                                  {entity.stageId <= 16 ? (
-                                    <span className="almanac-card__era">{`S${entity.stageId}`}</span>
-                                  ) : null}
+                                  {entity.stageId <= 16 ? (() => {
+                                    const bestDrop = getBestDropStage(entity);
+                                    return (
+                                      <span className="almanac-card__era" title={t(language, bestDrop !== null ? 'codexBestDrop' : 'codexFusionOnly')}>
+                                        {`S${bestDrop ?? entity.stageId}`}
+                                      </span>
+                                    );
+                                  })() : null}
                                 </button>
                               );
                             })}
