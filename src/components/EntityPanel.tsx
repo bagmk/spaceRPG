@@ -256,13 +256,23 @@ function substatValueLabel(
 export function TraitBadge({ entity, className = '' }: { entity: StageEntity; className?: string }) {
   const trait = EFFECT_TRAIT[entity.effect.type];
   if (!trait) return null;
+  // Multi-icon (user): rare+ items with several big effects show the primary +
+  // their secondary-stat icons too (deduped vs the primary, capped at 3). Neutral-
+  // toned so more icons ≠ more colors; the shapes read the effects at a glance.
+  const icons: string[] = [trait.icon];
+  if (entity.rarity !== 'common') {
+    for (const sub of getSecondaryStats(entity)) {
+      const ic = SUBSTAT_TRAIT[sub.type];
+      if (ic && !icons.includes(ic) && icons.length < 3) icons.push(ic);
+    }
+  }
   return (
     <span
-      className={`trait-badge ${className}`}
+      className={`trait-badge ${icons.length > 1 ? 'trait-badge--multi' : ''} ${className}`}
       style={{ color: TRAIT_ICON_TONE, borderColor: TRAIT_ICON_TONE } as CSSProperties}
       aria-hidden="true"
     >
-      {trait.icon}
+      {icons.map((ic, i) => <span key={i}>{ic}</span>)}
     </span>
   );
 }

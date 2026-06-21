@@ -107,13 +107,14 @@ shop affordability, not just gate timing.
   tests. NOTE: "전체 강화에서 제외" toggle + "가능한 만큼 전체 강화" button removal
   deferred to **P7** (the enhance rework) to avoid mid-state churn; in P7 ★ also
   protects from pooled enhance fodder.
-- **P3 ◧ IN PROGRESS** H equip-page redesign (presentation, no save). DONE: removed
+- **P3 ✅ DONE** H equip-page redesign (presentation, no save). DONE: removed
   the 아이콘 안내 TraitLegend + the click/auto readout cards (`.hex-heroes`, incl. the
   superseded sticky readout); new `.equip-loadout` row = LEFT owned-stats stack
   (`.equip-statstack`, click/auto always + crit chance/mult when present — "보유한
-  스탯만") + hexagon flexed right. Verified 390px: clean, one-view. REMAINING:
-  multi-icon on rare+/multi-effect item cards (2–3 trait icons); the shared
-  `.collection-bar` deferred to P8 (needs P7 copies-vs-need data).
+  스탯만") + hexagon flexed right; multi-icon trait pills on rare+ cards (primary +
+  secondary icons, neutral-toned); color-minimize (all trait icons one neutral tone,
+  rarity color only on borders). Verified desktop+390px. The shared `.collection-bar`
+  deferred to P8 (needs P7 copies-vs-need data).
 - **P4** Shop redesign (presentation): grade-color cards (era chip, 보유 N chip,
   price pill, no gray-out), gacha box color, split stones/packs; directional guard +
   i18n; lift `RARITY_COLORS` to balance.ts. No save bump.

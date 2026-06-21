@@ -8642,6 +8642,14 @@ button.stat-header-item {
   pointer-events: none;
   z-index: 2;
 }
+/* Multi-icon (rare+): the corner badge becomes an auto-width pill holding the
+   primary + secondary effect icons in a row (neutral-toned). */
+.trait-badge--card.trait-badge--multi {
+  width: auto;
+  min-width: 16px;
+  padding: 0 3px;
+  gap: 2px;
+}
 .spec-chip {
   display: inline-flex;
   align-items: baseline;
