@@ -22,6 +22,33 @@ drops.ts + codex badge).
    enhance** (its `isProtected` is the only safety net once spares auto-consume);
    only **two save bumps: v26 (lock), v27 (enhance)**.
 
+## Balance philosophy (user-locked 2026-06-21) — GEAR is the only matter lever
+The economy is balanced by ONE knob: **gear power (fusion + enhance)**. Two anchors
+are FIXED and must NOT move:
+- **Per-stage base matter generation stays fixed.** Do NOT auto-inflate base click
+  or base auto output as stages advance. Clicking does not silently scale up.
+- **Shop price is the benchmark/target** — intentionally expensive. It is the
+  goalpost, not a number to lower.
+
+The consequence the user wants: at each stage, the ONLY realistic way to afford that
+stage's shop is to **equip + enhance + fuse** good gear so your matter *income* (and
+click) climbs to meet the (fixed) shop price. Plain base-rate farming must NOT reach
+it. So:
+- **Enhance per-level effect must be TENS of times (수십배), not a few ×.** Crank
+  `ENTITY_LEVEL_EFFECT_BONUS` (currently 0.85 = +85%/lvl) and/or the geometric
+  `ENHANCE_MATTER_LEVEL_GROWTH` channel WAY up so a maxed item is orders of magnitude
+  stronger.
+- **Higher rarity → steeper per-level enhance growth** (rare/epic/legendary level to
+  bigger multipliers than common). Add a per-rarity enhance-growth scalar.
+- **Tune ONLY the enhance-stack (per-level power + rarity scalar) and the item-stack
+  (fusion).** Do NOT change per-stage matter generation or shop prices to balance.
+
+**Re-sim target (P7):** with base click/auto + shop prices held fixed, tune the
+enhance curve + per-rarity scalar so the *max achievable gear via realistic
+fusion+enhance at stage N* yields matter income that affords stage N's shop (and the
+entropy gate still opens). The entropy-gate-sim must model gear-driven income vs.
+shop affordability, not just gate timing.
+
 ## Verified ground truth (checked in code, not assumed)
 - Duplicate count already gives **zero power** (`getEffectiveCount` → 1 for all
   non-time gear). So copies are pure leveling/fusion fuel — no power double-dip.
@@ -99,7 +126,11 @@ drops.ts + codex badge).
   (via addToInventory); delete risk helpers + protect UI; rework the F result card
   same commit; fusion carries a level (decision #2); route fodder through isProtected;
   bump v27 + `|| v===27`; **re-pin ENTROPY_THRESHOLDS** (drop-supply + shared-pool,
-  both level channels, ENH_DUP_* mirrored into the sim).
+  both level channels, ENH_DUP_* mirrored into the sim). **ALSO crank the enhance
+  power curve per the balance philosophy:** raise `ENTITY_LEVEL_EFFECT_BONUS` /
+  `ENHANCE_MATTER_LEVEL_GROWTH` to 수십배-scale + add a per-rarity enhance-growth
+  scalar (rare/epic/legendary steeper), and sim gear-driven matter income vs. FIXED
+  shop prices + FIXED base generation so maxed gear at stage N affords stage N's shop.
 - **P8** Inventory bar semantics + G synergy retune: apply `.collection-bar`
   (spares-vs-need(level)) to owned-grid + 등급순/레벨순 sort; retune any pending G
   synergy targets in COPIES not matter, keyed off equipped-set + modest levels.
