@@ -1763,7 +1763,9 @@ button.hud-stage-title--clickable:hover {
 .enhance-result-layer {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  /* Above the item-detail/slot-detail card (z 220) it's launched from — the detail
+     card stays open while enhancing, so the result must sit ON TOP of it. */
+  z-index: 240;
   display: grid;
   place-items: center;
   pointer-events: auto;
