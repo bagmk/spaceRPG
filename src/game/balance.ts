@@ -548,6 +548,17 @@ export const ENHANCE_LEVEL_CAPS: Record<EntityRarity, number> = {
 /** Fraction of a consumed stack's invested enhance quanta refunded on fusion. */
 export const ENHANCE_REFUND_RATE = 0.6;
 
+/**
+ * Overhaul-4 P7b — duplicate-collection enhance: you level gear by MERGING spare
+ * copies, not by spending matter. Copies to go from level L → L+1:
+ *   need(L) = ENH_DUP_BASE + ENH_DUP_STEP·(L−1)  →  3, 5, 7, 9, …
+ * Total copies to reach level L from Lv1:  cumNeed(L) = L² − 1.
+ * (Pure curve here; the reducer + save-v27 switch + the 물질/강화석 copy-token cost
+ *  + the entropy-gate re-pin land in the coupled P7b implementation phase.)
+ */
+export const ENH_DUP_BASE = 3;
+export const ENH_DUP_STEP = 2;
+
 // ── 강화 risk phase (#47) — every enhance costs MATTER ONLY. From this level up
 //    an attempt can FAIL; a failed UNPROTECTED attempt DESTROYS one copy and mints
 //    a RANDOM amount of 강화석 (no level-down). 강화석 is spent ONLY by 보호(protect),
