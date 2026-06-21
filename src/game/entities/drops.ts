@@ -17,6 +17,8 @@ import {
   DROP_RARITY_WEIGHTS,
   RARITY_GATE_RAMP_STAGES,
   RARITY_STAGE_GATES,
+  DROP_HOME_AFFINITY_FALLOFF,
+  DROP_HOME_AFFINITY_FLOOR,
 } from '../balance';
 import { getEntitiesForStage } from './stageItems';
 import { makeInstance } from './instances';
@@ -131,7 +133,10 @@ function pickRarity(pick01: number, weights: Record<EntityRarity, number>): Enti
  * Pick which stage's pool a drop (or fusion output) comes from (Phase 4-1
  * stage independence): DROP_CURRENT_STAGE_WEIGHT of rolls stay on the current
  * stage; the rest backfill past stages weighted by (uncollected codex entries
- * + 1), so collection holes pull drops toward themselves.
+ * + 1) × P6 recency affinity, so collection holes pull drops toward themselves
+ * but nearer stages are favored (see DROP_HOME_AFFINITY_* in balance.ts). The
+ * `s < playerStageId` loop bound is the hard directional gate — affinity only
+ * re-weights existing candidates, it never lets a future stage drop.
  */
 export function pickDropStage(
   playerStageId: number,
@@ -145,7 +150,12 @@ export function pickDropStage(
   for (let s = 1; s < playerStageId; s++) {
     const collected = almanacCollected[s]?.length ?? 0;
     const uncollected = Math.max(0, getEntitiesForStage(s).length - collected);
-    const w = uncollected + 1;
+    // P6 recency affinity: nearer past stages weigh more (toward 1.0), distant
+    // ones decay toward DROP_HOME_AFFINITY_FLOOR but never to 0 — so collection
+    // holes still pull, just dampened by distance.
+    const affinity = DROP_HOME_AFFINITY_FLOOR
+      + (1 - DROP_HOME_AFFINITY_FLOOR) * Math.pow(DROP_HOME_AFFINITY_FALLOFF, playerStageId - s - 1);
+    const w = (uncollected + 1) * affinity;
     weights.push(w);
     total += w;
   }

@@ -20,19 +20,40 @@ describe('Phase 4-1: drop/fusion stage pools', () => {
   });
 
   it('pickDropStage: codex-backfill weighting pulls drops toward uncollected stages', () => {
-    // Everything collected except stage 3 → past rolls should heavily favor 3.
+    // Everything collected except stage 3 → past rolls should still favor 3 the
+    // most, even though P6 recency affinity dampens its (distant) weight.
     const allCollected: Record<number, string[]> = {};
     for (let s = 1; s < 10; s++) {
       allCollected[s] = s === 3 ? [] : getEntitiesForStage(s).map((e) => e.id);
     }
-    let hits3 = 0;
-    const samples = 100;
+    const hits: Record<number, number> = {};
+    const samples = 200;
     for (let i = 0; i < samples; i++) {
       const roll = DROP_CURRENT_STAGE_WEIGHT + ((1 - DROP_CURRENT_STAGE_WEIGHT) * i) / samples;
-      if (pickDropStage(10, roll, allCollected) === 3) hits3++;
+      const s = pickDropStage(10, roll, allCollected);
+      hits[s] = (hits[s] ?? 0) + 1;
     }
-    // Stage 3 carries (14 uncollected + 1) weight vs 1 for each of the other 8.
-    expect(hits3 / samples).toBeGreaterThan(0.5);
+    // The lone hole (stage 3) is the single most-hit past stage by a clear margin.
+    const others = Object.entries(hits).filter(([s]) => Number(s) !== 3 && Number(s) !== 10);
+    const maxOther = Math.max(0, ...others.map(([, n]) => n));
+    expect(hits[3] ?? 0).toBeGreaterThan(maxOther);
+    expect((hits[3] ?? 0) / samples).toBeGreaterThan(0.35);
+  });
+
+  it('pickDropStage: P6 recency affinity favors nearer past stages (no holes)', () => {
+    // All collected → weight is affinity-only; nearer stages must out-draw far ones.
+    const allCollected: Record<number, string[]> = {};
+    for (let s = 1; s < 10; s++) allCollected[s] = getEntitiesForStage(s).map((e) => e.id);
+    const hits: Record<number, number> = {};
+    const samples = 400;
+    for (let i = 0; i < samples; i++) {
+      const roll = DROP_CURRENT_STAGE_WEIGHT + ((1 - DROP_CURRENT_STAGE_WEIGHT) * i) / samples;
+      const s = pickDropStage(10, roll, allCollected);
+      hits[s] = (hits[s] ?? 0) + 1;
+    }
+    // Nearest past stage (9) draws strictly more than a distant one (1) — and 1 still > 0 (floor).
+    expect(hits[9] ?? 0).toBeGreaterThan(hits[1] ?? 0);
+    expect(hits[1] ?? 0).toBeGreaterThan(0);
   });
 
   it('past-stage pools exclude time entities (cosmic clock is stage-relative)', () => {

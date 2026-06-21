@@ -380,6 +380,21 @@ export const DROP_COMBO_BIAS_THRESHOLD = 100;
  */
 export const DROP_CURRENT_STAGE_WEIGHT = 0.6;
 
+/**
+ * Overhaul-4 P6: recency affinity for the BACKFILL distribution (the past-stage
+ * spread, NOT the current-stage share above). The backfill weight is
+ * `(uncollected + 1) × affinity(distance)` where distance = playerStage − s, and
+ * `affinity(d) = FLOOR + (1 − FLOOR) × FALLOFF^(d−1)` (1.0 at the nearest past
+ * stage, decaying toward FLOOR for distant ones). This favors gear from stages
+ * NEAR the player (higher anchor / more economy-relevant) while the FLOOR keeps
+ * every old stage dropping for collection. The hard directional gate is still the
+ * `s < playerStage` loop bound in pickDropStage — affinity only re-weights, never
+ * unlocks a future stage. Pure distribution tuning: no save bump, and total drop
+ * rate / DROP_CURRENT_STAGE_WEIGHT are unchanged, so the entropy gate is unaffected.
+ */
+export const DROP_HOME_AFFINITY_FALLOFF = 0.8;
+export const DROP_HOME_AFFINITY_FLOOR = 0.25;
+
 // ── Fusion / gacha (entity redesign Phase 3) ─────────────────────────────────
 
 /** Copies consumed per fusion (all inputs must share one rarity). */
