@@ -942,10 +942,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       const visible = showMissing ? members.filter((m) => !isCollected(m)) : members;
                       if (visible.length === 0) return null;
                       return (
-                        <div className="codex-subset" key={sub.id}>
+                        <div className={`codex-subset ${subDone ? 'codex-subset--complete' : ''}`} key={sub.id}>
                           <div className="codex-divider">
                             <span className="codex-divider__label">{codexSubsetLabel(sub, language)}</span>
                             <span className="codex-divider__count">{`${subGot}/${members.length}`}</span>
+                            {subDone ? <span className="codex-divider__done">{t(language, 'codexSubsetDone')}</span> : null}
                             <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(sub.reward, language)}>
                               <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
                               <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>

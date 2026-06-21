@@ -103,6 +103,7 @@ export const STRINGS = {
   codexMassFactor:  { en: 'Condensed mass', ko: '응축 질량' },
   codexPurpose:     { en: 'Collect discovered particles — complete sets for bonuses', ko: '발견한 입자를 모으세요 — 세트를 완성하면 보너스' },
   codexShowMissing: { en: 'Missing only', ko: '빈칸만' },
+  codexSubsetDone:  { en: 'COMPLETE', ko: '완료' },
   codexClosest:     { en: '{name} — {n} to go!', ko: '{name} — {n}개 남음!' },
   equipCatClick:    { en: 'Click power', ko: '클릭 강화' },
   equipCatRift:     { en: 'Auto income', ko: '자동 수익 강화' },

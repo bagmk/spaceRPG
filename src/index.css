@@ -156,6 +156,7 @@ button,
     /* Cheaper blur on mobile: smaller radius, no saturation, lower fillrate. */
     --panel-blur: blur(6px);
   }
+  .codex-subset--complete .codex-reward__star { animation: none !important; }
 
   /* Heaviest panels: drop backdrop entirely on mobile, swap to opaque bg. */
   .entity-panel,
@@ -14145,6 +14146,28 @@ button.stat-header-item {
   opacity: 1;
   color: #ffd76a;
 }
+/* Sub-collection 100% complete — make it visibly stand out (user). Gold header
+   + a "완료" badge + a glow + the reward star pulses. */
+.codex-subset--complete .codex-divider__label {
+  color: #ffe49a;
+  text-shadow: 0 0 10px rgba(255, 200, 90, 0.45);
+  font-weight: 700;
+}
+.codex-divider__done {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #2a1d05;
+  background: linear-gradient(180deg, #ffd76a, #f0b030);
+  padding: 1px 6px;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(255, 200, 90, 0.4);
+}
+.codex-subset--complete .codex-divider__rule {
+  background: linear-gradient(90deg, rgba(255, 200, 90, 0.4), transparent);
+}
+.codex-subset--complete .codex-reward__star { animation: codex-star-pulse 1.8s ease-in-out infinite; }
+@keyframes codex-star-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.18); } }
 .codex-reward__star {
   font-size: 10px;
 }
