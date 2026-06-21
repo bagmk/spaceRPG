@@ -105,7 +105,6 @@ export const STRINGS = {
   equipSlotTapFill: { en: 'Tap to choose gear', ko: '탭하여 장비 선택' },
   equipStatDetails: { en: 'Details', ko: '세부 능력치' },
   traitLegend:      { en: 'Icon guide', ko: '아이콘 안내' },
-  enhanceAll:       { en: 'Enhance all affordable', ko: '가능한 만큼 전체 강화' },
   equipPickActive:  { en: 'Pick an entity for this slot', ko: '이 슬롯에 넣을 아이템 선택' },
   equipSwap:        { en: 'Swap', ko: '교체' },
   // #44 Hexagon equip — center wild slot + line-bingo bonus readout.
@@ -146,8 +145,6 @@ export const STRINGS = {
   hudStones:        { en: 'Stones', ko: '강화석' },
   enhanceFailLabel: { en: 'fail {n}%', ko: '실패 {n}%' },
   enhanceProtect:   { en: 'Protect', ko: '보호 강화' },
-  enhanceExcludeToggle: { en: 'Skip in Enhance All', ko: '전체 강화에서 제외' },
-  enhanceExcludeBadge:  { en: 'skip', ko: '제외' },
   qualityTail:          { en: 'Pristine', ko: '명품' },
   enhanceOutcomeUp:    { en: 'ENHANCED!', ko: '강화 성공!' },
   enhanceOutcomeDown:  { en: 'Downgraded', ko: '강등…' },

@@ -70,7 +70,7 @@ function formatSubstat(sub: SecondaryStat, lang: Lang, level = 1, gearPower = 1)
   const label = t(lang, SUBSTAT_LABEL_KEY[sub.type]);
   // Mirrors applyEntityModifiers: `scales` substats ride the gear power curve.
   const v = sub.value * getLevelMult(level) * (sub.scales ? gearPower : 1);
-  const value = sub.type === 'comboCap' ? `+${v.toFixed(1)}` : `+${v.toFixed(1)}%`;
+  const value = sub.type === 'comboCap' ? `${v.toFixed(1)}` : `${v.toFixed(1)}%`;
   return `${value} ${label}`;
 }
 
@@ -158,21 +158,21 @@ function formatEntityEffect(
   // Curve follows the player's live power; carried items drop the itemStage clamp.
   const curved = value * lvl * getGearPowerMult(power, entity.stageId, carried);
   if (type === 'click') {
-    return `+${formatPct(curved)} ${t(lang, 'effectClickPower')}`;
+    return `${formatPct(curved)} ${t(lang, 'effectClickPower')}`;
   }
   if (type === 'auto') {
-    return `+${formatAutoRateValue(getEntityAutoRate(entity, power, 1, level, carried))}${t(lang, 'effectAutoRateUnit')}`;
+    return `${formatAutoRateValue(getEntityAutoRate(entity, power, 1, level, carried))}${t(lang, 'effectAutoRateUnit')}`;
   }
   if (type === 'crit') {
     return isFlat
-      ? `+${formatPct(value * lvl)} ${t(lang, 'effectCritChance')}`
-      : `+${formatPct(curved)} ${t(lang, 'effectCritMult')}`;
+      ? `${formatPct(value * lvl)} ${t(lang, 'effectCritChance')}`
+      : `${formatPct(curved)} ${t(lang, 'effectCritMult')}`;
   }
-  if (type === 'auto_mult') return `+${formatPct(value * lvl)} ${t(lang, 'effectAutoPower')}`;
-  if (type === 'time') return `+${formatPct(getNextTimeRatePct(entity, count, level, power.stageId))} ${t(lang, 'effectTimeRate')}`;
-  if (type === 'multiplier') return `+${formatPct(curved)} ${t(lang, 'effectAllSources')}`;
-  if (type === 'entropy') return `+${formatPct(curved)} ${t(lang, 'effectEncounterBonus')}`;
-  return `+${formatPct(value * lvl)} ${type}`;
+  if (type === 'auto_mult') return `${formatPct(value * lvl)} ${t(lang, 'effectAutoPower')}`;
+  if (type === 'time') return `${formatPct(getNextTimeRatePct(entity, count, level, power.stageId))} ${t(lang, 'effectTimeRate')}`;
+  if (type === 'multiplier') return `${formatPct(curved)} ${t(lang, 'effectAllSources')}`;
+  if (type === 'entropy') return `${formatPct(curved)} ${t(lang, 'effectEncounterBonus')}`;
+  return `${formatPct(value * lvl)} ${type}`;
 }
 
 /**
@@ -196,7 +196,7 @@ export function effectValueLabel(
   const curve = getGearPowerMult(power, entity.stageId, carried);
   // #50: quality scales the shown number so the card matches the applied power.
   const q = qualityMult(quality);
-  const pct = (v: number) => `+${formatPct(v * q)}`;
+  const pct = (v: number) => `${formatPct(v * q)}`;
   switch (type) {
     case 'click':
       return { value: pct(value * effCount * lvl * curve), label: t(lang, 'effectClickPower') };
@@ -238,7 +238,7 @@ function substatValueLabel(
   quality?: number,
 ): { icon: string; value: string; label: string } {
   const v = sub.value * getLevelMult(level) * (sub.scales ? gearPower : 1) * qualityMult(quality);
-  const value = sub.type === 'comboCap' ? `+${v.toFixed(1)}` : `+${v.toFixed(1)}%`;
+  const value = sub.type === 'comboCap' ? `${v.toFixed(1)}` : `${v.toFixed(1)}%`;
   return { icon: SUBSTAT_TRAIT[sub.type], value, label: t(lang, SUBSTAT_LABEL_KEY[sub.type]) };
 }
 
@@ -424,7 +424,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // #44: the hexagon CENTER (wild) slot has its own picker (any category) since
   // it isn't tied to the click/rift equipCat+slotIndex addressing of the outer 6.
   const [pickingWild, setPickingWild] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [protectEnhance, setProtectEnhance] = useState(false);
   // 🅠7: enhancement unlocks at S3 (S1 = collect/codex, S2 = equip/fuse).
   const enhanceUnlocked = currentStageId >= ENHANCE_UNLOCK_STAGE_ID;
@@ -445,10 +444,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const enhanceTimerRef = useRef<number | null>(null);
   // Overhaul-4 (v26): Fuse-All protection is now the PERSISTENT ★ favorite
   // (favoriteEntityIds prop) — the old per-session excludedIds Set was replaced.
-  // #51: Enhance-All exclude — equipped items the player has shielded from the
-  // bulk 강화 (since #47 enhance can DESTROY an item in the risk phase, you want
-  // to keep your best gear out of the spray-and-pray).
-  const [enhanceExcludedIds, setEnhanceExcludedIds] = useState<Set<string>>(() => new Set());
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
 
   const playerStage = STAGES.find((s) => s.id === currentStageId) ?? STAGES[STAGES.length - 1];
@@ -1056,8 +1051,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         {slotEntity ? (
                           <>
                             {linked ? <span className="equip-slot-card__set">⬡</span> : null}
-                            {/* #51: at-a-glance "전체 강화에서 빠짐" marker. */}
-                            {entry?.instanceId && enhanceExcludedIds.has(entry.instanceId) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
                             {/* Inline unequip — a span (not button) since this card is itself a button. */}
                             <span
                               className="equip-slot-card__remove"
@@ -1135,11 +1128,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               );
             }
             const linked = Boolean(dominantKey && getEquipSetKey(slotEntity) === dominantKey);
-            const p = effectValueLabel(slotEntity, language, power, entry?.count ?? 1, entry?.level ?? 1, entry?.carried ?? false, true, entry?.quality);
+            // Compact square slot (user): glyph + name only — the per-slot effect text
+            // is dropped (the left stat-stack already shows the live totals).
             return (
               <>
                 {linked ? <span className="equip-slot-card__set">⬡</span> : null}
-                {entry?.instanceId && enhanceExcludedIds.has(entry.instanceId) ? <span className="equip-slot-card__skip">{t(language, 'enhanceExcludeBadge')}</span> : null}
                 <span
                   className="equip-slot-card__remove"
                   role="button"
@@ -1156,10 +1149,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
                 </div>
                 <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
-                <div className="equip-slot-card__effect" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>
-                  <span className="equip-slot-card__effect-value">{p.value}</span>
-                  <span className="equip-slot-card__effect-label">{p.label}</span>
-                </div>
               </>
             );
           };
@@ -1338,20 +1327,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       {`⬡ ${name}${t(language, 'setBonusLabel')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}
                     </span>
                   );
-                })() : <span />}
-                <button
-                  type="button"
-                  className="equip-enhance-all"
-                  disabled={!enhanceUnlocked}
-                  title={enhanceUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}
-                  onClick={() => { [...equippedSlots, ...riftSlots, wildSlot].forEach((id) => { if (id && !enhanceExcludedIds.has(id)) onEnhance(id); }); }}
-                >
-                  {/* C-P2: show the unlock-stage reason in the VISIBLE label (not just
-                      title=, invisible on touch) — mirrors the codex-card enhance button. */}
-                  {enhanceUnlocked
-                    ? t(language, 'enhanceAll')
-                    : `🔒 ${t(language, 'enhanceAll')} · ${t(language, 'lockUntilStage').replace('{n}', String(ENHANCE_UNLOCK_STAGE_ID))}`}
-                </button>
+                })() : null}
               </div>
 
               {/* Owned gear of this category — quiet at rest, deltas while picking */}
@@ -1362,16 +1338,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       ? t(language, 'equipPickActive')
                       : `${t(language, 'ownedItemsLabel')} (${pickerEntities.length})`}
                   </span>
-                  <button
-                    type="button"
-                    className={`entity-inv__filter ${filterOpen ? 'entity-inv__filter--on' : ''}`}
-                    aria-label={t(language, 'rarityAll')}
-                    onClick={() => { setFilterOpen((v) => !v); onUITap?.(); }}
-                  >
-                    <i className="ti ti-filter" aria-hidden="true"></i>
-                  </button>
                 </div>
-                {filterOpen ? rarityFilterBar : null}
+                {/* Rarity tabs shown directly (user: drop the popup square). */}
+                {rarityFilterBar}
                 {pickerEntities.length === 0 ? (
                   <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
                 ) : (
@@ -1867,9 +1836,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {ev.outcome === 'break' && (ev.stonesEarned ?? 0) > 0 ? (
                 <div className="enhance-result-card__payout enhance-result-card__payout--stones">{`◆ ${ev.stonesEarned} ${t(language, 'hudStones')}`}</div>
               ) : null}
-              {ev.outcome !== 'break' && ev.payout && ev.payout > 0 ? (
-                <div className="enhance-result-card__payout">{`⚛ ${formatEntityCost(ev.payout)}`}</div>
-              ) : null}
             </article>
           </div>
         );
@@ -1961,24 +1927,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       </>
                     )}
               </button>
-              {/* #51: keep this item out of the "전체 강화" spray (so Enhance-All
-                  never risk-destroys your best gear). */}
-              {!atCap ? (
-                <button
-                  type="button"
-                  className={`slot-detail__skip ${enhanceExcludedIds.has(slotVal) ? 'slot-detail__skip--on' : ''}`}
-                  onClick={() => {
-                    setEnhanceExcludedIds((prev) => {
-                      const nextSet = new Set(prev);
-                      if (nextSet.has(slotVal)) nextSet.delete(slotVal); else nextSet.add(slotVal);
-                      return nextSet;
-                    });
-                    onUITap?.();
-                  }}
-                >
-                  {`${enhanceExcludedIds.has(slotVal) ? '☑' : '☐'} ${t(language, 'enhanceExcludeToggle')}`}
-                </button>
-              ) : null}
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
                   {t(language, 'equipSwap')}

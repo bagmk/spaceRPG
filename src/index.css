@@ -799,8 +799,11 @@ button.hud-stage-title--clickable:hover {
 .equip-loadout {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 2px 0 4px;
+  justify-content: center;
+  gap: 12px;
+  /* Compact, CENTERED cluster — must NOT balloon full-width on desktop (user). */
+  max-width: 470px;
+  margin: 4px auto 6px;
 }
 .equip-statstack {
   flex: 0 0 auto;
@@ -823,8 +826,10 @@ button.hud-stage-title--clickable:hover {
 .equip-statstack__icon { grid-area: icon; font-size: 15px; align-self: center; }
 .equip-statstack__label { grid-area: label; font-size: 10px; color: #8fa0b8; line-height: 1.15; }
 .equip-statstack__value { grid-area: value; font-family: var(--mono); font-size: 13px; font-weight: 700; color: #eef2fa; line-height: 1.2; }
-/* In the loadout row the hexagon flexes to fill the space beside the stat stack. */
-.equip-loadout .hex-board { flex: 1 1 auto; max-width: none; min-width: 0; margin: 0; }
+/* The hexagon gets a DEFINITE clamped width (its slots are absolutely positioned, so
+   flex-basis:auto would collapse it to ~0). Compact ~300px cap on desktop, shrinks on
+   mobile — never stretches the whole panel. */
+.equip-loadout .hex-board { flex: none; width: clamp(190px, 56vw, 300px); max-width: 300px; margin: 0; }
 /* (Overhaul-3 P3/P4: dead .hex-grid removed — replaced by .hex-board below.) */
 /* Connected hexagon (Overhaul-3): a square board with an SVG link layer (6 ring
    edges + 6 center spokes) behind 7 absolutely-placed slots on regular-hexagon
