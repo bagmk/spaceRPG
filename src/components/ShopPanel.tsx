@@ -50,6 +50,15 @@ const GACHA_BOX_NAME: Record<string, { en: string; ko: string }> = {
   box_bright: { en: 'Bright Nebula', ko: '찬란한 성운' },
   box_prime: { en: 'Primordial Nebula', ko: '태초의 성운' },
 };
+/** Gacha box tier → grade-card accent (by GachaBoxSpec.rank 0/1/2). Drives the
+ *  shared --rarity-color so each box reads its tier via the same color language.
+ *  NB: keyed off rank, not box.odds — all boxes have legendary>0, so an
+ *  odds-headline pick would collapse every box to one color. */
+const GACHA_RANK_ACCENT: Record<number, string> = {
+  0: RARITY_COLORS.rare,
+  1: RARITY_COLORS.epic,
+  2: RARITY_COLORS.legendary,
+};
 
 function formatRemainingMs(ms: number): string | null {
   if (ms <= 0) return null;
@@ -263,7 +272,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                 <button
                   key={offer.slot}
                   type="button"
-                  className={`shop-item-card ${sold ? 'shop-item-card--sold' : ''}`}
+                  className={`shop-card shop-item-card ${sold ? 'shop-item-card--sold' : ''}`}
                   style={{ '--rarity-color': rc } as CSSProperties}
                   disabled={sold || !afford}
                   onClick={() => { dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now }); onSfx?.(); }}
@@ -273,7 +282,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   {ent ? <EntityGlyph entity={ent} color={rc} /> : null}
                   <span className="shop-item-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
                   {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={TRAIT_ICON_TONE} /> : null}
-                  <span className="shop-item-card__cost">
+                  <span className="shop-card__price">
                     {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
                   </span>
                 </button>
@@ -297,7 +306,8 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                 <button
                   key={box.id}
                   type="button"
-                  className="shop-gacha-card"
+                  className="shop-card shop-gacha-card"
+                  style={{ '--rarity-color': GACHA_RANK_ACCENT[box.rank] } as CSSProperties}
                   disabled={!afford}
                   onClick={() => openBox(box.id)}
                   title={`${t(language, 'shopGachaOdds')}: ${odds}`}
@@ -305,7 +315,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   <span className="shop-gacha-card__icon" aria-hidden="true">🎁</span>
                   <span className="shop-gacha-card__name">{GACHA_BOX_NAME[box.id]?.[language] ?? box.id}</span>
                   <span className="shop-gacha-card__odds">{odds}</span>
-                  <span className="shop-gacha-card__cost">⚛{formatGameNumberShort(cost)}</span>
+                  <span className="shop-card__price">⚛{formatGameNumberShort(cost)}</span>
                 </button>
               );
             })}
@@ -360,12 +370,13 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                 <button
                   key={count}
                   type="button"
-                  className="shop-stone-card"
+                  className="shop-card shop-stone-card"
+                  style={{ '--rarity-color': 'var(--cc-stone-accent)' } as CSSProperties}
                   disabled={!afford}
                   onClick={() => { dispatch({ type: 'BUY_ENHANCE_STONES', count }); onSfx?.(); }}
                 >
                   <span className="shop-stone-card__amount">◆ {count}</span>
-                  <span className="shop-stone-card__cost">⚛{formatGameNumberShort(cost)}</span>
+                  <span className="shop-card__price">⚛{formatGameNumberShort(cost)}</span>
                 </button>
               );
             })}
@@ -376,14 +387,14 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               <button
                 key={p.id}
                 type="button"
-                className="shop-pack-card"
-                style={{ '--boost-color': p.color } as CSSProperties}
+                className="shop-card shop-pack-card"
+                style={{ '--boost-color': p.color, '--rarity-color': p.color } as CSSProperties}
                 disabled={pendingId !== null}
                 onClick={() => handlePaid(p)}
               >
                 <span className="shop-pack-card__icon">{p.icon}</span>
                 <span className="shop-pack-card__amount">{p.name[language]}</span>
-                <span className="shop-pack-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
+                <span className="shop-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
               </button>
             ))}
           </div>

@@ -11,6 +11,7 @@
   --text-primary: #f5f7fa;
   --muted: rgba(245, 247, 250, 0.55);
   --text-disabled: rgba(245, 247, 250, 0.3);
+  --cc-stone-accent: #bb8cff; /* 강화석 purple — single source for the shop stone-card accent */
   --accent: #ff6644;
   --core: #ffaa66;
   --ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -14715,62 +14716,59 @@ button.stat-header-item {
   color: rgba(245, 247, 250, 0.5);
 }
 .shop-fs__stones { display: flex; gap: 8px; }
-.shop-stone-card {
-  flex: 1;
+/* Overhaul-4 P4: ONE shared grade-card language for every shop card type
+   (daily/gacha/stone/pack). Each card drives a single --rarity-color accent →
+   rarity border + faint rarity wash + lift-and-glow on hover. Placed first so
+   the per-board overrides below win the cascade. */
+.shop-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: 5px;
+  padding: 12px 8px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(187, 140, 255, 0.28);
-  background: rgba(187, 140, 255, 0.07);
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 50%, transparent);
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 10%, rgba(12, 12, 18, 0.72));
   color: var(--fg);
   font: inherit;
   cursor: pointer;
-  transition: filter 0.15s, transform 0.12s;
+  text-align: center;
+  transition: filter 0.15s, transform 0.12s, box-shadow 0.15s, border-color 0.15s;
 }
-.shop-stone-card:not(:disabled):hover { filter: brightness(1.15); }
-.shop-stone-card:not(:disabled):active { transform: scale(0.97); }
-.shop-stone-card:disabled { opacity: 0.4; cursor: not-allowed; }
+.shop-card:not(:disabled):hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--rarity-color, #8090b0) 78%, transparent);
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--rarity-color, #8090b0) 55%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--rarity-color, #8090b0) 40%, transparent);
+}
+.shop-card:not(:disabled):active { transform: scale(0.97); }
+.shop-card:disabled { opacity: 0.5; cursor: not-allowed; }
+.shop-card__price {
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--rarity-color, #cfd6e6) 70%, #f3f1ec);
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 16%, rgba(255, 255, 255, 0.05));
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 30%, transparent);
+}
+/* Stone card: only the bit .shop-card doesn't cover (it sits in a flex row). */
+.shop-stone-card { flex: 1; }
 .shop-stone-card__amount { font-size: 16px; font-weight: 800; }
-.shop-stone-card__cost { font-family: var(--mono); font-size: 11px; color: rgba(247, 241, 232, 0.7); }
 
 .shop-fs__packs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.shop-pack-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 14px 8px;
-  border-radius: 13px;
-  border: 1px solid color-mix(in srgb, var(--boost-color, #ffd766) 40%, rgba(255, 255, 255, 0.1));
-  background:
-    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--boost-color, #ffd766) 18%, transparent), transparent 70%),
-    rgba(14, 12, 16, 0.7);
-  color: var(--fg);
-  font: inherit;
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.12s;
-}
-.shop-pack-card:not(:disabled):hover { filter: brightness(1.12); }
-.shop-pack-card:not(:disabled):active { transform: scale(0.97); }
-.shop-pack-card:disabled { opacity: 0.6; cursor: wait; }
+/* Pack card: keep the async-purchase cursor (.shop-card covers the rest). */
+.shop-pack-card:disabled { cursor: wait; }
 .shop-pack-card__icon { font-size: 20px; color: var(--boost-color, #ffd766); }
 .shop-pack-card__amount { font-family: var(--mono); font-size: 14px; font-weight: 800; color: #fff2d0; }
-.shop-pack-card__price {
-  margin-top: 2px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--boost-color, #ffd766) 24%, rgba(255, 255, 255, 0.08));
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 800;
-}
 
 .shop-fs__daily-head { display: flex; align-items: center; gap: 12px; }
 .shop-fs__daily-head .shop-fs__section-title { flex: 1; }
@@ -14798,31 +14796,7 @@ button.stat-header-item {
   font-size: 10px;
   color: rgba(245, 247, 250, 0.42);
 }
-/* #43: richer single-tap item card (rarity + glyph + spec chip + description). */
-.shop-item-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 12px 8px 10px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 50%, transparent);
-  background: color-mix(in srgb, var(--rarity-color, #8090b0) 10%, rgba(12, 12, 18, 0.72));
-  color: var(--fg);
-  font: inherit;
-  cursor: pointer;
-  text-align: center;
-  transition: filter 0.15s, transform 0.12s, box-shadow 0.15s, border-color 0.15s;
-}
-.shop-item-card:not(:disabled):hover {
-  filter: brightness(1.12);
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--rarity-color, #8090b0) 78%, transparent);
-  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--rarity-color, #8090b0) 55%, transparent);
-}
-.shop-item-card:not(:disabled):active { transform: scale(0.97); }
-.shop-item-card:disabled { opacity: 0.5; cursor: not-allowed; }
+/* #43 daily item card — base shared via .shop-card; only its extras remain. */
 .shop-item-card--sold { opacity: 0.35; filter: grayscale(0.6); }
 .shop-item-card__rarity { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .shop-item-card__name { font-size: 11px; font-weight: 700; line-height: 1.15; color: #f3f1ec; }
@@ -14835,31 +14809,13 @@ button.stat-header-item {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.shop-item-card__cost { font-family: var(--mono); font-size: 11px; font-weight: 800; color: var(--rarity-color, #cfd6e6); margin-top: 2px; }
 
 /* #43: gacha (Nebula Boxes) — tier buttons + in-place single-card reveal. */
 .shop-gacha-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.shop-gacha-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--stage-accent, #8090b0) 40%, transparent);
-  background: color-mix(in srgb, var(--stage-accent, #8090b0) 10%, rgba(12, 12, 18, 0.7));
-  color: var(--fg);
-  font: inherit;
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.12s;
-}
-.shop-gacha-card:not(:disabled):hover { filter: brightness(1.15); }
-.shop-gacha-card:not(:disabled):active { transform: scale(0.97); }
-.shop-gacha-card:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Gacha box card — base shared via .shop-card (accent = box rank). */
 .shop-gacha-card__icon { font-size: 22px; }
 .shop-gacha-card__name { font-size: 10px; font-weight: 800; text-align: center; line-height: 1.1; }
 .shop-gacha-card__odds { font-size: 8px; color: rgba(245, 247, 250, 0.5); text-align: center; line-height: 1.15; }
-.shop-gacha-card__cost { font-family: var(--mono); font-size: 11px; font-weight: 700; color: #ffe08a; }
 .shop-gacha-reveal { margin-top: 14px; }
 /* A7: multi-item gacha haul — a clear grid of pulled cards + the 강화석 line. */
 .shop-gacha-haul {
@@ -14877,8 +14833,11 @@ button.stat-header-item {
   gap: 4px;
   padding: 10px 6px 8px;
   border-radius: 11px;
-  border: 1px solid var(--rarity-color, #8090b0);
-  background: color-mix(in srgb, var(--rarity-color, #8090b0) 12%, rgba(12, 14, 22, 0.92));
+  /* Match the shared grade-card look so "what you pull" reads like "what you buy". */
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #8090b0) 55%, transparent);
+  background: color-mix(in srgb, var(--rarity-color, #8090b0) 10%, rgba(12, 14, 22, 0.92));
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--rarity-color, #8090b0) 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--rarity-color, #8090b0) 35%, transparent);
 }
 .shop-gacha-haul-card__name {
   font-size: var(--fs-micro, 11px);
