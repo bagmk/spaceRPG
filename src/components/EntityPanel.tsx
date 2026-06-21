@@ -50,6 +50,13 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
   mythic: '#ff5db5',
 };
 
+/**
+ * Color-minimize (user 2026-06-21): rarity color is the ONLY color signal (card
+ * borders/glyphs). Effect/trait ICONS + spec chips render in ONE neutral tone so
+ * the screens aren't a rainbow — the icon SHAPE (●■★◆✚▲) still tells the type.
+ */
+const TRAIT_ICON_TONE = '#aeb8cc';
+
 const SUBSTAT_LABEL_KEY: Record<SecondaryStatType, Parameters<typeof t>[1]> = {
   critChance: 'effectCritChance',
   critMult: 'effectCritMult',
@@ -252,7 +259,7 @@ export function TraitBadge({ entity, className = '' }: { entity: StageEntity; cl
   return (
     <span
       className={`trait-badge ${className}`}
-      style={{ color: trait.accent, borderColor: trait.accent } as CSSProperties}
+      style={{ color: TRAIT_ICON_TONE, borderColor: TRAIT_ICON_TONE } as CSSProperties}
       aria-hidden="true"
     >
       {trait.icon}
@@ -1245,12 +1252,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // (click/auto always; crit chance+mult only once you have crit gear).
           // Replaces the removed icon-guide legend + click/auto readout cards.
           const statStack: { key: string; icon: string; color: string; label: string; value: string }[] = [
-            { key: 'click', icon: EFFECT_TRAIT.click.icon, color: EFFECT_TRAIT.click.accent, label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)}${t(language, 'hudPerClick')}` },
-            { key: 'auto', icon: EFFECT_TRAIT.auto.icon, color: EFFECT_TRAIT.auto.accent, label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}${t(language, 'effectAutoRatePerSec')}` },
+            { key: 'click', icon: EFFECT_TRAIT.click.icon, color: TRAIT_ICON_TONE, label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)}${t(language, 'hudPerClick')}` },
+            { key: 'auto', icon: EFFECT_TRAIT.auto.icon, color: TRAIT_ICON_TONE, label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}${t(language, 'effectAutoRatePerSec')}` },
           ];
           if (stats.critChance > 0) {
-            statStack.push({ key: 'critC', icon: EFFECT_TRAIT.crit.icon, color: EFFECT_TRAIT.crit.accent, label: t(language, 'effectCritChance'), value: `${Math.round(stats.critChance * 100)}%` });
-            statStack.push({ key: 'critM', icon: SUBSTAT_TRAIT.critMult, color: EFFECT_TRAIT.crit.accent, label: t(language, 'effectCritMult'), value: `×${stats.critMult.toFixed(1)}` });
+            statStack.push({ key: 'critC', icon: EFFECT_TRAIT.crit.icon, color: TRAIT_ICON_TONE, label: t(language, 'effectCritChance'), value: `${Math.round(stats.critChance * 100)}%` });
+            statStack.push({ key: 'critM', icon: SUBSTAT_TRAIT.critMult, color: TRAIT_ICON_TONE, label: t(language, 'effectCritMult'), value: `×${stats.critMult.toFixed(1)}` });
           }
 
           return (
@@ -1705,7 +1712,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {(() => {
                 const p = effectValueLabel(output, language, power, 1, 1, false, false);
                 const tr = EFFECT_TRAIT[output.effect.type];
-                return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+                return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
               })()}
               {/* On a failed upgrade the 강화석 ARE the payout — show them prominently. */}
               {!lastFusionEvent.rarityUp && lastFusionEvent.stonesEarned > 0 ? (
@@ -1807,7 +1814,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {ent ? <h3 className="enhance-result-card__name">{entityName(ent, language)}</h3> : null}
               {ev.outcome === 'up' && beforeVal && afterVal ? (
                 <div className="enhance-result-card__delta">
-                  {tr ? <span className="enhance-result-card__delta-icon" style={{ color: tr.accent }}>{tr.icon}</span> : null}
+                  {tr ? <span className="enhance-result-card__delta-icon" style={{ color: TRAIT_ICON_TONE }}>{tr.icon}</span> : null}
                   <span className="enhance-result-card__stat">{statLabel}</span>
                   <span className="enhance-result-card__before">{beforeVal}</span>
                   <span className="enhance-result-card__arrow">→</span>
@@ -1864,7 +1871,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 {(() => {
                   const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
                   const tr = EFFECT_TRAIT[ent.effect.type];
-                  return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+                  return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
                 })()}
                 <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
                 {/* #50: a tail (gold) specimen shows its quality percentile. */}
@@ -1992,7 +1999,7 @@ function EntityDetailCard({
           {(() => {
             const p = effectValueLabel(entity, language, power, count, ownedLevel, false, false);
             const tr = EFFECT_TRAIT[entity.effect.type];
-            return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={tr.accent} primary />;
+            return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
           })()}
           <span className="entity-detail-card__lvl">{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
         </div>
