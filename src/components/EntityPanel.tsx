@@ -1434,10 +1434,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           return (
             <div className="fuse-page cc-scroll">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
-              <TraitLegend language={language} />
-              {/* Fuse-All — compact box (#41): label + a small trio-count chip
-                  (no more "(N조)" in the label). Fuses every trio across all
-                  rarities except ✕-excluded stacks. */}
+              {/* 전체 융합 — one batch button: fuses every available same-rarity trio at
+                  once (the redundant in-altar "일괄 융합 ×N" + the "N회 가능" counts were
+                  removed; the (?) help explains it). */}
               {(() => {
                 const allTrios = allTriosCount();
                 return (
@@ -1450,9 +1449,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     <span className="gacha-fuse-all-btn__label">
                       {allTrios > 0 ? t(language, 'fuseAll') : t(language, 'fuseAllNone')}
                     </span>
-                    {allTrios > 0 ? (
-                      <span className="gacha-fuse-all-btn__count">{t(language, 'fuseTrios').replace('{n}', String(allTrios))}</span>
-                    ) : null}
                   </button>
                 );
               })()}
@@ -1510,17 +1506,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         : t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))}
                   </span>
                 </button>
-                {/* 🅠4: batch-fuse all available trios of the tray rarity (up to N). */}
-                {trayRarity && batchTrios >= 2 ? (
-                  <button
-                    type="button"
-                    className="gacha-batch-btn"
-                    disabled={fusing || !affordable}
-                    onClick={() => triggerBatch(trayRarity)}
-                  >
-                    {t(language, 'fuseBatch').replace('{n}', String(batchTrios))}
-                  </button>
-                ) : null}
                 <div className="gacha-odds">
                   {capped ? (
                     <span className="gacha-odds__cap">
@@ -1541,7 +1526,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <div className="entity-inv entity-inv--fuse">
                 <div className="entity-inv__head">
                   <span className="entity-inv__title">{t(language, 'fuseFuel')}</span>
-                  {trios > 0 ? <span className="entity-inv__sub">{t(language, 'fuseTrios').replace('{n}', String(trios))}</span> : null}
                 </div>
                 {rarityFilterBar}
                 {rarityFiltered.length === 0 ? (
