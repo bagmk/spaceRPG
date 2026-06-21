@@ -58,10 +58,12 @@ drops.ts + codex badge).
   a level or fuse→relevel is a brutal double grind.
 
 ## Phased implementation (each phase: tsc + vitest + build green; commit; FF main/feat; push)
-- **P0** Pin invariants + harden migration (no behavior change). Add
+- **P0 ✅ DONE** Pin invariants + harden migration (no behavior change). Added
   `dropDirectionality.test.ts` (DROP+SHOP+GACHA sweeps P=1..16, backward-reach,
-  no-S17-leak). Harden `convertEntityModelV14` to `.filter(isEntityInstance)`. Add a
-  `createSaveSnapshot()→migrateToCurrent()` round-trip test. No save bump.
+  no-S17-leak) + `saveRoundTrip.test.ts` (length/level/quality survive, idempotent,
+  empty-stays-empty, single-corrupt-copy dropped-not-wiped). Hardened
+  `convertEntityModelV14` to `.filter(isEntityInstance)` (array-ness = v14
+  discriminator). No save bump. 350 tests green.
 - **P1** maxCount unblock: route mint/grant through `addToInventory`; test a 2nd
   legendary grant succeeds. No save bump.
 - **P2** C favorite/lock (save **v26**): `EntityInstance.locked?` → `isEntityInstance`

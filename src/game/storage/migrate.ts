@@ -99,12 +99,21 @@ type EntityModelFields = Pick<
  */
 function convertEntityModelV14(record: Partial<SaveState>): EntityModelFields {
   const rawInventory = (record as { inventory?: unknown }).inventory;
-  const hasV14Inventory = Array.isArray(rawInventory) && rawInventory.every(isEntityInstance);
+  const rawIsArray = Array.isArray(rawInventory);
+  // Overhaul-4 hardening: the v14+ inventory is ALWAYS serialized as an array, so use
+  // the field's array-ness (not "EVERY element valid") as the v14 discriminator, and
+  // FILTER OUT any corrupt copies — rather than `.every()`-failing and discarding the
+  // ENTIRE inventory. Previously a single malformed copy (e.g. a future per-copy field
+  // not yet in isEntityInstance) wiped the whole hoard on load.
+  const validInstances: EntityInstance[] = rawIsArray
+    ? ((rawInventory as unknown[]).filter(isEntityInstance) as EntityInstance[])
+    : [];
+  const hasV14Inventory = rawIsArray;
   const legacyEntries = Array.isArray((record as { purchasedEntities?: unknown }).purchasedEntities)
     ? ((record as { purchasedEntities?: unknown[] }).purchasedEntities as unknown[]).filter(isPurchasedEntityEntry)
     : [];
   const inventory: EntityInstance[] = hasV14Inventory
-    ? (rawInventory as EntityInstance[])
+    ? validInstances
     : legacyEntries.map((e) => ({ entityId: e.entityId, count: e.count, level: 1 }));
   const almanacCollected = isAlmanacCollected(record.almanacCollected)
     ? record.almanacCollected
