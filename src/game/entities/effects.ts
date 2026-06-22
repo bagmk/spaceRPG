@@ -101,11 +101,15 @@ export function getEnhanceGeoLevelMult(rarity: EntityRarity, level: number): num
  * AUTO_STAGE_POWER_BASE stays 1.0 (P0 neutralised), kept for lockstep.
  */
 export function getAutoOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
-  const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
-  const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
-  const playerStage = Math.max(1, Math.floor(power.stageId)) as keyof typeof ENTITY_COST_ANCHORS;
-  const playerAnchor = ENTITY_COST_ANCHORS[playerStage] ?? ENTITY_COST_ANCHORS[1];
-  return rarityWeight * playerAnchor * AUTO_GEAR_INCOME_SCALE
+  // GEAR-DRIVEN ECONOMY (2026-06-22, user): auto WALLET income is anchored to the
+  // ITEM (its own baseCost = origin-stage × rarity), NOT the player's current stage.
+  // So a high-stage rift item pays a lot, and OLD gear stops free-inflating as you
+  // clear stages — auto grows by EQUIPPING BETTER GEAR, not by advancing
+  // ("오토는 아이템을 근거로 올라야지 스테이지 근거로 오르면 안되지"). For stage-appropriate gear
+  // (itemAnchor == playerAnchor) this is identical to the old player-anchored value,
+  // so the gate sim + affordability calibration are UNCHANGED; only carried past-stage
+  // gear is reduced to its origin scale. baseCost == rarityWeight × itemAnchor.
+  return entity.baseCost * AUTO_GEAR_INCOME_SCALE
     * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
 }
 

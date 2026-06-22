@@ -110,21 +110,23 @@ describe('Phase 4-1: economy re-anchors', () => {
     expect(getEnhanceCost(s1Legendary, 1, 16)).toBe(getEnhanceCost(s1Legendary, 1, 1));
   });
 
-  it('auto WALLET anchor tracks the player stage; the TAME entropy anchor stays fixed', () => {
-    // GEAR-ONLY ECONOMY CRANK (2026-06-21): the dead late-game auto channel is fixed.
-    // The WALLET anchor (getAutoOutputAnchor) NOW scales with the player-stage cost
-    // anchor so auto income affords the shop ladder; the ENTROPY-feeding anchor
-    // (getTameAutoOutputAnchor) stays stage-1-pinned so progression pacing is unchanged.
+  it('auto WALLET anchor is ITEM-anchored (player-stage-invariant); grows with the item, not the stage', () => {
+    // GEAR-DRIVEN ECONOMY (2026-06-22, user): auto income is anchored to the ITEM's
+    // own baseCost, NOT the player's current stage — advancing stages no longer
+    // free-inflates auto; equipping a BETTER (higher-origin) item does. The
+    // ENTROPY-feeding anchor (getTameAutoOutputAnchor) stays stage-1-pinned.
     const s1Auto = STAGE_ENTITIES.find((e) => e.stageId === 1 && e.effect.type === 'auto')!;
     const atP1 = getAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 });
     const atP5 = getAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 });
-    // Wallet anchor grows with the player anchor ladder (anchor[5]/anchor[1]).
-    expect(atP5 / atP1).toBeCloseTo(ENTITY_COST_ANCHORS[5] / ENTITY_COST_ANCHORS[1], 5);
+    // SAME item, different player stage → identical wallet anchor (no stage inflation).
+    expect(atP5).toBeCloseTo(atP1, 5);
+    // A higher-origin item pays MORE — the wallet anchor tracks the item's baseCost.
+    const s13Auto = STAGE_ENTITIES.find((e) => e.stageId === 13 && e.effect.type === 'auto')!;
+    expect(getAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }) / atP1)
+      .toBeCloseTo(s13Auto.baseCost / s1Auto.baseCost, 5);
     // The TAME entropy anchor is player-stage-invariant (gate untouched).
     expect(getTameAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 }))
       .toBeCloseTo(getTameAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 }), 5);
-    // A late-origin item: its tame entropy anchor is likewise player-stage-invariant.
-    const s13Auto = STAGE_ENTITIES.find((e) => e.stageId === 13 && e.effect.type === 'auto')!;
     expect(getTameAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }))
       .toBeCloseTo(getTameAutoOutputAnchor(s13Auto, { stageId: 13, gateProgress01: 0 }), 5);
   });
