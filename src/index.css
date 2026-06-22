@@ -14815,6 +14815,9 @@ button.stat-header-item {
 .shop-fs__body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* no horizontal scroll — cards must fit the column */
+  scrollbar-width: none; /* hide the scrollbar (user: 상점 스크롤 안보이게) */
+  -ms-overflow-style: none;
   /* Overhaul-4: cap to a phone-width column (centered) so the 3-col card grids stay
      compact/square like the reference instead of stretching wide on desktop. */
   width: 100%;
@@ -14822,6 +14825,7 @@ button.stat-header-item {
   margin: 0 auto;
   padding: 4px 16px 24px;
 }
+.shop-fs__body::-webkit-scrollbar { display: none; }
 .shop-fs__section-title {
   margin: 14px 0 8px;
   font-family: var(--mono);
@@ -14885,7 +14889,7 @@ button.stat-header-item {
 
 .shop-fs__packs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 /* Pack card: keep the async-purchase cursor (.shop-card covers the rest). */
@@ -14916,7 +14920,7 @@ button.stat-header-item {
 .shop-fs__refresh:disabled { opacity: 0.4; cursor: not-allowed; }
 .shop-fs__daily-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 /* (Overhaul-3 P4: dead .shop-daily-card family removed — the live card is
@@ -14951,7 +14955,7 @@ button.stat-header-item {
 }
 
 /* #43: gacha (Nebula Boxes) — tier buttons + in-place single-card reveal. */
-.shop-gacha-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.shop-gacha-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 /* Gacha box card — base shared via .shop-card (accent = box rank). */
 .shop-gacha-card__icon { font-size: 22px; }
 .shop-gacha-card__name { font-size: 10px; font-weight: 800; text-align: center; line-height: 1.1; }
