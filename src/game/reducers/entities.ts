@@ -17,7 +17,7 @@ import {
 import {
   getEnhanceLevelCap,
   applyMergeCopies,
-  getCopyTokenCost,
+  getEnhanceStoneCost,
 } from '../entities/enhance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
@@ -47,7 +47,6 @@ type UnequipAction = Extract<GameAction, { type: 'UNEQUIP_ENTITY' }>;
 type FuseAction = Extract<GameAction, { type: 'FUSE_ENTITIES' }>;
 type FuseBatchAction = Extract<GameAction, { type: 'FUSE_BATCH' }>;
 type EnhanceAction = Extract<GameAction, { type: 'ENHANCE_ENTITY' }>;
-type BuyCopyTokenAction = Extract<GameAction, { type: 'BUY_COPY_TOKEN' }>;
 
 /** Raise slot counts when stage/almanac progress earns new slots (never lowers). */
 export function syncSlotUnlocks(state: GameState): GameState {
@@ -506,7 +505,33 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   const spares = fodder.reduce((s, e) => s + (e.count ?? 1), 0);
 
   const merge = applyMergeCopies(anchor.level, spares, cap);
-  if (merge.levelsGained <= 0) return state; // not enough copies for even one level
+  if (merge.levelsGained <= 0) {
+    // #8 (user): no spare copies for even one level → the 강화석 escape valve
+    // ("카드가 없으면 비싸게 업그레이트"). Pay an escalating 강화석 price for ONE level; no
+    // copies consumed. Replaces the removed copy-token BUY ("카드 사는건 안 됨") and
+    // keeps 강화석 a live sink. Copies remain the cheap (free) path when you have them.
+    const stoneCost = getEnhanceStoneCost(entity, anchor.level);
+    if (state.enhanceStones < stoneCost) return state;
+    const nextLevel = anchor.level + 1;
+    const eventId = nextEventId(state);
+    const nextInventory = state.inventory.map((e) =>
+      e.instanceId === anchorId ? { ...e, level: nextLevel } : e);
+    return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+      ...state,
+      enhanceStones: state.enhanceStones - stoneCost,
+      inventory: nextInventory,
+      eventCounter: eventId,
+      lastEnhanceEvent: {
+        id: eventId,
+        entityId: anchor.entityId,
+        instanceId: anchorId,
+        outcome: 'up',
+        level: nextLevel,
+        prevLevel: anchor.level,
+        mergedCount: 0,
+      },
+    }));
+  }
 
   const consumedInstances = fodder.slice(0, merge.consumed); // each flat copy = 1
   const consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
@@ -542,23 +567,6 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   }));
 }
 
-/**
- * BUY_COPY_TOKEN (P7b escape valve): mint ONE spare copy of an item with 물질 or
- * 강화석, for players whose drops are dry on a needed merge. Routed through the
- * UNCAPPED addToInventory (never the maxCount-gated buy path).
- */
-export function handleBuyCopyToken(state: GameState, action: BuyCopyTokenAction): GameState {
-  if (state.completedRun || state.imploding || state.selectedEndingId !== null) return state;
-  const entity = findEntityById(action.entityId);
-  if (!entity) return state;
-  const cost = getCopyTokenCost(entity);
-  if (action.currency === 'stone') {
-    if (state.enhanceStones < cost.stones) return state;
-    return syncSlotUnlocks({ ...state, enhanceStones: state.enhanceStones - cost.stones, inventory: addToInventory(state.inventory, entity.id) });
-  }
-  if (state.quanta < cost.matter) return state;
-  return syncSlotUnlocks({ ...state, quanta: state.quanta - cost.matter, inventory: addToInventory(state.inventory, entity.id) });
-}
 
 /**
  * Overhaul-4 (v26): toggle an entity's ★ favorite. Favorited entities' copies are

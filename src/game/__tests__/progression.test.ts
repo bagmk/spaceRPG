@@ -3,7 +3,7 @@ import { gameReducer, createInitialGameState } from '../reducer';
 import { STAGE_ENTITIES, getEntitiesForStage } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { getSecondaryStats } from '../entities/substats';
-import { getEnhanceCost, getEnhanceLevelCap } from '../entities/enhance';
+import { getEnhanceCost, getEnhanceLevelCap, getEnhanceStoneCost } from '../entities/enhance';
 import { getRarityGateRamp, rollEntityDrop } from '../entities/drops';
 import { getMaxFusionRarityIdx, rollFusionRarity, getFusionQuantaCost } from '../entities/fusion';
 import { isEntityLockedByAnchor } from '../entities/anchors';
@@ -185,15 +185,31 @@ describe('enhancement (강화소)', () => {
       .toBe(ENHANCE_LEVEL_CAPS.common);
   });
 
-  it('P7b: BUY_COPY_TOKEN mints a spare copy with matter (uncapped)', () => {
+  it('#8: ENHANCE with no spare copies uses the 강화석 escape (spends stones, mints no copy)', () => {
+    const stoneCost = getEnhanceStoneCost(entity, 1);
     const state: GameState = {
       ...createInitialGameState(0),
-      quanta: 1e9,
+      enhanceStones: stoneCost + 5,
+      // one lone copy → no spares for a free merge → falls to the 강화석 escape valve.
       inventory: [{ entityId: entity.id, instanceId: 'a', count: 1, level: 1 }],
     };
-    const next = gameReducer(state, { type: 'BUY_COPY_TOKEN', entityId: entity.id, currency: 'matter' });
-    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(2); // +1 spare copy
-    expect(next.quanta).toBeLessThan(state.quanta); // matter spent
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
+    const anchor = next.inventory.find((e) => e.instanceId === 'a')!;
+    expect(anchor.level).toBe(2); // leveled via 강화석
+    expect(next.enhanceStones).toBe(5); // exactly stoneCost spent
+    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(1); // no copy minted (buy removed)
+  });
+
+  it('#8: ENHANCE with no copies AND insufficient 강화석 is a no-op', () => {
+    const stoneCost = getEnhanceStoneCost(entity, 1);
+    const state: GameState = {
+      ...createInitialGameState(0),
+      enhanceStones: stoneCost - 1,
+      inventory: [{ entityId: entity.id, instanceId: 'a', count: 1, level: 1 }],
+    };
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
+    expect(next.inventory.find((e) => e.instanceId === 'a')!.level).toBe(1); // unchanged
+    expect(next.enhanceStones).toBe(stoneCost - 1); // no stones spent
   });
 
   it('level cap helper follows rarity', () => {

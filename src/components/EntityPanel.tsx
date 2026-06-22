@@ -26,7 +26,7 @@ import {
 import { computeHexBingo } from '../game/entities/hexBingo';
 import { getAutoOutputAnchor, getEffectiveCount, getEnhanceGeoLevelMult, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
-import { getEnhanceLevelCap, needCopiesForLevel, getCopyTokenCost } from '../game/entities/enhance';
+import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
@@ -422,8 +422,6 @@ interface Props {
   onEquipWild?: (entityId: string) => void;
   onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
   onEnhance: (instanceId: string) => void;
-  /** P7b: mint a spare copy of an item with 물질/강화석 (the merge escape valve). */
-  onBuyCopyToken?: (entityId: string, currency: 'matter' | 'stone') => void;
   onFuse: (inputEntityIds: string[]) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
   onFuseBatch: (inputEntityIds: string[]) => void;
@@ -441,7 +439,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onBuyCopyToken, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -1904,7 +1902,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           .filter((e) => e.entityId === ent.id && e.instanceId !== slotVal && !gearIdSet.has(e.instanceId ?? ''))
           .reduce((s, e) => s + (e.count ?? 1), 0);
         const canMerge = !atCap && spares >= need;
-        const tokenCost = getCopyTokenCost(ent);
+        // #8: no-copy escape valve — pay 강화석 to level when you have no spare copies
+        // ("카드 없으면 비싸게"). Copies stay the cheap (free) path; the buy is gone.
+        const stoneCost = getEnhanceStoneCost(ent, lvl);
+        const canStone = !atCap && !canMerge && enhanceStones >= stoneCost;
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setInspectedSlot(null); }}>
@@ -1936,8 +1937,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
-                style={canMerge && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-                disabled={!canMerge || !enhanceUnlocked || enhancing !== null}
+                style={(canMerge || canStone) && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+                disabled={(!canMerge && !canStone) || !enhanceUnlocked || enhancing !== null}
                 onClick={() => triggerEnhance(slotVal)}
               >
                 {!enhanceUnlocked
@@ -1948,21 +1949,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       <>
                         <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
-                        <span className="enhance-btn__cost">{`🧬 ${spares}/${need}`}</span>
+                        {/* #8: copies (free) when you have enough, else the 강화석 escape price. */}
+                        <span className="enhance-btn__cost">{canMerge ? `🧬 ${spares}/${need}` : `◆ ${stoneCost}`}</span>
                       </>
                     )}
               </button>
-              {!atCap && onBuyCopyToken ? (
-                <div className="slot-detail__token">
-                  <span className="slot-detail__token-label">{t(language, 'copyTokenBuy')}</span>
-                  <button type="button" className="slot-detail__token-btn" disabled={quanta < tokenCost.matter} onClick={() => { onBuyCopyToken(ent.id, 'matter'); onUITap?.(); }}>
-                    {`⚛${formatEntityCost(tokenCost.matter)}`}
-                  </button>
-                  <button type="button" className="slot-detail__token-btn" disabled={enhanceStones < tokenCost.stones} onClick={() => { onBuyCopyToken(ent.id, 'stone'); onUITap?.(); }}>
-                    {`◆${tokenCost.stones}`}
-                  </button>
-                </div>
-              ) : null}
               <div className="slot-detail__actions">
                 <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
                   {t(language, 'equipSwap')}

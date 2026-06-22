@@ -13,8 +13,8 @@ import {
   ENHANCE_LEVEL_CAPS,
   ENH_DUP_BASE,
   ENH_DUP_STEP,
-  COPY_TOKEN_MATTER_FACTOR,
-  COPY_TOKEN_STONE_COST,
+  ENHANCE_STONE_BASE,
+  ENHANCE_STONE_GROWTH,
 } from '../balance';
 import { type StageEntity } from './types';
 
@@ -22,13 +22,18 @@ export function getEnhanceLevelCap(entity: StageEntity): number {
   return ENHANCE_LEVEL_CAPS[entity.rarity] ?? 10;
 }
 
-/** Cost to buy ONE spare copy of an item (the merge escape valve). Matter anchors
- *  to the item's baseCost (stage-independent); 강화석 is the flat per-rarity price. */
-export function getCopyTokenCost(entity: StageEntity): { matter: number; stones: number } {
-  return {
-    matter: Math.ceil(entity.baseCost * COPY_TOKEN_MATTER_FACTOR),
-    stones: COPY_TOKEN_STONE_COST[entity.rarity] ?? 1,
-  };
+/**
+ * 강화석 (diamond) cost to level ONE step WITHOUT spare copies — the "no-card"
+ * escape valve (user #8: "카드가 없으면 비싸게 업그레이트", and "카드 사는건 안 됨" so the
+ * copy-token BUY is gone). Copies stay the cheap path (free merge); when you have
+ * none, you pay an escalating 강화석 price instead. Per-rarity base × growth^(level-1),
+ * reusing the same constants the entropy-gate sim's stone phase already models, so
+ * the gate calibration is unchanged (copies fund levels for free on top → conservative).
+ */
+export function getEnhanceStoneCost(entity: StageEntity, level: number): number {
+  const safeLevel = Math.max(1, Math.floor(level));
+  const base = ENHANCE_STONE_BASE[entity.rarity] ?? 2;
+  return Math.ceil(base * Math.pow(ENHANCE_STONE_GROWTH, safeLevel - 1));
 }
 
 // ── Overhaul-4 P7b: duplicate-collection enhance (pure merge math) ────────────
