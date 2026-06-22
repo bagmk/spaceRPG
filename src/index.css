@@ -14815,6 +14815,11 @@ button.stat-header-item {
 .shop-fs__body {
   flex: 1;
   overflow-y: auto;
+  /* Overhaul-4: cap to a phone-width column (centered) so the 3-col card grids stay
+     compact/square like the reference instead of stretching wide on desktop. */
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
   padding: 4px 16px 24px;
 }
 .shop-fs__section-title {
@@ -14826,7 +14831,7 @@ button.stat-header-item {
   text-transform: uppercase;
   color: rgba(245, 247, 250, 0.5);
 }
-.shop-fs__stones { display: flex; gap: 8px; }
+.shop-fs__stones { display: flex; gap: 10px; }
 /* Overhaul-4 P4: ONE shared grade-card language for every shop card type
    (daily/gacha/stone/pack). Each card drives a single --rarity-color accent →
    rarity border + faint rarity wash + lift-and-glow on hover. Placed first so
@@ -14881,7 +14886,7 @@ button.stat-header-item {
 .shop-fs__packs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 /* Pack card: keep the async-purchase cursor (.shop-card covers the rest). */
 .shop-pack-card:disabled { cursor: wait; }
@@ -14912,7 +14917,7 @@ button.stat-header-item {
 .shop-fs__daily-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 /* (Overhaul-3 P4: dead .shop-daily-card family removed — the live card is
    .shop-item-card; grep-confirmed unreferenced in markup.) */
@@ -14946,7 +14951,7 @@ button.stat-header-item {
 }
 
 /* #43: gacha (Nebula Boxes) — tier buttons + in-place single-card reveal. */
-.shop-gacha-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.shop-gacha-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 /* Gacha box card — base shared via .shop-card (accent = box rank). */
 .shop-gacha-card__icon { font-size: 22px; }
 .shop-gacha-card__name { font-size: 10px; font-weight: 800; text-align: center; line-height: 1.1; }
