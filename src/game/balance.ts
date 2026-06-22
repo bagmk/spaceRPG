@@ -243,31 +243,30 @@ export const ENTROPY_STAGE_GROWTH_BASE = 2.0;
 // storage/migrate.ts for the v17 save remap; never edit that copy.
 
 export const ENTROPY_THRESHOLDS: Record<number, number> = {
-  // GEAR-ONLY ECONOMY CRANK recalibration (2026-06-21, scripts/entropy-gate-sim.mjs,
-  // reference pinned to realPlayTargetSec, ALL INVARIANTS PASS). The crank's WALLET
-  // income (player-stage-anchored auto) is decoupled from the entropy gate via the
-  // tame autoEntropyFlatAdd channel, so it does NOT enter this calibration — the
-  // ladder shifts only because the cheaper enhance (ENHANCE_COST_FACTOR 0.5 /
-  // GROWTH 1.15) lifts the LINEAR per-level gate term slightly. Values are nearly
-  // identical to the prior ladder (≤ ~10% drift). Re-run the sim after touching
-  // gear curve / slots / costs / level / count and re-paste; the v16 ladder stays
-  // FROZEN in storage/migrate.ts.
-  1: 1.467e3,
-  2: 9.446e3,
-  3: 2.944e4,
-  4: 6.367e4,
-  5: 1.301e5,
-  6: 3.712e5,
-  7: 9.441e5,
-  8: 2.239e6,
-  9: 3.360e6,
-  10: 4.989e6,
-  11: 7.696e6,
-  12: 1.179e7,
-  13: 1.641e7,
-  14: 5.035e7,
-  15: 1.390e8,
-  16: 1.739e8,
+  // GEAR-DRIVEN ECONOMY recalibration (2026-06-22, scripts/entropy-gate-sim.mjs,
+  // reference pinned to realPlayTargetSec, ALL INVARIANTS PASS). Re-pinned after the
+  // crit substat bump (critChance 0.4→1.2, critMult 4→6) — crit feeds click income so
+  // it lifts the gate, shifting the ladder up ≤ ~12%. The auto WALLET income is
+  // item-anchored (decoupled from the gate via the tame autoEntropyFlatAdd channel),
+  // so #6 does NOT enter this calibration. Re-run the sim after touching gear curve /
+  // slots / costs / level / count / crit and re-paste; the v16 ladder stays FROZEN in
+  // storage/migrate.ts.
+  1: 1.479e3,
+  2: 9.526e3,
+  3: 2.969e4,
+  4: 6.421e4,
+  5: 1.335e5,
+  6: 3.871e5,
+  7: 1.014e6,
+  8: 2.453e6,
+  9: 3.644e6,
+  10: 5.367e6,
+  11: 8.219e6,
+  12: 1.254e7,
+  13: 1.741e7,
+  14: 5.633e7,
+  15: 1.580e8,
+  16: 1.980e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -704,8 +703,13 @@ export type SecondaryStatType =
  * `scales` stats ride STAGE_POWER_BASE; capped/flat resources do not.
  */
 export const SECONDARY_STAT_DEFS: Record<SecondaryStatType, { base: number; scales: boolean }> = {
-  critChance: { base: 0.4, scales: false }, // +% crit chance (capped resource)
-  critMult: { base: 4, scales: false },     // +% crit multiplier (bounded — see CRIT_MULT_GEAR_CAP)
+  // GEAR-DRIVEN ECONOMY (2026-06-22, user "치명타 확률 왜캐 낮냐 / 팍팍 성장"): crit was
+  // the outlier-low substat (0.4%/stat → barely felt vs the combo-driven crit). Bumped
+  // ×3 so crit GEAR is a real build choice, and critMult base 4→6 so big crits arrive
+  // sooner (still bounded by CRIT_MULT_GEAR_CAP). Mirrored in entropy-gate-sim.mjs +
+  // ENTROPY_THRESHOLDS re-pinned (crit feeds click income → the gate).
+  critChance: { base: 1.2, scales: false }, // +% crit chance (capped resource)
+  critMult: { base: 6, scales: false },     // +% crit multiplier (bounded — see CRIT_MULT_GEAR_CAP)
   comboCap: { base: 0.5, scales: false },   // flat combo cap add
   entropyGain: { base: 3, scales: false },  // +% entropy from all play income
   dropRate: { base: 5, scales: false },     // +% drop chance

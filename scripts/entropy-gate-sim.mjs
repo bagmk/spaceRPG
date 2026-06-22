@@ -330,12 +330,13 @@ function critFactor(stageId, combo, critGear = 0.5, stoneBudget = 0) {
   const statCount = { common: 1, rare: 1, epic: 2, legendary: 3 }[r];
   const rarityScale = { common: 0.6, rare: 1, epic: 1.5, legendary: 2.2 }[r];
   const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
-  // critChance substat: base 0.4% × rarityScale × lvl per stat; assume critGear
-  // share of (slots × statCount) stats are crit-flavored.
-  const chanceAdd = 0.004 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
+  // critChance substat: base 1.2% × rarityScale × lvl per stat (user bump ×3 —
+  // lockstep with balance.ts SECONDARY_STAT_DEFS.critChance); assume critGear share
+  // of (slots × statCount) stats are crit-flavored.
+  const chanceAdd = 0.012 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
   const chance = Math.min(CRIT_MAX, chanceAdd + combo * 0.003);
-  // critMult substat: base 4% × rarityScale × lvl per stat (scales=false now).
-  const multAdd = 0.04 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
+  // critMult substat: base 6% × rarityScale × lvl per stat (user bump 4→6 — lockstep).
+  const multAdd = 0.06 * rarityScale * lvl * clickSlots(stageId) * statCount * critGear;
   const critMult = 1.5 * Math.min(CRIT_MULT_GEAR_CAP, 1 + multAdd);
   return 1 + chance * (critMult - 1);
 }
