@@ -14887,6 +14887,8 @@ button.stat-header-item {
 .shop-pack-card:disabled { cursor: wait; }
 .shop-pack-card__icon { font-size: 20px; color: var(--boost-color, #ffd766); }
 .shop-pack-card__amount { font-family: var(--mono); font-size: 14px; font-weight: 800; color: #fff2d0; }
+/* Overhaul-4: how much matter each USD pack grants (so its value is visible). */
+.shop-pack-card__payout { font-family: var(--mono); font-size: 11px; font-weight: 700; color: color-mix(in srgb, var(--boost-color, #ffd766) 60%, #f3f1ec); }
 
 .shop-fs__daily-head { display: flex; align-items: center; gap: 12px; }
 .shop-fs__daily-head .shop-fs__section-title { flex: 1; }
@@ -14918,6 +14920,16 @@ button.stat-header-item {
   margin-top: 12px;
   font-size: 10px;
   color: rgba(245, 247, 250, 0.42);
+}
+/* Overhaul-4: daily-shop reset countdown (⏱ HH:MM:SS 후 초기화) — like the reference. */
+.shop-fs__reset-timer {
+  margin: -2px 0 10px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--stage-accent, #8090b0) 45%, #f5f7fa);
 }
 /* #43 daily item card — base shared via .shop-card; only its extras remain. */
 .shop-item-card--sold { opacity: 0.35; filter: grayscale(0.6); }

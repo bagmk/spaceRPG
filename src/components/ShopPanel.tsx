@@ -22,7 +22,7 @@ import {
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
 import { generateDailyShop, toDateKey } from '../game/shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost } from '../game/shop/pricing';
+import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout } from '../game/shop/pricing';
 import { STONE_BUNDLES, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { findEntityById, entityName } from '../game/entities/stageItems';
@@ -66,6 +66,16 @@ function formatRemainingMs(ms: number): string | null {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/** HH:MM:SS until the next LOCAL midnight — when the daily shop roster resets. */
+function formatResetCountdown(now: number): string {
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  let s = Math.max(0, Math.floor((next.getTime() - now) / 1000));
+  const h = Math.floor(s / 3600); s -= h * 3600;
+  const m = Math.floor(s / 60); const sec = s % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
 interface ShopPanelProps {
@@ -259,6 +269,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
             </button>
           )}
         >
+          <div className="shop-fs__reset-timer">{`⏱ ${formatResetCountdown(now)} ${t(language, 'shopResetIn')}`}</div>
           <div className="shop-fs__daily-grid">
             {roster.map((offer) => {
               const ent = findEntityById(offer.entityId);
@@ -383,7 +394,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
           </div>
           <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
           <div className="shop-fs__packs">
-            {MATTER_PACK_PRODUCTS.map((p) => (
+            {MATTER_PACK_PRODUCTS.map((p, i) => (
               <button
                 key={p.id}
                 type="button"
@@ -394,6 +405,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               >
                 <span className="shop-pack-card__icon">{p.icon}</span>
                 <span className="shop-pack-card__amount">{p.name[language]}</span>
+                <span className="shop-pack-card__payout">⚛{formatGameNumberShort(packMatterPayout(i, playerStageId))}</span>
                 <span className="shop-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
               </button>
             ))}

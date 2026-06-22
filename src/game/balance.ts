@@ -817,8 +817,8 @@ export const SHOP_RARITY_PRICE_FRAC: Record<EntityRarity, number> = { common: 0.
 export const SHOP_RANK_STEP = 1.35;
 /** Rank index per rarity — the geometric exponent base for shop pricing. */
 export const SHOP_RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-/** Matter price of one 강화석 = anchor × this. */
-export const SHOP_STONE_PRICE_FRAC = 0.18;
+/** Matter price of one 강화석 = anchor × this. (Overhaul-4: 0.18 → 0.14, slightly cheaper diamonds per user.) */
+export const SHOP_STONE_PRICE_FRAC = 0.14;
 /** Daily-refresh matter cost = anchor × this[refreshCount] (clamped), escalating. */
 export const SHOP_REFRESH_FRAC: number[] = [0.05, 0.15, 0.4, 1.0];
 

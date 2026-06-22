@@ -111,7 +111,9 @@ describe('#43 stage/rarity pricing + gacha', () => {
     // Higher stage anchor → more expensive; higher rarity → more expensive.
     expect(shopItemMatterCost('common', 8)).toBeGreaterThan(shopItemMatterCost('common', 2));
     expect(shopItemMatterCost('legendary', 8)).toBeGreaterThan(shopItemMatterCost('common', 8));
-    expect(shopStoneMatterCost(8, 10)).toBe(shopStoneMatterCost(8, 1) * 10);
+    // ~linear in count (ceil rounding makes exact ×10 equality float-fragile).
+    expect(shopStoneMatterCost(8, 10)).toBeLessThanOrEqual(shopStoneMatterCost(8, 1) * 10);
+    expect(shopStoneMatterCost(8, 10)).toBeGreaterThan(shopStoneMatterCost(8, 1) * 9);
     expect(shopRefreshMatterCost(8, 1)).toBeGreaterThan(shopRefreshMatterCost(8, 0));
   });
 
