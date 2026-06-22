@@ -831,7 +831,7 @@ export function GameScreen({
             stats={{
               // Show the explosive per-click matter (decoupled from entropy): the
               // tame base click power × the matter-only gear multiplier (#39).
-              clickPower: getClickPower(modifiers) * modifiers.clickMatterMult,
+              clickPower: getClickPower(modifiers) * modifiers.clickMatterMult + modifiers.clickMatterFlatAdd,
               autoRate: displayedAutoRate,
               critChance: getCritChance(0, modifiers),
               critMult: getCritMultiplier(modifiers),

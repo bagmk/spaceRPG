@@ -209,7 +209,10 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   // the player banks (the satisfying number) — NOT the entropy income below, so
   // the entropy gate stays exactly as calibrated. `gained` remains the tame
   // value that feeds entropy; `matterGained` is what hits the wallet.
-  const matterGained = gained * modifiers.clickMatterMult;
+  // Overhaul-4: + the click WALLET flat add (player-stage-anchored per tap, mirrors
+  // auto's flat /sec; the shop matterBoost applies to it too). Off-gate — the entropy
+  // below still rides the tame `gained`, so the gate stays exactly as calibrated.
+  const matterGained = gained * modifiers.clickMatterMult + modifiers.clickMatterFlatAdd * matterBoost;
   const eventId = nextEventId(state);
   const nextQuanta = safeAdd(state.quanta, matterGained + boostedMechanicQuanta);
   const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));

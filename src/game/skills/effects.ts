@@ -36,6 +36,12 @@ export interface Modifiers {
    */
   clickMatterMult: number;
   /**
+   * Overhaul-4: click gear's player-stage-anchored WALLET matter-per-tap (flat add,
+   * mirrors autoRateFlatAdd). Makes a click out-earn auto/sec. Off-gate (entropy
+   * rides the tame `gained`, never this), like clickMatterMult. Default 0.
+   */
+  clickMatterFlatAdd: number;
+  /**
    * #44 hexagon bingo: wallet-only AUTO multiplier — mirrors clickMatterMult.
    * Boosts the auto matter that hits the WALLET but NOT the auto entropy (which
    * keeps riding the tame auto delta), so a strong hex auto bonus never touches
@@ -95,6 +101,7 @@ export function defaultModifiers(): Modifiers {
     clickPowerMult: 1,
     clickPowerAdd: 0,
     clickMatterMult: 1,
+    clickMatterFlatAdd: 0,
     autoMatterMult: 1,
     clickEmissionCount: 1,
     clickVfxScale: 1,

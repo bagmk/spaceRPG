@@ -4,6 +4,7 @@ import type { Modifiers } from '../skills/effects';
 import type { EntityInstance, StageEntity } from './types';
 import {
   AUTO_GEAR_INCOME_SCALE,
+  CLICK_GEAR_INCOME_SCALE,
   AUTO_STAGE_POWER_BASE,
   CODEX_REWARD_MULT,
   CLICK_GEAR_MATTER_BOOST,
@@ -121,6 +122,20 @@ export function getTameAutoOutputAnchor(entity: StageEntity, power: GearPower, c
   return rarityWeight * ENTITY_COST_ANCHORS[1] * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
 }
 
+/**
+ * Overhaul-4: CLICK gear's player-stage WALLET anchor — identical to
+ * getAutoOutputAnchor but with CLICK_GEAR_INCOME_SCALE (> AUTO's), so a click per
+ * tap out-earns auto per second. Feeds clickMatterFlatAdd only (off-gate wallet).
+ */
+export function getClickOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
+  const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
+  const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
+  const playerStage = Math.max(1, Math.floor(power.stageId)) as keyof typeof ENTITY_COST_ANCHORS;
+  const playerAnchor = ENTITY_COST_ANCHORS[playerStage] ?? ENTITY_COST_ANCHORS[1];
+  return rarityWeight * playerAnchor * CLICK_GEAR_INCOME_SCALE
+    * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
+}
+
 export function applyEntityModifiers(
   mods: Modifiers,
   inventory: EntityInstance[],
@@ -178,6 +193,9 @@ export function applyEntityModifiers(
         // click number multiplies hard per equipped click item + per level, WITHOUT
         // touching entropy (gate untouched).
         mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
+        // Overhaul-4: player-stage-anchored WALLET per tap (mirrors auto's flat add)
+        // so click out-earns auto. Off-gate.
+        mods.clickMatterFlatAdd += Math.max(0, getClickOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
         break;
       case 'crit':
         if (isFlat) {
@@ -206,6 +224,7 @@ export function applyEntityModifiers(
         // gear — click gear must never leak into the auto calculation (스펙 §10).
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
         mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
+        mods.clickMatterFlatAdd += Math.max(0, getClickOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
         mods.critMultMult *= 1 + (total * gearPower) / 200;
         break;
     }

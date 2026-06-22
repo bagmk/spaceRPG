@@ -191,6 +191,14 @@ export const CLICK_GEAR_MATTER_BOOST = 2;
  */
 export const AUTO_GEAR_INCOME_SCALE = 0.16;
 /**
+ * Overhaul-4 (user: "클릭은 당연히 오토보다 더 높게"): click gear gets its OWN
+ * player-stage-anchored WALLET (clickMatterFlatAdd), mirroring the auto split, so a
+ * click PER TAP out-earns auto PER SECOND. Set ABOVE AUTO_GEAR_INCOME_SCALE so one
+ * click ≈ this/AUTO_GEAR_INCOME_SCALE seconds of auto (~3×). Off-gate (entropy still
+ * rides the TAME `gained`, never this), so no gate re-pin — the sim just confirms it.
+ */
+export const CLICK_GEAR_INCOME_SCALE = 0.5;
+/**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the
  * first rift item drops. Tiny vs every stage threshold, so pacing is unaffected.
