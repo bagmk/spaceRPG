@@ -1342,8 +1342,14 @@ button.hud-stage-title--clickable:hover {
 .entity-fs__body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  /* User: 스크롤 기능 좀 빼라 — keep the panel scrollable (content can be tall) but
+     hide the scrollbar everywhere in this full-screen panel (codex/equip/fuse). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 48px) 48px;
 }
+.entity-fs__body::-webkit-scrollbar { display: none; }
 .entity-fs__body > * { max-width: 1080px; margin-inline: auto; }
 
 /* Tab content sits inside the body's own scroll — drop the old panel's
@@ -14105,9 +14111,9 @@ button.stat-header-item {
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 7px;
   padding: 8px 12px 14px;
-  overflow-y: auto;
+  /* User: 스크롤 빼라 — the grid sizes to its cards and the WHOLE codex scrolls as
+     one (scrollbar hidden on .entity-fs__body); no per-subset scroll pane. */
   align-content: start;
-  flex: 1;
 }
 .almanac-card {
   position: relative;

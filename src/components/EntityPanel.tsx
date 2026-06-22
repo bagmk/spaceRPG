@@ -961,7 +961,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                         .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
                       const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
                       const subGot = members.filter(isCollected).length;
-                      const visible = showMissing ? members.filter((m) => !isCollected(m)) : members;
+                      // User: 빈칸(empty/locked placeholders) 지워줘 — default view shows
+                      // ONLY collected cards (a clean trophy case); the 미수집 toggle
+                      // flips to the uncollected list for hunting. No empty cells either way.
+                      const visible = showMissing ? members.filter((m) => !isCollected(m)) : members.filter(isCollected);
                       if (visible.length === 0) return null;
                       return (
                         <div className={`codex-subset ${subDone ? 'codex-subset--complete' : ''}`} key={sub.id}>
