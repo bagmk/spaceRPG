@@ -127,16 +127,15 @@ export function getTameAutoOutputAnchor(entity: StageEntity, power: GearPower, c
 }
 
 /**
- * Overhaul-4: CLICK gear's player-stage WALLET anchor — identical to
- * getAutoOutputAnchor but with CLICK_GEAR_INCOME_SCALE (> AUTO's), so a click per
- * tap out-earns auto per second. Feeds clickMatterFlatAdd only (off-gate wallet).
+ * CLICK gear's WALLET anchor — feeds clickMatterFlatAdd only (off-gate wallet).
+ * GEAR-DRIVEN ECONOMY (2026-06-23, user, repeated): anchored to the ITEM's own
+ * baseCost, NOT the player stage — clicking-matter must NOT rise just from clearing
+ * stages ("물질은 순전히 클릭으로, 아이템은 스테이지 지나도 안 오름"). Mirrors getAutoOutputAnchor
+ * (item-anchored) but with CLICK_GEAR_INCOME_SCALE (> AUTO's), so a click per tap
+ * out-earns auto per second.
  */
 export function getClickOutputAnchor(entity: StageEntity, power: GearPower, carried = false): number {
-  const stageAnchor = ENTITY_COST_ANCHORS[entity.stageId as keyof typeof ENTITY_COST_ANCHORS] ?? entity.baseCost;
-  const rarityWeight = stageAnchor > 0 ? entity.baseCost / stageAnchor : 1;
-  const playerStage = Math.max(1, Math.floor(power.stageId)) as keyof typeof ENTITY_COST_ANCHORS;
-  const playerAnchor = ENTITY_COST_ANCHORS[playerStage] ?? ENTITY_COST_ANCHORS[1];
-  return rarityWeight * playerAnchor * CLICK_GEAR_INCOME_SCALE
+  return entity.baseCost * CLICK_GEAR_INCOME_SCALE
     * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
 }
 

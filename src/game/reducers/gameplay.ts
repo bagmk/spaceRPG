@@ -209,10 +209,15 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   // the player banks (the satisfying number) — NOT the entropy income below, so
   // the entropy gate stays exactly as calibrated. `gained` remains the tame
   // value that feeds entropy; `matterGained` is what hits the wallet.
-  // Overhaul-4: + the click WALLET flat add (player-stage-anchored per tap, mirrors
-  // auto's flat /sec; the shop matterBoost applies to it too). Off-gate — the entropy
-  // below still rides the tame `gained`, so the gate stays exactly as calibrated.
-  const matterGained = gained * modifiers.clickMatterMult + modifiers.clickMatterFlatAdd * matterBoost;
+  // Overhaul-4: + the click WALLET flat add (ITEM-anchored per tap, mirrors auto's
+  // flat /sec; the shop matterBoost applies). Off-gate — the entropy below still rides
+  // the tame `gained`, so the gate stays calibrated.
+  // 2026-06-23 (user): combo × crit now multiply the FLAT-ADD too. Before, they lived
+  // only in `gained`, so once a strong item made the flat-add dominate, combo/crit
+  // barely moved the total ("아이템이 쎄지면 콤보/크리가 클릭파워를 안 바꾼다"). Now they scale
+  // the whole per-tap matter.
+  const comboCritMult = comboMult * critMult;
+  const matterGained = gained * modifiers.clickMatterMult + modifiers.clickMatterFlatAdd * comboCritMult * matterBoost;
   const eventId = nextEventId(state);
   const nextQuanta = safeAdd(state.quanta, matterGained + boostedMechanicQuanta);
   const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
