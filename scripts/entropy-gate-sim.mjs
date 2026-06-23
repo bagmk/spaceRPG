@@ -451,6 +451,49 @@ const thresholds = calibrateThresholds(PROFILES.reference);
 console.log('=== Calibrated ENTROPY_THRESHOLDS (gear-only, reference pinned to realPlayTargetSec) ===');
 STAGES.forEach((s, i) => console.log(`  ${String(s.id).padStart(2)}: ${thresholds[i].toExponential(3)},  // ${s.name} — target ${fmt(s.realPlayTargetSec)}`));
 
+// ---------------------------------------------------------------------------
+// INCOME-DRIVEN ENTROPY MODEL (user 2026-06-23): "estimate the item you'd realistically
+// have at each stage + its enhance level → average click / auto / comet matter income →
+// pick a sane clicks-per-stage target (not too fast) → derive each stage's entropy."
+// This is the DESIGN BASIS for coupling in-game entropy to the matter (entropy ∝ matter):
+// entropy/click = matter/click × W, so threshold = expected matter income over the target
+// time × W. The numbers below are the per-stage expectation; W is the matter→entropy rate.
+// ---------------------------------------------------------------------------
+const CLICK_GEAR_INCOME_SCALE = 0.5;   // lockstep balance.ts — click WALLET flat-add scale
+const W_MATTER_ENTROPY = 0.00002;      // proposed entropy-per-matter (tunable; sets threshold scale)
+const REF = PROFILES.reference;
+const refClicksPerSec = REF.cps * REF.activeFraction; // ≈1.5 clicks/s of actual progress
+// Expected full matter PER CLICK at end-of-stage gear (p=1): the explosive wallet — the
+// big number the player sees. = comboCrit × (clickPower×matterMult + flatAdd×slots).
+function expectedMatterPerClick(stageId, level) {
+  const r = bestRarity(stageId);
+  const q = GEAR.click[r];
+  const clickPowerMult = Math.max(1, gearClickMultAtLevel(stageId, 1, level));
+  const clickPower = 1 + (clickPowerMult - 1) * CLICK_OUTPUT_MULTIPLIER;
+  const matterMult = gearClickMatterMultAtLevel(stageId, 1, level);
+  const baseCost = RARITY_FACTOR[r] * ENTITY_COST_ANCHORS[stageId];
+  const flatPerItem = baseCost * CLICK_GEAR_INCOME_SCALE * (q.pct * geoLevelMult(r, level)) / 100;
+  const flatAdd = flatPerItem * clickSlots(stageId);
+  const comboCrit = comboMult(REF.combo, stageId) * critFactor(stageId, REF.combo, 0.5, 0);
+  return comboCrit * (clickPower * matterMult + flatAdd);
+}
+console.log('\n=== INCOME-DRIVEN entropy basis (expected gear → matter income → threshold) ===');
+console.log(' stage  rarity Lv | matter/click | auto matter/s | targetClicks | threshold(=income×t×W)');
+const incomeThresholds = [];
+STAGES.forEach((s, i) => {
+  const r = bestRarity(s.id);
+  const stoneBudget = stoneBudgetFor(s, REF);
+  const level = derivedLevel(s.id, r, stoneBudget, ENTITY_COST_ANCHORS[s.id] * ENHANCE_BUDGET_ANCHORS);
+  const mpc = expectedMatterPerClick(s.id, level);
+  const aps = autoMatterPerSecAtLevel(s.id, 1, level);
+  const targetClicks = refClicksPerSec * s.realPlayTargetSec;
+  // entropy = matter × W; income over the stage = clicks×mpc + auto×time.
+  const matterOverStage = targetClicks * mpc + aps * s.realPlayTargetSec;
+  const threshold = matterOverStage * W_MATTER_ENTROPY;
+  incomeThresholds.push(threshold);
+  console.log(`  ${String(s.id).padStart(2)}  ${r.slice(0,4).padEnd(4)} Lv${String(level).padStart(2)} | ${mpc.toExponential(2).padStart(9)} | ${aps.toExponential(2).padStart(10)} | ${Math.round(targetClicks).toString().padStart(7)} | ${threshold.toExponential(3)}`);
+});
+
 console.log('\n=== Profiles vs calibrated thresholds ===');
 const results = {};
 for (const [name, p] of Object.entries(PROFILES)) {
