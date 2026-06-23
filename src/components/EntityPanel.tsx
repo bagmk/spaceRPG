@@ -861,7 +861,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           {tab !== 'lab' ? (
             <div className="entity-fs__wallet">
               <span>{t(language, 'hudQuanta')}</span>
-              <strong>⚛{formatEntityCost(quanta)}</strong>
+              <strong><span className="qsym">⚛</span>{formatEntityCost(quanta)}</strong>
             </div>
           ) : null}
           {tab !== 'lab' ? (

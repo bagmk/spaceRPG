@@ -155,7 +155,7 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
                     </div>
                     <div className="quest-card__side">
                       <div className="quest-card__reward">
-                        {matter > 0 ? <span className="quest-card__matter">{`⚛${formatGameNumberShort(matter)}`}</span> : null}
+                        {matter > 0 ? <span className="quest-card__matter"><span className="qsym">⚛</span>{formatGameNumberShort(matter)}</span> : null}
                         {stones > 0 ? <span className="quest-card__stones">{`💎${stones}`}</span> : null}
                       </div>
                       <button
