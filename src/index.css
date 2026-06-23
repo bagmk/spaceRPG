@@ -5336,6 +5336,14 @@ button.stat-header-item {
   font-size: 20px;
   line-height: 1;
 }
+/* #1 (user "S3만 왜캐 커"): the rule above sizes ALL shop-button spans at 20px,
+   which leaked into the locked-stage badge (it's a <span>), so the shop's S{n} badge
+   rendered 20px vs the equip/fuse 8px. Re-assert the small corner-chip size (higher
+   specificity than `.shop-button span`). */
+.shop-button .entity-lab-button__lockstage {
+  font-size: 8px;
+  line-height: 12px;
+}
 
 .skills-button.affordable,
 .shop-button.affordable {
