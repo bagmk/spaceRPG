@@ -6918,6 +6918,42 @@ button.stat-header-item {
   text-align: center;
   color: #9fb4d0;
 }
+/* Per-stage quest tabs (user) — a horizontal S{n} strip; scrollbar hidden. */
+.quest-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  margin-bottom: 4px;
+}
+.quest-tab {
+  flex: 0 0 auto;
+  min-width: 38px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.quest-tab--active {
+  border-color: rgba(255, 184, 77, 0.6);
+  background: rgba(255, 184, 77, 0.14);
+  color: var(--fg);
+}
+/* Record cards for past stages — claimed (✓) / missed, no progress bar or claim. */
+.quest-card--record { opacity: 0.92; }
+.quest-card--missed { opacity: 0.6; }
+.quest-card__status {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.quest-card__status--claimed { color: #6ee7a0; }
+.quest-card__status--missed { color: var(--muted); }
 .quest-list {
   display: flex;
   flex-direction: column;

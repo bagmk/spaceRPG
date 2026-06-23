@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { GameState } from '../game/types';
 import { t, type Lang } from '../i18n';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { ENTITY_COST_ANCHORS, ATTENDANCE_REWARDS } from '../game/balance';
 import { STAGES } from '../game/stages';
+import { getStageMilestoneActiveIds } from '../game/milestones';
 import { toDateKey } from '../game/shop/daily';
 import { formatGameNumberShort } from '../game/formulas';
 import {
@@ -38,9 +39,27 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
   const attReward = ATTENDANCE_REWARDS[attCycleDay];
   const attAnchor = ENTITY_COST_ANCHORS[stageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
   const attMatter = Math.ceil(attReward.matterAnchorMult * attAnchor);
-  const quests = state.activeQuests
-    .map((id) => getQuest(id))
-    .filter((q): q is QuestDef => q !== undefined);
+
+  // User: quests from a cleared stage shouldn't vanish — let you tab back to view each
+  // stage's quests. The CURRENT stage tab shows live/claimable quests; PAST stage tabs
+  // show that stage's record (✓ claimed / ✗ missed) — past-stage milestone progress
+  // counters reset on stage entry, so live progress isn't shown for them.
+  const [tabStage, setTabStage] = useState(stageId);
+  const milestoneStageOf = (id: string): number => {
+    const p = id.split('.');
+    return p[0] === 'm' ? Number(p[1]) : NaN;
+  };
+  type QuestRow = { quest: QuestDef; status: 'active' | 'claimed' | 'missed' };
+  const claimedForTab = state.completedQuestIds.filter((id) => milestoneStageOf(id) === tabStage);
+  const openForTab = tabStage === stageId
+    ? state.activeQuests
+    : getStageMilestoneActiveIds(tabStage, state.completedQuestIds);
+  const questRows: QuestRow[] = [
+    ...openForTab.map((id) => ({ id, status: (tabStage === stageId ? 'active' : 'missed') as QuestRow['status'] })),
+    ...claimedForTab.map((id) => ({ id, status: 'claimed' as QuestRow['status'] })),
+  ]
+    .map(({ id, status }) => ({ quest: getQuest(id), status }))
+    .filter((r): r is QuestRow => r.quest !== undefined);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   useModalA11y(overlayRef, onClose);
@@ -92,39 +111,77 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
           </button>
         </div>
 
-        {quests.length === 0 ? (
-          <div className="quest-panel__empty">{t(language, 'questAllDone')}</div>
+        {/* User: per-stage quest tabs — cleared stages no longer vanish; tab back to
+            view each stage's quests (S{n}). Only shown once past stage 1. */}
+        {stageId > 1 ? (
+          <div className="quest-tabs cc-scroll cc-scroll--hidden" role="tablist">
+            {Array.from({ length: stageId }, (_, i) => i + 1).map((s) => (
+              <button
+                key={s}
+                type="button"
+                role="tab"
+                aria-selected={s === tabStage}
+                className={`quest-tab ${s === tabStage ? 'quest-tab--active' : ''}`}
+                onClick={() => setTabStage(s)}
+              >
+                {`S${s}`}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {questRows.length === 0 ? (
+          <div className="quest-panel__empty">
+            {tabStage === stageId ? t(language, 'questAllDone') : t(language, 'questStageEmpty')}
+          </div>
         ) : (
           <div className="quest-list">
-            {quests.map((quest) => {
-              const progress = getQuestProgress(quest, state);
-              const claimable = isQuestClaimable(quest, state);
-              const matter = rewardMatter(quest, stageId);
+            {questRows.map(({ quest, status }) => {
+              const matter = rewardMatter(quest, tabStage);
               const stones = quest.reward.stones ?? 0;
-              const pct = Math.round((progress / quest.target) * 100);
+              if (status === 'active') {
+                const progress = getQuestProgress(quest, state);
+                const claimable = isQuestClaimable(quest, state);
+                const pct = Math.round((progress / quest.target) * 100);
+                return (
+                  <div key={quest.id} className={`quest-card ${claimable ? 'quest-card--ready' : ''}`}>
+                    <div className="quest-card__main">
+                      <div className="quest-card__title">{questTitle(quest, language)}</div>
+                      <div className="quest-card__desc">{questDesc(quest, language)}</div>
+                      <div className="quest-card__bar" aria-hidden="true">
+                        <div className="quest-card__fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="quest-card__progress">{`${progress} / ${quest.target}`}</div>
+                    </div>
+                    <div className="quest-card__side">
+                      <div className="quest-card__reward">
+                        {matter > 0 ? <span className="quest-card__matter">{`⚛${formatGameNumberShort(matter)}`}</span> : null}
+                        {stones > 0 ? <span className="quest-card__stones">{`💎${stones}`}</span> : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="quest-card__claim"
+                        disabled={!claimable}
+                        onClick={() => onClaim(quest.id)}
+                      >
+                        {claimable ? t(language, 'questClaim') : `${pct}%`}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              // claimed / missed — a compact per-stage RECORD card (no live progress/claim,
+              // since past-stage progress counters reset on stage entry).
               return (
-                <div key={quest.id} className={`quest-card ${claimable ? 'quest-card--ready' : ''}`}>
+                <div key={quest.id} className={`quest-card quest-card--record quest-card--${status}`}>
                   <div className="quest-card__main">
                     <div className="quest-card__title">{questTitle(quest, language)}</div>
                     <div className="quest-card__desc">{questDesc(quest, language)}</div>
-                    <div className="quest-card__bar" aria-hidden="true">
-                      <div className="quest-card__fill" style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="quest-card__progress">{`${progress} / ${quest.target}`}</div>
                   </div>
                   <div className="quest-card__side">
-                    <div className="quest-card__reward">
-                      {matter > 0 ? <span className="quest-card__matter">{`⚛${formatGameNumberShort(matter)}`}</span> : null}
-                      {stones > 0 ? <span className="quest-card__stones">{`💎${stones}`}</span> : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="quest-card__claim"
-                      disabled={!claimable}
-                      onClick={() => onClaim(quest.id)}
-                    >
-                      {claimable ? t(language, 'questClaim') : `${pct}%`}
-                    </button>
+                    <span className={`quest-card__status quest-card__status--${status}`}>
+                      {status === 'claimed' ? `✓ ${t(language, 'questDone')}` : t(language, 'questMissed')}
+                    </span>
                   </div>
                 </div>
               );
