@@ -84,12 +84,16 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   const critFlags = isCritGear && !state.endingProgressFlags.criticalUpgradedThisUniverse
     ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
     : state.endingProgressFlags;
+  // #3 (user): first successful equip arms the fusion-intro tutorial step.
+  const eqFlags = state.tutorialFlags['first-equip-done']
+    ? state.tutorialFlags
+    : { ...state.tutorialFlags, 'first-equip-done': true };
 
   // #44 hexagon CENTER (wild) slot — accepts ANY category. Unlocks by stage.
   if (action.wild) {
     const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
     if (stageId < HEX_WILD_UNLOCK_STAGE) return state;
-    return { ...state, wildSlot: instanceId, endingProgressFlags: critFlags };
+    return { ...state, wildSlot: instanceId, endingProgressFlags: critFlags, tutorialFlags: eqFlags };
   }
 
   const category = getEquipCategory(entity);
@@ -113,8 +117,8 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   next[slot] = instanceId;
   while (next.length > 0 && next[next.length - 1] === '') next.pop();
   return category === 'rift'
-    ? { ...state, riftSlots: next, endingProgressFlags: critFlags }
-    : { ...state, equippedSlots: next, endingProgressFlags: critFlags };
+    ? { ...state, riftSlots: next, endingProgressFlags: critFlags, tutorialFlags: eqFlags }
+    : { ...state, equippedSlots: next, endingProgressFlags: critFlags, tutorialFlags: eqFlags };
 }
 
 export function handleUnequipEntity(state: GameState, action: UnequipAction): GameState {

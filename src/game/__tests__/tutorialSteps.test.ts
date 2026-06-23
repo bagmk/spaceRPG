@@ -115,8 +115,30 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro', 'time-gauge-visible',
-      'first-fuse-equip', 'second-fuse-equip', 'entity-lab-intro',
+      'first-fuse-equip', 'second-fuse-equip', 'entity-lab-intro', 'fusion-intro',
       'hasSeenCashShopTutorial', 'boost-hud-seen', 'condense-ready', 'info-hint-seen',
     ]);
+  });
+
+  it('#2: equip-intro fires on reaching S2 (equipUnlocked) even with NO current-stage item', () => {
+    const step = selectTutorialStep(ctx({
+      stageId: 2, equipUnlocked: true, ownedCurrentStageEntityCount: 0,
+      flags: { 'matter-time-intro': true, 'auto-income-intro': true, 'time-gauge-visible': true },
+    }));
+    expect(step?.id).toBe('entity-lab-intro');
+  });
+
+  it('#3: fusion-intro fires after the first equip (first-equip-done), once equip-intro is seen', () => {
+    const base = ctx({
+      stageId: 2, equipUnlocked: true,
+      flags: {
+        'matter-time-intro': true, 'auto-income-intro': true, 'time-gauge-visible': true,
+        'entity-lab-intro': true, 'first-equip-done': true,
+      },
+    });
+    expect(selectTutorialStep(base)?.id).toBe('fusion-intro');
+    // before the first equip it must NOT show
+    const noEquip = ctx({ ...base, flags: { ...base.flags, 'first-equip-done': false } });
+    expect(selectTutorialStep(noEquip)?.id).not.toBe('fusion-intro');
   });
 });

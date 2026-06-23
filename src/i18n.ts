@@ -246,6 +246,8 @@ export const STRINGS = {
                           ko: '이번엔 자동 소득 아이템이에요. 장착하면 물질이 저절로 쌓입니다. 아이템을 모아서 강화해보세요!' },
   tutEntityLabIntro:    { en: 'You collected an entity! Equip it as gear to power up — clicking and collisions drop more.',
                           ko: '엔티티를 획득했어요! 장비로 장착하면 강해집니다 — 클릭과 충돌로 더 많이 드랍됩니다.' },
+  tutFusionIntro:       { en: 'Geared up! Now fuse duplicate entities to forge rarer, stronger ones — tap the Fuse button.',
+                          ko: '장착 완료! 이제 같은 엔티티를 융합해 더 희귀하고 강한 걸 만들어보세요 — 융합 버튼을 눌러요.' },
   tutEntityLabOpen:     { en: 'Open Equip', ko: '장착 열기' },
   tutEntityLabCanvas:   { en: 'Purchased entities now orbit the center. Buying more copies adds more bodies, not just a number.',
                           ko: '구매한 엔티티가 중심을 공전합니다. 더 구매할수록 단순한 숫자가 아니라 실제 객체가 늘어납니다.' },

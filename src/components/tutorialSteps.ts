@@ -101,11 +101,23 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'second-fuse-equip'),
   },
   {
+    // #2 (user): fire the equip-open tutorial the moment equip unlocks (reaching S2),
+    // NOT only after a current-stage item drops ("2스테이지 가면 바로, 아이템 나오고 X").
+    // By S2 the player already holds S1 drops to equip.
     id: 'entity-lab-intro', flagId: 'entity-lab-intro', anchor: 'equip',
     messageKey: 'tutEntityLabIntro', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
     suppressedByAllDismissed: true,
-    eligible: (c) => c.equipUnlocked && c.ownedCurrentStageEntityCount > 0,
+    eligible: (c) => c.equipUnlocked,
     seen: (c) => flag(c, 'entity-lab-intro'),
+  },
+  {
+    // #3 (user): after the FIRST equip, point them to fusion ("장착 하고 나오면 융합 튜토리얼").
+    // first-equip-done is set by handleEquipEntity on the first successful equip.
+    id: 'fusion-intro', flagId: 'fusion-intro', anchor: 'fuse',
+    messageKey: 'tutFusionIntro',
+    suppressedByAllDismissed: true,
+    eligible: (c) => flag(c, 'first-equip-done'),
+    seen: (c) => flag(c, 'fusion-intro'),
   },
   {
     id: 'hasSeenCashShopTutorial', flagId: 'hasSeenCashShopTutorial', anchor: 'shop',
