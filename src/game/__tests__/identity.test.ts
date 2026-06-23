@@ -252,13 +252,18 @@ describe('codex thematic sets', () => {
     const ctx = { stagesCleared: 0, currentQuanta: 0, secondsInStage: 0, stageId: 1, gateProgress01: 0, progress01: 0, clickLevel: 0 };
 
     const base = getActiveModifiers(ctx, [], undefined, {});
-    const earned = getActiveModifiers(ctx, [], undefined, { 1: stage1Ids });
+    // v28: SUBSET rewards are gated on CLAIMing (click-to-activate); SET rewards auto-apply.
+    const collectedNotClaimed = getActiveModifiers(ctx, [], undefined, { 1: stage1Ids });
+    const claimed = getActiveModifiers(ctx, [], undefined, { 1: stage1Ids }, ['first_light']);
 
-    // Genesis "first_light" subset (+6% drop base) and the set reward (+8% base) both
-    // fire, each scaled by CODEX_REWARD_MULT (rounded) — derived so the bump is robust.
+    // Genesis "first_light" subset (+6% drop base) and the set reward (+8% base), each
+    // scaled by CODEX_REWARD_MULT (rounded) — derived so the bump is robust.
     const subPct = Math.round(6 * CODEX_REWARD_MULT) / 100;
     const setPct = Math.round(8 * CODEX_REWARD_MULT) / 100;
-    expect(earned.dropChanceMult).toBeGreaterThan(base.dropChanceMult);
-    expect(earned.dropChanceMult).toBeCloseTo(base.dropChanceMult * (1 + subPct) * (1 + setPct), 6);
+    // Collected but UNCLAIMED → only the auto SET reward fires (subset pending a claim).
+    expect(collectedNotClaimed.dropChanceMult).toBeCloseTo(base.dropChanceMult * (1 + setPct), 6);
+    // After claiming first_light → both subset + set rewards apply.
+    expect(claimed.dropChanceMult).toBeGreaterThan(collectedNotClaimed.dropChanceMult);
+    expect(claimed.dropChanceMult).toBeCloseTo(base.dropChanceMult * (1 + subPct) * (1 + setPct), 6);
   });
 });

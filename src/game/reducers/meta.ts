@@ -4,6 +4,7 @@
 
 import type { GameState, PersistentGameState } from '../types';
 import type { GameAction } from '../reducer';
+import { getClaimableCodexSubsetIds } from '../entities/effects';
 import {
   createDefaultDailyCheckIns,
   createDefaultEndingProgressFlags,
@@ -114,6 +115,18 @@ export function handleMarkCodexSeen(state: GameState): GameState {
   }
   if (seen.size === state.codexSeenIds.length) return state;
   return { ...state, codexSeenIds: [...seen] };
+}
+
+type ClaimCodexSubsetAction = Extract<GameAction, { type: 'CLAIM_CODEX_SUBSET' }>;
+
+/** #2 (v28): activate a COMPLETE codex subset's reward (click-to-claim). No-op if
+ *  already claimed or not actually complete (defends against a stale UI click). */
+export function handleClaimCodexSubset(state: GameState, action: ClaimCodexSubsetAction): GameState {
+  if (state.claimedCodexSubsetIds.includes(action.subsetId)) return state;
+  if (!getClaimableCodexSubsetIds(state.almanacCollected, state.claimedCodexSubsetIds).includes(action.subsetId)) {
+    return state;
+  }
+  return { ...state, claimedCodexSubsetIds: [...state.claimedCodexSubsetIds, action.subsetId] };
 }
 
 /** Record a first-visit panel hint as shown (idempotent). */

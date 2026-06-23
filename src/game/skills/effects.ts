@@ -149,6 +149,7 @@ export function getActiveModifiers(
   inventory?: EntityInstance[],
   prestigeUpgrades?: PrestigeUpgradeLevels,
   almanacCollected?: Record<number, string[]>,
+  claimedCodexSubsetIds?: readonly string[],
 ): Modifiers {
   const mods = defaultModifiers();
 
@@ -167,7 +168,7 @@ export function getActiveModifiers(
 
   // Codex collection completion rewards (permanent, from the almanac).
   if (almanacCollected) {
-    applyCollectionRewards(mods, almanacCollected);
+    applyCollectionRewards(mods, almanacCollected, claimedCodexSubsetIds ?? []);
   }
 
   // Apply permanent prestige multipliers. Ids are legacy save keys; their levers

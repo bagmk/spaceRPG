@@ -410,6 +410,10 @@ interface Props {
   wildSlot?: string;
   lastFusionEvent: FusionEvent | null;
   almanacCollected: Record<number, string[]>;
+  /** v28: codex subset ids whose reward the player has CLAIMED (click-to-activate). */
+  claimedCodexSubsetIds?: string[];
+  /** v28: claim a COMPLETE codex subset's reward. */
+  onClaimCodexSubset?: (subsetId: string) => void;
   /** Entity ids already seen in the codex — drives the NEW-discovery badge (v18). */
   codexSeenIds?: string[];
   /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
@@ -442,7 +446,7 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -887,6 +891,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           // Codex: a glyph wall crowned by ONE completion meter. Sets→subsets
           // span all eras; chips are an opt-in filter (default = all).
           const collectedSet = collectedIdSet(almanacCollected);
+          const claimedSet = new Set(claimedCodexSubsetIds);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
           // #45: entries from eras the player hasn't reached are LOCKED (blur + 🔒)
           // — distinct from merely-uncollected. The full-roster totals below are
@@ -961,6 +966,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       const members = getSubsetMembers(sub, STAGE_ENTITIES)
                         .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
                       const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
+                      // v28: reward is gated on CLAIMing the completion (click-to-activate).
+                      const subClaimed = claimedSet.has(sub.id);
+                      const subClaimable = subDone && !subClaimed;
                       const subGot = members.filter(isCollected).length;
                       // User: 빈칸(empty/locked placeholders) 지워줘 — default view shows
                       // ONLY collected cards (a clean trophy case); the 미수집 toggle
@@ -968,15 +976,27 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       const visible = showMissing ? members.filter((m) => !isCollected(m)) : members.filter(isCollected);
                       if (visible.length === 0) return null;
                       return (
-                        <div className={`codex-subset ${subDone ? 'codex-subset--complete' : ''}`} key={sub.id}>
+                        <div className={`codex-subset ${subClaimed ? 'codex-subset--complete' : ''} ${subClaimable ? 'codex-subset--claimable' : ''}`} key={sub.id}>
                           <div className="codex-divider">
                             <span className="codex-divider__label">{codexSubsetLabel(sub, language)}</span>
                             <span className="codex-divider__count">{`${subGot}/${members.length}`}</span>
-                            {subDone ? <span className="codex-divider__done">{t(language, 'codexSubsetDone')}</span> : null}
-                            <span className={`codex-reward ${subDone ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(sub.reward, language)}>
-                              <span className="codex-reward__star">{subDone ? '★' : '☆'}</span>
-                              <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>
-                            </span>
+                            {subClaimed ? <span className="codex-divider__done">{t(language, 'codexSubsetDone')}</span> : null}
+                            {subClaimable ? (
+                              // v28: complete but unclaimed → click to ACTIVATE the reward ("효과 발동").
+                              <button
+                                type="button"
+                                className="codex-claim-btn"
+                                title={codexRewardLabel(sub.reward, language)}
+                                onClick={() => { onClaimCodexSubset?.(sub.id); onUITap?.(); }}
+                              >
+                                {`✨ ${t(language, 'codexClaim')} · ${codexRewardLabel(sub.reward, language)}`}
+                              </button>
+                            ) : (
+                              <span className={`codex-reward ${subClaimed ? 'codex-reward--earned' : ''}`} title={codexRewardLabel(sub.reward, language)}>
+                                <span className="codex-reward__star">{subClaimed ? '★' : '☆'}</span>
+                                <span className="codex-reward__text">{codexRewardLabel(sub.reward, language)}</span>
+                              </span>
+                            )}
                             <span className="codex-divider__rule" />
                           </div>
                           <div className="almanac-grid">

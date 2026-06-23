@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 27;
+  version: 28;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -298,6 +298,9 @@ export interface SaveState {
   /** Overhaul-4 (v26): favorited entity ids (★). Their copies are protected from
    *  Fuse-All (and, once duplicate-collection ships, from pooled enhance fodder). */
   favoriteEntityIds: string[];
+  /** Codex (v28): subset ids whose completion reward the player has CLAIMED (the
+   *  click-to-activate gate — a complete-but-unclaimed subset grants no bonus yet). */
+  claimedCodexSubsetIds: string[];
   /** Daily attendance (v27): total days claimed (cycle day = streak % 7). */
   attendanceStreak: number;
   /** Daily attendance (v27): local date-key of the last claim; ''=never claimed. */

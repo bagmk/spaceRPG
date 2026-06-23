@@ -51,6 +51,7 @@ import {
   handleMarkTutorialFlag,
   handleMarkCashShopTutorialSeen,
   handleMarkCodexSeen,
+  handleClaimCodexSubset,
   handleMarkPanelHint,
   handleMarkTutorialStageSeen,
   handleClearClickEvent,
@@ -133,6 +134,7 @@ export type GameAction =
   | { type: 'MARK_TUTORIAL_FLAG'; flagId: string }
   | { type: 'MARK_CASH_SHOP_TUTORIAL_SEEN' }
   | { type: 'MARK_CODEX_SEEN' }
+  | { type: 'CLAIM_CODEX_SUBSET'; subsetId: string }
   | { type: 'MARK_PANEL_HINT'; hintId: string }
   | { type: 'PURCHASE_ENTITY'; entityId: string; qualityRoll1?: number; qualityRoll2?: number }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number; wild?: boolean }
@@ -219,6 +221,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
     favoriteEntityIds: state.favoriteEntityIds,
+    claimedCodexSubsetIds: state.claimedCodexSubsetIds,
     attendanceStreak: state.attendanceStreak,
     attendanceClaimedDate: state.attendanceClaimedDate,
     dailyShopDateKey: state.dailyShopDateKey,
@@ -270,6 +273,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'MARK_TUTORIAL_FLAG':    return handleMarkTutorialFlag(state, action);
     case 'MARK_CASH_SHOP_TUTORIAL_SEEN': return handleMarkCashShopTutorialSeen(state);
     case 'MARK_CODEX_SEEN':       return handleMarkCodexSeen(state);
+    case 'CLAIM_CODEX_SUBSET':    return handleClaimCodexSubset(state, action);
     case 'MARK_PANEL_HINT':       return handleMarkPanelHint(state, action);
     case 'PURCHASE_ENTITY':       return handlePurchaseEntity(state, action);
     case 'EQUIP_ENTITY':          return handleEquipEntity(state, action);

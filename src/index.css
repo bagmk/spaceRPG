@@ -14306,6 +14306,27 @@ button.stat-header-item {
   opacity: 1;
   color: #ffd76a;
 }
+/* v28 click-to-activate: a complete-but-unclaimed subset shows a glowing CLAIM button
+   (the alarm), and its row pulses to draw the eye until claimed. */
+.codex-claim-btn {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 7px;
+  border: 1px solid #ffd76a;
+  background: rgba(255, 215, 106, 0.16);
+  color: #ffe9a8;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: codex-claim-pulse 1.4s ease-in-out infinite;
+}
+.codex-claim-btn:hover { background: rgba(255, 215, 106, 0.28); }
+@keyframes codex-claim-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 106, 0); }
+  50% { box-shadow: 0 0 8px 1px rgba(255, 215, 106, 0.45); }
+}
+.codex-subset--claimable .codex-divider__label { color: #ffe9a8; }
 /* Sub-collection 100% complete — make it visibly stand out (user). Gold header
    + a "완료" badge + a glow + the reward star pulses. */
 .codex-subset--complete .codex-divider__label {

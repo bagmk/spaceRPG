@@ -334,17 +334,41 @@ function applyCodexReward(mods: Modifiers, reward: CodexReward): void {
  * grants its bonus; completing all sub-collections of a set grants the set
  * bonus on top. Permanent (almanac survives prestige), deterministic.
  */
+/**
+ * Codex completion rewards. #2 (user, v28): a SUBSET reward applies only once its
+ * completion has been CLAIMED (click-to-activate) — a complete-but-unclaimed subset
+ * grants nothing yet, and an alarm prompts the claim. SET rewards (no claim UI) keep
+ * auto-applying on completion.
+ */
 export function applyCollectionRewards(
   mods: Modifiers,
   almanacCollected: Record<number, string[]>,
+  claimedSubsetIds: readonly string[] = [],
 ): void {
   const collected = collectedIdSet(almanacCollected);
+  const claimed = new Set(claimedSubsetIds);
   for (const set of CODEX_SETS) {
     for (const sub of set.subsets) {
-      if (isSubsetComplete(sub, collected, STAGE_ENTITIES)) applyCodexReward(mods, sub.reward);
+      if (claimed.has(sub.id) && isSubsetComplete(sub, collected, STAGE_ENTITIES)) applyCodexReward(mods, sub.reward);
     }
     if (isSetComplete(set, collected, STAGE_ENTITIES)) applyCodexReward(mods, set.reward);
   }
+}
+
+/** Subset ids that are COMPLETE but NOT yet claimed — drives the codex alarm. */
+export function getClaimableCodexSubsetIds(
+  almanacCollected: Record<number, string[]>,
+  claimedSubsetIds: readonly string[] = [],
+): string[] {
+  const collected = collectedIdSet(almanacCollected);
+  const claimed = new Set(claimedSubsetIds);
+  const out: string[] = [];
+  for (const set of CODEX_SETS) {
+    for (const sub of set.subsets) {
+      if (!claimed.has(sub.id) && isSubsetComplete(sub, collected, STAGE_ENTITIES)) out.push(sub.id);
+    }
+  }
+  return out;
 }
 
 // Category helper lives in ./types (dependency-free); re-exported for callers.

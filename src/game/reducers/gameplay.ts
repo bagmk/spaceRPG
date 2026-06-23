@@ -75,7 +75,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     hexSlots: getHexSlots(state),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
@@ -186,7 +186,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
     hexSlots: getHexSlots(state),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);

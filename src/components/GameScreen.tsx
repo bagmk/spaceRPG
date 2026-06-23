@@ -23,7 +23,7 @@ import {
   getTimeMultiplier,
 } from '../game/formulas';
 import { getActiveModifiers } from '../game/skills/effects';
-import { getEquippedInstances } from '../game/entities/effects';
+import { getEquippedInstances, getClaimableCodexSubsetIds } from '../game/entities/effects';
 import { getComboCapBonus } from '../game/reducers/helpers';
 import { getMechanic } from '../game/mechanics';
 import type { GameAction } from '../game/reducer';
@@ -219,7 +219,7 @@ export function GameScreen({
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01,
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
   const autoRate = getAutoRate(modifiers);
   const stageAutoBonus =
     stage.mechanic === 'reionization'
@@ -284,6 +284,8 @@ export function GameScreen({
   const fuseSeenInvRef = useRef(invTotal);
   const equipHasNew = equipUnlocked && invTotal > equipSeenInvRef.current;
   const fuseHasNew = fusionUnlocked && invTotal > fuseSeenInvRef.current;
+  // v28: a complete-but-unclaimed codex subset → pulse the 도감 button (alarm to claim).
+  const codexHasClaimable = getClaimableCodexSubsetIds(state.almanacCollected, state.claimedCodexSubsetIds).length > 0;
   const openEntityPanel = (page: 'lab' | 'equip' | 'fuse' = 'lab', category: 'click' | 'rift' = 'click') => {
     if (page === 'equip') equipSeenInvRef.current = invTotal;
     if (page === 'fuse' || page === 'lab') fuseSeenInvRef.current = invTotal;
@@ -870,6 +872,8 @@ export function GameScreen({
             onClearEnhanceEvent={(id) => dispatch({ type: 'CLEAR_ENHANCE_EVENT', id })}
             favoriteEntityIds={state.favoriteEntityIds}
             onToggleFavorite={(entityId) => dispatch({ type: 'TOGGLE_FAVORITE', entityId })}
+            claimedCodexSubsetIds={state.claimedCodexSubsetIds}
+            onClaimCodexSubset={(subsetId) => { dispatch({ type: 'CLAIM_CODEX_SUBSET', subsetId }); soundManager?.playEntityLevelUp(); }}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
             onClose={() => {
@@ -998,13 +1002,14 @@ export function GameScreen({
           <button
             ref={entityAnchorRef}
             type="button"
-            className="entity-lab-button"
+            className={`entity-lab-button ${codexHasClaimable ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#7ec8ff' } as React.CSSProperties}
             onClick={() => openEntityPanel('lab')}
             aria-label={t(language, 'collectionTitle')}
           >
             <span className="hud-action-icon" aria-hidden="true">📖</span>
             <span className="hud-action-label">{t(language, 'collectionTitle')}</span>
+            {codexHasClaimable ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
             ref={questAnchorRef}

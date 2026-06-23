@@ -104,6 +104,7 @@ export const STRINGS = {
   codexPurpose:     { en: 'Collect discovered particles — complete sets for bonuses', ko: '발견한 입자를 모으세요 — 세트를 완성하면 보너스' },
   codexShowMissing: { en: 'Missing only', ko: '빈칸만' },
   codexSubsetDone:  { en: 'COMPLETE', ko: '완료' },
+  codexClaim:       { en: 'Activate', ko: '효과 발동' },
   codexBestDrop:    { en: 'Best drop stage', ko: '최적 획득 시대' },
   codexFusionOnly:  { en: 'Fusion / box only', ko: '융합·상자 전용' },
   codexClosest:     { en: '{name} — {n} to go!', ko: '{name} — {n}개 남음!' },
