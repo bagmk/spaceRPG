@@ -22,7 +22,7 @@ import {
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
 import { generateDailyShop, toDateKey } from '../game/shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout } from '../game/shop/pricing';
+import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount } from '../game/shop/pricing';
 import { STONE_BUNDLES, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { findEntityById, entityName } from '../game/entities/stageItems';
@@ -249,7 +249,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
       <section className="entity-fs__panel" onClick={(e) => e.stopPropagation()} style={{ '--stage-accent': accent } as CSSProperties}>
       <header className="entity-fs__topbar">
         <h2 className="entity-fs__screen-title">{t(language, 'hudShop')}</h2>
-        <span className="shop-fs__balance">⚛{formatGameNumberShort(quanta)} · ◆{formatGameNumberShort(state.enhanceStones)}</span>
+        <span className="shop-fs__balance"><span className="qsym">⚛</span>{formatGameNumberShort(quanta)} · ◆{formatGameNumberShort(state.enhanceStones)}</span>
         <button className="entity-fs__close" aria-label={t(language, 'shopClose')} onClick={onClose}>✕</button>
       </header>
 
@@ -326,7 +326,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   <span className="shop-gacha-card__icon" aria-hidden="true">🎁</span>
                   <span className="shop-gacha-card__name">{GACHA_BOX_NAME[box.id]?.[language] ?? box.id}</span>
                   <span className="shop-gacha-card__odds">{odds}</span>
-                  <span className="shop-card__price">⚛{formatGameNumberShort(cost)}</span>
+                  <span className="shop-card__price"><span className="qsym">⚛</span>{formatGameNumberShort(cost)}</span>
                 </button>
               );
             })}
@@ -386,29 +386,38 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   disabled={!afford}
                   onClick={() => { dispatch({ type: 'BUY_ENHANCE_STONES', count }); onSfx?.(); }}
                 >
+                  {stoneBulkDiscount(count) > 0 ? (
+                    <span className="shop-ribbon">{t(language, 'shopDiscountRibbon').replace('{n}', String(Math.round(stoneBulkDiscount(count) * 100)))}</span>
+                  ) : null}
                   <span className="shop-stone-card__amount">◆ {count}</span>
-                  <span className="shop-card__price">⚛{formatGameNumberShort(cost)}</span>
+                  <span className="shop-card__price"><span className="qsym">⚛</span>{formatGameNumberShort(cost)}</span>
                 </button>
               );
             })}
           </div>
           <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
           <div className="shop-fs__packs">
-            {MATTER_PACK_PRODUCTS.map((p, i) => (
-              <button
-                key={p.id}
-                type="button"
-                className="shop-card shop-pack-card"
-                style={{ '--boost-color': p.color, '--rarity-color': p.color } as CSSProperties}
-                disabled={pendingId !== null}
-                onClick={() => handlePaid(p)}
-              >
-                <span className="shop-pack-card__icon">{p.icon}</span>
-                <span className="shop-pack-card__amount">{p.name[language]}</span>
-                <span className="shop-pack-card__payout">⚛{formatGameNumberShort(packMatterPayout(i, playerStageId))}</span>
-                <span className="shop-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
-              </button>
-            ))}
+            {MATTER_PACK_PRODUCTS.map((p, i) => {
+              // Bigger packs give more matter per $ — show that as a "+X%" value ribbon (vs pack 1).
+              const base = packMatterPayout(0, playerStageId) / Math.max(0.01, MATTER_PACK_PRODUCTS[0].priceUSD);
+              const bonus = i === 0 || base <= 0 ? 0 : Math.round(((packMatterPayout(i, playerStageId) / p.priceUSD) / base - 1) * 100);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="shop-card shop-pack-card"
+                  style={{ '--boost-color': p.color, '--rarity-color': p.color } as CSSProperties}
+                  disabled={pendingId !== null}
+                  onClick={() => handlePaid(p)}
+                >
+                  {bonus > 0 ? <span className="shop-ribbon">{t(language, 'shopBonusRibbon').replace('{n}', String(bonus))}</span> : null}
+                  <span className="shop-pack-card__icon">{p.icon}</span>
+                  <span className="shop-pack-card__amount">{p.name[language]}</span>
+                  <span className="shop-pack-card__payout"><span className="qsym">⚛</span>{formatGameNumberShort(packMatterPayout(i, playerStageId))}</span>
+                  <span className="shop-card__price">{pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`}</span>
+                </button>
+              );
+            })}
           </div>
         </ShopBoard>
 

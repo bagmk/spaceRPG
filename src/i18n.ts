@@ -304,6 +304,8 @@ export const STRINGS = {
   shopDailyRefresh:   { en: 'Refresh',        ko: '새로고침' },
   shopDailyHint:      { en: 'Resets every day. Refresh to re-roll for matter.', ko: '매일 초기화 — 물질로 새로고침할 수 있습니다.' },
   shopResetIn:        { en: 'until reset', ko: '후 초기화' },
+  shopDiscountRibbon: { en: '{n}% OFF', ko: '{n}% 할인' },
+  shopBonusRibbon:    { en: '+{n}%', ko: '+{n}%' },
   shopSoldOut:        { en: 'Owned',          ko: '구매함' },
   shopGachaTitle:     { en: 'Nebula Boxes',   ko: '성운 상자' },
   shopGachaOdds:      { en: 'Odds',           ko: '확률' },

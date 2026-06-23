@@ -111,9 +111,11 @@ describe('#43 stage/rarity pricing + gacha', () => {
     // Higher stage anchor → more expensive; higher rarity → more expensive.
     expect(shopItemMatterCost('common', 8)).toBeGreaterThan(shopItemMatterCost('common', 2));
     expect(shopItemMatterCost('legendary', 8)).toBeGreaterThan(shopItemMatterCost('common', 8));
-    // ~linear in count (ceil rounding makes exact ×10 equality float-fragile).
-    expect(shopStoneMatterCost(8, 10)).toBeLessThanOrEqual(shopStoneMatterCost(8, 1) * 10);
-    expect(shopStoneMatterCost(8, 10)).toBeGreaterThan(shopStoneMatterCost(8, 1) * 9);
+    // Bulk discount (user): ◆10 −10%, ◆100 −25% → per-unit price drops with bundle size.
+    const unit = shopStoneMatterCost(8, 1);
+    expect(shopStoneMatterCost(8, 10)).toBeLessThan(unit * 10);                          // 10-bundle cheaper than 10× singles
+    expect(shopStoneMatterCost(8, 10)).toBeGreaterThan(unit * 8);                         // but not absurd
+    expect(shopStoneMatterCost(8, 100) / 100).toBeLessThan(shopStoneMatterCost(8, 10) / 10); // 100 even cheaper PER UNIT
     expect(shopRefreshMatterCost(8, 1)).toBeGreaterThan(shopRefreshMatterCost(8, 0));
   });
 

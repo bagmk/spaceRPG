@@ -38,9 +38,17 @@ export function shopItemMatterCost(
   return Math.ceil(anchor(stageId) * (SHOP_RARITY_PRICE_FRAC[rarity] ?? 0.1) * Math.pow(SHOP_RANK_STEP, rank));
 }
 
-/** Matter cost of `count` 강화석 at the player's stage. */
+/** Bulk discount on multi-강화석 bundles (user): 10개 −10%, 100개 −25%. */
+export function stoneBulkDiscount(count: number): number {
+  if (count >= 100) return 0.25;
+  if (count >= 10) return 0.10;
+  return 0;
+}
+
+/** Matter cost of `count` 강화석 at the player's stage (with the bulk discount). */
 export function shopStoneMatterCost(stageId: number, count: number): number {
-  return Math.ceil(anchor(stageId) * SHOP_STONE_PRICE_FRAC * Math.max(1, Math.floor(count)));
+  const n = Math.max(1, Math.floor(count));
+  return Math.ceil(anchor(stageId) * SHOP_STONE_PRICE_FRAC * n * (1 - stoneBulkDiscount(n)));
 }
 
 /** Matter cost of the next daily refresh (escalating by refreshCount). */

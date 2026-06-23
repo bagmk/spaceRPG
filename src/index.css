@@ -14911,6 +14911,24 @@ button.stat-header-item {
    (daily/gacha/stone/pack). Each card drives a single --rarity-color accent →
    rarity border + faint rarity wash + lift-and-glow on hover. Placed first so
    the per-board overrides below win the cascade. */
+/* User: a "X% 할인" / "+X%" value ribbon on premium cards (diamonds bulk, matter packs). */
+.shop-ribbon {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 3;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: linear-gradient(95deg, #ff5a4d, #ff8a3c);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+/* User: the ⚛ matter symbol reads too small inline — bump it ~+2pt relative to its text. */
+.qsym { font-size: 1.2em; line-height: 1; }
 .shop-card {
   position: relative;
   display: flex;
