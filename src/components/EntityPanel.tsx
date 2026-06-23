@@ -117,7 +117,7 @@ function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, lev
   const geoLevelMult = getEnhanceGeoLevelMult(entity.rarity, level);
   // Floor mirrors the live modifier (effects.ts) so the shop/forge label matches the
   // applied value — early common auto reads ≥ the floor, not ~0.02/s.
-  return Math.max(AUTO_WALLET_MIN_PER_ITEM, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
+  return Math.max(AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {

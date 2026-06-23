@@ -191,15 +191,21 @@ export const CLICK_GEAR_MATTER_BOOST = 2;
  */
 export const AUTO_GEAR_INCOME_SCALE = 0.16;
 /**
- * 2026-06-23 (user "커먼 auto 향상이 너무 작아 처음에 — 1/초인데 장착해도 1/초"): early
- * common rift items are item-anchored to a tiny stage-1 baseCost, so their auto WALLET
- * contribution was ~0.02/s — invisible against the 1/s base. FLOOR each equipped auto
- * item's WALLET contribution so equipping ANY auto item visibly moves 오토 속도 (base 1/s
- * → ≥1.5/s). Off-gate (the gate reads autoEntropyFlatAdd, not this) → sim-neutral; only
- * lifts items whose computed value is below the floor (strong items keep their value).
- * 1.0 (not 0.5) so the integer-rounded 오토 속도 reads 2/s, not a still-"1/s" 1.5.
+ * Auto WALLET contribution FLOOR per equipped rift item — makes early items visibly move
+ * 오토 속도 (their item-anchored value is tiny at low stages). 2026-06-23 FIX (user "글루온
+ * (레어) 2/초 < 업쿼크(커먼) 2.3/초 — 웃기는 방향"): a FLAT floor lifted BOTH common AND rare
+ * to the same ~1.0 at low stages, flattening the rarity order. Now RARITY-SCALED ~10×/tier
+ * so a rarer item always floors higher (레어 ≥ 10× 커먼). Off-gate (gate reads
+ * autoEntropyFlatAdd) → sim-neutral; only binds at low stages where the natural value is
+ * below the floor (higher stages keep their larger natural value).
  */
-export const AUTO_WALLET_MIN_PER_ITEM = 1.0;
+export const AUTO_WALLET_MIN_PER_ITEM: Record<EntityRarity, number> = {
+  common: 0.5,
+  rare: 5,
+  epic: 50,
+  legendary: 500,
+  mythic: 5000,
+};
 /**
  * Overhaul-4 (user: "클릭은 당연히 오토보다 더 높게"): click gear gets its OWN
  * player-stage-anchored WALLET (clickMatterFlatAdd), mirroring the auto split, so a

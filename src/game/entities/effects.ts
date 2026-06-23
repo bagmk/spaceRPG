@@ -183,7 +183,7 @@ export function applyEntityModifiers(
         //  • ENTROPY (autoEntropyFlatAdd): the TAME, stage-1-pinned, linear-level
         //    value — so the entropy gate stays EXACTLY as calibrated (no re-sim, all
         //    pacing invariants hold). Mirrors clickMatterMult ↔ clickPowerMult.
-        mods.autoRateFlatAdd += Math.max(AUTO_WALLET_MIN_PER_ITEM, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        mods.autoRateFlatAdd += Math.max(AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
         mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':
