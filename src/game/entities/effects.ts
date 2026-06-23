@@ -4,6 +4,7 @@ import type { Modifiers } from '../skills/effects';
 import type { EntityInstance, StageEntity } from './types';
 import {
   AUTO_GEAR_INCOME_SCALE,
+  AUTO_WALLET_MIN_PER_ITEM,
   CLICK_GEAR_INCOME_SCALE,
   AUTO_STAGE_POWER_BASE,
   CODEX_REWARD_MULT,
@@ -182,7 +183,7 @@ export function applyEntityModifiers(
         //  • ENTROPY (autoEntropyFlatAdd): the TAME, stage-1-pinned, linear-level
         //    value — so the entropy gate stays EXACTLY as calibrated (no re-sim, all
         //    pacing invariants hold). Mirrors clickMatterMult ↔ clickPowerMult.
-        mods.autoRateFlatAdd += Math.max(0, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        mods.autoRateFlatAdd += Math.max(AUTO_WALLET_MIN_PER_ITEM, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
         mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':

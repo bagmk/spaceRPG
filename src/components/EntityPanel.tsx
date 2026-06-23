@@ -21,6 +21,7 @@ import {
   HEX_NODE_XY,
   HEX_LINK_EDGES,
   HEX_WILD_UNLOCK_STAGE,
+  AUTO_WALLET_MIN_PER_ITEM,
   type SecondaryStatType,
 } from '../game/balance';
 import { computeHexBingo } from '../game/entities/hexBingo';
@@ -114,7 +115,9 @@ function formatPct(value: number): string {
 function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1, carried = false): number {
   const effCount = getEffectiveCount(count, entity.maxCount, false);
   const geoLevelMult = getEnhanceGeoLevelMult(entity.rarity, level);
-  return Math.max(0, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
+  // Floor mirrors the live modifier (effects.ts) so the shop/forge label matches the
+  // applied value — early common auto reads ≥ the floor, not ~0.02/s.
+  return Math.max(AUTO_WALLET_MIN_PER_ITEM, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {

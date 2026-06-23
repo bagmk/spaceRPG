@@ -191,6 +191,16 @@ export const CLICK_GEAR_MATTER_BOOST = 2;
  */
 export const AUTO_GEAR_INCOME_SCALE = 0.16;
 /**
+ * 2026-06-23 (user "커먼 auto 향상이 너무 작아 처음에 — 1/초인데 장착해도 1/초"): early
+ * common rift items are item-anchored to a tiny stage-1 baseCost, so their auto WALLET
+ * contribution was ~0.02/s — invisible against the 1/s base. FLOOR each equipped auto
+ * item's WALLET contribution so equipping ANY auto item visibly moves 오토 속도 (base 1/s
+ * → ≥1.5/s). Off-gate (the gate reads autoEntropyFlatAdd, not this) → sim-neutral; only
+ * lifts items whose computed value is below the floor (strong items keep their value).
+ * 1.0 (not 0.5) so the integer-rounded 오토 속도 reads 2/s, not a still-"1/s" 1.5.
+ */
+export const AUTO_WALLET_MIN_PER_ITEM = 1.0;
+/**
  * Overhaul-4 (user: "클릭은 당연히 오토보다 더 높게"): click gear gets its OWN
  * player-stage-anchored WALLET (clickMatterFlatAdd), mirroring the auto split, so a
  * click PER TAP out-earns auto PER SECOND. Set ABOVE AUTO_GEAR_INCOME_SCALE so one
