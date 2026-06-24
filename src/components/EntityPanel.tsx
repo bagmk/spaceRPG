@@ -495,6 +495,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   const [inspectedEntityId, setInspectedEntityId] = useState<string | null>(null);
   // Equip: hero-stat breakdown expand, slot-detail inspector, on-demand filter.
   const [inspectedSlot, setInspectedSlot] = useState<number | null>(null);
+  // O fix: the CENTER wild slot needs its OWN inspect flag — it isn't in gearSlots
+  // (click/rift), so equippedEntities[inspectedSlot] can't resolve it. When set, the
+  // detail card resolves the entity/entry from wildSlot instead.
+  const [inspectWild, setInspectWild] = useState(false);
   // #44: the hexagon CENTER (wild) slot has its own picker (any category) since
   // it isn't tied to the click/rift equipCat+slotIndex addressing of the outer 6.
   const [pickingWild, setPickingWild] = useState(false);
@@ -1324,7 +1328,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity], ...centerPos } as CSSProperties) : centerPos}
                 onClick={() => {
                   setPickingSlot(null);
-                  setPickingWild((v) => !v);
+                  // O fix: FILLED center → open the detail (enhance/swap/unequip), matching
+                  // the outer slots; only an EMPTY center toggles the wild picker. Before,
+                  // it always toggled the picker, so "가운데 얘 강화하려고 눌러도" did nothing.
+                  if (slotEntity) { setInspectWild(true); }
+                  else { setPickingWild((v) => !v); }
                   onUITap?.();
                 }}
               >
@@ -1977,14 +1985,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}
-      {/* Equip slot detail — gear actions (enhance / swap / unequip) live here */}
-      {inspectedSlot !== null && equippedEntities[inspectedSlot] ? (() => {
-        const i = inspectedSlot;
-        const ent = equippedEntities[i]!;
+      {/* Equip slot detail — gear actions (enhance / swap / unequip) live here.
+          O fix: also opens for the CENTER wild slot (inspectWild) — it isn't in gearSlots. */}
+      {((inspectedSlot !== null && equippedEntities[inspectedSlot]) || (inspectWild && wildSlot && entityOfSlot(wildSlot))) ? (() => {
+        const isWild = inspectWild && !!wildSlot && !!entityOfSlot(wildSlot);
+        const i = inspectedSlot ?? -1;
+        const ent = (isWild ? entityOfSlot(wildSlot) : equippedEntities[i])!;
         // P6: this detail is for the SPECIFIC equipped copy — resolve by the slot's
         // instanceId so its own level/quality (not a spare's) drives enhance.
-        const slotVal = gearSlots[i] ?? '';
+        const slotVal = isWild ? (wildSlot as string) : (gearSlots[i] ?? '');
         const entry = entryOfSlot(slotVal);
+        const closeDetail = () => { setInspectedSlot(null); setInspectWild(false); };
         const lvl = entry?.level ?? 1;
         const cap = getEnhanceLevelCap(ent);
         const atCap = lvl >= cap;
@@ -2002,9 +2013,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         const canStone = !atCap && !canMerge && enhanceStones >= stoneCost;
         const rc = RARITY_COLORS[ent.rarity];
         return (
-          <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setInspectedSlot(null); }}>
+          <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
             <article className={`entity-detail-card cc-scroll entity-detail-card--${ent.rarity} ${isTailQuality(entry?.quality) ? 'entity-detail-card--tail' : ''}`} style={{ '--rarity-color': rc } as CSSProperties} onClick={(e) => e.stopPropagation()}>
-              <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={() => setInspectedSlot(null)}>×</button>
+              <button type="button" className="entity-detail-card__close" aria-label={t(language, 'panelClose')} onClick={closeDetail}>×</button>
               <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
               <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
@@ -2050,10 +2061,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     )}
               </button>
               <div className="slot-detail__actions">
-                <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { setPickingSlot(i); setInspectedSlot(null); }}>
+                <button type="button" className="entity-detail-card__equip slot-detail__swap" onClick={() => { if (isWild) { setPickingWild(true); } else { setPickingSlot(i); } closeDetail(); }}>
                   {t(language, 'equipSwap')}
                 </button>
-                <button type="button" className="entity-detail-card__equip slot-detail__remove" onClick={() => { onUnequip(i, equipCat); setInspectedSlot(null); }}>
+                <button type="button" className="entity-detail-card__equip slot-detail__remove" onClick={() => { onUnequip(isWild ? 0 : i, isWild ? 'wild' : equipCat); closeDetail(); }}>
                   {t(language, 'entityUnequip')}
                 </button>
               </div>
