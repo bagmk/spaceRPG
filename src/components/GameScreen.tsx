@@ -1064,7 +1064,7 @@ export function GameScreen({
             onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
             aria-label={t(language, 'questTitle')}
           >
-            <span className="hud-action-icon" aria-hidden="true">✦</span>
+            <span className="hud-action-icon" aria-hidden="true">📋</span>
             <span className="hud-action-label">{t(language, 'questTitle')}</span>
             {questPanelHasNudge ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
@@ -1078,7 +1078,7 @@ export function GameScreen({
             aria-label={t(language, 'equipClickTitle')}
             title={equipUnlocked ? undefined : t(language, 'lockUntilStage').replace('{n}', String(EQUIP_UNLOCK_STAGE_ID))}
           >
-            <span className="hud-action-icon" aria-hidden="true">{equipUnlocked ? '⌖' : '🔒'}</span>
+            <span className="hud-action-icon" aria-hidden="true">{equipUnlocked ? '⬡' : '🔒'}</span>
             <span className="hud-action-label">{t(language, 'entityEquip')}</span>
             {/* C-P2 touch: surface the unlock-stage on the locked circle (title= is
                 invisible on touch). aria-hidden — the button's title/aria-label carry it. */}
