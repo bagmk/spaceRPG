@@ -122,12 +122,36 @@ export const ENTITY_RARITY_TINT: Record<EntityRarity, { hex: string; amount: num
 
 // Non-flat effect values are scaled up by rarity so legendary/epic feel impactful.
 // Multiplier effects skip this scaling (they compound multiplicatively across stages).
+// This is the GENTLER scale used for the % effect types OTHER than click —
+// auto_mult, crit-mult, entropy — which compound or are bounded, so they don't
+// take the steep click ladder. (Plain AUTO is FLAT-typed and already ~10×/tier via
+// the rarity-scaled baseCost anchor; see getAutoOutputAnchor — it skips this scale.)
 export const ENTITY_RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
   common:    1.0,
   rare:      1.0,
   epic:      1.8,
   legendary: 3.0,
   mythic:    5.0,
+};
+
+// RARITY STEEPENING (PO 2026-06-23 "커먼→레어 10배↑→에픽 10배↑…, 모든 스탯이 바뀌어야"):
+// CLICK gets its OWN, much steeper per-rarity scale so a higher-rarity click item is
+// DECISIVELY stronger. Combined with the uniform base click values (common 15 / rare 22 /
+// epic 35) and the click stageEffectScale (0.25 for the rebalanced common/rare/epic;
+// 1.0 for legendary/mythic), this yields a printed click ladder of
+//   common 3.75 → rare 11.0 → epic 33.25  (≈3× per tier, vs the old 1.47×/2.86×).
+// CLICK power is EXPONENTIAL in equipped slots — clickPowerMult = (1 + value·level/100)^slots —
+// so a literal 10×/tier on the VALUE would explode legendary into millions×. 3×/tier on the
+// printed value is the steepest the entropy-gate sim (scripts/entropy-gate-sim.mjs) tolerates
+// while every invariant stays green; it already delivers a large, level-amplified power jump
+// per tier. legendary/mythic (no in-stage click item; mythic-bucket base 18–20) continue the
+// climb. The sim's GEAR.click table mirrors the resulting printed values; thresholds re-pinned.
+export const ENTITY_RARITY_CLICK_SCALE: Record<EntityRarity, number> = {
+  common:    1.0,
+  rare:      2.0,
+  epic:      3.8,
+  legendary: 2.9, // legendary/mythic skip the 0.25 click stageEffectScale (sesFor=1),
+  mythic:    16.0, // so their scalar is lower yet the printed value keeps climbing.
 };
 
 // ── Output anchors (Phase 4-2: gear-only economy) ───────────────────────────
@@ -267,22 +291,28 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // so #6 does NOT enter this calibration. Re-run the sim after touching gear curve /
   // slots / costs / level / count / crit and re-paste; the v16 ladder stays FROZEN in
   // storage/migrate.ts.
+  // RARITY STEEPENING re-pin (2026-06-23, scripts/entropy-gate-sim.mjs): steeper CLICK
+  // (ENTITY_RARITY_CLICK_SCALE, GEAR.click 3.75/11.0/33.25) + steeper SUBSTATS
+  // (SECONDARY_RARITY_SCALE 0.6/1.3/2.8/6.0) lift the gate (click + crit feed it), so the
+  // reference profile is re-pinned to realPlayTargetSec and these are the freshly-printed
+  // thresholds. ALL invariants pass (crit spread 2.76×, casual/hardcore 140.8×). The v16
+  // ladder stays FROZEN in storage/migrate.ts.
   1: 1.479e3,
   2: 9.526e3,
   3: 2.969e4,
   4: 6.421e4,
-  5: 1.335e5,
-  6: 3.871e5,
-  7: 1.014e6,
-  8: 2.453e6,
-  9: 3.644e6,
-  10: 5.367e6,
-  11: 8.219e6,
-  12: 1.254e7,
-  13: 1.741e7,
-  14: 5.633e7,
-  15: 1.580e8,
-  16: 1.980e8,
+  5: 1.580e5,
+  6: 5.611e5,
+  7: 1.646e6,
+  8: 4.262e6,
+  9: 6.218e6,
+  10: 9.154e6,
+  11: 1.403e7,
+  12: 2.138e7,
+  13: 2.963e7,
+  14: 9.345e7,
+  15: 2.603e8,
+  16: 3.256e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -785,13 +815,22 @@ export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
   mythic: 3,
 };
 
-/** Secondary magnitudes scale with rarity on top of the per-stat base. */
+/** Secondary magnitudes scale with rarity on top of the per-stat base.
+ *  RARITY STEEPENING (PO 2026-06-23): steepened from {0.6,1,1.5,2.2,3} (~1.5×/tier)
+ *  to ~2.15×/tier so a higher-rarity item's SUBSTATS visibly jump too ("모든 스탯이
+ *  바뀌어야"). The UNCAPPED substats (autoPct, dropRate, entropyGain, fusionBurst,
+ *  offlineEff, comboCap) genuinely scale ~2.15×/tier; the CRIT substats (critChance /
+ *  critMult) are bounded by CRIT_MULT_GEAR_CAP + the in-game crit-chance cap, so they
+ *  saturate rather than explode. That cap is also why this can't be a literal 10×/tier:
+ *  crit substats FEED the entropy gate (click income), and the sim's best-crit-vs-no-crit
+ *  ≤3× invariant breaks past ~2.15×/tier. This is the steepest the sim still passes (crit
+ *  spread 2.76× < 3×). Mirrored in scripts/entropy-gate-sim.mjs critFactor; thresholds re-pinned. */
 export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
   common: 0.6,
-  rare: 1,
-  epic: 1.5,
-  legendary: 2.2,
-  mythic: 3.0,
+  rare: 1.3,
+  epic: 2.8,
+  legendary: 6.0,
+  mythic: 12.6,
 };
 
 // ── Feature unlock gating (Overhaul-2 🅠7 — staged onboarding) ───────────────

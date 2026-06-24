@@ -19,6 +19,7 @@ import {
   ENTITY_RARITY_SIZE,
   ENTITY_RARITY_TINT,
   ENTITY_RARITY_EFFECT_SCALE,
+  ENTITY_RARITY_CLICK_SCALE,
 } from '../balance';
 
 type StageId = keyof typeof ENTITY_COST_ANCHORS;
@@ -723,7 +724,15 @@ function stage(stageId: StageId, specs: EntitySpec[]): StageEntity[] {
     }
     // Multiplier effects are NOT scaled up by rarity — they compound multiplicatively across stages.
     // Auto, click, crit, and time effects get rarity scaling to make higher rarities feel impactful.
-    const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier' ? 1 : ENTITY_RARITY_EFFECT_SCALE[spec.rarity];
+    // RARITY STEEPENING (PO 2026-06-23): the scale is now TYPE-AWARE — CLICK rides the steep
+    // ENTITY_RARITY_CLICK_SCALE (decisive per-tier jump, exponential-safe), everything else keeps
+    // the gentler ENTITY_RARITY_EFFECT_SCALE. (Flat-typed AUTO skips both: its ~10×/tier ladder
+    // already comes from the rarity-scaled baseCost anchor in getAutoOutputAnchor.)
+    const effectScale = spec.effect.isFlat || spec.effect.type === 'multiplier'
+      ? 1
+      : spec.effect.type === 'click'
+        ? ENTITY_RARITY_CLICK_SCALE[spec.rarity]
+        : ENTITY_RARITY_EFFECT_SCALE[spec.rarity];
     // Auto-populate Korean translations from lookup table when not already on the spec.
     const ko = ENTITY_KO_TRANSLATIONS[spec.name];
     const nameKo = spec.nameKo ?? ko?.name;

@@ -138,9 +138,13 @@ const comboMult = (combo, stageId) =>
 // power now rides per-item pct × LEVEL × equipped slots only. Thresholds recalibrated.
 const GEAR = {
   click: {
+    // RARITY STEEPENING (2026-06-23) — mirrors the printed click ladder from
+    // ENTITY_RARITY_CLICK_SCALE × base(15/22/35) × stageEffectScale(0.25): now a
+    // ~3×/tier climb (was 3.75/5.5/15.75 ≈ 1.47×/2.86×). legendary stays 50 (it's the
+    // 'multiplier'-type item, not a click item — there is NO legendary click gear in-stage).
     common:    { pct: 3.75, eff: 1 },
-    rare:      { pct: 5.5,  eff: 1 },
-    epic:      { pct: 15.75, eff: 1 },
+    rare:      { pct: 11.0,  eff: 1 },
+    epic:      { pct: 33.25, eff: 1 },
     legendary: { pct: 50,   eff: 1 }, // 'multiplier' type — click + crit/2
   },
   auto: {
@@ -328,7 +332,10 @@ function critFactor(stageId, combo, critGear = 0.5, stoneBudget = 0) {
   // carry 1 weak signature substat (count 1, scale 0.6) — matters only at the
   // earliest stages where common is the best equippable rarity.
   const statCount = { common: 1, rare: 1, epic: 2, legendary: 3 }[r];
-  const rarityScale = { common: 0.6, rare: 1, epic: 1.5, legendary: 2.2 }[r];
+  // RARITY STEEPENING (2026-06-23) — lockstep with balance.ts SECONDARY_RARITY_SCALE
+  // (was 0.6/1/1.5/2.2). Crit substats feed click income, so this is bounded by the
+  // best-crit-vs-no-crit ≤3× invariant (here 2.76×); 2.15×/tier is the steepest that holds.
+  const rarityScale = { common: 0.6, rare: 1.3, epic: 2.8, legendary: 6.0 }[r];
   const lvl = levelMult(derivedLevel(stageId, r, stoneBudget));
   // critChance substat: base 1.2% × rarityScale × lvl per stat (user bump ×3 —
   // lockstep with balance.ts SECONDARY_STAT_DEFS.critChance); assume critGear share
