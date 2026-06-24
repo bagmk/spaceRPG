@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { STAGE_LOGS, pickLogText } from '../game/stageLogs';
-import type { Lang } from '../i18n';
+import { t, type Lang } from '../i18n';
 
 interface StageLogToastProps {
   stageId: number;
@@ -109,7 +109,7 @@ export function StageLogToast({ stageId, progressPercent, language, onFirstDismi
           <button
             type="button"
             className="stage-log-dismiss"
-            aria-label="Dismiss message"
+            aria-label={t(language, 'srDismissMessage')}
             onClick={(event) => {
               event.stopPropagation();
               handleDismiss();

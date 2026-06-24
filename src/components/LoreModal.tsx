@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLore } from '../hooks/useLore';
-import type { Lang } from '../i18n';
+import { t, type Lang } from '../i18n';
 
 interface LoreModalProps {
   loreId: string;
@@ -53,9 +53,9 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
     return (
       <div className="lore-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
         <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="lore-modal__close" onClick={onClose} aria-label="Close">×</button>
+          <button type="button" className="lore-modal__close" onClick={onClose} aria-label={t(internalLang, 'panelClose')}>×</button>
           <div className="lore-modal__body cc-scroll cc-scroll--colored">
-            <p>{internalLang === 'ko' ? '해설을 찾을 수 없습니다.' : 'Lore not available.'}</p>
+            <p>{t(internalLang, 'loreUnavailable')}</p>
           </div>
         </div>
       </div>
@@ -77,7 +77,7 @@ export function LoreModal({ loreId, language, onClose }: LoreModalProps) {
   return (
     <div className="lore-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="lore-modal" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="lore-modal__close" onClick={onClose} aria-label="Close">×</button>
+        <button type="button" className="lore-modal__close" onClick={onClose} aria-label={t(internalLang, 'panelClose')}>×</button>
         <h2 className="lore-modal__title">{title}</h2>
         <div className="lore-modal__body cc-scroll cc-scroll--colored" dangerouslySetInnerHTML={{ __html: formatBody(body ?? '') }} />
       </div>

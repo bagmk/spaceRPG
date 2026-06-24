@@ -24,7 +24,7 @@ export function EndingChooser({ options, onChoose, onClose, language }: EndingCh
               type="button"
               className="ending-chooser__close"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t(language, 'panelClose')}
             >
               ✕
             </button>

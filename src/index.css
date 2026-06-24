@@ -917,6 +917,11 @@ button.hud-stage-title--clickable:hover {
   0%, 100% { box-shadow: 0 0 0 1.5px rgba(255, 233, 168, 0.7), 0 0 12px rgba(255, 214, 130, 0.4); }
   50%      { box-shadow: 0 0 0 2px rgba(255, 233, 168, 1), 0 0 22px rgba(255, 214, 130, 0.7); }
 }
+/* C a11y: keep the static bonus glow but stop the loop for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .hex-links__lit,
+  .hex-slot--line { animation: none !important; }
+}
 .hex-bonus {
   margin: 8px auto 0;
   padding: 7px 12px;

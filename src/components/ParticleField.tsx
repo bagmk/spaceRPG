@@ -41,6 +41,7 @@ import {
   spawnMotesAtClick,
 } from '../canvas/spawn';
 import { ROGUE_TYPES, TUNING } from '../game/constants';
+import { t, stageName, type Lang } from '../i18n';
 import { getProgress } from '../game/formulas';
 import { getMechanic } from '../game/mechanics';
 import { STAGES } from '../game/stages';
@@ -263,6 +264,7 @@ interface AbsorbCometPayload {
 
 interface ParticleFieldProps {
   stage: Stage;
+  language: Lang;
   actualStageId: number;
   quanta: number;
   autoRate: number;
@@ -845,6 +847,7 @@ function applyPointerAttractionToRogue(
 
 const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(function ParticleFieldInner({
   stage,
+  language,
   actualStageId,
   quanta,
   autoRate,
@@ -1715,7 +1718,11 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       role="button"
       tabIndex={interactionLocked ? -1 : 0}
       aria-keyshortcuts="Space Enter"
-      aria-label={totalClicks > 0 ? `${stage.name} — gather (Space/Enter)` : `${stage.name} — press Space or Enter to gather`}
+      aria-label={
+        totalClicks > 0
+          ? t(language, 'srGather').replace('{stage}', stageName(language, stage.id, stage.name))
+          : t(language, 'srGatherHint').replace('{stage}', stageName(language, stage.id, stage.name))
+      }
     >
       <canvas
         ref={canvasRef}

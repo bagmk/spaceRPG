@@ -761,6 +761,7 @@ export function GameScreen({
         <ParticleField
           ref={particleFieldRef}
           stage={displayStage}
+          language={language}
           actualStageId={displayStage.id}
           quanta={displayQuanta}
           autoRate={displayedAutoRate}
@@ -974,7 +975,14 @@ export function GameScreen({
                       {formatEntropyPair(state.entropy, stage.entropyThreshold)}
                     </span>
                   </div>
-                  <div className="hud-gauge hud-entropy-gauge" aria-label="Entropy gate">
+                  <div
+                    className="hud-gauge hud-entropy-gauge"
+                    role="progressbar"
+                    aria-label={t(language, 'srEntropyGate')}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(Math.min(100, entropyGateProgress01 * 100))}
+                  >
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
                   </div>
                 </div>
@@ -1095,6 +1103,7 @@ export function GameScreen({
             <ShopButton
               highlighted={hasShopNotification}
               disabled={!canShowShop}
+              language={language}
               lockStageLabel={`S${SHOP_UNLOCK_STAGE_ID}`}
               onClick={() => {
                 setShopOpen(true);
@@ -1296,6 +1305,7 @@ export function GameScreen({
                   ? 'top'
                   : 'left'
           }
+          language={language}
           message={activeTutorialBubble.message}
           ctaLabel={activeTutorialBubble.ctaLabel}
           autoCloseMs={activeTutorialBubble.autoCloseMs}

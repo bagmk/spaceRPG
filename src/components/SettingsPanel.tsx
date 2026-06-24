@@ -80,16 +80,16 @@ export function SettingsPanel({
       >
         <div className="settings-header">
           <span className="settings-title">{t(language, 'settingsTitle')}</span>
-          <button type="button" className="settings-close" onClick={onClose}>✕</button>
+          <button type="button" className="settings-close" onClick={onClose} aria-label={t(language, 'panelClose')}>✕</button>
         </div>
 
         <div className="settings-row">
-          <span className="settings-label">{language === 'ko' ? '음악' : 'Music'}</span>
+          <span className="settings-label">{t(language, 'settingsMusic')}</span>
           <button
             type="button"
             className={`settings-audio-btn ${!musicMuted ? 'settings-audio-btn--on' : ''}`}
             onClick={() => { onToggleMusic(); if (musicMuted) soundManager?.playToggle(true); }}
-            aria-label={musicMuted ? 'Music off' : 'Music on'}
+            aria-label={musicMuted ? t(language, 'srMusicOff') : t(language, 'srMusicOn')}
           >
             <span className="audio-icon">{musicMuted ? '🎵' : '🎵'}</span>
           </button>
@@ -102,7 +102,7 @@ export function SettingsPanel({
             type="button"
             className={`settings-audio-btn ${!sfxMuted ? 'settings-audio-btn--on' : ''}`}
             onClick={() => { onToggleSfx(); if (sfxMuted) window.setTimeout(() => soundManager?.playToggle(true), 30); }}
-            aria-label={sfxMuted ? 'SFX off' : 'SFX on'}
+            aria-label={sfxMuted ? t(language, 'srSfxOff') : t(language, 'srSfxOn')}
           >
             <span className="audio-icon">{sfxMuted ? '🔈' : '🔈'}</span>
           </button>

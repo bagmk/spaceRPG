@@ -93,6 +93,7 @@ export function ShopButton({
   onClick,
   label = 'Shop',
   lockStageLabel,
+  language,
 }: {
   highlighted: boolean;
   disabled?: boolean;
@@ -100,6 +101,7 @@ export function ShopButton({
   label?: string;
   /** e.g. "S3" — corner badge while locked (parity with the equip/fuse rail buttons). */
   lockStageLabel?: string;
+  language: Lang;
 }) {
   return (
     <button
@@ -107,7 +109,7 @@ export function ShopButton({
       className={`shop-button ${highlighted ? 'affordable' : ''}`}
       disabled={disabled}
       onClick={onClick}
-      aria-label={disabled ? 'Cosmic shop locked' : 'Open cosmic shop'}
+      aria-label={disabled ? t(language, 'shopLockedAria') : t(language, 'shopOpenAria')}
     >
       <span className="hud-action-icon" aria-hidden="true">{disabled ? '🔒' : '🛒'}</span>
       <span className="hud-action-label">{label}</span>

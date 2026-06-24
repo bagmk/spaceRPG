@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import { t, type Lang } from '../i18n';
 
 interface SpeechBubbleProps {
   anchorRef: RefObject<HTMLElement>;
   position: 'top' | 'bottom' | 'left' | 'right';
+  language: Lang;
   message: string;
   ctaLabel?: string;
   onCta?: () => void;
@@ -93,6 +95,7 @@ function resolvePosition(
 export function SpeechBubble({
   anchorRef,
   position,
+  language,
   message,
   ctaLabel,
   onCta,
@@ -159,7 +162,7 @@ export function SpeechBubble({
       role="status"
       aria-live="polite"
     >
-      <button className="speech-dismiss" type="button" onClick={onDismiss} aria-label="Dismiss tutorial">
+      <button className="speech-dismiss" type="button" onClick={onDismiss} aria-label={t(language, 'srDismissTutorial')}>
         x
       </button>
       <div className="speech-message">{message}</div>
