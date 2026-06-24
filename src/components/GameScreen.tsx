@@ -57,6 +57,7 @@ import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { DropDiscoveryToast } from './DropDiscoveryToast';
+import { StageLogToast } from './StageLogToast';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { toDateKey } from '../game/shop/daily';
 import { milestoneEraLog } from '../game/milestones';
@@ -1258,6 +1259,15 @@ export function GameScreen({
           onDismiss={() => dispatch({ type: 'CLEAR_DROP_EVENT', id: state.lastDropEvent!.id })}
         />
       ) : null}
+
+      {/* Panel I: ambient era-narrative drip. STAGE_LOGS' flavor lines fire at their
+          gate-progress points as you advance (no claim) — the component was fully built
+          but never mounted. It self-manages queue/auto-dismiss + resets on stage change. */}
+      <StageLogToast
+        stageId={rawStage.id}
+        progressPercent={entropyGateProgress01 * 100}
+        language={language}
+      />
 
       {settingsOpen ? (
         <SettingsPanel
