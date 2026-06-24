@@ -11653,6 +11653,17 @@ button.stat-header-item {
 /* Panel #7: matter is the headline number — bump it + give the ⚛ glyph an accent tint. */
 .hud-entropy-readout .hud-quanta-value { font-size: 1.5em; opacity: 1; }
 .hud-entropy-readout .hud-quanta-glyph { color: var(--accent, #ffd27f); opacity: 1; }
+/* Panel E: matter sits on its own row under the title; auto-rate + ◆ stones demote
+   to a smaller, dimmer secondary token so the matter value reads as THE headline. */
+.hud-matter-line { margin-top: 1px; }
+.hud-readout-secondary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: 2px;
+  font-size: 0.78em;
+  opacity: 0.6;
+}
 
 .hud-entropy-unit {
   color: color-mix(in srgb, var(--accent) 76%, #fff4df);
