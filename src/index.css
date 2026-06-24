@@ -4808,6 +4808,16 @@ button.stat-header-item {
   opacity: 0.72;
   cursor: not-allowed;
 }
+/* Panel #7: a not-yet-wired node — dimmed further + its cost slot reads "준비 중". */
+.singularity-item.coming-soon {
+  opacity: 0.5;
+  border-style: dashed;
+}
+.singularity-item.coming-soon .singularity-cost {
+  font-style: italic;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
 
 .ending-option:disabled .ending-requirement {
   color: rgba(236, 232, 217, 0.62);

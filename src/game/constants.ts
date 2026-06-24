@@ -244,6 +244,7 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     cost: 50,
     effect: 'Retain 25% of upgrade levels between stages',
     description: 'Dying structures leave a memory trace in what follows them.',
+    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
   {
     id: 'hawking_echo',
@@ -279,6 +280,7 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     cost: 2000,
     effect: 'Seed customization reserved',
     description: 'You begin to see neighboring histories through the grain.',
+    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
   {
     id: 'vacuum_stability',
@@ -286,6 +288,7 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     cost: 8000,
     effect: 'Unlock Vacuum Decay',
     description: 'A deeper floor reveals itself beneath apparent emptiness.',
+    unimplemented: true, // Panel #7: effect not wired (vacuum-decay ending gates on no-crit, not this) — disabled until wired.
   },
   {
     id: 'boltzmann_brain',
@@ -293,6 +296,7 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     cost: 30000,
     effect: 'Heat death continues indefinitely',
     description: 'Equilibrium stops pretending to be the end of narration.',
+    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
 ];
 

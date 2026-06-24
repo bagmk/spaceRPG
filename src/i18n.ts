@@ -373,6 +373,7 @@ export const STRINGS = {
   finalCondensedMassLabel: { en: 'Condensed Mass',          ko: '응축 질량' },
   finalOwned:           { en: 'Owned',                     ko: '보유 중' },
   finalMassUnit:        { en: 'mass',                      ko: '질량' },
+  singularityComingSoon: { en: 'Coming soon',              ko: '준비 중' },
   finalNewEndingReward: { en: 'New ending reward',         ko: '새 엔딩 보상' },
   finalEchoes:          { en: 'echoes',                    ko: '에코' },
   finalCodexProgress:   { en: 'Codex',                     ko: '도감' },

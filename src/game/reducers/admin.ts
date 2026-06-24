@@ -154,7 +154,9 @@ export function handleBuySingularityUnlock(
   action: BuySingularityAction,
 ): GameState {
   const unlock = SINGULARITY_UNLOCK_LOOKUP[action.unlockId];
-  if (!unlock || state.singularityUnlocks.includes(action.unlockId) || state.condensedMass < unlock.cost) {
+  // Panel #7: never let condensedMass be spent on a node whose effect isn't wired
+  // (the UI disables these, but guard the reducer too).
+  if (!unlock || unlock.unimplemented || state.singularityUnlocks.includes(action.unlockId) || state.condensedMass < unlock.cost) {
     return state;
   }
   return {

@@ -391,6 +391,13 @@ export interface SingularityUnlockDefinition {
   cost: number;
   effect: string;
   description: string;
+  /**
+   * Panel #7: this node's effect is NOT wired to any code (no hasUnlock/.includes
+   * consumer) — it was a buyable no-op that silently ate the player's condensedMass.
+   * Flagged so the UI shows "준비 중/Coming soon" + disables purchase, and the buy
+   * reducer rejects it defensively. The held prestige redesign will wire + un-flag.
+   */
+  unimplemented?: boolean;
 }
 
 export interface TutorialStepState {

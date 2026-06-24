@@ -467,6 +467,22 @@ describe('gameReducer', () => {
     expect(next.endingsCompleted).toContain('heat_death');
     expect(next.lastEndingId).toBeNull();
   });
+
+  // Panel #7: an unwired ("unimplemented") singularity node must never be purchasable —
+  // it used to silently consume condensedMass for no effect.
+  it('rejects buying an unimplemented singularity node (no condensedMass spent)', () => {
+    const state = { ...createInitialGameState(0), condensedMass: 1e6 };
+    const next = gameReducer(state, { type: 'BUY_SINGULARITY_UNLOCK', unlockId: 'vacuum_stability' });
+    expect(next.condensedMass).toBe(1e6);
+    expect(next.singularityUnlocks).not.toContain('vacuum_stability');
+  });
+
+  it('still allows buying a wired singularity node', () => {
+    const state = { ...createInitialGameState(0), condensedMass: 1e6 };
+    const next = gameReducer(state, { type: 'BUY_SINGULARITY_UNLOCK', unlockId: 'quark_foam' });
+    expect(next.singularityUnlocks).toContain('quark_foam');
+    expect(next.condensedMass).toBeLessThan(1e6);
+  });
 });
 
 describe('P5: combo cap growth (R10) + set-key split (R8)', () => {

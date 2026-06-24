@@ -26,16 +26,25 @@ export function SingularityTree({
         {SINGULARITY_UNLOCKS.map((unlock) => {
           const owned = unlocks.includes(unlock.id);
           const affordable = condensedMass >= unlock.cost;
+          // Panel #7: a node whose effect isn't wired must never be purchasable
+          // (it silently ate condensedMass). Show it as "준비 중/Coming soon", disabled.
+          const comingSoon = unlock.unimplemented === true;
           return (
             <button
               key={unlock.id}
-              className={`singularity-item ${owned ? 'owned' : ''}`}
+              className={`singularity-item ${owned ? 'owned' : ''}${comingSoon ? ' coming-soon' : ''}`}
               type="button"
-              disabled={owned || !affordable}
-              onClick={() => onUnlock(unlock.id)}
+              disabled={owned || comingSoon || !affordable}
+              onClick={() => { if (!comingSoon) onUnlock(unlock.id); }}
             >
               <span className="singularity-name">{unlock.label}</span>
-              <span className="singularity-cost">{owned ? t(language, 'finalOwned') : `${unlock.cost} ${t(language, 'finalMassUnit')}`}</span>
+              <span className="singularity-cost">
+                {comingSoon
+                  ? t(language, 'singularityComingSoon')
+                  : owned
+                    ? t(language, 'finalOwned')
+                    : `${unlock.cost} ${t(language, 'finalMassUnit')}`}
+              </span>
               <span className="singularity-effect">{unlock.effect}</span>
               <span className="singularity-desc">{unlock.description}</span>
             </button>
