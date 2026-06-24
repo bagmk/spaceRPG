@@ -15049,7 +15049,25 @@ button.stat-header-item {
 .shop-gacha-card__icon { font-size: 22px; }
 .shop-gacha-card__name { font-size: 10px; font-weight: 800; text-align: center; line-height: 1.1; }
 .shop-gacha-card__odds { font-size: 8px; color: rgba(245, 247, 250, 0.5); text-align: center; line-height: 1.15; }
-.shop-gacha-reveal { margin-top: 14px; }
+/* User ("유아이가 이게 뭐니"): the gacha reveal inherited .fusion-result's position:fixed
+   full-screen modal, which a transformed shop ancestor captured → it stretched across the
+   tall scrollable shop body, piling the pulled cards on top of the shop boards with the
+   다시뽑기/닫기 buttons floating over 물질팩. Make it a clean SELF-CONTAINED inline reveal
+   card that appears right below the gacha boxes (the "reveal in place" intent). */
+.shop-gacha-reveal {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 14px;
+  padding: 16px 12px 14px;
+  border-radius: 16px;
+  background: rgba(10, 12, 20, 0.94);
+  border: 1px solid rgba(127, 233, 255, 0.22);
+  overflow: hidden;
+}
 /* A7: multi-item gacha haul — a clear grid of pulled cards + the 강화석 line. */
 .shop-gacha-haul {
   display: grid;
