@@ -9,8 +9,6 @@ import type { PrestigeUpgradeId } from '../game/prestige';
 import type { SingularityUnlockId } from '../game/types';
 import type { SoundManager } from '../game/audio';
 import { PRESTIGE_CHAPTER_ID, getPrestigeTrackUrls } from '../game/musicChapters';
-import { computeCarriedInventory } from '../game/reducers/stage';
-import { findEntityById, entityName } from '../game/entities/stageItems';
 import { getCodexCompletionFraction } from '../game/entities/codexSets';
 import { PrestigeShop } from './PrestigeShop';
 import { SingularityTree } from './SingularityTree';
@@ -92,9 +90,8 @@ interface FinalScreenProps {
 
 export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onBuySingularityUnlock, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
-  // Phase 4-3: what carries to the next universe (best click + rift item) and
-  // the codex completion that boosted this run's condensed-mass reward.
-  const carried = computeCarriedInventory(state.inventory);
+  // Phase 4-3: the codex completion that boosted this run's condensed-mass reward.
+  // (Item carry was removed — prestige resets the inventory; only bonuses carry.)
   const codexPct = Math.round(getCodexCompletionFraction(state.almanacCollected) * 100);
   const massEarned = state.lastCondensedMassEarned;
   const codexFactor = state.lastCodexMassBonus;
@@ -202,25 +199,13 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
             <div className="overlay-card prestige-confirm" onClick={(e) => e.stopPropagation()}>
               <h2>{t(language, 'prestigeConfirmTitle')}</h2>
               <p className="prestige-confirm__body">{t(language, 'finalPrestigeWarning')}</p>
-              {/* Carry preview (Phase 4-3) — on the same overlay as the commit click. */}
+              {/* Panel #7 (A): truthful reset summary on the same overlay as the commit.
+                  handlePrestige RESETS the inventory — the old "장비 이월" preview was a
+                  false promise (computeCarriedInventory was never applied). Only bonuses carry. */}
               <div className="prestige-confirm__carry">
-                <span className="prestige-confirm__carry-title">{t(language, 'finalCarryTitle')}</span>
-                {carried.length === 0 ? (
-                  <span className="prestige-confirm__carry-none">{t(language, 'finalCarryNone')}</span>
-                ) : (
-                  <ul className="prestige-confirm__carry-list">
-                    {carried.map((inst) => {
-                      const ent = findEntityById(inst.entityId);
-                      return (
-                        <li key={inst.entityId}>
-                          {ent ? entityName(ent, language) : inst.entityId}
-                          {inst.level > 1 ? ` · Lv.${inst.level}` : ''}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <span className="prestige-confirm__carry-hint">{t(language, 'finalCarryHint')}</span>
+                <span className="prestige-confirm__carry-title">{t(language, 'finalResetTitle')}</span>
+                <span className="prestige-confirm__carry-none">{t(language, 'finalResetItems')}</span>
+                <span className="prestige-confirm__carry-hint">{t(language, 'finalKeepBonuses')}</span>
               </div>
               <div className="prestige-confirm__actions">
                 <button className="final-action-primary" type="button" onClick={onPrestige}>

@@ -20,10 +20,6 @@ import {
 } from '../multiverse';
 import { createInitialGameState } from '../defaults';
 import { pickActiveQuests, refillActiveQuests } from '../quests';
-import { findEntityById } from '../entities/stageItems';
-import { makeInstance } from '../entities/instances';
-import { getEquipCategory, type EntityInstance, type EntityRarity } from '../entities/types';
-import { PRESTIGE_CARRY_COUNT_CAP } from '../balance';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
@@ -35,53 +31,9 @@ import {
 import { createDefaultEndingProgressFlags } from '../defaults';
 import { syncSlotUnlocks } from './entities';
 
-const RARITY_RANK: Record<EntityRarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-
-/**
- * Prestige carry (Phase 4-3 D2): keep the single best click-gear item AND the
- * single best rift-gear item across prestige (highest rarity, ties by level
- * then count). Matches the fresh universe's 1+1 starting slots so nothing is
- * wasted. The carried stack keeps its LEVEL but its power is stripped to the
- * player's stage (carried:true → getGearPowerExponent), so it's a head start,
- * never an origin-stage cudgel. Count is clamped and the id canonicalized here
- * (this bypasses the load-time normalize/clamp passes). Equip/rift slots are
- * NOT carried — re-equipping is a deliberate player action.
- */
-export function computeCarriedInventory(inventory: EntityInstance[]): EntityInstance[] {
-  type Candidate = { entry: EntityInstance; rank: number };
-  let bestClick: Candidate | null = null;
-  let bestRift: Candidate | null = null;
-  for (const entry of inventory) {
-    if (entry.count <= 0) continue;
-    const entity = findEntityById(entry.entityId);
-    if (!entity) continue;
-    const rank = RARITY_RANK[entity.rarity] ?? 0;
-    const isRift = getEquipCategory(entity) === 'rift';
-    const cur: Candidate | null = isRift ? bestRift : bestClick;
-    const better =
-      cur === null ||
-      rank > cur.rank ||
-      (rank === cur.rank && entry.level > cur.entry.level) ||
-      (rank === cur.rank && entry.level === cur.entry.level && entry.count > cur.entry.count);
-    if (better) {
-      const winner: Candidate = { entry, rank };
-      if (isRift) bestRift = winner; else bestClick = winner;
-    }
-  }
-  // P6: carry up to CAP SEPARATE flat copies (each its own instanceId). The first
-  // keeps the winning copy's level; the rest carry at Lv1 (mirrors the stack-
-  // explode rule), so per-copy enhance survives prestige intact.
-  const carried: EntityInstance[] = [];
-  for (const best of [bestClick, bestRift]) {
-    if (!best) continue;
-    const canonicalId = findEntityById(best.entry.entityId)?.id ?? best.entry.entityId;
-    const n = Math.min(best.entry.count, PRESTIGE_CARRY_COUNT_CAP);
-    for (let i = 0; i < n; i++) {
-      carried.push(makeInstance(canonicalId, { level: i === 0 ? best.entry.level : 1, carried: true }));
-    }
-  }
-  return carried;
-}
+// Panel #7 (A): computeCarriedInventory was removed — prestige RESETS the inventory
+// (handlePrestige below), so computing "carried items" was dead + powered a false
+// "장비 이월" promise on the FinalScreen. Only bonuses carry across prestige.
 
 type StartCondenseAction = Extract<GameAction, { type: 'START_CONDENSE' }>;
 type AdvanceStageAction = Extract<GameAction, { type: 'ADVANCE_STAGE' }>;

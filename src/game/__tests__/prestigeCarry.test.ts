@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, gameReducer } from '../reducer';
-import { computeCarriedInventory } from '../reducers/stage';
 import { createDefaultEndingProgressFlags } from '../defaults';
 import { getCondensedMassReward } from '../formulas';
 import { getCodexCompletionFraction } from '../entities/codexSets';
@@ -8,32 +7,10 @@ import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { getEquipCategory } from '../entities/types';
-import { CODEX_MASS_BONUS, PRESTIGE_CARRY_COUNT_CAP } from '../balance';
+import { CODEX_MASS_BONUS } from '../balance';
 import type { GameState } from '../types';
 
-describe('Phase 4-3: prestige item carry (D2)', () => {
-  it('carries the best click + best rift item (highest rarity), count clamped, carried flagged', () => {
-    const clickCommon = getEntitiesForStage(2).find((e) => getEquipCategory(e) === 'click' && e.rarity === 'common')!;
-    const clickRare = getEntitiesForStage(2).find((e) => getEquipCategory(e) === 'click' && e.rarity === 'rare')!;
-    const riftItem = STAGE_ENTITIES.find((e) => getEquipCategory(e) === 'rift')!;
-    const carried = computeCarriedInventory([
-      { entityId: clickCommon.id, count: 9, level: 1 },
-      { entityId: clickRare.id, count: 3, level: 2 },
-      { entityId: riftItem.id, count: 5, level: 4 },
-    ]);
-    // One click (the rare beats the common) + one rift.
-    expect(carried).toHaveLength(2);
-    const click = carried.find((c) => getEquipCategory(getEntitiesForStage(2).find((e) => e.id === c.entityId)!) === 'click')!;
-    expect(click.entityId).toBe(clickRare.id);
-    expect(click.count).toBe(PRESTIGE_CARRY_COUNT_CAP); // clamped (was 3)
-    expect(click.level).toBe(2); // level preserved
-    expect(carried.every((c) => c.carried === true)).toBe(true);
-  });
-
-  it('empty inventory carries nothing', () => {
-    expect(computeCarriedInventory([])).toEqual([]);
-  });
-
+describe('Phase 4-3: prestige item reset (D2)', () => {
   it('PRESTIGE RESETS the inventory — items do NOT carry, only bonuses (S, 2026-06-24)', () => {
     const click = getEntitiesForStage(2).find((e) => getEquipCategory(e) === 'click')!;
     const state: GameState = {

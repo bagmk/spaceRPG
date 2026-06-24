@@ -377,15 +377,9 @@ export const PRESTIGE_COST_GROWTH = 5;
 /** Gear-driven crit multiplier is bounded (substats stack across slots). */
 export const CRIT_MULT_GEAR_CAP = 5;
 
-// ── Prestige carry + codex meta bonus (Phase 4-3) ───────────────────────────
-
-/**
- * Max stack count carried across prestige per carried item (D2: highest-tier
- * item carry). The item keeps its LEVEL but its power is stripped to the
- * player's stage (carried flag in getGearPowerExponent) — a head start, never
- * an origin-stage cudgel that would collapse the entropy gate.
- */
-export const PRESTIGE_CARRY_COUNT_CAP = 1;
+// ── Codex meta bonus (Phase 4-3) ────────────────────────────────────────────
+// (Panel #7 A: prestige item-carry was removed — prestige resets the inventory;
+//  only bonuses carry. PRESTIGE_CARRY_COUNT_CAP + computeCarriedInventory deleted.)
 /**
  * Offline entropy floor (Phase 4-4 idle floor): even a player with zero auto
  * income (e.g. a click-only build with no rift gear equipped) makes a little
