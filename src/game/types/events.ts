@@ -1,6 +1,7 @@
 /** UI event types emitted by the game engine to drive React animations. */
 
 import type { RogueTypeKey } from './canvas';
+import type { EntityRarity } from '../entities/types';
 
 export interface FloatingClickEvent {
   id: number;
@@ -118,6 +119,21 @@ export interface GachaEvent {
   stonesEarned: number;
   /** Which box tier was opened (for the "다시 뽑기" retry). */
   boxId: string;
+}
+
+/**
+ * A genuinely NEW entity (not previously in the almanac) just dropped into the
+ * inventory — drives the floating "Discovered!" reveal toast (persona #10).
+ * Transient like the other Floating/reveal events: never persisted, dropped by
+ * the save whitelist, cleared by CLEAR_DROP_EVENT. Mirrors GachaEvent (a reveal
+ * event keyed by a monotonic eventId).
+ */
+export interface FloatingDropEvent {
+  id: number;
+  entityId: string;
+  /** Pool stage the copy came from — resolves glyph/name via findEntityById. */
+  stageId: number;
+  rarity: EntityRarity;
 }
 
 /** A claimed milestone/era-record (#42) — drives the slot-machine matter rollup. */

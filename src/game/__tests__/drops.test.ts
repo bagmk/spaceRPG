@@ -6,6 +6,7 @@ import {
   getCollisionDropChance,
   getBaseRarityDropShare,
   getEntityDropShare,
+  isNewDiscovery,
   rollEntityDrop,
 } from '../entities/drops';
 import {
@@ -92,6 +93,43 @@ describe('entity drops', () => {
     const dropped = next.inventory[0];
     expect(next.almanacCollected[1]).toContain(dropped.entityId);
     expect(next.lastClickEvent?.droppedEntityId).toBe(dropped.entityId);
+  });
+
+  it('isNewDiscovery mirrors addToAlmanac (true only when the id is not yet collected)', () => {
+    expect(isNewDiscovery({}, 1, 'e1')).toBe(true);
+    expect(isNewDiscovery({ 1: ['e1'] }, 1, 'e1')).toBe(false);
+    expect(isNewDiscovery({ 1: ['e1'] }, 1, 'e2')).toBe(true);
+    expect(isNewDiscovery({ 1: ['e1'] }, 2, 'e1')).toBe(true); // stage-scoped
+  });
+
+  it('persona #10: a NEW-discovery drop fires lastDropEvent; CLEAR_DROP_EVENT clears it', () => {
+    const state = createInitialGameState(0);
+    const next = gameReducer(state, {
+      type: 'CLICK', now: 1000, randomValue: 1, x: 0, y: 0, dropRoll: 0, dropPickRoll: 0.1,
+    });
+    const dropped = next.inventory[0];
+    expect(next.lastDropEvent).not.toBeNull();
+    expect(next.lastDropEvent?.entityId).toBe(dropped.entityId);
+    expect(next.lastDropEvent?.stageId).toBe(1);
+    expect(next.lastDropEvent?.rarity).toBeTruthy();
+    // The CLEAR action keyed by the event id removes it (mirrors CLEAR_GACHA_EVENT).
+    const cleared = gameReducer(next, { type: 'CLEAR_DROP_EVENT', id: next.lastDropEvent!.id });
+    expect(cleared.lastDropEvent).toBeNull();
+    // A stale id is a no-op.
+    const stale = gameReducer(next, { type: 'CLEAR_DROP_EVENT', id: next.lastDropEvent!.id + 999 });
+    expect(stale.lastDropEvent).not.toBeNull();
+  });
+
+  it('persona #10: a REPEAT drop (already in the almanac) does NOT fire lastDropEvent', () => {
+    const first = gameReducer(createInitialGameState(0), {
+      type: 'CLICK', now: 1000, randomValue: 1, x: 0, y: 0, dropRoll: 0, dropPickRoll: 0.1,
+    });
+    // Same deterministic roll → same entity, now already collected → no new reveal.
+    const second = gameReducer({ ...first, lastDropEvent: null }, {
+      type: 'CLICK', now: 2000, randomValue: 1, x: 0, y: 0, dropRoll: 0, dropPickRoll: 0.1,
+    });
+    expect(second.inventory.length).toBe(2); // a second copy still drops
+    expect(second.lastDropEvent).toBeNull(); // but no NEW-discovery reveal
   });
 
   it('CLICK without drop rolls never drops (test/mechanic clicks)', () => {

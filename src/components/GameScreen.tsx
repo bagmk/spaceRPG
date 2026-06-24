@@ -56,6 +56,7 @@ import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
 import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
+import { DropDiscoveryToast } from './DropDiscoveryToast';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { milestoneEraLog } from '../game/milestones';
 import { pickLogText } from '../game/stageLogs';
@@ -587,6 +588,16 @@ export function GameScreen({
     }, TUNING.FLOAT_AUTO_MS);
     return () => window.clearTimeout(timeoutId);
   }, [language, state.lastAutoIncomeEvent]);
+
+  // Persona #10: chime once when a NEW entity is discovered (the gear-chase
+  // payoff beat). Reuses the triumphant quest-claim sting; the toast itself
+  // handles its own auto-dismiss + click-to-dismiss. Keyed on the event id so it
+  // fires exactly once per discovery.
+  const dropEventId = state.lastDropEvent?.id ?? null;
+  useEffect(() => {
+    if (dropEventId === null) return;
+    soundManager?.playQuestClaim();
+  }, [dropEventId, soundManager]);
 
   // Quest milestone reached: when a quest newly meets its condition, pop a toast
   // ("Milestone! Tap ✦ to claim"). The very FIRST time is handled by the
@@ -1217,6 +1228,19 @@ export function GameScreen({
           title={(() => { const q = getQuest(state.lastQuestClaimEvent.questId); return q ? questTitle(q, language) : '✦'; })()}
           language={language}
           onDone={() => dispatch({ type: 'CLEAR_QUEST_CLAIM_EVENT', id: state.lastQuestClaimEvent!.id })}
+        />
+      ) : null}
+
+      {/* Persona #10: floating "발견!" reveal when a drop collects a NEW entity.
+          Mirrors the gacha/fusion reveals — transient, self-clearing, clickable. */}
+      {state.lastDropEvent ? (
+        <DropDiscoveryToast
+          key={state.lastDropEvent.id}
+          entityId={state.lastDropEvent.entityId}
+          stageId={state.lastDropEvent.stageId}
+          rarity={state.lastDropEvent.rarity}
+          language={language}
+          onDismiss={() => dispatch({ type: 'CLEAR_DROP_EVENT', id: state.lastDropEvent!.id })}
         />
       ) : null}
 

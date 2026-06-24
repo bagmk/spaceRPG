@@ -254,3 +254,17 @@ export function addToAlmanac(
   if (collected.includes(entityId)) return almanacCollected;
   return { ...almanacCollected, [stageId]: [...collected, entityId] };
 }
+
+/**
+ * Persona #10: was this drop a genuinely NEW discovery — i.e. the entity wasn't
+ * already recorded in the almanac for its stage? Drives the floating "발견!"
+ * reveal toast. The check mirrors addToAlmanac's idempotency guard (same
+ * stage→ids lookup) so "new" means "addToAlmanac will actually grow the grid".
+ */
+export function isNewDiscovery(
+  almanacCollected: Record<number, string[]>,
+  stageId: number,
+  entityId: string,
+): boolean {
+  return !(almanacCollected[stageId] ?? []).includes(entityId);
+}

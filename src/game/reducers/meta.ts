@@ -39,6 +39,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastEnhanceEvent: null,
     lastQuestClaimEvent: null,
     lastGachaEvent: null,
+    lastDropEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -167,6 +168,11 @@ export function handleClearQuestClaimEvent(state: GameState, action: ClearQuestC
 type ClearGachaEventAction = Extract<GameAction, { type: 'CLEAR_GACHA_EVENT' }>;
 export function handleClearGachaEvent(state: GameState, action: ClearGachaEventAction): GameState {
   return state.lastGachaEvent?.id === action.id ? { ...state, lastGachaEvent: null } : state;
+}
+
+type ClearDropEventAction = Extract<GameAction, { type: 'CLEAR_DROP_EVENT' }>;
+export function handleClearDropEvent(state: GameState, action: ClearDropEventAction): GameState {
+  return state.lastDropEvent?.id === action.id ? { ...state, lastDropEvent: null } : state;
 }
 
 export function handleClearCollisionEvent(

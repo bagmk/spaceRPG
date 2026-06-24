@@ -29,6 +29,7 @@ import {
   addToInventory,
   getClickDropChance,
   getCollisionDropChance,
+  isNewDiscovery,
   rollEntityDrop,
 } from '../entities/drops';
 import { rollQualityScore } from '../entities/quality';
@@ -237,6 +238,13 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
           state.almanacCollected,
         )
       : null;
+  // Persona #10: a drop that adds an entity not yet in the almanac is a genuine
+  // NEW discovery — fire the floating "발견!" reveal. Uses its OWN event id
+  // (eventId + 1) so the CLEAR_DROP_EVENT match is unambiguous; eventCounter
+  // advances to cover it. Mirrors lastGachaEvent (transient reveal, not persisted).
+  const dropIsNew =
+    droppedEntity !== null && isNewDiscovery(state.almanacCollected, droppedEntity.stageId, droppedEntity.id);
+  const dropEventId = dropIsNew ? eventId + 1 : eventId;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: nextQuanta,
@@ -246,7 +254,11 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     // 🅠5: combo-track quests watch the running max combo reached.
     comboThisStage: Math.max(state.comboThisStage, combo), // milestones: per-stage peak combo
     lastClick: action.now,
-    eventCounter: eventId,
+    eventCounter: dropEventId,
+    lastDropEvent:
+      dropIsNew && droppedEntity
+        ? { id: dropEventId, entityId: droppedEntity.id, stageId: droppedEntity.stageId, rarity: droppedEntity.rarity }
+        : state.lastDropEvent,
     inventory: droppedEntity
       ? addToInventory(
           state.inventory,
@@ -316,13 +328,21 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
           state.almanacCollected,
         )
       : null;
+  // Persona #10: same NEW-discovery reveal for comet-absorb drops.
+  const dropIsNew =
+    droppedEntity !== null && isNewDiscovery(state.almanacCollected, droppedEntity.stageId, droppedEntity.id);
+  const dropEventId = dropIsNew ? eventId + 1 : eventId;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: safeAdd(state.quanta, boostedBonus),
     entropy: safeAdd(state.entropy, entropyGained),
     collisions: state.collisions + 1,
     cometsThisStage: state.cometsThisStage + 1, // milestones: per-stage comet counter
-    eventCounter: eventId,
+    eventCounter: dropEventId,
+    lastDropEvent:
+      dropIsNew && droppedEntity
+        ? { id: dropEventId, entityId: droppedEntity.id, stageId: droppedEntity.stageId, rarity: droppedEntity.rarity }
+        : state.lastDropEvent,
     inventory: droppedEntity
       ? addToInventory(
           state.inventory,

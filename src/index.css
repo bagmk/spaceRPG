@@ -1941,6 +1941,89 @@ button.hud-stage-title--clickable:hover {
 @keyframes quest-claim-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes enhance-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 
+/* ════ Persona #10: floating "발견!" NEW-discovery reveal toast ════
+   Top-center so it never collides with the bottom quest-milestone alarm. Reuses
+   the rollup card look + EntityGlyph; rarity color rides --rarity-color. */
+.drop-discovery-toast {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #6db86d) 60%, transparent);
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(12, 14, 22, 0.96));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+              0 0 22px -4px color-mix(in srgb, var(--rarity-color, #6db86d) 55%, transparent);
+  cursor: pointer;
+  font: inherit;
+  color: #eef3fb;
+  text-align: left;
+  pointer-events: auto;
+  animation: drop-discovery-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Rare+ escalation — a touch bigger + a brief celebratory glow pulse. */
+.drop-discovery-toast--rare {
+  padding: 14px 22px;
+  box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55),
+              0 0 30px -2px color-mix(in srgb, var(--rarity-color, #ffa500) 70%, transparent);
+  animation: drop-discovery-in 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+             drop-discovery-pulse 1.6s ease-in-out 0.36s infinite;
+}
+.drop-discovery-toast__tag {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.drop-discovery-toast__glyph {
+  grid-row: 2;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+}
+.drop-discovery-toast--rare .drop-discovery-toast__glyph { width: 46px; height: 46px; }
+.drop-discovery-toast__name {
+  grid-row: 2;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fdfefe;
+}
+.drop-discovery-toast__badge {
+  grid-row: 2;
+  justify-self: end;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--rarity-color, #6db86d) 70%, transparent);
+  background: color-mix(in srgb, var(--rarity-color, #6db86d) 16%, transparent);
+}
+@keyframes drop-discovery-in {
+  0%   { transform: translateX(-50%) translateY(-14px) scale(0.82); opacity: 0; }
+  60%  { transform: translateX(-50%) translateY(0) scale(1.04); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes drop-discovery-pulse {
+  0%, 100% { box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55), 0 0 24px -4px color-mix(in srgb, var(--rarity-color, #ffa500) 55%, transparent); }
+  50%      { box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55), 0 0 36px 0 color-mix(in srgb, var(--rarity-color, #ffa500) 80%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drop-discovery-toast,
+  .drop-discovery-toast--rare {
+    animation: none;
+    transform: translateX(-50%);
+  }
+}
+
 /* ════ Fusion lever curation: cost on the lever, reveal fork ════ */
 .gacha-fuse-btn { position: relative; overflow: hidden; }
 .gacha-fuse-btn__label { position: relative; z-index: 1; }

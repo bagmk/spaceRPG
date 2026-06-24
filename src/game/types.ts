@@ -11,7 +11,7 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent, GachaEvent } from './types/events';
+import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent, GachaEvent, FloatingDropEvent } from './types/events';
 import type { EntityInstance } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
@@ -340,6 +340,9 @@ export interface GameState extends PersistentGameState {
   lastQuestClaimEvent: QuestClaimEvent | null;
   /** #43 transient gacha-pull reveal — drives the shop Nebula Box reveal (not persisted). */
   lastGachaEvent: GachaEvent | null;
+  /** Persona #10 transient NEW-discovery reveal — drives the floating "발견!"
+   *  toast when a drop adds an entity not yet in the almanac (not persisted). */
+  lastDropEvent: FloatingDropEvent | null;
   offlineElapsedMs: number;
   offlineGained: number;
   offlineEntropyGained: number;

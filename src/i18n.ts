@@ -179,6 +179,9 @@ export const STRINGS = {
   questMilestoneToast:    { en: 'Era record ready', ko: '시대기록 해금 가능' },
   questMilestoneToastCta: { en: 'Tap to claim', ko: '탭하여 수령' },
   questClaimUnlocked:     { en: 'Era Record Unlocked', ko: '시대기록 해금' },
+  /** Persona #10: floating reveal when a drop adds a not-yet-collected entity. */
+  dropDiscovered:         { en: 'Discovered!', ko: '발견!' },
+  dropDiscoveredNewBadge: { en: 'NEW', ko: 'NEW' },
   tutQuestMilestone:      { en: 'A quest milestone is ready! Tap ✦ to claim its reward and see details — your past milestones are kept in the Almanac (top-left).',
                             ko: '퀘스트 마일스톤 달성! ✦를 눌러 보상을 수령하고 자세히 보세요. 지난 마일스톤은 우주도감(왼쪽 위)에서 볼 수 있어요.' },
   tutQuestMilestoneOpen:  { en: 'Open quests', ko: '퀘스트 열기' },
