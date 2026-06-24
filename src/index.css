@@ -11733,6 +11733,15 @@ button.stat-header-item {
   font-family: var(--mono);
   opacity: 0.9;
 }
+/* F (user): the 강화석 (◆) stash, tracked next to 물질 in the HUD. */
+.hud-stones-readout {
+  margin-left: 7px;
+  color: #8fd0ff;
+  font-size: 0.88em;
+  font-weight: 700;
+  font-family: var(--mono);
+  opacity: 0.9;
+}
 
 .hud-time-estimate,
 .hud-time-estimate-inline {

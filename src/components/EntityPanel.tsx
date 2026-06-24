@@ -1809,7 +1809,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               ) : null}
               <div className="fusion-reveal__totals">
                 <span>{`+${formatEntropyAmount(ev.entropyBurst)} ${t(language, 'hudEntropy')}`}</span>
-                {ev.stonesEarned > 0 ? <span>{`💎 ${ev.stonesEarned}`}</span> : null}
+                {ev.stonesEarned > 0 ? <span>{`◆ ${ev.stonesEarned}`}</span> : null}
                 {ev.refund > 0 ? <span>{`⚛${formatEntityCost(ev.refund)}`}</span> : null}
               </div>
               <div className="fusion-result__actions">
@@ -1854,7 +1854,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {/* On a failed upgrade the 강화석 ARE the payout — show them prominently. */}
               {!lastFusionEvent.rarityUp && lastFusionEvent.stonesEarned > 0 ? (
                 <div className="fusion-result__stones fusion-result__stones--big">
-                  {`💎 ${t(language, 'fuseStonesEarned').replace('{n}', String(lastFusionEvent.stonesEarned))}`}
+                  {`◆ ${t(language, 'fuseStonesEarned').replace('{n}', String(lastFusionEvent.stonesEarned))}`}
                 </div>
               ) : null}
               {/* Secondary: what became of the output copy. */}

@@ -46,7 +46,7 @@ export function QuestClaimRollup({ matter, stones, title, language, onDone }: Pr
         <div className="quest-claim-rollup__tag">{t(language, 'questClaimUnlocked')}</div>
         <div className="quest-claim-rollup__title">✦ {title}</div>
         <div className="quest-claim-rollup__matter"><span className="qsym">⚛</span>{` ${formatGameNumber(shown)}`}</div>
-        {stones > 0 ? <div className="quest-claim-rollup__stones">{`💎 ${stones}`}</div> : null}
+        {stones > 0 ? <div className="quest-claim-rollup__stones">{`◆ ${stones}`}</div> : null}
       </div>
     </div>
   );

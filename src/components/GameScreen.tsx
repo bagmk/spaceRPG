@@ -937,6 +937,8 @@ export function GameScreen({
                       {displayedAutoRate > 0 && !isViewingPastStage ? (
                         <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
                       ) : null}
+                      {/* F (user): track the 강화석 (◆) stash next to 물질 in the HUD. */}
+                      <span className="hud-stones-readout">{`◆ ${formatGameNumberShort(state.enhanceStones)}`}</span>
                     </span>
                 </div>
               </div>

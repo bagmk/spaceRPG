@@ -91,7 +91,7 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
                   className={`attendance__day ${claimed ? 'attendance__day--claimed' : ''} ${current ? 'attendance__day--current' : ''} ${gift ? 'attendance__day--gift' : ''}`}
                 >
                   <span className="attendance__day-n">{`D${i + 1}`}</span>
-                  <span className="attendance__day-reward">{gift ? '🎁' : r.stones > 0 ? `💎${r.stones}` : '⚛'}</span>
+                  <span className="attendance__day-reward">{gift ? '🎁' : r.stones > 0 ? `◆${r.stones}` : '⚛'}</span>
                   {claimed ? <span className="attendance__day-check">✓</span> : null}
                 </div>
               );
@@ -107,7 +107,7 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
               ? t(language, 'attendanceClaimedToday')
               : `${t(language, 'attendanceClaim')} · ${attReward.gachaBoxId
                   ? `🎁 ${t(language, 'attendanceBoxGift')}`
-                  : [attMatter > 0 ? `⚛${formatGameNumberShort(attMatter)}` : '', attReward.stones > 0 ? `💎${attReward.stones}` : ''].filter(Boolean).join(' ')}`}
+                  : [attMatter > 0 ? `⚛${formatGameNumberShort(attMatter)}` : '', attReward.stones > 0 ? `◆${attReward.stones}` : ''].filter(Boolean).join(' ')}`}
           </button>
         </div>
 
@@ -156,7 +156,7 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
                     <div className="quest-card__side">
                       <div className="quest-card__reward">
                         {matter > 0 ? <span className="quest-card__matter"><span className="qsym">⚛</span>{formatGameNumberShort(matter)}</span> : null}
-                        {stones > 0 ? <span className="quest-card__stones">{`💎${stones}`}</span> : null}
+                        {stones > 0 ? <span className="quest-card__stones">{`◆${stones}`}</span> : null}
                       </div>
                       <button
                         type="button"

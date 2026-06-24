@@ -155,7 +155,7 @@ export const STRINGS = {
   fuseTrios:        { en: '{n} fusable', ko: '{n}회 가능' },
   fuseBatch:        { en: 'Fuse all ×{n}', ko: '일괄 융합 ×{n}' },
   fuseBatchSummary: { en: '{s} / {n} UP', ko: '{n}회 중 {s}회 성공' },
-  fuseBatchFailStones: { en: '{n} fizzled → 💎 {s}', ko: '실패 {n}회 → 💎 {s}' },
+  fuseBatchFailStones: { en: '{n} fizzled → ◆ {s}', ko: '실패 {n}회 → ◆ {s}' },
   fuseRetry:        { en: 'Retry', ko: '재시도' },
   fuseClose:        { en: 'Close', ko: '닫기' },
   fuseAll:          { en: 'Fuse All', ko: '전체 융합' },
