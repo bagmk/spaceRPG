@@ -437,8 +437,15 @@ canvas {
   color: var(--fg);
   font-size: 11px;
   line-height: 1.3;
-  pointer-events: auto;
+  /* Persona-panel fix: the fixed HUD box was eating click-gather taps in its empty
+     padding/gauge areas (pointer-events:auto over a transparent box). Let taps pass
+     THROUGH to the click target; re-enable only the real interactive children below. */
+  pointer-events: none;
 }
+/* Only the HUD's actual buttons catch taps — everything else passes to the clicker. */
+.hud-stage-chip,
+.hud-stage-title--clickable,
+.hud-condense { pointer-events: auto; }
 
 .hud-pips-row {
   display: flex;
