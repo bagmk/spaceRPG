@@ -472,6 +472,16 @@ interface Props {
   onMarkPanelHint?: (hintId: string) => void;
 }
 
+/** G (user): the "Lv.N" text gets a more vivid colour + bolder weight as the level
+ *  climbs (Lv1 stays the default grey) so a high-level item visibly stands out. */
+function levelTextStyle(level: number): CSSProperties {
+  if (level <= 1) return {};
+  if (level <= 3) return { color: '#9fd0ff', fontWeight: 700 };
+  if (level <= 5) return { color: '#7af0c0', fontWeight: 800 };
+  if (level <= 8) return { color: '#c8a2ff', fontWeight: 800 };
+  return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
+}
+
 export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
@@ -1515,7 +1525,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                           <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                           <span className="owned-card__name">{entityName(entity, language)}</span>
                           {/* 🅠6 (req ⑫) card format: Lv.N · count/threshold · ⬆ (when below cap). */}
-                          <span className="owned-card__count">
+                          <span className="owned-card__count" style={levelTextStyle(entry.level)}>
                             {`Lv.${entry.level} · ${entry.count}/${entity.maxCount}`}
                             {entry.level < getEnhanceLevelCap(entity) ? <span className="owned-card__up"> ⬆</span> : null}
                           </span>
@@ -2034,7 +2044,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   })}
                 </div>
                 {/* quiet footer: level + owned count (+ quality) under the chip cluster. */}
-                <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
+                <span className="entity-detail-card__lvl" style={levelTextStyle(lvl)}>{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
                 {/* #50: a tail (gold) specimen shows its quality percentile. */}
                 {isTailQuality(entry?.quality) ? (
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
