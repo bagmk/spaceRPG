@@ -158,6 +158,7 @@ button,
     --panel-blur: blur(6px);
   }
   .codex-subset--complete .codex-reward__star { animation: none !important; }
+  .codex-subset--complete .almanac-card { animation: none !important; } /* keep the static glow, drop the pulse */
 
   /* Heaviest panels: drop backdrop entirely on mobile, swap to opaque bg. */
   .entity-panel,
@@ -14378,6 +14379,17 @@ button.stat-header-item {
 }
 .codex-subset--complete .codex-reward__star { animation: codex-star-pulse 1.8s ease-in-out infinite; }
 @keyframes codex-star-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.18); } }
+/* J (user): when a set bonus is ACTIVE (claimed → "효과 발동"), GLOW its contributing
+   cards so you can see WHERE the bonus fires + the divider rule pulses gold. */
+.codex-subset--complete .almanac-card {
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffd86b 55%, transparent),
+              0 0 13px -3px color-mix(in srgb, #ffd86b 55%, transparent);
+  animation: codex-active-glow 2.4s ease-in-out infinite;
+}
+@keyframes codex-active-glow {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, #ffd86b 45%, transparent), 0 0 10px -4px color-mix(in srgb, #ffd86b 40%, transparent); }
+  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, #ffd86b 80%, transparent), 0 0 18px -1px color-mix(in srgb, #ffd86b 70%, transparent); }
+}
 .codex-reward__star {
   font-size: 10px;
 }
