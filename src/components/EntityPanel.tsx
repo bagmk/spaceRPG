@@ -2069,8 +2069,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       <>
                         <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
-                        {/* #8: copies (free) when you have enough, else the 강화석 escape price. */}
-                        <span className="enhance-btn__cost">{canMerge ? `🧬 ${spares}/${need}` : `◆ ${stoneCost}`}</span>
+                        {/* Panel N: show BOTH enhance paths — the copy-merge progress (free
+                            when full) AND the ◆ 강화석 escape — so neither path is hidden.
+                            When you have enough copies it merges free (◆ not shown). */}
+                        <span className="enhance-btn__cost">{canMerge ? `🧬 ${spares}/${need}` : `🧬 ${spares}/${need} · ◆ ${stoneCost}`}</span>
                       </>
                     )}
               </button>
