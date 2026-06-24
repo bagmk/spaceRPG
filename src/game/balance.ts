@@ -818,7 +818,7 @@ export const EFFECT_TRAIT: Record<EntityEffectType, { icon: string; accent: stri
   click:      { icon: '●', accent: '#7fd8ff' }, // circle — click power %
   auto:       { icon: '■', accent: '#6ee7a0' }, // square — flat auto rate (/s)
   crit:       { icon: '★', accent: '#ff9a5b' }, // star — crit chance / crit mult
-  auto_mult:  { icon: '◆', accent: '#9be86e' }, // diamond — auto power %
+  auto_mult:  { icon: '▣', accent: '#9be86e' }, // nested square — auto power % (was ◆, which collided with the 강화석 currency glyph; ▣ ties to ■ auto)
   multiplier: { icon: '✚', accent: '#c79bff' }, // plus — all-source %
   combo_cap:  { icon: '▲', accent: '#7fe0d8' }, // triangle — combo cap +
   time:       { icon: '◇', accent: '#8fb6ff' }, // (legacy) time rate

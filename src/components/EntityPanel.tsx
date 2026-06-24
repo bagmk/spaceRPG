@@ -56,7 +56,7 @@ const RARITY_COLORS: Record<EntityRarity, string> = {
 /**
  * Color-minimize (user 2026-06-21): rarity color is the ONLY color signal (card
  * borders/glyphs). Effect/trait ICONS + spec chips render in ONE neutral tone so
- * the screens aren't a rainbow — the icon SHAPE (●■★◆✚▲) still tells the type.
+ * the screens aren't a rainbow — the icon SHAPE (●■★▣✚▲) still tells the type.
  */
 export const TRAIT_ICON_TONE = '#aeb8cc';
 
@@ -317,7 +317,7 @@ function CollectionBar({ entity, level, copies }: { entity: StageEntity; level: 
 }
 
 // The trait shapes the player actually meets, with a short label — shown as a
-// legend strip in the equip/fusion screens so ●/■/★/◆/✚ are self-explanatory.
+// legend strip in the equip/fusion screens so ●/■/★/▣/✚ are self-explanatory.
 const TRAIT_LEGEND: { type: keyof typeof EFFECT_TRAIT; labelKey: Parameters<typeof t>[1] }[] = [
   { type: 'click', labelKey: 'effectClickPower' },
   { type: 'auto', labelKey: 'hudAuto' },
@@ -343,7 +343,7 @@ const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[])
 
 // Per-stat plain-language glossary for the (?) help overlay (user: the equip/
 // fusion screens are unfriendly — say what each effect actually does). Deduped to
-// one row per concept: the 5 live primaries (●■★◆✚) then the 6 distinct substats
+// one row per concept: the 5 live primaries (●■★▣✚) then the 6 distinct substats
 // (critChance/autoPct/clickPct are omitted — they ARE the crit/auto/click primaries).
 const EFFECT_HELP_ROWS: { key: string; icon: string; labelKey: Parameters<typeof t>[1]; descKey: Parameters<typeof t>[1] }[] = [
   { key: 'click',       icon: EFFECT_TRAIT.click.icon,      labelKey: 'effectClickPower', descKey: 'helpStatClick' },
