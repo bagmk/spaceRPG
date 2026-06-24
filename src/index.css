@@ -11534,6 +11534,9 @@ button.stat-header-item {
   font-size: 1.08em;
   font-variant-numeric: tabular-nums;
 }
+/* Panel #7: matter is the headline number — bump it + give the ⚛ glyph an accent tint. */
+.hud-entropy-readout .hud-quanta-value { font-size: 1.5em; opacity: 1; }
+.hud-entropy-readout .hud-quanta-glyph { color: var(--accent, #ffd27f); opacity: 1; }
 
 .hud-entropy-unit {
   color: color-mix(in srgb, var(--accent) 76%, #fff4df);

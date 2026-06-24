@@ -932,8 +932,11 @@ export function GameScreen({
                   <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                   <span className="hud-title-separator" aria-hidden="true">·</span>
                     <span className="hud-entropy-readout">
-                      <span>{t(language, 'hudQuanta')}</span>
-                      <strong>{formatGameNumberShort(state.quanta)}</strong>
+                      {/* Panel #7: matter is the most-watched number — give it the ⚛ glyph
+                          (consistent with every other screen) + a bigger value, the plain
+                          "물질" word had no glyph and the weakest hierarchy. */}
+                      <span className="qsym hud-quanta-glyph" aria-label={t(language, 'hudQuanta')}>⚛</span>
+                      <strong className="hud-quanta-value">{formatGameNumberShort(state.quanta)}</strong>
                       {displayedAutoRate > 0 && !isViewingPastStage ? (
                         <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
                       ) : null}
