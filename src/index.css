@@ -5303,6 +5303,29 @@ button.stat-header-item {
   opacity: 0.75;
 }
 
+/* Condensation Core — the endless condensed-mass sink. A wider, brighter card that
+   sits above the capped entropy upgrades, marked ENDLESS so its open-ended grind
+   reads as distinct from the Lv5-capped row. */
+.prestige-card--endless {
+  border-color: color-mix(in srgb, var(--prestige-accent) 40%, rgba(255, 255, 255, 0.12));
+  background:
+    radial-gradient(circle at 8% 50%, color-mix(in srgb, var(--prestige-accent) 14%, transparent), transparent 120px),
+    rgba(127, 216, 255, 0.04);
+}
+
+.prestige-card__endless-tag {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 0.05em 0.45em;
+  border-radius: 999px;
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--prestige-accent);
+  background: color-mix(in srgb, var(--prestige-accent) 18%, transparent);
+  vertical-align: middle;
+}
+
 /* Buy celebration */
 @keyframes prestige-buy-pop {
   0% { transform: scale(1); }

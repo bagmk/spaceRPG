@@ -377,6 +377,25 @@ export const PRESTIGE_COST_GROWTH = 5;
 /** Gear-driven crit multiplier is bounded (substats stack across slots). */
 export const CRIT_MULT_GEAR_CAP = 5;
 
+// ── Condensation Core: the ENDLESS off-gate prestige sink ───────────────────
+// Hardcore players cap out the 5 entropy-bought prestige upgrades (Lv5) and the
+// 6 wired Singularity nodes, then prestige has nothing left to spend on. The
+// Condensation Core is an UNCAPPED upgrade bought with condensedMass at a
+// geometric rising cost. Each level grants a small PERMANENT OFF-GATE wallet
+// boost (clickMatterMult + autoMatterMult), so it makes the player richer/better
+// geared but NEVER feeds the entropy gate (which rides the tame clickPower×combo
+// ×crit + tame auto). The entropy-gate sim doesn't read these levers, so endless
+// stacking can't move the calibrated pacing.
+//
+// +CONDENSATION_CORE_BOOST_PER_LEVEL per level to BOTH wallet income mults — small
+// so it's a long grind, not a spike. Cost = base × growth^level (level is current
+// owned count). condensedMass is whole-number scaled; base 50 lands the first
+// level after the early wired nodes (quark_foam 10 … free_combo 25), growth 1.6
+// keeps every next level a meaningful but reachable reach.
+export const CONDENSATION_CORE_BOOST_PER_LEVEL = 0.02; // +2% wallet income / level (off-gate)
+export const CONDENSATION_CORE_COST_BASE = 50;
+export const CONDENSATION_CORE_COST_GROWTH = 1.6;
+
 // ── Codex meta bonus (Phase 4-3) ────────────────────────────────────────────
 // (Panel #7 A: prestige item-carry was removed — prestige resets the inventory;
 //  only bonuses carry. PRESTIGE_CARRY_COUNT_CAP + computeCarriedInventory deleted.)

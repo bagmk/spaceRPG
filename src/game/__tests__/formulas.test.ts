@@ -19,7 +19,6 @@ import {
   getEchoReward,
   getTimeMultiplier,
   getUnupgradedTimeGaugeSeconds,
-  getUniverseBoost,
   safeAdd,
   MAX_SAFE_QUANTA,
 } from '../formulas';
@@ -223,8 +222,6 @@ describe('scaling formulas', () => {
   });
 
   it('scales prestige rewards without a hard cap', () => {
-    expect(getUniverseBoost(1e4)).toBeGreaterThan(0);
-    expect(getUniverseBoost(1e40)).toBeGreaterThan(getUniverseBoost(1e10));
     expect(getCondensedMassReward(1e20, 'vacuum_decay', 1)).toBeGreaterThan(
       getCondensedMassReward(1e20, 'heat_death', 2),
     );

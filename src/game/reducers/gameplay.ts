@@ -47,6 +47,8 @@ import {
   getHexSlots,
   getEncounterRewardMultiplier,
   getEncounterClickMultiplier,
+  getStellarMemoryAutoMult,
+  getMultiverseLensDropMult,
   createClickEvent,
   createCollisionEvent,
   createEncounterEvent,
@@ -74,7 +76,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
-    progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
+    progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
   const shouldClearCombo =
@@ -84,7 +86,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     state.pendingCondenseStageIdx === null &&
     !state.imploding &&
     state.selectedEndingId === null;
-  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+  const effectiveThreshold = getEffectiveThreshold(stage);
   const progress = getProgress(state.quanta, effectiveThreshold);
   const baseAuto = getAutoRate(modifiers);
   // GEAR-ONLY ECONOMY CRANK (2026-06-21): the TAME (pre-crank) auto rate feeds the
@@ -128,7 +130,9 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // #44 hexagon: the auto bingo bonus boosts the WALLET auto only — entropy keeps
   // riding the TAME `gained` (mirrors clickMatterMult), so a strong auto bonus
   // never feeds the entropy gate (no re-sim). autoMatterMult defaults to 1.
-  const walletAuto = gained * modifiers.autoMatterMult;
+  // stellar_memory singularity (off-gate): ×1.25 on the WALLET auto only.
+  const stellarMemoryMult = getStellarMemoryAutoMult(state);
+  const walletAuto = gained * modifiers.autoMatterMult * stellarMemoryMult;
   const quantaDelta = walletAuto + tickQuantaDelta;
   const nextQuanta = safeAdd(state.quanta, quantaDelta);
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
@@ -144,7 +148,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // Transient — driven off action.now, never persisted.
   // P6: slots store an instanceId — resolve it to the entity id the float renders.
   const primaryRiftId = getEquippedInstances(state.inventory, state.riftSlots.slice(0, 1))[0]?.entityId ?? '';
-  const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost * modifiers.autoMatterMult;
+  const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost * modifiers.autoMatterMult * stellarMemoryMult;
   const emitAutoIncome =
     canAccrue &&
     perSecAuto > 0 &&
@@ -185,7 +189,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     secondsInStage: Math.max(0, (action.now - state.stageStartedAt) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
-    progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
+    progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
   const combo =
@@ -221,7 +225,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const matterGained = gained * modifiers.clickMatterMult + modifiers.clickMatterFlatAdd * comboCritMult * matterBoost;
   const eventId = nextEventId(state);
   const nextQuanta = safeAdd(state.quanta, matterGained + boostedMechanicQuanta);
-  const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage, state.cumulativeBoost));
+  const nextProgress = getProgress(nextQuanta, getEffectiveThreshold(stage));
   const particleName = pickParticleName(stage.id, nextProgress);
   const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   // Entropy rides the TAME `gained` (no clickMatterMult) — gate pacing unchanged.
@@ -232,7 +236,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
           stage.id,
-          getClickDropChance(isCrit) * modifiers.dropChanceMult,
+          getClickDropChance(isCrit) * modifiers.dropChanceMult * getMultiverseLensDropMult(state),
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit, combo },
           state.almanacCollected,
@@ -322,7 +326,7 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
           stage.id,
-          getCollisionDropChance() * modifiers.dropChanceMult,
+          getCollisionDropChance() * modifiers.dropChanceMult * getMultiverseLensDropMult(state),
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit: true },
           state.almanacCollected,

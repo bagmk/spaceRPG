@@ -39,7 +39,7 @@ import { getAutoEntropyRate, getEntropyGateFloor, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
 import { STAGES } from '../stages';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
-import { getAdjustedClickPower, getCurrentModifiers, nextEventId } from './helpers';
+import { getAdjustedClickPower, getCurrentModifiers, getBoltzmannBrainFusionBurstMult, nextEventId } from './helpers';
 
 type PurchaseAction = Extract<GameAction, { type: 'PURCHASE_ENTITY' }>;
 type EquipAction = Extract<GameAction, { type: 'EQUIP_ENTITY' }>;
@@ -309,6 +309,7 @@ function fuseOnce(
     // entropy burst (gate untouched; also still span-capped below).
     getFusionEntropyBurst(getAdjustedClickPower(state), getAutoEntropyRate(fusionModifiers)) *
     fusionModifiers.fusionBurstMult *
+    getBoltzmannBrainFusionBurstMult(state) *
     entropyEchoMult *
     burstCostScale *
     (sameSubset ? FUSION_SAME_SUBSET_BURST_MULT : 1);

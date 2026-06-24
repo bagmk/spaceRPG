@@ -5,14 +5,30 @@
  */
 
 import type { Lang } from '../i18n';
-import { PRESTIGE_COST_BASE_KB, PRESTIGE_COST_GROWTH } from './balance';
+import {
+  PRESTIGE_COST_BASE_KB,
+  PRESTIGE_COST_GROWTH,
+  CONDENSATION_CORE_BOOST_PER_LEVEL,
+  CONDENSATION_CORE_COST_BASE,
+  CONDENSATION_CORE_COST_GROWTH,
+} from './balance';
 import { formatEntropyAmount } from './formulas';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type PrestigeUpgradeId = 'time_warp' | 'matter_forge' | 'critical_core' | 'auto_engine' | 'entropy_echo';
+// `condensation_core` is the ENDLESS off-gate sink (no PRESTIGE_MAX_LEVEL cap, bought
+// with condensedMass — see handleBuyPrestigeUpgrade). The other 5 are entropy-bought,
+// capped at PRESTIGE_MAX_LEVEL. Adding it as a record key needs NO save migration:
+// old saves default it to 0 via the `?? 0` reads everywhere.
+export type PrestigeUpgradeId =
+  | 'time_warp'
+  | 'matter_forge'
+  | 'critical_core'
+  | 'auto_engine'
+  | 'entropy_echo'
+  | 'condensation_core';
 
 export interface PrestigeUpgradeLevels {
   time_warp: number;
@@ -20,6 +36,7 @@ export interface PrestigeUpgradeLevels {
   critical_core: number;
   auto_engine: number;
   entropy_echo: number;
+  condensation_core: number;
 }
 
 export function createDefaultPrestigeUpgrades(): PrestigeUpgradeLevels {
@@ -29,7 +46,25 @@ export function createDefaultPrestigeUpgrades(): PrestigeUpgradeLevels {
     critical_core: 0,
     auto_engine: 0,
     entropy_echo: 0,
+    condensation_core: 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Condensation Core (endless, condensedMass-bought, off-gate)
+// ---------------------------------------------------------------------------
+
+/** The off-gate wallet multiplier granted by `level` Condensation Core levels
+ *  (applied to BOTH clickMatterMult and autoMatterMult in getActiveModifiers). */
+export function getCondensationCoreMultiplier(level: number): number {
+  return 1 + CONDENSATION_CORE_BOOST_PER_LEVEL * Math.max(0, level);
+}
+
+/** condensedMass cost to buy the NEXT Condensation Core level (geometric, endless). */
+export function getCondensationCoreCost(currentLevel: number): number {
+  return Math.ceil(
+    CONDENSATION_CORE_COST_BASE * Math.pow(CONDENSATION_CORE_COST_GROWTH, Math.max(0, currentLevel)),
+  );
 }
 
 // ---------------------------------------------------------------------------

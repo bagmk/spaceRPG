@@ -8,6 +8,7 @@ import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
+import { getCondensationCoreCost } from '../prestige';
 import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
@@ -468,13 +469,15 @@ describe('gameReducer', () => {
     expect(next.lastEndingId).toBeNull();
   });
 
-  // Panel #7: an unwired ("unimplemented") singularity node must never be purchasable —
-  // it used to silently consume condensedMass for no effect.
-  it('rejects buying an unimplemented singularity node (no condensedMass spent)', () => {
+  // The 4 formerly-`unimplemented` endgame nodes (stellar_memory, multiverse_lens,
+  // vacuum_stability, boltzmann_brain) are now WIRED to off-gate effects (2026-06-24),
+  // so they are purchasable like any other node. The reducer's `unimplemented` guard
+  // stays as defensive code for any FUTURE stub.
+  it('allows buying a now-wired endgame singularity node (vacuum_stability)', () => {
     const state = { ...createInitialGameState(0), condensedMass: 1e6 };
     const next = gameReducer(state, { type: 'BUY_SINGULARITY_UNLOCK', unlockId: 'vacuum_stability' });
-    expect(next.condensedMass).toBe(1e6);
-    expect(next.singularityUnlocks).not.toContain('vacuum_stability');
+    expect(next.condensedMass).toBeLessThan(1e6);
+    expect(next.singularityUnlocks).toContain('vacuum_stability');
   });
 
   it('still allows buying a wired singularity node', () => {
@@ -482,6 +485,34 @@ describe('gameReducer', () => {
     const next = gameReducer(state, { type: 'BUY_SINGULARITY_UNLOCK', unlockId: 'quark_foam' });
     expect(next.singularityUnlocks).toContain('quark_foam');
     expect(next.condensedMass).toBeLessThan(1e6);
+  });
+
+  // Condensation Core — the ENDLESS off-gate sink. Bought with condensedMass at a
+  // geometric cost, uncapped (well past PRESTIGE_MAX_LEVEL), no save migration.
+  it('Condensation Core: condensedMass buy, geometric cost, uncapped past Lv5', () => {
+    let state = { ...createInitialGameState(0), condensedMass: 1e9, entropy: 0 };
+    expect(state.prestigeUpgrades.condensation_core).toBe(0);
+    const firstCost = getCondensationCoreCost(0);
+    const next = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'condensation_core' });
+    expect(next.prestigeUpgrades.condensation_core).toBe(1);
+    expect(next.condensedMass).toBeCloseTo(1e9 - firstCost, 6);
+    // entropy is untouched (this sink spends condensedMass, not entropy).
+    expect(next.entropy).toBe(0);
+    // Costs rise geometrically.
+    expect(getCondensationCoreCost(1)).toBeGreaterThan(getCondensationCoreCost(0));
+    // Uncapped: buy 12 levels in a row (past the Lv5 cap on the entropy upgrades).
+    state = next;
+    for (let i = 0; i < 11; i++) {
+      state = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'condensation_core' });
+    }
+    expect(state.prestigeUpgrades.condensation_core).toBe(12);
+  });
+
+  it('Condensation Core: rejects the buy when condensedMass is short', () => {
+    const state = { ...createInitialGameState(0), condensedMass: 0 };
+    const next = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'condensation_core' });
+    expect(next.prestigeUpgrades.condensation_core).toBe(0);
+    expect(next.condensedMass).toBe(0);
   });
 });
 

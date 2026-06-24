@@ -242,9 +242,8 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     id: 'stellar_memory',
     label: 'Stellar Memory',
     cost: 50,
-    effect: 'Retain 25% of upgrade levels between stages',
+    effect: 'Auto matter income ×1.25 (wallet)',
     description: 'Dying structures leave a memory trace in what follows them.',
-    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
   {
     id: 'hawking_echo',
@@ -278,25 +277,22 @@ export const SINGULARITY_UNLOCKS: SingularityUnlockDefinition[] = [
     id: 'multiverse_lens',
     label: 'Multiverse Lens',
     cost: 2000,
-    effect: 'Seed customization reserved',
+    effect: 'Entity drop chance ×1.5',
     description: 'You begin to see neighboring histories through the grain.',
-    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
   {
     id: 'vacuum_stability',
     label: 'Vacuum Stability',
     cost: 8000,
-    effect: 'Unlock Vacuum Decay',
+    effect: 'Offline income ×2',
     description: 'A deeper floor reveals itself beneath apparent emptiness.',
-    unimplemented: true, // Panel #7: effect not wired (vacuum-decay ending gates on no-crit, not this) — disabled until wired.
   },
   {
     id: 'boltzmann_brain',
     label: 'Boltzmann Brain',
     cost: 30000,
-    effect: 'Heat death continues indefinitely',
+    effect: 'Fusion entropy burst ×2',
     description: 'Equilibrium stops pretending to be the end of narration.',
-    unimplemented: true, // Panel #7: effect not wired — disabled until the prestige redesign wires it.
   },
 ];
 

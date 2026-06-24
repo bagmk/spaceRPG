@@ -52,7 +52,7 @@ export function handleStartCondense(state: GameState, action: StartCondenseActio
   }
   if (state.completedRun || state.pendingCondenseStageIdx !== null) return state;
   const stage = getCurrentStage(state);
-  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+  const effectiveThreshold = getEffectiveThreshold(stage);
   if (!canCondense(state)) return state;
 
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);

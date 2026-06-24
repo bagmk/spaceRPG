@@ -214,10 +214,10 @@ export function GameScreen({
   );
   const isViewingPastStage = displayStage.id < stage.id;
   const mechanic = getMechanic(stage.mechanic);
-  const effectiveThreshold = getEffectiveThreshold(stage, state.cumulativeBoost);
+  const effectiveThreshold = getEffectiveThreshold(stage);
   const progress01 = getProgress(state.quanta, effectiveThreshold);
   const displayEffectiveThreshold = isViewingPastStage
-    ? getEffectiveThreshold(displayStage, state.cumulativeBoost)
+    ? getEffectiveThreshold(displayStage)
     : effectiveThreshold;
   const displayQuanta = state.quanta;
   const modifiers = getActiveModifiers({

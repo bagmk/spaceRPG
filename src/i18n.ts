@@ -389,6 +389,12 @@ export const STRINGS = {
   finalOwned:           { en: 'Owned',                     ko: '보유 중' },
   finalMassUnit:        { en: 'mass',                      ko: '질량' },
   singularityComingSoon: { en: 'Coming soon',              ko: '준비 중' },
+  // Condensation Core — the endless condensed-mass prestige sink.
+  condCoreName:         { en: 'Condensation Core',         ko: '응축 핵' },
+  condCoreDesc:         { en: 'Endless. Each level boosts all matter income (off the entropy gate).', ko: '무한. 레벨마다 모든 물질 수입 증가 (엔트로피 게이트와 무관).' },
+  condCoreEndless:      { en: 'ENDLESS',                   ko: '무한' },
+  condCoreLevel:        { en: 'Lv',                        ko: 'Lv' },
+  condCoreIncome:       { en: 'matter income',            ko: '물질 수입' },
   finalNewEndingReward: { en: 'New ending reward',         ko: '새 엔딩 보상' },
   finalEchoes:          { en: 'echoes',                    ko: '에코' },
   finalCodexProgress:   { en: 'Codex',                     ko: '도감' },
