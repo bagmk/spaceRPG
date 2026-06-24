@@ -250,14 +250,16 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     endingProgressFlags: createDefaultEndingProgressFlags(),
     universeAtlas: state.universeAtlas,
     currentUniverseSeed: nextSeed,
-    // Almanac survives prestige (D2); the best click + rift item carry over
-    // (power stripped to the player's stage). Equip slots stay empty.
+    // S fix (user: "다음 빅뱅이라 기억 제거 — 아이템 들고가면 안 되지, 들고가는 건 보너스만"):
+    // INVENTORY now RESETS — items do NOT carry. Only BONUSES carry: prestige upgrades +
+    // the codex/almanac collection bonuses (almanac survives, those completion modifiers ARE
+    // the "bonuses"). Equip slots stay empty (resetState).
     almanacCollected: state.almanacCollected,
-    inventory: computeCarriedInventory(state.inventory),
+    inventory: resetState.inventory,
     // 🅠5: completed quests are once-only (survive prestige); active quests reset
     // to a fresh stage-1 set (excluding the carried completed ones).
     completedQuestIds: state.completedQuestIds,
-    favoriteEntityIds: state.favoriteEntityIds,
+    favoriteEntityIds: resetState.favoriteEntityIds, // item-tied → reset with the inventory
     claimedCodexSubsetIds: state.claimedCodexSubsetIds,
     attendanceStreak: state.attendanceStreak,
     attendanceClaimedDate: state.attendanceClaimedDate,

@@ -34,7 +34,7 @@ describe('Phase 4-3: prestige item carry (D2)', () => {
     expect(computeCarriedInventory([])).toEqual([]);
   });
 
-  it('PRESTIGE seeds carry into the new universe inventory and leaves equip slots empty', () => {
+  it('PRESTIGE RESETS the inventory — items do NOT carry, only bonuses (S, 2026-06-24)', () => {
     const click = getEntitiesForStage(2).find((e) => getEquipCategory(e) === 'click')!;
     const state: GameState = {
       ...createInitialGameState(0),
@@ -45,11 +45,12 @@ describe('Phase 4-3: prestige item carry (D2)', () => {
     };
     const completed = gameReducer(state, { type: 'COMPLETE_ENDING', now: 900 });
     const next = gameReducer(completed, { type: 'PRESTIGE', now: 1000 });
-    expect(next.inventory).toHaveLength(1);
-    expect(next.inventory[0]).toMatchObject({ entityId: click.id, level: 3, carried: true });
+    // S: "새로운 빅뱅이라 기억 제거" — the inventory resets to a fresh universe, the carried
+    // item is gone. Only BONUSES (prestige upgrades + codex bonuses) carry.
+    expect(next.inventory).toEqual(createInitialGameState(1000).inventory);
+    expect(next.inventory.some((e) => e.entityId === click.id && e.carried)).toBe(false);
     expect(next.equippedSlots).toEqual([]);
     expect(next.riftSlots).toEqual([]);
-    // Ending flags fully reset on prestige (regression guard).
     expect(next.endingProgressFlags).toEqual(createDefaultEndingProgressFlags());
   });
 
