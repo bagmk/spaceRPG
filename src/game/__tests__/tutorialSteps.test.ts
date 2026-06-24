@@ -115,7 +115,7 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro', 'time-gauge-visible',
-      'first-fuse-equip', 'second-fuse-equip', 'entity-lab-intro', 'fusion-intro',
+      'entity-lab-intro', 'fusion-intro',
       'hasSeenCashShopTutorial', 'boost-hud-seen', 'condense-ready', 'info-hint-seen',
     ]);
   });

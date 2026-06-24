@@ -87,20 +87,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'time-gauge-visible'),
   },
   {
-    id: 'first-fuse-equip', flagId: 'first-fuse-equip', anchor: 'equip',
-    messageKey: 'tutFirstFuseEquip', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
-    suppressedByAllDismissed: true,
-    eligible: (c) => flag(c, 'first-fuse-done') && c.equipUnlocked,
-    seen: (c) => flag(c, 'first-fuse-equip'),
-  },
-  {
-    id: 'second-fuse-equip', flagId: 'second-fuse-equip', anchor: 'equip',
-    messageKey: 'tutSecondFuseEquip', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
-    suppressedByAllDismissed: true,
-    eligible: (c) => flag(c, 'second-fuse-done') && c.equipUnlocked,
-    seen: (c) => flag(c, 'second-fuse-equip'),
-  },
-  {
+    // ONBOARDING SPINE (user: "장착에서 여러번 나와"): the two guaranteed-fusion
+    // equip bubbles (first-fuse-equip / second-fuse-equip) were removed — they
+    // chained three back-to-back "go equip" prompts. The single equip prompt below
+    // already fires the moment equip unlocks, so the spine is reach-S2 → equip →
+    // fuse with exactly ONE equip bubble. (The guaranteed first/second fusions in
+    // reducers/entities.ts that HAND the player click+auto items still happen — only
+    // their redundant bubbles are gone.)
     // #2 (user): fire the equip-open tutorial the moment equip unlocks (reaching S2),
     // NOT only after a current-stage item drops ("2스테이지 가면 바로, 아이템 나오고 X").
     // By S2 the player already holds S1 drops to equip.
