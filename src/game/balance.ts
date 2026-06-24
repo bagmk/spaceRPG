@@ -212,8 +212,18 @@ export const CLICK_GEAR_MATTER_BOOST = 2;
  * epic/legendary rift slots afford much faster (the intended maxed-loadout power
  * fantasy). AUTO is the stage-scaling economy path; CLICK power is stage-flat by
  * design (getClickPower), so click feeds entropy/burst, not late shop affordability.
+ *
+ * LANE RECONVERGENCE (2026-06-24): 0.16 → 2.4e-5. The old wallet flat-add multiplied
+ * the anchor by the per-effect `value` (auto ~0.15–1.0, click ~11–33) × the GEOMETRIC
+ * enhance level term — so each lane's matter/sec exploded ~hundreds of × past the shop
+ * anchor (auto afforded the S16 anchor in <1 s, click in ~0 s) AND the two lanes
+ * diverged by 1.6–6.3 orders depending on loadout. The wallet flat-add is now decoupled
+ * from the volatile per-effect value: it rides the item anchor × WALLET_RARITY_WEIGHT ×
+ * a GENTLE linear level term (WALLET_LEVEL_BONUS) — see getWalletAnchorFlat. This scale
+ * is re-tuned to that new structure so a maxed rift loadout affords the stage anchor in
+ * the ~25–75 min band at every checkpoint, and click/auto stay within ~0.6 orders.
  */
-export const AUTO_GEAR_INCOME_SCALE = 0.16;
+export const AUTO_GEAR_INCOME_SCALE = 2.4e-5;
 /**
  * Auto WALLET contribution FLOOR per equipped rift item — makes early items visibly move
  * 오토 속도 (their item-anchored value is tiny at low stages). 2026-06-23 FIX (user "글루온
@@ -232,12 +242,48 @@ export const AUTO_WALLET_MIN_PER_ITEM: Record<EntityRarity, number> = {
 };
 /**
  * Overhaul-4 (user: "클릭은 당연히 오토보다 더 높게"): click gear gets its OWN
- * player-stage-anchored WALLET (clickMatterFlatAdd), mirroring the auto split, so a
- * click PER TAP out-earns auto PER SECOND. Set ABOVE AUTO_GEAR_INCOME_SCALE so one
- * click ≈ this/AUTO_GEAR_INCOME_SCALE seconds of auto (~3×). Off-gate (entropy still
- * rides the TAME `gained`, never this), so no gate re-pin — the sim just confirms it.
+ * item-anchored WALLET (clickMatterFlatAdd), mirroring the auto split, so a click PER
+ * TAP out-earns auto PER SECOND. Set so click stays the same ORDER as auto (the lane
+ * reconvergence target) while the per-tap combo×crit factor + the on-screen geometric
+ * clickMatterMult keep click the more EXPLOSIVE feel.
+ *
+ * LANE RECONVERGENCE (2026-06-24): 0.5 → 6.0e-6. Same restructure as
+ * AUTO_GEAR_INCOME_SCALE — the wallet now rides anchor × WALLET_RARITY_WEIGHT × gentle
+ * level (getWalletAnchorFlat), not anchor × per-effect-value × geometric level. The
+ * click flat-add is additionally multiplied by comboCrit per tap (handleClick), so it
+ * does NOT need to sit above the auto scale to out-earn auto; both scales are picked so
+ * |log10(autoMps/clickMps)| ≤ ~0.6 across S5/9/12/16. Off-gate (entropy rides the TAME
+ * `gained`), so no entropy-gate re-pin — the sim's affordability block confirms it.
  */
-export const CLICK_GEAR_INCOME_SCALE = 0.5;
+export const CLICK_GEAR_INCOME_SCALE = 6.0e-6;
+/**
+ * LANE RECONVERGENCE (2026-06-24) — wallet rarity ranking, shared by BOTH the click and
+ * auto wallet flat-adds (getWalletAnchorFlat). Replaces using the per-effect `value` as
+ * the wallet multiplier: effect values are wildly asymmetric between lanes (auto 0.15–1.0,
+ * click 11–33) and jump ~3×/rarity, which (a) made the two lanes diverge by orders and
+ * (b) made afford-time shrink ~40× from S5→S16 (busting any ≥10 min floor). This gentle
+ * ~1.5×/tier table is the ONLY rarity term in the wallet, so a rarer item earns a bit
+ * more but afford-time stays in a tight band across stages (≈4× S5→S16). The effect
+ * `value` still drives the on-gate entropy income + the on-screen click/auto numbers;
+ * only the off-gate WALLET affordability is decoupled from it.
+ */
+export const WALLET_RARITY_WEIGHT: Record<EntityRarity, number> = {
+  common: 1,
+  rare: 1.5,
+  epic: 2.2,
+  legendary: 3.0,
+  mythic: 4.0,
+};
+/**
+ * LANE RECONVERGENCE (2026-06-24) — per-level growth of the WALLET flat-add (linear,
+ * gentle). The wallet affordability must NOT ride the steep geometric enhance term
+ * (ENHANCE_MATTER_LEVEL_GROWTH ^ level), which alone inflated income ~280× by legendary
+ * Lv22 and busted the afford window. Enhancing still climbs the wallet (a leveled item
+ * affords faster) but gently — 1 + (level-1) × this — so the maxed-loadout afford-time
+ * stays in [10 min, 2 h]. The GEOMETRIC term remains on clickMatterMult (the visible
+ * per-tap power fantasy) and on the entropy-side linear levelMult (unchanged).
+ */
+export const WALLET_LEVEL_BONUS = 0.05;
 /**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the

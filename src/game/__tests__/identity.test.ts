@@ -34,12 +34,16 @@ describe('identity pass: structure preserved', () => {
   it('preserves the per-stage category balance (rift vs click counts)', () => {
     // Snapshot captured before the identity pass — the permutation must not move it.
     // S4–S15 padded to 10:5:4:2 in P3 (+4 click, +3 rift each); S16 unchanged.
+    // LANE RECONVERGENCE (2026-06-24): one legendary per stage 4–15 retyped
+    // multiplier(click)→auto/auto_mult(rift) to give the rift slots a legendary ceiling
+    // — so those stages shift one item click→rift (12→11 click, 9→10 rift). S16 endings
+    // stay multiplier (unchanged).
     const expected: Record<number, { click: number; rift: number }> = {
       1: { click: 2, rift: 1 }, 2: { click: 4, rift: 4 }, 3: { click: 6, rift: 6 },
-      4: { click: 12, rift: 9 }, 5: { click: 12, rift: 9 }, 6: { click: 12, rift: 9 },
-      7: { click: 12, rift: 9 }, 8: { click: 12, rift: 9 }, 9: { click: 12, rift: 9 },
-      10: { click: 12, rift: 9 }, 11: { click: 12, rift: 9 }, 12: { click: 12, rift: 9 },
-      13: { click: 12, rift: 9 }, 14: { click: 12, rift: 9 }, 15: { click: 12, rift: 9 },
+      4: { click: 11, rift: 10 }, 5: { click: 11, rift: 10 }, 6: { click: 11, rift: 10 },
+      7: { click: 11, rift: 10 }, 8: { click: 11, rift: 10 }, 9: { click: 11, rift: 10 },
+      10: { click: 11, rift: 10 }, 11: { click: 11, rift: 10 }, 12: { click: 11, rift: 10 },
+      13: { click: 11, rift: 10 }, 14: { click: 11, rift: 10 }, 15: { click: 11, rift: 10 },
       16: { click: 8, rift: 6 },
     };
     for (let s = 1; s <= 16; s++) {
@@ -55,10 +59,17 @@ describe('identity pass: structure preserved', () => {
       const pool = getEntitiesForStage(s);
       const counts: Record<string, number> = {};
       for (const e of pool) counts[e.effect.type] = (counts[e.effect.type] ?? 0) + 1;
-      // Stages 4-15 after P3 padding (10:5:4:2): 5 auto, 6 click, 4 crit,
-      // 4 auto_mult, 2 multiplier (legendary). Was 3/3/3/3/2 before padding.
+      // Stages 4-15 after P3 padding (10:5:4:2): base was 5 auto, 6 click, 4 crit,
+      // 4 auto_mult, 2 multiplier (legendary). LANE RECONVERGENCE (2026-06-24): one of
+      // the two legendaries per stage was retyped multiplier→auto (EVEN stages) or
+      // →auto_mult (ODD stages) to give the rift slots a legendary ceiling — so the
+      // multiplier count drops to 1 and that lane gains 1. Each stage still offers one
+      // click capstone (the remaining multiplier legendary) + one auto capstone.
       if (s >= 4 && s <= 15) {
-        expect(counts).toEqual({ auto: 5, click: 6, crit: 4, auto_mult: 4, multiplier: 2 });
+        const expected = s % 2 === 0
+          ? { auto: 6, click: 6, crit: 4, auto_mult: 4, multiplier: 1 }  // even → auto legendary
+          : { auto: 5, click: 6, crit: 4, auto_mult: 5, multiplier: 1 }; // odd  → auto_mult legendary
+        expect(counts, `stage ${s}`).toEqual(expected);
       }
     }
   });

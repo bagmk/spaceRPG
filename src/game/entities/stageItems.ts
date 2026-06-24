@@ -1183,7 +1183,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     ),
     item('Neutron-Proton Ratio', 'n/p', 'The 1:7 ratio that fixes primordial element yields.',    'epic',   'auto_mult',  4.0),
     item('BBN Completion',       '★',   'Light-element synthesis locks in, never to repeat.',     'legendary', 'multiplier', 50.0),
-    item('Fusion Window',        '⊕',   'Three-minute window that decides all atomic history.',   'legendary', 'multiplier', 50.0),
+    item('Fusion Window',        '⊕',   'Three-minute window that decides all atomic history.',   'legendary', 'auto', 12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Positron',                  'e⁺',   'Antielectron annihilating with electrons in the hot plasma.', 'common', 'auto', 2.0),
     item('Neutrino Decoupling',       'ν↛',   'Neutrinos stop interacting and stream freely forever.',       'common', 'click', 15.0),
@@ -1215,7 +1215,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Last Scattering Surface',   '═',    'Shell from which CMB photons last scattered.',         'epic', 'auto_mult', 4.0),
     item('CMB Anisotropy',            '≈',    'Minute temperature contrast imprinted in relic light.','epic', 'crit', 2.0, true),
     item('Cosmic Transparency',       'γ∞',   'The universe finally becomes transparent to light.',   'legendary', 'multiplier', 50.0),
-    item('Structure Seed',            'δ₀',   'Primordial perturbation that grows into every galaxy.','legendary', 'multiplier', 50.0),
+    item('Structure Seed',            'δ₀',   'Primordial perturbation that grows into every galaxy.','legendary', 'auto_mult', 8.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Lyman-alpha Photon',        'Lyα',  'Hydrogen\'s resonance photon, trapped in the cooling gas.',  'common', 'auto', 2.0),
     item('Saha Equilibrium',          'Saha', 'The balance fixing how many atoms stay neutral.',           'common', 'click', 15.0),
@@ -1241,7 +1241,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Dark Energy Background','Λ',    'Vacuum energy quietly accelerating the expansion.',     'epic',   'crit',  2.0, true),
     item('Silk Damping',          'λ_d',  'Small-scale fluctuations erased by photon diffusion.',  'epic',   'auto_mult',  4.0),
     item('Gravitational Collapse','↓↓',   'Gravity finally overcomes pressure and ignites fate.',  'legendary', 'multiplier', 50.0),
-    item('First Cosmic Dawn Seed','∘',    'The seed that will end darkness when it finally ignites.','legendary','multiplier',50.0),
+    item('First Cosmic Dawn Seed','∘',    'The seed that will end darkness when it finally ignites.','legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Spin Temperature',      'Tₛ',   'Sets whether the 21cm line shines or absorbs.',         'common', 'auto', 2.0),
     item('Wouthuysen-Field',      'WF',   'Lyman-alpha coupling that wakes the 21cm signal.',       'common', 'click', 15.0),
@@ -1273,7 +1273,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Stellar Feedback',    '⟲',   'Energy from stars reshaping the surrounding gas cloud.',  'epic', 'auto_mult', 4.0),
     item('Supernova Precursor', '⚠★',  'Massive star nearing explosive gravitational collapse.',  'epic', 'crit', 2.0, true),
     item('Pop III Supernova',   '☆→',  'First stars explode, seeding space with heavy elements.','legendary','multiplier',50.0),
-    item('Pair Instability SN', '✸',   'Giant star destroyed entirely by gamma-pair creation.',   'legendary','multiplier',50.0),
+    item('Pair Instability SN', '✸',   'Giant star destroyed entirely by gamma-pair creation.',   'legendary','auto_mult',8.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Accretion Disk',      '◍',    'Infalling gas spiraling onto the growing protostar.',    'common', 'auto', 2.0),
     item('Deuterium Burning',   'D→',   'The first nuclear fire before hydrogen ignites.',        'common', 'click', 15.0),
@@ -1299,7 +1299,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Gunn-Peterson Trough','GP',  'Absence of neutral hydrogen confirming full reionization.','epic',  'crit',  2.0, true),
     item('Intergalactic Medium','IGM',  'Thin gas tracking the ionization state between galaxies.','epic',  'auto_mult',  4.0),
     item('Reionization Complete','✓',  'Most cosmic hydrogen is ionized — the universe clears.',  'legendary','multiplier',50.0),
-    item('Epoch of Reionization','EoR','The great cosmic clearing that ended the dark ages.',     'legendary','multiplier',50.0),
+    item('Epoch of Reionization','EoR','The great cosmic clearing that ended the dark ages.',     'legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Escape Fraction',    'f_esc', 'The slice of starlight that leaks out to ionize space.', 'common', 'auto', 2.0),
     item('Lyman Continuum',    'LyC',   'Photons past the limit that can ionize hydrogen.',       'common', 'click', 15.0),
@@ -1328,7 +1328,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Filamentary Structure', '⌇',  'Thread of dark matter and gas connecting galaxy nodes.',  'epic', 'auto_mult', 5.0),
     item('Cosmic Web Node',       '✦',  'Filament junction at the heart of the large-scale web.',  'epic', 'click', 35.0),
     item('Cosmic Void',           '□',  'Vast underdense region spanning hundreds of megaparsecs.','legendary','multiplier',50.0),
-    item('Large Scale Structure', 'LSS','The full web of filaments, nodes, and voids revealed.',   'legendary','multiplier',50.0),
+    item('Large Scale Structure', 'LSS','The full web of filaments, nodes, and voids revealed.',   'legendary','auto_mult',8.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Cold Flow',          '↓gas', 'Unshocked cold gas feeding the young galactic disk.',     'common', 'auto', 2.0),
     item('Galactic Disk',      '▭',    'Rotating sheet of stars, gas, and dust settling in.',     'common', 'click', 15.0),
@@ -1360,7 +1360,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Magnetic Field',   '⇌',    'Planetary shield deflecting harmful stellar wind.',        'epic', 'click', 35.0),
     item('Goldilocks Zone',  '🌡',   'Orbital band where surface water stays liquid.',           'epic', 'crit', 2.0, true),
     item('Protoplanetary Disk','◎',   'The spinning cradle of dust and gas that sculpts every world to come.','legendary','multiplier',50.0),
-    item('Habitable World',  '⊕',    'A world where all the conditions for life align.',         'legendary','multiplier',50.0),
+    item('Habitable World',  '⊕',    'A world where all the conditions for life align.',         'legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Solar Nebula',     '◌gas', 'The collapsing cloud from which the Sun and planets form.','common', 'auto', 2.0),
     item('Chondrule',        '•',     'Flash-melted droplet, a building block of meteorites.',    'common', 'click', 15.0),
@@ -1440,7 +1440,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
       ['s11_14_space_telescope'],
     ),
     withAliases(
-      item('Interstellar Ark',   'ARK','A living archive carrying Earth beyond its home star.',      'legendary','multiplier',50.0),
+      item('Interstellar Ark',   'ARK','A living archive carrying Earth beyond its home star.',      'legendary','auto_mult',8.0),
       ['s11_14_homo_sapiens'],
     ),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
@@ -1470,7 +1470,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Magnetar',           '⊛M',  'Neutron star with the strongest magnetic fields known.',  'epic', 'auto_mult', 5.0),
     item('Gravitational Wave', '◌~',   'Spacetime ripples from accelerating compact remnants.',   'epic', 'click', 35.0),
     item('Type Ia Supernova',  'SNIa', 'White dwarf detonation used as a cosmic distance candle.','legendary','multiplier',50.0),
-    item('Core Collapse SN',   'SNII', 'Massive stellar core implodes and rebounds outward.',     'legendary','multiplier',50.0),
+    item('Core Collapse SN',   'SNII', 'Massive stellar core implodes and rebounds outward.',     'legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Subgiant Branch',    '↗★',  'A star leaving the main sequence as its core contracts.', 'common', 'auto', 2.0),
     item('Dredge-Up',          '↑C',   'Convection hauling fresh carbon to the stellar surface.', 'common', 'click', 15.0),
@@ -1499,7 +1499,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     ),
     item('Stellar Mass BH',      '⚫', 'Black hole left behind by a collapsed massive star.',     'epic',   'auto_mult',  5.0),
     item('Last Red Dwarf',       '🔴✦','The final small star exhausting its hydrogen supply.',    'legendary','multiplier',50.0),
-    item('Total Darkness',       '░',  'Starlight ends; only remnants remain in the galaxy.',     'legendary','multiplier',50.0),
+    item('Total Darkness',       '░',  'Starlight ends; only remnants remain in the galaxy.',     'legendary','auto_mult',8.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Red Dwarf',            '🔴·','A tiny cool star burning its fuel for trillions of years.','common', 'auto', 2.0),
     item('Degenerate Remnant',   '◇',  'Cooling cinder left where a star once shone.',            'common', 'click', 15.0),
@@ -1531,7 +1531,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Dark Matter Annihilation',  'DM⊕', 'Dark matter candidates finally erasing each other.',    'epic', 'auto_mult', 5.0),
     item('BH Domination',             '⚫>', 'Black holes now hold most remaining mass-energy.',       'epic', 'crit', 3.0, true),
     item('Last Baryon',               'p_∞', 'Final proton waiting out its immense decay clock.',     'legendary','multiplier',50.0),
-    item('Baryon Washout',            'B=0', 'Baryon number dwindles to zero across the cosmos.',      'legendary','multiplier',50.0),
+    item('Baryon Washout',            'B=0', 'Baryon number dwindles to zero across the cosmos.',      'legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Baryon Half-Life',          't½',  'The immense clock ticking down every proton.',          'common', 'auto', 2.0),
     item('Decay Photon',              'γ_d', 'Gamma rays from the rare dissolution of matter.',       'common', 'click', 15.0),
@@ -1557,7 +1557,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Information Paradox',    '?⚫',  'Does information survive the final evaporation?',        'epic', 'auto_mult', 6.0),
     item('Planck Remnant',         'ℓP',   'Possible Planck-scale residue after full evaporation.',  'epic', 'auto', 9.0),
     item('Final Evaporation Flash','☀→∅', 'Last burst of light as the final black hole ends.',      'legendary','multiplier',50.0),
-    item('Last Black Hole',        '⚫_',  'The very last horizon preparing its ultimate emission.', 'legendary','multiplier',50.0),
+    item('Last Black Hole',        '⚫_',  'The very last horizon preparing its ultimate emission.', 'legendary','auto_mult',8.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Hawking Temperature',    'T_H',  'The colder the bigger — a black hole\'s faint heat.',    'common', 'auto', 2.0),
     item('Unruh Radiation',        'U',    'An accelerating observer\'s glow in empty space.',       'common', 'click', 15.0),

@@ -11,12 +11,15 @@ import {
   CLICK_GEAR_MATTER_BOOST,
   ENHANCE_MATTER_LEVEL_GROWTH,
   ENHANCE_RARITY_GROWTH,
+  ENTITY_BASE_COST_FACTOR,
   ENTITY_COST_ANCHORS,
   ENTITY_LEVEL_EFFECT_BONUS,
   EQUIP_SLOT_UNLOCKS,
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
+  WALLET_LEVEL_BONUS,
+  WALLET_RARITY_WEIGHT,
 } from '../balance';
 import type { EntityRarity } from './types';
 import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
@@ -115,6 +118,42 @@ export function getAutoOutputAnchor(entity: StageEntity, power: GearPower, carri
 }
 
 /**
+ * LANE RECONVERGENCE (2026-06-24) — the per-equipped-item WALLET flat-add, shared by
+ * BOTH the auto (autoRateFlatAdd) and click (clickMatterFlatAdd) lanes. This is the
+ * single source of the off-gate wallet income, decoupled from the volatile per-effect
+ * `value`:
+ *
+ *   flatAdd = itemOriginAnchor × scale × WALLET_RARITY_WEIGHT[rarity]
+ *             × (1 + (level-1)·WALLET_LEVEL_BONUS) × qMult
+ *
+ * - itemOriginAnchor = baseCost ÷ ENTITY_BASE_COST_FACTOR[rarity] — the item's ORIGIN
+ *   stage cost anchor, so the wallet is ITEM-anchored (player-stage-invariant), keeping
+ *   the user's "오토는 아이템 근거" rule; dividing out the rarity cost factor means the only
+ *   rarity term is the gentle WALLET_RARITY_WEIGHT (no double rarity ranking).
+ * - The GENTLE linear level term replaces the steep geometric enhance term that used to
+ *   blow income hundreds of × past the anchor (busting the afford window). The geometric
+ *   term stays on clickMatterMult (the on-screen power fantasy) and the entropy-side
+ *   levelMult is untouched, so the entropy gate does NOT re-pin.
+ * - `carried` items follow the player exponent only (AUTO_STAGE_POWER_BASE = 1.0, so this
+ *   exponent is a no-op today but kept for lockstep with the rest of the curve).
+ */
+export function getWalletAnchorFlat(
+  entity: StageEntity,
+  level: number,
+  qMult: number,
+  scale: number,
+  power: GearPower,
+  carried = false,
+): number {
+  const rarityCostFactor = ENTITY_BASE_COST_FACTOR[entity.rarity] || 1;
+  const itemOriginAnchor = entity.baseCost / rarityCostFactor;
+  const walletWeight = WALLET_RARITY_WEIGHT[entity.rarity] ?? 1;
+  const levelMult = 1 + Math.max(0, (level || 1) - 1) * WALLET_LEVEL_BONUS;
+  return itemOriginAnchor * scale * walletWeight * levelMult * qMult
+    * Math.pow(AUTO_STAGE_POWER_BASE, getGearPowerExponent(power, entity.stageId, carried));
+}
+
+/**
  * TAME (pre-crank) auto anchor — the ORIGINAL stage-1-pinned model. Feeds the
  * ENTROPY gate only (Modifiers.autoEntropyFlatAdd), so progression pacing is
  * EXACTLY as calibrated (no gate re-sim) while getAutoOutputAnchor's player-stage
@@ -183,7 +222,12 @@ export function applyEntityModifiers(
         //  • ENTROPY (autoEntropyFlatAdd): the TAME, stage-1-pinned, linear-level
         //    value — so the entropy gate stays EXACTLY as calibrated (no re-sim, all
         //    pacing invariants hold). Mirrors clickMatterMult ↔ clickPowerMult.
-        mods.autoRateFlatAdd += Math.max(AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5, getAutoOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        // WALLET (off-gate): LANE RECONVERGENCE — decoupled from the per-effect value,
+        // rides the shared item-anchored getWalletAnchorFlat (gentle rarity + level).
+        mods.autoRateFlatAdd += Math.max(
+          AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5,
+          getWalletAnchorFlat(entity, entry.level ?? 1, qMult, AUTO_GEAR_INCOME_SCALE, power, carried) * count,
+        );
         mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':
@@ -197,9 +241,10 @@ export function applyEntityModifiers(
         // click number multiplies hard per equipped click item + per level, WITHOUT
         // touching entropy (gate untouched).
         mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
-        // Overhaul-4: player-stage-anchored WALLET per tap (mirrors auto's flat add)
-        // so click out-earns auto. Off-gate.
-        mods.clickMatterFlatAdd += Math.max(0, getClickOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        // WALLET per tap (off-gate): LANE RECONVERGENCE — shared item-anchored
+        // getWalletAnchorFlat. handleClick multiplies THIS by combo×crit per tap, so a
+        // click out-earns auto without the wallet scale itself sitting above auto's.
+        mods.clickMatterFlatAdd += Math.max(0, getWalletAnchorFlat(entity, entry.level ?? 1, qMult, CLICK_GEAR_INCOME_SCALE, power, carried) * count);
         break;
       case 'crit':
         if (isFlat) {
@@ -228,7 +273,7 @@ export function applyEntityModifiers(
         // gear — click gear must never leak into the auto calculation (스펙 §10).
         mods.clickPowerMult *= 1 + (total * gearPower) / 100;
         mods.clickMatterMult *= 1 + (matterTotal * gearPower * CLICK_GEAR_MATTER_BOOST) / 100;
-        mods.clickMatterFlatAdd += Math.max(0, getClickOutputAnchor(entity, power, carried) * (value * count * geoLevelMult * qMult) / 100);
+        mods.clickMatterFlatAdd += Math.max(0, getWalletAnchorFlat(entity, entry.level ?? 1, qMult, CLICK_GEAR_INCOME_SCALE, power, carried) * count);
         mods.critMultMult *= 1 + (total * gearPower) / 200;
         break;
     }

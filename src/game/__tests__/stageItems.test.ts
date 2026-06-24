@@ -3,7 +3,7 @@ import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE, AUTO_GEAR_INCOME_SCALE } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE, AUTO_GEAR_INCOME_SCALE, WALLET_RARITY_WEIGHT, AUTO_WALLET_MIN_PER_ITEM } from '../balance';
 import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -218,16 +218,19 @@ describe('stage entity definitions', () => {
     // Player on the Sun's own stage (10): E = max(9, 9) = 9 — origin parity.
     applyEntityModifiers(withSun, [{ entityId: sun.id, count: 1, level: 1 }], { stageId: 10, gateProgress01: 0 });
 
-    // GEAR-ONLY ECONOMY CRANK (2026-06-21): the auto WALLET flat add is the
-    // PLAYER-stage-anchored income (getAutoOutputAnchor), still NOT multiplied by
-    // autoRateMult (the property this test guards). At player stage 10 the rarity
-    // weight's stage-10 anchor cancels, leaving sun.baseCost × SCALE × value/100.
+    // LANE RECONVERGENCE (2026-06-24): the auto WALLET flat add now rides the shared
+    // item-anchored getWalletAnchorFlat (item origin anchor × scale × WALLET_RARITY_WEIGHT
+    // × gentle level), still NOT multiplied by autoRateMult (the property this test guards).
+    // itemOriginAnchor = baseCost ÷ ENTITY_BASE_COST_FACTOR[rarity]; at level 1 the level
+    // term is 1. Sun is a common auto item, so the rarity weight is 1.
+    const itemOriginAnchor = sun.baseCost / ENTITY_BASE_COST_FACTOR[sun.rarity];
     const expectedFlat =
-      (sun.baseCost / ENTITY_COST_ANCHORS[10]) *
-      ENTITY_COST_ANCHORS[10] *
+      itemOriginAnchor *
       AUTO_GEAR_INCOME_SCALE *
-      Math.pow(AUTO_STAGE_POWER_BASE, 9) *
-      (sun.effect.value / 100);
+      WALLET_RARITY_WEIGHT[sun.rarity] *
+      Math.pow(AUTO_STAGE_POWER_BASE, 9);
+    // Floor must not bind (it's tiny vs the stage-10 anchor income).
+    expect(expectedFlat).toBeGreaterThan(AUTO_WALLET_MIN_PER_ITEM[sun.rarity]);
     expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(expectedFlat, 0);
   });
 });

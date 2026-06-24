@@ -152,15 +152,38 @@ const GEAR = {
     common:    { pct: 0.15, eff: 1, weight: 0.07 },
     rare:      { pct: 0.35, eff: 1, weight: 0.32 },
     epic:      { pct: 1.0,  eff: 1, weight: 1.5 },
-    legendary: { pct: 1.0,  eff: 1, weight: 1.5 },
+    // LANE RECONVERGENCE (2026-06-24): rift now gets a real LEGENDARY ceiling — ~half
+    // the legendaries were retyped multiplier→auto/auto_mult (stageItems.ts), so the 3
+    // rift slots are no longer capped at EPIC. The legendary auto item is base value 12
+    // → ×ENTITY_RARITY_EFFECT_SCALE.legendary(3.0) = 36 printed (was epic 8×1.8=14.4),
+    // weight = ENTITY_BASE_COST_FACTOR.legendary 3.6. (auto_mult legendary feeds the
+    // autoFlatMult ×1.5 lever already modeled via autoPowerMult.)
+    legendary: { pct: 0.36, eff: 1, weight: 3.6 },
   },
 };
+
+// LANE RECONVERGENCE (2026-06-24) — wallet income is decoupled from the per-effect
+// value: it rides the item anchor × WALLET_RARITY_WEIGHT × a GENTLE linear level term
+// (lockstep with balance.ts WALLET_RARITY_WEIGHT / WALLET_LEVEL_BONUS and effects.ts
+// getWalletAnchorFlat). This is what reconverges the two lanes AND tames the cross-stage
+// afford spread into the [10 min, 2 h] window. ENTROPY-side gear (gearClickMult /
+// gearAutoFlat / critFactor) is UNCHANGED, so the gate calibration does NOT move.
+const WALLET_RARITY_WEIGHT = { common: 1, rare: 1.5, epic: 2.2, legendary: 3.0, mythic: 4.0 };
+const WALLET_LEVEL_BONUS = 0.05;
+const walletLevelMult = (level) => 1 + Math.max(0, Math.floor(level) - 1) * WALLET_LEVEL_BONUS;
 
 function bestRarity(stageId) {
   if (stageId >= RARITY_GATES.legendary + GATE_RAMP - 1) return 'legendary';
   if (stageId >= RARITY_GATES.epic + GATE_RAMP - 1) return 'epic';
   if (stageId >= RARITY_GATES.rare + GATE_RAMP - 1) return 'rare';
   return 'common';
+}
+// CLICK gear has NO legendary tier in-stage (the legendary 'multiplier' item is the
+// click capstone, but the affordability click lane models the dedicated 'click'-effect
+// item, which caps at EPIC). AUTO gear now DOES reach legendary (retyped legendaries).
+function bestClickRarity(stageId) {
+  const r = bestRarity(stageId);
+  return r === 'legendary' ? 'epic' : r;
 }
 // Slot pacing (#39, stage-gated): click slot2@S5 / slot3@S9; rift slot2@S7 / slot3@S12.
 const clickSlots = (s) => 1 + (s >= 5 ? 1 : 0) + (s >= 9 ? 1 : 0);
@@ -236,7 +259,7 @@ const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.85;
 const ENHANCE_MATTER_LEVEL_GROWTH = 1.2; // lockstep with balance.ts (1.3 → 1.2)
 const ENHANCE_RARITY_GROWTH = { common: 1.0, rare: 1.03, epic: 1.06, legendary: 1.09, mythic: 1.12 }; // lockstep
 const CLICK_GEAR_MATTER_BOOST = 2; // lockstep with balance.ts (6 → 2)
-const AUTO_GEAR_INCOME_SCALE = 0.16; // lockstep with balance.ts — tames player-anchored auto income to the window
+const AUTO_GEAR_INCOME_SCALE = 2.4e-5; // LANE RECONVERGENCE — lockstep with balance.ts (0.16 → 2.4e-5, new wallet structure)
 const geoLevelMult = (rarity, level) =>
   Math.pow(ENHANCE_MATTER_LEVEL_GROWTH * (ENHANCE_RARITY_GROWTH[rarity] ?? 1), Math.max(0, Math.floor(level) - 1));
 
@@ -281,29 +304,46 @@ function baseMatterPerSec(stageId, profile) {
 // ── Explicit-LEVEL variants (used by the affordability iteration, which derives
 //    the reachable level from realistic stage income). Same math as above but the
 //    enhance level is supplied, not re-derived from a budget. ─────────────────
+// LANE RECONVERGENCE (2026-06-24): the WALLET flat-add per equipped item mirrors
+// effects.ts getWalletAnchorFlat — itemAnchor × scale × WALLET_RARITY_WEIGHT × gentle
+// linear level. The current gear's item anchor == ENTITY_COST_ANCHORS[stageId]. No
+// per-effect value, no geometric level (that stays on clickMatterMult), so the cross-
+// stage afford spread collapses to ~4× (fits the [10 min, 2 h] window) and the lanes
+// differ only by scale × slots × (combo×crit on the click tap).
+function walletFlatPerItem(stageId, rarity, level, scale) {
+  return (ENTITY_COST_ANCHORS[stageId] ?? ANCHOR1) * scale * (WALLET_RARITY_WEIGHT[rarity] ?? 1) * walletLevelMult(level);
+}
 function gearAutoFlatAtLevel(stageId, p, level) {
   const r = bestRarity(stageId);
-  const q = GEAR.auto[r];
-  const lvl = geoLevelMult(r, level);
-  const playerAnchor = ENTITY_COST_ANCHORS[stageId] ?? ANCHOR1;
-  const perSlot = q.weight * playerAnchor * AUTO_GEAR_INCOME_SCALE * (q.pct * q.eff * lvl * maturity(stageId, p) * QUALITY_FACTOR) / 100;
-  const autoPowerMult = stageId >= 6 ? 1.5 : 1;
+  const perSlot = walletFlatPerItem(stageId, r, level, AUTO_GEAR_INCOME_SCALE) * maturity(stageId, p);
+  const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power (auto_mult)
   return perSlot * riftSlots(stageId) * autoPowerMult;
 }
 function autoMatterPerSecAtLevel(stageId, p, level) {
   return (1 /* AUTO_RATE_BASE */ + gearAutoFlatAtLevel(stageId, p, level)) * 1 /* AUTO_OUTPUT_MULTIPLIER */;
 }
 function gearClickMultAtLevel(stageId, p, level) {
-  const r = bestRarity(stageId);
+  const r = bestClickRarity(stageId);
   const q = GEAR.click[r];
   const stack = (q.pct * q.eff * levelMult(level) * maturity(stageId, p) * QUALITY_FACTOR) / 100;
   return Math.pow(1 + stack, clickSlots(stageId));
 }
 function gearClickMatterMultAtLevel(stageId, p, level) {
-  const r = bestRarity(stageId);
+  const r = bestClickRarity(stageId);
   const q = GEAR.click[r];
   const perSlot = 1 + (q.pct * geoLevelMult(r, level) * maturity(stageId, p) * CLICK_GEAR_MATTER_BOOST) / 100;
   return Math.pow(perSlot, clickSlots(stageId));
+}
+// LANE RECONVERGENCE (2026-06-24): faithful to the in-game handleClick wallet —
+// the OLD model omitted Modifiers.clickMatterFlatAdd (gameplay.ts:220), the DOMINANT
+// click matter term. Now matter/tap = comboCrit×(clickPower×matterMult) +
+// comboCrit×clickMatterFlatAdd, where the flat-add mirrors effects.ts getWalletAnchorFlat
+// (item anchor × scale × WALLET_RARITY_WEIGHT × gentle level — NOT per-effect value ×
+// geometric level). Click gear caps at EPIC (bestClickRarity); the legendary capstone
+// is the 'multiplier' item, not a dedicated click item.
+function gearClickFlatAdd(stageId, p, level) {
+  const r = bestClickRarity(stageId);
+  return walletFlatPerItem(stageId, r, level, CLICK_GEAR_INCOME_SCALE) * maturity(stageId, p) * clickSlots(stageId);
 }
 function clickMatterPerSecAtLevel(stageId, profile, p, level) {
   const clickPowerMult = Math.max(1, gearClickMultAtLevel(stageId, p, level));
@@ -312,7 +352,11 @@ function clickMatterPerSecAtLevel(stageId, profile, p, level) {
   const cm = comboMult(profile.combo ?? 0, stageId);
   const mech = MECHANIC_CLICK_BOOST[STAGES[stageId - 1].mechanic] ?? 1;
   const matterMult = gearClickMatterMultAtLevel(stageId, p, level);
-  return profile.cps * profile.activeFraction * clickPower * crit * cm * mech * matterMult;
+  const comboCrit = crit * cm;
+  const flatAdd = gearClickFlatAdd(stageId, p, level);
+  // matter/tap (mirrors handleClick) × taps/sec.
+  const matterPerTap = comboCrit * clickPower * matterMult * mech + comboCrit * flatAdd;
+  return profile.cps * profile.activeFraction * matterPerTap;
 }
 /** Expected 강화석 a profile banks during a stage (drives stone-phase levels). */
 function stoneBudgetFor(stage, profile) {
@@ -467,21 +511,18 @@ STAGES.forEach((s, i) => console.log(`  ${String(s.id).padStart(2)}: ${threshold
 // entropy/click = matter/click × W, so threshold = expected matter income over the target
 // time × W. The numbers below are the per-stage expectation; W is the matter→entropy rate.
 // ---------------------------------------------------------------------------
-const CLICK_GEAR_INCOME_SCALE = 0.5;   // lockstep balance.ts — click WALLET flat-add scale
+const CLICK_GEAR_INCOME_SCALE = 6.0e-6; // LANE RECONVERGENCE — lockstep balance.ts (0.5 → 6.0e-6, new wallet structure)
 const W_MATTER_ENTROPY = 0.00002;      // proposed entropy-per-matter (tunable; sets threshold scale)
 const REF = PROFILES.reference;
 const refClicksPerSec = REF.cps * REF.activeFraction; // ≈1.5 clicks/s of actual progress
 // Expected full matter PER CLICK at end-of-stage gear (p=1): the explosive wallet — the
-// big number the player sees. = comboCrit × (clickPower×matterMult + flatAdd×slots).
+// big number the player sees. = comboCrit × (clickPower×matterMult + flatAdd). The
+// flatAdd now rides getWalletAnchorFlat (LANE RECONVERGENCE), not per-effect value.
 function expectedMatterPerClick(stageId, level) {
-  const r = bestRarity(stageId);
-  const q = GEAR.click[r];
   const clickPowerMult = Math.max(1, gearClickMultAtLevel(stageId, 1, level));
   const clickPower = 1 + (clickPowerMult - 1) * CLICK_OUTPUT_MULTIPLIER;
   const matterMult = gearClickMatterMultAtLevel(stageId, 1, level);
-  const baseCost = RARITY_FACTOR[r] * ENTITY_COST_ANCHORS[stageId];
-  const flatPerItem = baseCost * CLICK_GEAR_INCOME_SCALE * (q.pct * geoLevelMult(r, level)) / 100;
-  const flatAdd = flatPerItem * clickSlots(stageId);
+  const flatAdd = gearClickFlatAdd(stageId, 1, level);
   const comboCrit = comboMult(REF.combo, stageId) * critFactor(stageId, REF.combo, 0.5, 0);
   return comboCrit * (clickPower * matterMult + flatAdd);
 }
@@ -538,9 +579,16 @@ const AFFORD = {
   // 30–90 min target for the anchor → seconds. We assert geared time falls
   // within [floor, ceil]; floor guards against trivialising (free shop), ceil
   // against the dead-channel bug (unaffordable). Base must exceed BASE_MIN.
-  windowMinSec: 20 * 60,   // floor: must take ≥ 20 min (not trivial)
+  windowMinSec: 20 * 60,   // floor: must take ≥ 20 min (not trivial) — S5 binding-case band
   windowMaxSec: 120 * 60,  // ceil:  must take ≤ 120 min (reachable)
   baseMinSec: 6 * 60 * 60, // base-only must take ≥ 6 h (effectively walled)
+  // LANE RECONVERGENCE (2026-06-24) — NEW upper-bound floor: EVERY checkpoint's geared
+  // best path must take ≥ this (not seconds — "no more 3s"). The escalating matter sinks
+  // are meaningless if one leveled rift item makes the anchor free.
+  gearedFloorSec: 10 * 60,
+  // NEW lane-convergence cap: |log10(clickMps/autoMps)| ≤ this at every checkpoint, so the
+  // click and auto income lanes stay the SAME order of magnitude (no 6-order divergence).
+  laneLog10Max: 1.5,
 };
 const affordRef = PROFILES.reference;
 const affordRows = [];
@@ -617,23 +665,30 @@ assertish(spread >= 2 && spread <= 170, `casual/hardcore spread in [2, 170]× ($
 const critSpread = noCrit.total / maxCrit.total;
 assertish(Number.isFinite(critSpread) && critSpread <= 3, `best-crit vs no-crit total time ≤ 3× (${critSpread.toFixed(2)}×)`);
 
-// GEAR-ONLY ECONOMY CRANK affordability assertions (the point of this pass).
-// DESIGN NOTE: AUTO (rift) is the stage-scaling economy path — its flat matter add
-// now tracks the player-stage anchor (the fixed dead channel). CLICK power is
-// stage-FLAT by design (getClickPower: a click's quanta does not grow with stage),
-// so the click path feeds entropy/burst, not late-game shop affordability — its
-// afford-time is reported for transparency but NOT asserted as a shop path. We
-// assert: (a) the geared player (best path = auto) affords the anchor within the
-// window — the SLOWEST realistic case (S5: only the first rift slot is unlocked)
-// must sit in the 30–90 min target, later maxed loadouts afford faster (intended
-// power fantasy); (b) BASE-only farming canNOT, by a wide margin; (c) gear ≫ base.
+// LANE RECONVERGENCE affordability assertions (the point of THIS pass — 2026-06-24).
+// DESIGN NOTE: the click and auto WALLET lanes are now the SAME order of magnitude
+// (decoupled from the per-effect value via getWalletAnchorFlat), so BOTH are real shop
+// paths and we assert the geared player's BEST path stays inside a sane window at every
+// checkpoint. We assert: (a) geared best ≤ 2 h ceiling (reachable); (b) NEW upper-bound
+// floor — geared best ≥ 10 min at EVERY checkpoint (no more "anchor free in 3 s"), with
+// the S5 binding case still pinned to the 20–90 min target; (c) NEW lane convergence —
+// |log10(clickMps/autoMps)| ≤ 1.5 at every checkpoint (lanes within ~1.5 orders); (d)
+// BASE-only farming canNOT afford the anchor (≥ 6 h); (e) gear ≫ base (≥ 10×).
 for (const r of affordRows) {
   const best = Math.min(r.clkSec, r.autSec); // geared player uses the better path
   // Geared affords within a generous ceiling at every checkpoint.
   assertish(best <= AFFORD.windowMaxSec,
     `S${r.sid} geared affords anchor ≤ ${fmt(AFFORD.windowMaxSec)} (best ${fmt(best)}; clk ${fmt(r.clkSec)} / aut ${fmt(r.autSec)})`);
+  // NEW upper-bound floor: the geared best path must take ≥ 10 min at EVERY checkpoint —
+  // the escalating matter sinks are meaningless if a leveled item makes the anchor free.
+  assertish(best >= AFFORD.gearedFloorSec,
+    `S${r.sid} geared anchor takes ≥ ${fmt(AFFORD.gearedFloorSec)} — not seconds (best ${fmt(best)})`);
+  // NEW lane convergence: click & auto wallet income within ~1.5 orders of magnitude.
+  const laneLog10 = Math.abs(Math.log10(r.clkMps / r.autMps));
+  assertish(laneLog10 <= AFFORD.laneLog10Max,
+    `S${r.sid} click/auto lanes within ${AFFORD.laneLog10Max} orders (|log10(clk/aut)| = ${laneLog10.toFixed(2)})`);
   // The BINDING / slowest realistic checkpoint (first rift slot only) must land in
-  // the 30–90 min target band — proving the crank isn't trivial where it matters.
+  // the 20–90 min target band — proving the economy isn't trivial where it matters.
   if (r.sid === 5) {
     assertish(best >= AFFORD.windowMinSec && best <= 90 * 60,
       `S5 (binding case) affords in the 20–90 min target (${fmt(best)})`);

@@ -22,10 +22,11 @@ import {
   HEX_LINK_EDGES,
   HEX_WILD_UNLOCK_STAGE,
   AUTO_WALLET_MIN_PER_ITEM,
+  AUTO_GEAR_INCOME_SCALE,
   type SecondaryStatType,
 } from '../game/balance';
 import { computeHexBingo } from '../game/entities/hexBingo';
-import { getAutoOutputAnchor, getEffectiveCount, getEnhanceGeoLevelMult, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
+import { getWalletAnchorFlat, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
@@ -109,15 +110,18 @@ function formatPct(value: number): string {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
-// Labels share the EXACT applied formula (entities/effects.ts) — anchor + soft-capped
-// count + GEOMETRIC level term (getEnhanceGeoLevelMult). GEAR-ONLY ECONOMY CRANK
-// (2026-06-21): mirrors the auto branch's switch to player-stage anchor + geo level.
+// Labels share the EXACT applied formula (entities/effects.ts). LANE RECONVERGENCE
+// (2026-06-24): the auto WALLET add now rides the shared item-anchored
+// getWalletAnchorFlat (gentle rarity weight + gentle linear level), NOT anchor ×
+// per-effect-value × geometric level — so the shown /s equals the applied /s.
 function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1, carried = false): number {
   const effCount = getEffectiveCount(count, entity.maxCount, false);
-  const geoLevelMult = getEnhanceGeoLevelMult(entity.rarity, level);
   // Floor mirrors the live modifier (effects.ts) so the shop/forge label matches the
   // applied value — early common auto reads ≥ the floor, not ~0.02/s.
-  return Math.max(AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5, getAutoOutputAnchor(entity, power, carried) * (entity.effect.value * effCount * geoLevelMult) / 100);
+  return Math.max(
+    AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5,
+    getWalletAnchorFlat(entity, level, 1, AUTO_GEAR_INCOME_SCALE, power, carried) * effCount,
+  );
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {
