@@ -229,7 +229,10 @@ export function GameScreen({
         : 0;
   const shopTimeBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'time', wallNow);
   const shopMatterBoost = getActiveShopBoostMultiplier(state.shopBoosts, 'matter', wallNow);
-  const displayedAutoRate = (autoRate + stageAutoBonus) * shopTimeBoost * shopMatterBoost;
+  // Include autoMatterMult (hex-bingo, ≤6×) so the HUD + equip "오토 속도" match the REAL
+  // credited income (gameplay.ts perSecAuto also ×autoMatterMult). Was omitted → the equip
+  // readout under-reported by up to 6× vs the floating "+N/s" (user "오토 90.9 stuck/안 맞음").
+  const displayedAutoRate = (autoRate + stageAutoBonus) * shopTimeBoost * shopMatterBoost * modifiers.autoMatterMult;
   const timeMult = getTimeMultiplier(modifiers) * shopTimeBoost;
   const entropyGateProgress01 = getEntropyGateProgress(state.entropy, state.stageIdx);
   const clickEmissionCount =

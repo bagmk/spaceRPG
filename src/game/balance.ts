@@ -988,7 +988,9 @@ export const HEX_HARMONY_BONUS = 0.3;
 /** Bonus SUM per lane is capped here → lane multiplier maxes at 1 + this. */
 export const HEX_BONUS_CAP = 5;
 /** Stage at which the 7th (center/wild) slot unlocks. */
-export const HEX_WILD_UNLOCK_STAGE = 9;
+// Wild center slot — moved 9→6 (user: the 3rd click slot ALSO unlocks at stage 9, so two
+// hex slots opened at once; staggering the wild to stage 6 makes the progression less flat).
+export const HEX_WILD_UNLOCK_STAGE = 6;
 
 // ── Stage milestones (Overhaul-2: per-stage "Achievement Tracks") ───────────
 /**
