@@ -5,7 +5,7 @@ import { STAGES } from '../stages';
 import { getEntropyGateFloor } from '../formulas';
 import { getStageStartCosmicTime } from '../timeFlow';
 import { createInitialGameState, createDefaultEndingProgressFlags } from '../defaults';
-import { PRESTIGE_MAX_LEVEL, getPrestigeCost } from '../prestige';
+import { PRESTIGE_MAX_LEVEL, getPrestigeCost, getCondensationCoreCost } from '../prestige';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { resetMechanicState, hasUnlock } from './helpers';
@@ -171,6 +171,22 @@ export function handleBuyPrestigeUpgrade(
   action: BuyPrestigeUpgradeAction,
 ): GameState {
   const currentLevel = state.prestigeUpgrades[action.upgradeId] ?? 0;
+
+  // Condensation Core: the ENDLESS off-gate sink — uncapped, bought with
+  // condensedMass at a geometric cost (the other 5 are entropy-bought, Lv5-capped).
+  if (action.upgradeId === 'condensation_core') {
+    const massCost = getCondensationCoreCost(currentLevel);
+    if (state.condensedMass < massCost) return state;
+    return {
+      ...state,
+      condensedMass: state.condensedMass - massCost,
+      prestigeUpgrades: {
+        ...state.prestigeUpgrades,
+        condensation_core: currentLevel + 1,
+      },
+    };
+  }
+
   if (currentLevel >= PRESTIGE_MAX_LEVEL) return state;
   const cost = getPrestigeCost(currentLevel);
   if (cost === null || state.entropy < cost) return state;

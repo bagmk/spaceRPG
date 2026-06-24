@@ -5,18 +5,23 @@ import {
   getPrestigeCost,
   getPrestigeMultiplier,
   formatPrestigeCost,
+  getCondensationCoreCost,
 } from '../game/prestige';
 import type { PrestigeUpgradeId, PrestigeUpgradeLevels } from '../game/prestige';
-import { formatEntropyParts } from '../game/formulas';
-import type { Lang } from '../i18n';
+import { CONDENSATION_CORE_BOOST_PER_LEVEL } from '../game/balance';
+import { formatEntropyParts, formatWhole } from '../game/formulas';
+import { t, type Lang } from '../i18n';
 
 // Keyed by legacy save id (see PRESTIGE_UPGRADES) — time_warp now = drop rate.
+// condensation_core renders as its OWN dedicated endless card (not in the
+// PRESTIGE_UPGRADES grid loop), but the records are keyed by the full id union.
 const ICONS: Record<PrestigeUpgradeId, string> = {
   matter_forge: '⚛',
   auto_engine: '⚡',
   critical_core: '◆',
   time_warp: '❖',
   entropy_echo: '∞',
+  condensation_core: '◉',
 };
 
 const ACCENT_COLORS: Record<PrestigeUpgradeId, string> = {
@@ -25,16 +30,18 @@ const ACCENT_COLORS: Record<PrestigeUpgradeId, string> = {
   critical_core: '#ffb347',
   time_warp: '#5fe0c8',
   entropy_echo: '#ff8ea0',
+  condensation_core: '#7fd8ff',
 };
 
 interface PrestigeShopProps {
   entropy: number;
+  condensedMass: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
   onBuy: (upgradeId: PrestigeUpgradeId) => void;
   language: Lang;
 }
 
-export function PrestigeShop({ entropy, prestigeUpgrades, onBuy, language }: PrestigeShopProps) {
+export function PrestigeShop({ entropy, condensedMass, prestigeUpgrades, onBuy, language }: PrestigeShopProps) {
   const entropyReadout = formatEntropyParts(entropy);
   const [celebratingId, setCelebratingId] = useState<PrestigeUpgradeId | null>(null);
 
@@ -43,6 +50,14 @@ export function PrestigeShop({ entropy, prestigeUpgrades, onBuy, language }: Pre
     setCelebratingId(id);
     setTimeout(() => setCelebratingId(null), 700);
   }
+
+  // Condensation Core — the ENDLESS condensed-mass sink (uncapped, off-gate).
+  const condCoreLevel = prestigeUpgrades.condensation_core ?? 0;
+  const condCoreCost = getCondensationCoreCost(condCoreLevel);
+  const condCoreCanAfford = condensedMass >= condCoreCost;
+  const condCoreBonusPct = Math.round(condCoreLevel * CONDENSATION_CORE_BOOST_PER_LEVEL * 100);
+  const condCoreNextPct = Math.round(CONDENSATION_CORE_BOOST_PER_LEVEL * 100);
+  const condCoreCelebrating = celebratingId === 'condensation_core';
 
   return (
     <section className="prestige-shop">
@@ -63,6 +78,47 @@ export function PrestigeShop({ entropy, prestigeUpgrades, onBuy, language }: Pre
           ? '영구 프레스티지 — 다음 우주부터 적용'
           : 'Permanent prestige — active from next universe'}
       </div>
+
+      {/* Condensation Core — the ENDLESS condensed-mass sink (uncapped, off-gate). */}
+      <div className="prestige-shop__grid">
+        <button
+          type="button"
+          className={[
+            'prestige-card',
+            'prestige-card--endless',
+            condCoreCanAfford ? 'prestige-card--affordable' : '',
+            condCoreCelebrating ? 'prestige-card--celebrate' : '',
+          ].filter(Boolean).join(' ')}
+          style={{ '--prestige-accent': '#7fd8ff' } as React.CSSProperties}
+          disabled={!condCoreCanAfford}
+          onClick={() => handleBuy('condensation_core')}
+        >
+          <div className="prestige-card__glyph">
+            <span className="prestige-card__icon">◉</span>
+            {condCoreLevel > 0 && <div className="prestige-card__ring" />}
+          </div>
+          <div className="prestige-card__info">
+            <div className="prestige-card__name">
+              {t(language, 'condCoreName')}{' '}
+              <span className="prestige-card__endless-tag">{t(language, 'condCoreEndless')}</span>
+            </div>
+            <div className="prestige-card__desc">{t(language, 'condCoreDesc')}</div>
+            <div className="prestige-card__progress-row">
+              <span className="prestige-card__mult">
+                {t(language, 'condCoreLevel')} {condCoreLevel}
+                {condCoreLevel > 0 ? ` · +${condCoreBonusPct}%` : ''}
+                {` (→ +${condCoreNextPct}% ${t(language, 'condCoreIncome')})`}
+              </span>
+            </div>
+          </div>
+          <div className="prestige-card__right">
+            <span className="prestige-card__cost">
+              {formatWhole(condCoreCost)} {t(language, 'finalMassUnit')}
+            </span>
+          </div>
+        </button>
+      </div>
+
       <div className="prestige-shop__grid">
         {PRESTIGE_UPGRADES.map((def, idx) => {
           const level = prestigeUpgrades[def.id] ?? 0;

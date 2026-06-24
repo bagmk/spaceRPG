@@ -126,9 +126,13 @@ export function useGameState(): UseGameStateResult {
         offlineStartMs,
         offlineEndMs,
       );
-      const gained = autoRate * boostedMatterSec * offlineMultiplier;
+      // vacuum_stability singularity (off-gate): ×2 on the offline WALLET income
+      // ONLY — the tame entropy path below (tameGained) is untouched, so the
+      // entropy gate stays calibrated even for a long offline catch-up.
+      const vacuumStabilityMult = payload.singularityUnlocks.includes('vacuum_stability') ? 2 : 1;
+      const gained = autoRate * boostedMatterSec * offlineMultiplier * vacuumStabilityMult;
       const nextQuanta = safeAdd(baseState.quanta, gained);
-      const effectiveThreshold = getEffectiveThreshold(stage, payload.cumulativeBoost);
+      const effectiveThreshold = getEffectiveThreshold(stage);
       const entropyEchoMult = getPrestigeMultiplier(payload.prestigeUpgrades?.entropy_echo ?? 0);
       // GEAR-ONLY ECONOMY CRANK (2026-06-21): offline entropy rides the TAME auto
       // rate (getAutoEntropyRate), not the cranked wallet rate — so the player-stage

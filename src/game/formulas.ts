@@ -320,7 +320,13 @@ export function getCritMultiplier(mods: Modifiers): number {
   return 1.5 * mods.critMultMult * mods.apexMult;
 }
 
-export function getEffectiveThreshold(stage: Stage, _prestigeBoost: number): number {
+// Panel D cleanup (2026-06-24): the prestige "universe boost" machinery was dead —
+// `cumulativeBoost` was reset to 0 every prestige and getEffectiveThreshold ignored
+// its param, so the gate threshold was never actually boosted. The ignored param is
+// removed here. The `cumulativeBoost` save field is kept as a vestigial always-0
+// number (it lives in the validateV5 whitelist + every migration branch; removing it
+// would risk rejecting existing saves — not worth a migration for a no-op field).
+export function getEffectiveThreshold(stage: Stage): number {
   return stage.threshold;
 }
 
@@ -515,10 +521,6 @@ export function getEntropyFromMatterGain(
 
 export function applyAntiRunaway(raw: number): number {
   return raw;
-}
-
-export function getUniverseBoost(runEntropy: number): number {
-  return Math.log10(1 + runEntropy) * 2;
 }
 
 export function getCondensedMassReward(

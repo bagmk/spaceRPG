@@ -1,6 +1,6 @@
 import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
-import { getPrestigeMultiplier } from '../prestige';
+import { getPrestigeMultiplier, getCondensationCoreMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses } from '../entities/effects';
 import { computeHexBingo } from '../entities/hexBingo';
 import { CRIT_MULT_GEAR_CAP } from '../balance';
@@ -188,7 +188,17 @@ export function getActiveModifiers(
     mods.autoRateMult *= getPrestigeMultiplier(prestigeUpgrades.auto_engine);      // Auto Engine → auto production
     mods.critMultMult *= getPrestigeMultiplier(prestigeUpgrades.critical_core);    // Critical Core → crit multiplier
     mods.dropChanceMult *= getPrestigeMultiplier(prestigeUpgrades.time_warp);      // Nucleation Seed → drop rate
+
+    // Condensation Core (endless, off-gate): each level lifts the WALLET income
+    // mults only (clickMatterMult + autoMatterMult), NEVER a gate lever. The
+    // entropy gate rides the tame clickPower/auto deltas, so stacking this to any
+    // level can't move the sim's calibrated pacing.
+    const condCore = getCondensationCoreMultiplier(prestigeUpgrades.condensation_core ?? 0);
+    mods.clickMatterMult *= condCore;
+    mods.autoMatterMult *= condCore;
   }
 
+  // CRIT GEAR CAP re-applied AFTER prestige? No — prestige critMultMult (critical_core)
+  // is meta-progression and intentionally stacks ON TOP of the gear cap above.
   return mods;
 }

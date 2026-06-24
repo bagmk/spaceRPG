@@ -50,6 +50,30 @@ export function getLateStageCompression(state: GameState): number {
   return hasUnlock(state, 'red_shift') && state.stageIdx >= 10 && state.stageIdx <= 14 ? 1.5 : 1;
 }
 
+// ── Endgame Singularity nodes (wired 2026-06-24, all OFF-GATE) ───────────────
+// These four nodes were `unimplemented` stubs that silently ate condensedMass.
+// They now grant modest OFF-GATE boosts (wallet income / drop rate / offline /
+// fusion burst) — never a gate lever (clickPower/auto/crit/combo), so the
+// entropy-gate calibration is untouched (the sim doesn't read these paths).
+
+/** stellar_memory: auto WALLET matter income ×1.25 (off-gate; mirrors autoMatterMult). */
+export function getStellarMemoryAutoMult(state: GameState): number {
+  return hasUnlock(state, 'stellar_memory') ? 1.25 : 1;
+}
+
+/** multiverse_lens: entity drop chance ×1.5 (off-gate; stacks on dropChanceMult). */
+export function getMultiverseLensDropMult(state: GameState): number {
+  return hasUnlock(state, 'multiverse_lens') ? 1.5 : 1;
+}
+
+// vacuum_stability (offline income ×2) is applied inline in useGameState.ts, where
+// the offline catch-up runs on the loaded save payload (no full GameState/hasUnlock).
+
+/** boltzmann_brain: fusion entropy burst ×2 (still span-capped by FUSION_BURST_SPAN_CAP). */
+export function getBoltzmannBrainFusionBurstMult(state: GameState): number {
+  return hasUnlock(state, 'boltzmann_brain') ? 2 : 1;
+}
+
 export function getEncounterRewardMultiplier(state: GameState): number {
   return hasUnlock(state, 'cosmic_web') ? 2 : 1;
 }
@@ -75,7 +99,7 @@ export function getCurrentModifiers(state: GameState) {
     secondsInStage: Math.max(0, (state.totalTimePlayed - Math.max(0, state.stageStartedAt - state.runStartTime)) / 1000),
     stageId: stage.id,
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
-    progress01: getProgress(state.quanta, getEffectiveThreshold(stage, state.cumulativeBoost)),
+    progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
   }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
 }

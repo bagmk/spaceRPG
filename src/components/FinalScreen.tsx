@@ -174,6 +174,7 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
         {/* Prestige Shop */}
         <PrestigeShop
           entropy={state.entropy}
+          condensedMass={state.condensedMass}
           prestigeUpgrades={state.prestigeUpgrades}
           onBuy={onBuyPrestigeUpgrade}
           language={language}
