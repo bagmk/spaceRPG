@@ -58,6 +58,7 @@ import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { DropDiscoveryToast } from './DropDiscoveryToast';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
+import { toDateKey } from '../game/shop/daily';
 import { milestoneEraLog } from '../game/milestones';
 import { pickLogText } from '../game/stageLogs';
 import { SettingsPanel } from './SettingsPanel';
@@ -175,6 +176,11 @@ export function GameScreen({
     return q ? isQuestClaimable(q, state) : false;
   });
   const hasClaimableQuest = claimableQuestIds.length > 0;
+  // Panel B: also badge the quest button when today's daily attendance reward is
+  // unclaimed — it lives in the quest panel and had no return hook. (hasClaimableQuest
+  // stays quest-only for tutorial gating; the badge uses the broader signal below.)
+  const dailyClaimable = state.attendanceClaimedDate !== toDateKey(Date.now());
+  const questPanelHasNudge = hasClaimableQuest || dailyClaimable;
   const questMilestoneSeen = Boolean(state.tutorialFlags['quest-milestone-intro']);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
@@ -1044,14 +1050,14 @@ export function GameScreen({
           <button
             ref={questAnchorRef}
             type="button"
-            className={`entity-lab-button ${hasClaimableQuest ? 'entity-lab-button--notify' : ''}`}
+            className={`entity-lab-button ${questPanelHasNudge ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#ffcf6b' } as React.CSSProperties}
             onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
             aria-label={t(language, 'questTitle')}
           >
             <span className="hud-action-icon" aria-hidden="true">✦</span>
             <span className="hud-action-label">{t(language, 'questTitle')}</span>
-            {hasClaimableQuest ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
+            {questPanelHasNudge ? <span className="entity-lab-button__dot" aria-hidden="true" /> : null}
           </button>
           <button
             ref={equipAnchorRef}
