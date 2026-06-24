@@ -3,6 +3,7 @@ import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses } from '../entities/effects';
 import { computeHexBingo } from '../entities/hexBingo';
+import { CRIT_MULT_GEAR_CAP } from '../balance';
 
 export interface ModifierContext {
   currentQuanta?: number;
@@ -157,6 +158,14 @@ export function getActiveModifiers(
     applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });
     applySetBonuses(mods, inventory);
   }
+
+  // CRIT GEAR CAP (P fix, 2026-06-24): CRIT_MULT_GEAR_CAP was defined but NEVER applied
+  // in-game, so the gear-built crit mult ran away to ~×36 (display ×80), far past the
+  // sim's calibrated cap. Crit feeds the entropy gate (gained = clickPower×combo×critMult),
+  // so uncapped crit trivialized late stages ("12화부터 너무 쉬움"). The sim's critFactor
+  // already caps it as 1.5×min(CAP, 1+multAdd) — this makes the GAME match its own
+  // calibration. Collection rewards + prestige (meta-progression) still stack on top.
+  mods.critMultMult = Math.min(mods.critMultMult, CRIT_MULT_GEAR_CAP);
 
   // #44 hexagon bingo: completed lines feed OFF-GATE matter multipliers (click →
   // wallet click matter, auto → wallet auto matter), never the entropy gate.
