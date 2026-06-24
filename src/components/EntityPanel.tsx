@@ -953,6 +953,18 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
               {/* The glyph wall — thin set/subset dividers, dense cards. */}
               {setsToRender.map((cs) => {
+                // Hide a SET whose subsets contribute zero visible cards in the
+                // current view (collected-only default OR 미수집 toggle) — mirrors
+                // the per-subset line-977 guard so empty set headers/reward lines
+                // don't render as bare blanks. .some() across subsets keeps a set
+                // alive when ANY subset has a visible card; fully-empty sets vanish
+                // (header + all subset blocks) together via the null Fragment.
+                const setHasVisible = cs.subsets.some((sub) =>
+                  getSubsetMembers(sub, STAGE_ENTITIES).some((m) =>
+                    showMissing ? !isCollected(m) : isCollected(m),
+                  ),
+                );
+                if (!setHasVisible) return null;
                 return (
                   <Fragment key={cs.id}>
                     {selectedSetId === 'all' ? (

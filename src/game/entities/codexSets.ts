@@ -167,8 +167,15 @@ export const CODEX_SETS: CodexSet[] = [
     reward: { stat: 'entropyGain', value: 15 },
     subsets: [
       { id: 'gravity', label: { en: 'Gravity Wells', ko: '중력 우물' }, match: { glyphs: ['black_hole', 'singularity'] }, reward: { stat: 'clickPower', value: 10 } },
-      // The void + the relic neutrinos still drifting through it.
-      { id: 'the_void', label: { en: 'The Void', ko: '공허' }, match: { glyphs: ['void', 'entropy', 'bounce'], entityIds: ['s14_03', 's14_08'] }, reward: { stat: 'entropyGain', value: 10 } },
+      // The void + the relic neutrinos still drifting through it. Curated to an
+      // explicit roster (like the Standard Model sets): the broad glyphs net
+      // (`void`/`entropy`/`bounce`) over-matched the primordial stage-1 "False
+      // Vacuum Bubble" (s1_02, glyph `void` via the name→glyph "vacuum" keyword),
+      // leaking it into 종말/공허. Listing the intended end-era void/entropy/
+      // heat-death/bounce entities by their unique canonical ids excludes that
+      // collision while keeping every genuine member (+ the two relic neutrinos,
+      // which carry glyph `lepton` and were always listed by id).
+      { id: 'the_void', label: { en: 'The Void', ko: '공허' }, match: { entityIds: ['s4_19', 's5_13', 's5_16', 's6_11', 's9_13', 's13_14', 's14_03', 's14_04', 's14_08', 's14_14', 's16_06', 's16_07', 's16_08', 's16_10', 's16_14'] }, reward: { stat: 'entropyGain', value: 10 } },
       // Quantum fate: the last baryon and the vacuum's final fluctuations.
       { id: 'quantum_fate', label: { en: 'Quantum Fate', ko: '양자의 운명' }, match: { entityIds: ['s14_13', 's15_02', 's16_09', 's16_13'] }, reward: { stat: 'entropyGain', value: 8 } },
     ],
