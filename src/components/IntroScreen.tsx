@@ -80,6 +80,23 @@ export function IntroScreen({
     };
   }, [onComplete, phase]);
 
+  // Panel F: let a tap or key skip the ~7.4s genesis→big-bang animation (esp. on
+  // resets, when you've seen it many times). Only while it's actually playing.
+  useEffect(() => {
+    if (phase !== 'expanding') return undefined;
+    const skip = () => {
+      setPhase('done');
+      setElapsed(GENESIS_MS + BIG_BANG_TO_GAME_MS);
+      onComplete();
+    };
+    window.addEventListener('pointerdown', skip);
+    window.addEventListener('keydown', skip);
+    return () => {
+      window.removeEventListener('pointerdown', skip);
+      window.removeEventListener('keydown', skip);
+    };
+  }, [phase, onComplete]);
+
   const bgElapsed = phase === 'expanding' ? Math.max(0, elapsed - GENESIS_MS) : 0;
   const tickerIndex = Math.min(
     INTRO_TIMES.length - 1,
@@ -152,6 +169,9 @@ export function IntroScreen({
           />
           <div className="intro-ticker">{phase === 'expanding' ? INTRO_TIMES[tickerIndex] : ''}</div>
           <p className="intro-tagline">{t(language, 'introTagline')}</p>
+          {phase === 'expanding' ? (
+            <p className="intro-skip-hint" aria-hidden="true">{t(language, 'introSkipHint')}</p>
+          ) : null}
           {phase === 'idle' ? (
             canResume ? (
               <div className="intro-actions">

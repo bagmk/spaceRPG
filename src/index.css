@@ -3843,6 +3843,24 @@ button.stat-header-item {
   white-space: pre-line;
 }
 
+/* Panel F: subtle "tap to skip" hint during the big-bang animation. */
+.intro-skip-hint {
+  margin: 20px 0 0;
+  color: rgba(247, 241, 232, 0.45);
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.2vw, 13px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  animation: intro-skip-fade 2.4s ease-in-out infinite;
+}
+@keyframes intro-skip-fade {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-skip-hint { animation: none; opacity: 0.5; }
+}
+
 .intro-button {
   margin-top: 0;
 }
