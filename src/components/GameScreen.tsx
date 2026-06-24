@@ -282,6 +282,13 @@ export function GameScreen({
   const invTotal = state.inventory.reduce((sum, e) => sum + Math.max(0, e.count), 0);
   const equipSeenInvRef = useRef(invTotal);
   const fuseSeenInvRef = useRef(invTotal);
+  // While the matching panel page is OPEN, keep its seen-baseline tracking live
+  // inventory growth — so items that arrive WHILE the player is in there (e.g. the
+  // guaranteed S2 fusions handed to them) don't relight the dot the moment they
+  // leave. Without this the dot re-triggered right after equipping ("클릭하고 돌아오면
+  // 다시 알람"), because invTotal had grown past the stale open-time baseline.
+  if (panelView?.page === 'equip') equipSeenInvRef.current = invTotal;
+  if (panelView?.page === 'fuse' || panelView?.page === 'lab') fuseSeenInvRef.current = invTotal;
   const equipHasNew = equipUnlocked && invTotal > equipSeenInvRef.current;
   const fuseHasNew = fusionUnlocked && invTotal > fuseSeenInvRef.current;
   // v28: a complete-but-unclaimed codex subset → pulse the 도감 button (alarm to claim).
@@ -838,12 +845,16 @@ export function GameScreen({
               critChance: getCritChance(0, modifiers),
               critMult: getCritMultiplier(modifiers),
               comboCapMult: maxComboMult,
+              comboCapAdd: modifiers.comboCapAdd,
               offlineEff:
                 (modifiers.hawkingEcho || state.singularityUnlocks.includes('hawking_echo')
                   ? 1
                   : TUNING.OFFLINE_BASE_RATE) * modifiers.offlineGainMult,
+              offlineGainMult: modifiers.offlineGainMult,
               emissionIntervalMs: Math.min(2200, Math.max(240, 1500 / Math.log10(10 + displayedAutoRate))),
               entropyGainMult: modifiers.entropyGainMult,
+              fusionBurstMult: modifiers.fusionBurstMult,
+              dropChanceMult: modifiers.dropChanceMult,
               autoFlatMult: modifiers.autoFlatMult,
             }}
             language={language}

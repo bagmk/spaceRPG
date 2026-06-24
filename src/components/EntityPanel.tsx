@@ -337,6 +337,24 @@ const SUBSTAT_LEGEND = (Object.keys(SUBSTAT_TRAIT) as SecondaryStatType[])
     labelKey: SUBSTAT_LABEL_KEY[type],
   }));
 
+// Per-stat plain-language glossary for the (?) help overlay (user: the equip/
+// fusion screens are unfriendly — say what each effect actually does). Deduped to
+// one row per concept: the 5 live primaries (●■★◆✚) then the 6 distinct substats
+// (critChance/autoPct/clickPct are omitted — they ARE the crit/auto/click primaries).
+const EFFECT_HELP_ROWS: { key: string; icon: string; labelKey: Parameters<typeof t>[1]; descKey: Parameters<typeof t>[1] }[] = [
+  { key: 'click',       icon: EFFECT_TRAIT.click.icon,      labelKey: 'effectClickPower', descKey: 'helpStatClick' },
+  { key: 'auto',        icon: EFFECT_TRAIT.auto.icon,       labelKey: 'hudAuto',          descKey: 'helpStatAuto' },
+  { key: 'crit',        icon: EFFECT_TRAIT.crit.icon,       labelKey: 'effectCritChance', descKey: 'helpStatCrit' },
+  { key: 'auto_mult',   icon: EFFECT_TRAIT.auto_mult.icon,  labelKey: 'effectAutoPower',  descKey: 'helpStatAutoMult' },
+  { key: 'multiplier',  icon: EFFECT_TRAIT.multiplier.icon, labelKey: 'effectAllSources', descKey: 'helpStatMultiplier' },
+  { key: 'critMult',    icon: SUBSTAT_TRAIT.critMult,       labelKey: 'effectCritMult',     descKey: 'helpStatCritMult' },
+  { key: 'comboCap',    icon: SUBSTAT_TRAIT.comboCap,       labelKey: 'substatComboCap',    descKey: 'helpStatComboCap' },
+  { key: 'entropyGain', icon: SUBSTAT_TRAIT.entropyGain,    labelKey: 'substatEntropyGain', descKey: 'helpStatEntropyGain' },
+  { key: 'dropRate',    icon: SUBSTAT_TRAIT.dropRate,       labelKey: 'substatDropRate',    descKey: 'helpStatDropRate' },
+  { key: 'fusionBurst', icon: SUBSTAT_TRAIT.fusionBurst,    labelKey: 'substatFusionBurst', descKey: 'helpStatFusionBurst' },
+  { key: 'offlineEff',  icon: SUBSTAT_TRAIT.offlineEff,     labelKey: 'statOffline',        descKey: 'helpStatOffline' },
+];
+
 /** Legend explaining what each trait shape means (#42-fix: 도형 직관화).
     Collapsed by default — the per-item SpecChips already label each stat, so the
     full grid is reference-only and was crowding the top of the equip page. */
@@ -382,12 +400,20 @@ export interface PanelStats {
   critMult: number;
   /** Max combo multiplier (base cap + gear bonuses). */
   comboCapMult: number;
+  /** Gear-only combo-cap flat add (0 = no combo gear) — drives the +N.N row. */
+  comboCapAdd: number;
   /** Offline income efficiency 0..1+. */
   offlineEff: number;
+  /** Gear-only offline multiplier (1 = no offline gear) — drives the +% row. */
+  offlineGainMult: number;
   /** Rift emission interval in ms (visual cadence of auto income). */
   emissionIntervalMs: number;
   /** Entropy income multiplier from gear. */
   entropyGainMult: number;
+  /** Fusion entropy burst multiplier from gear. */
+  fusionBurstMult: number;
+  /** Item drop chance multiplier from gear. */
+  dropChanceMult: number;
   /** Auto Power — multiplier on entity flat-auto output. */
   autoFlatMult: number;
 }
@@ -1322,16 +1348,33 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 .replace('{lines}', String(bingo.completedLines.length))
             : t(language, 'hexBonusNone');
 
-          // H redesign: the LEFT stat-stack — only the stats you actually HAVE
-          // (click/auto always; crit chance+mult only once you have crit gear).
+          // H redesign: the LEFT stat-stack — EVERY non-neutral stat the equipped
+          // gear contributes (click/auto always; the rest appear only when gear has
+          // actually moved them off their neutral base — mult ≠ 1, add ≠ 0).
           // Replaces the removed icon-guide legend + click/auto readout cards.
           const statStack: { key: string; icon: string; color: string; label: string; value: string }[] = [
             { key: 'click', icon: EFFECT_TRAIT.click.icon, color: TRAIT_ICON_TONE, label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)}${t(language, 'hudPerClick')}` },
             { key: 'auto', icon: EFFECT_TRAIT.auto.icon, color: TRAIT_ICON_TONE, label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}${t(language, 'effectAutoRatePerSec')}` },
           ];
+          // 엔트로피 획득 — sits directly under 오토 속도 (user-requested), then 융합 버스트.
+          if (stats.entropyGainMult > 1) {
+            statStack.push({ key: 'entropy', icon: SUBSTAT_TRAIT.entropyGain, color: TRAIT_ICON_TONE, label: t(language, 'substatEntropyGain'), value: `+${Math.round((stats.entropyGainMult - 1) * 100)}%` });
+          }
+          if (stats.fusionBurstMult > 1) {
+            statStack.push({ key: 'fusion', icon: SUBSTAT_TRAIT.fusionBurst, color: TRAIT_ICON_TONE, label: t(language, 'substatFusionBurst'), value: `+${Math.round((stats.fusionBurstMult - 1) * 100)}%` });
+          }
           if (stats.critChance > 0) {
             statStack.push({ key: 'critC', icon: EFFECT_TRAIT.crit.icon, color: TRAIT_ICON_TONE, label: t(language, 'effectCritChance'), value: `${Math.round(stats.critChance * 100)}%` });
             statStack.push({ key: 'critM', icon: SUBSTAT_TRAIT.critMult, color: TRAIT_ICON_TONE, label: t(language, 'effectCritMult'), value: `×${stats.critMult.toFixed(1)}` });
+          }
+          if (stats.comboCapAdd > 0) {
+            statStack.push({ key: 'combo', icon: SUBSTAT_TRAIT.comboCap, color: TRAIT_ICON_TONE, label: t(language, 'substatComboCap'), value: `×${stats.comboCapMult.toFixed(1)}` });
+          }
+          if (stats.dropChanceMult > 1) {
+            statStack.push({ key: 'drop', icon: SUBSTAT_TRAIT.dropRate, color: TRAIT_ICON_TONE, label: t(language, 'substatDropRate'), value: `+${Math.round((stats.dropChanceMult - 1) * 100)}%` });
+          }
+          if (stats.offlineGainMult > 1) {
+            statStack.push({ key: 'offline', icon: SUBSTAT_TRAIT.offlineEff, color: TRAIT_ICON_TONE, label: t(language, 'statOffline'), value: `${Math.round(stats.offlineEff * 100)}%` });
           }
 
           return (
@@ -1849,6 +1892,22 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                 <li key={k}>{t(language, k)}</li>
               ))}
             </ol>
+            {/* Per-stat glossary on the equip + fusion screens — what each effect
+                actually does, so the icons/chips aren't unfriendly (user request). */}
+            {tab !== 'lab' ? (
+              <div className="entity-help-card__glossary">
+                <h4 className="entity-help-card__subtitle">{t(language, 'helpStatHeader')}</h4>
+                <ul className="entity-help-card__stats">
+                  {EFFECT_HELP_ROWS.map((row) => (
+                    <li key={row.key} className="entity-help-card__stat">
+                      <span className="entity-help-card__stat-icon" style={{ color: TRAIT_ICON_TONE }} aria-hidden="true">{row.icon}</span>
+                      <span className="entity-help-card__stat-label">{t(language, row.labelKey)}</span>
+                      <span className="entity-help-card__stat-desc">{t(language, row.descKey)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </article>
         </div>
       ) : null}
@@ -1950,25 +2009,26 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
               <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
               <div className="entity-detail-card__stats">
-                {(() => {
-                  const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
-                  const tr = EFFECT_TRAIT[ent.effect.type];
-                  return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
-                })()}
+                {/* All specs in ONE block: primary chip + every secondary chip
+                    together (user: secondaries were tacked on separately below). */}
+                <div className="entity-detail-card__spec-chips spec-chip-row">
+                  {(() => {
+                    const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
+                    const tr = EFFECT_TRAIT[ent.effect.type];
+                    return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
+                  })()}
+                  {getSecondaryStats(ent).map((sub) => {
+                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried), entry?.quality);
+                    return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
+                  })}
+                </div>
+                {/* quiet footer: level + owned count (+ quality) under the chip cluster. */}
                 <span className="entity-detail-card__lvl">{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
                 {/* #50: a tail (gold) specimen shows its quality percentile. */}
                 {isTailQuality(entry?.quality) ? (
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
                 ) : null}
               </div>
-              {getSecondaryStats(ent).length > 0 ? (
-                <div className="entity-detail-card__substats spec-chip-row">
-                  {getSecondaryStats(ent).map((sub) => {
-                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried), entry?.quality);
-                    return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
-                  })}
-                </div>
-              ) : null}
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"

@@ -1338,6 +1338,23 @@ button.hud-stage-title--clickable:hover {
 .entity-help-card__list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 11px; }
 .entity-help-card__list li { font-size: 13px; line-height: 1.5; color: #c4cfe2; }
 .entity-help-card__list li::marker { color: #7fd8ff; font-weight: 700; }
+/* Per-stat glossary (what each effect does) below the rule list. */
+.entity-help-card__glossary {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.entity-help-card__subtitle { margin: 0 0 10px; font-size: 13px; font-weight: 700; color: #eaf0fb; }
+.entity-help-card__stats { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.entity-help-card__stat {
+  display: grid;
+  grid-template-columns: 18px minmax(64px, auto) 1fr;
+  align-items: baseline;
+  gap: 8px;
+}
+.entity-help-card__stat-icon { font-size: 13px; line-height: 1; text-align: center; }
+.entity-help-card__stat-label { font-size: 12.5px; font-weight: 700; color: #cbd6ea; }
+.entity-help-card__stat-desc { font-size: 12px; line-height: 1.45; color: #9aa7be; }
 
 .entity-fs__body {
   flex: 1;
@@ -8780,6 +8797,9 @@ button.stat-header-item {
   letter-spacing: 0.04em;
   text-align: center;
 }
+/* All specs (primary + secondaries) cluster in one centered, wrapping row; the
+   Lv·count footer then sits on its own grid line below. */
+.entity-detail-card__spec-chips { width: 100%; }
 
 /* ── Readability (#38): trait badge + spec chips ── */
 .trait-badge {
