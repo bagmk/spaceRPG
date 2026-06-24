@@ -57,6 +57,7 @@ import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { DropDiscoveryToast } from './DropDiscoveryToast';
+import { CodexClaimCelebration } from './CodexClaimCelebration';
 import { StageLogToast } from './StageLogToast';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { toDateKey } from '../game/shop/daily';
@@ -606,6 +607,16 @@ export function GameScreen({
     soundManager?.playQuestClaim();
   }, [dropEventId, soundManager]);
 
+  // Persona L: triumphant sting when a codex sub-collection's reward is claimed
+  // (the collection-peak beat). Mirrors the drop chime — reuses the quest-claim
+  // flourish, keyed on the event id so it fires once per claim. The celebration
+  // component handles its own auto-dismiss + click-to-dismiss.
+  const codexClaimEventId = state.lastCodexClaimEvent?.id ?? null;
+  useEffect(() => {
+    if (codexClaimEventId === null) return;
+    soundManager?.playQuestClaim();
+  }, [codexClaimEventId, soundManager]);
+
   // Quest milestone reached: when a quest newly meets its condition, pop a toast
   // ("Milestone! Tap ✦ to claim"). The very FIRST time is handled by the
   // one-shot tutorial bubble instead, so we don't double-notify.
@@ -906,7 +917,7 @@ export function GameScreen({
             favoriteEntityIds={state.favoriteEntityIds}
             onToggleFavorite={(entityId) => dispatch({ type: 'TOGGLE_FAVORITE', entityId })}
             claimedCodexSubsetIds={state.claimedCodexSubsetIds}
-            onClaimCodexSubset={(subsetId) => { dispatch({ type: 'CLAIM_CODEX_SUBSET', subsetId }); soundManager?.playEntityLevelUp(); }}
+            onClaimCodexSubset={(subsetId) => dispatch({ type: 'CLAIM_CODEX_SUBSET', subsetId })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
             onClose={() => {
@@ -1257,6 +1268,19 @@ export function GameScreen({
           rarity={state.lastDropEvent.rarity}
           language={language}
           onDismiss={() => dispatch({ type: 'CLEAR_DROP_EVENT', id: state.lastDropEvent!.id })}
+        />
+      ) : null}
+
+      {/* Persona L: collection-peak celebration when a codex sub-collection's
+          reward is claimed. Mirrors the drop reveal — transient, self-clearing,
+          click-to-dismiss. A full-set claim escalates to a gold-burst overlay. */}
+      {state.lastCodexClaimEvent ? (
+        <CodexClaimCelebration
+          key={state.lastCodexClaimEvent.id}
+          subsetId={state.lastCodexClaimEvent.subsetId}
+          isFullSet={state.lastCodexClaimEvent.isFullSet}
+          language={language}
+          onDismiss={() => dispatch({ type: 'CLEAR_CODEX_CLAIM_EVENT', id: state.lastCodexClaimEvent!.id })}
         />
       ) : null}
 

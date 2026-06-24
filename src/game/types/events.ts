@@ -136,6 +136,22 @@ export interface FloatingDropEvent {
   rarity: EntityRarity;
 }
 
+/**
+ * A codex sub-collection was just CLAIMED — drives the "collection complete!"
+ * celebration (the collection-peak moment). `isFullSet` is true when this claim
+ * completed its parent set (every sibling subset now claimed): the bigger
+ * milestone gets a fuller-screen celebration. Transient like the other reveal
+ * events: never persisted, dropped by the save whitelist, cleared by
+ * CLEAR_CODEX_CLAIM_EVENT. Mirrors FloatingDropEvent (a reveal keyed by eventId).
+ */
+export interface CodexClaimEvent {
+  id: number;
+  /** The claimed subset's bare id (e.g. 'quarks') — resolves label/reward via CODEX_SETS. */
+  subsetId: string;
+  /** Whether this claim completed every subset of its parent set. */
+  isFullSet: boolean;
+}
+
 /** A claimed milestone/era-record (#42) — drives the slot-machine matter rollup. */
 export interface QuestClaimEvent {
   id: number;

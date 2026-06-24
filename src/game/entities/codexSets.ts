@@ -325,6 +325,19 @@ export function getCodexSubsetIdForEntity(entity: StageEntity): string | null {
   return null;
 }
 
+/** Resolve a claimed subset (bare id) to its subset + parent set. Subset ids are
+ *  globally unique across CODEX_SETS, so the first match is the only one. Used by
+ *  the Persona L codex-claim celebration to read the subset label + its reward. */
+export function findCodexSubsetById(
+  subsetId: string,
+): { set: CodexSet; subset: CodexSubset } | null {
+  for (const set of CODEX_SETS) {
+    const subset = set.subsets.find((sub) => sub.id === subsetId);
+    if (subset) return { set, subset };
+  }
+  return null;
+}
+
 export function getCodexSetForEntity(entity: StageEntity): CodexSet {
   for (const set of CODEX_SETS) {
     if (set.id === 'genesis') continue; // Genesis overlaps; don't claim entities from families

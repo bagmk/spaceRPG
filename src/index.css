@@ -2029,6 +2029,143 @@ button.hud-stage-title--clickable:hover {
   }
 }
 
+/* ════ Persona L: codex collection-peak celebration ════
+   SUBSET claim → top-center toast (reuses the drop-discovery card look, accent
+   rides --codex-accent from the parent set). FULL-SET claim → a fuller-screen
+   gold-burst overlay (reuses the quest-claim-rollup overlay shell). */
+.codex-claim-toast {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 212;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 14px 22px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--codex-accent, #ffcf6b) 60%, transparent);
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(12, 14, 22, 0.96));
+  box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55),
+              0 0 30px -2px color-mix(in srgb, var(--codex-accent, #ffcf6b) 70%, transparent);
+  cursor: pointer;
+  font: inherit;
+  color: #eef3fb;
+  text-align: left;
+  pointer-events: auto;
+  animation: codex-claim-toast-in 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+             codex-claim-toast-pulse 1.6s ease-in-out 0.36s infinite;
+}
+.codex-claim-toast__tag {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--codex-accent, #ffcf6b) 80%, #fff);
+}
+.codex-claim-toast__icon {
+  grid-row: 2;
+  font-size: 26px;
+  line-height: 1;
+}
+.codex-claim-toast__name {
+  grid-row: 2;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fdfefe;
+}
+.codex-claim-toast__bonus {
+  grid-row: 2;
+  justify-self: end;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--codex-accent, #ffcf6b) 70%, transparent);
+  background: color-mix(in srgb, var(--codex-accent, #ffcf6b) 16%, transparent);
+  color: color-mix(in srgb, var(--codex-accent, #ffcf6b) 85%, #fff);
+}
+@keyframes codex-claim-toast-in {
+  0%   { transform: translateX(-50%) translateY(-14px) scale(0.82); opacity: 0; }
+  60%  { transform: translateX(-50%) translateY(0) scale(1.04); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes codex-claim-toast-pulse {
+  0%, 100% { box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55), 0 0 24px -4px color-mix(in srgb, var(--codex-accent, #ffcf6b) 55%, transparent); }
+  50%      { box-shadow: 0 10px 38px rgba(0, 0, 0, 0.55), 0 0 38px 0 color-mix(in srgb, var(--codex-accent, #ffcf6b) 85%, transparent); }
+}
+
+/* Full-set milestone — fuller-screen overlay + gold burst ring. */
+.codex-claim-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 222;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  background: radial-gradient(circle at center, rgba(255, 207, 107, 0.16), transparent 62%);
+  animation: codex-claim-burst-fade 0.3s ease-out;
+}
+.codex-claim-burst__ring {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 222, 150, 0.85);
+  animation: codex-claim-burst-ring 0.9s ease-out forwards;
+}
+.codex-claim-burst__card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 24px 38px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--codex-accent, #ffcf6b) 65%, transparent);
+  background: linear-gradient(180deg, rgba(40, 32, 16, 0.96), rgba(14, 12, 18, 0.96));
+  box-shadow: 0 0 46px color-mix(in srgb, var(--codex-accent, #ffcf6b) 40%, transparent);
+  animation: codex-claim-burst-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.codex-claim-burst__icon { font-size: 40px; line-height: 1; }
+.codex-claim-burst__tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--codex-accent, #ffcf6b) 85%, #fff);
+}
+.codex-claim-burst__title { font-size: 18px; font-weight: 900; color: #fff6e6; text-align: center; }
+.codex-claim-burst__bonus {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--codex-accent, #ffcf6b) 80%, #fff);
+}
+.codex-claim-burst__sub { font-size: 12px; font-weight: 700; color: #d7c8a8; opacity: 0.9; }
+@keyframes codex-claim-burst-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes codex-claim-burst-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes codex-claim-burst-ring {
+  0%   { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .codex-claim-toast {
+    animation: none;
+    transform: translateX(-50%);
+  }
+  .codex-claim-burst,
+  .codex-claim-burst__card { animation: none; }
+  .codex-claim-burst__ring { display: none; }
+}
+
 /* ════ Fusion lever curation: cost on the lever, reveal fork ════ */
 .gacha-fuse-btn { position: relative; overflow: hidden; }
 .gacha-fuse-btn__label { position: relative; z-index: 1; }

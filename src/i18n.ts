@@ -196,6 +196,12 @@ export const STRINGS = {
   /** Persona #10: floating reveal when a drop adds a not-yet-collected entity. */
   dropDiscovered:         { en: 'Discovered!', ko: '발견!' },
   dropDiscoveredNewBadge: { en: 'NEW', ko: 'NEW' },
+  /** Persona L: celebration when a codex sub-collection's reward is claimed. */
+  codexSubsetCompleteTag: { en: 'Collection Complete', ko: '컬렉션 완성' },
+  codexSubsetComplete:    { en: '{name} complete!', ko: '{name} 완성!' },
+  codexSetCompleteTag:    { en: 'Set Complete', ko: '세트 완성' },
+  codexSetComplete:       { en: '{name} fully assembled!', ko: '{name} 세트 완성!' },
+  codexClaimBonusLabel:   { en: 'Permanent bonus', ko: '영구 보너스' },
   tutQuestMilestone:      { en: 'A quest milestone is ready! Tap ✦ to claim its reward and see details — your past milestones are kept in the Almanac (top-left).',
                             ko: '퀘스트 마일스톤 달성! ✦를 눌러 보상을 수령하고 자세히 보세요. 지난 마일스톤은 우주도감(왼쪽 위)에서 볼 수 있어요.' },
   tutQuestMilestoneOpen:  { en: 'Open quests', ko: '퀘스트 열기' },

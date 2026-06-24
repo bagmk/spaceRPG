@@ -104,6 +104,7 @@ export function createInitialGameState(now: number): GameState {
     lastFusionEvent: null,
     lastGachaEvent: null,
     lastDropEvent: null,
+    lastCodexClaimEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,

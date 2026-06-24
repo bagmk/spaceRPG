@@ -5,6 +5,8 @@
 import type { GameState, PersistentGameState } from '../types';
 import type { GameAction } from '../reducer';
 import { getClaimableCodexSubsetIds } from '../entities/effects';
+import { CODEX_SETS } from '../entities/codexSets';
+import { nextEventId } from './helpers';
 import {
   createDefaultDailyCheckIns,
   createDefaultEndingProgressFlags,
@@ -40,6 +42,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastQuestClaimEvent: null,
     lastGachaEvent: null,
     lastDropEvent: null,
+    lastCodexClaimEvent: null,
     offlineElapsedMs: 0,
     offlineGained: 0,
     offlineEntropyGained: 0,
@@ -121,13 +124,34 @@ export function handleMarkCodexSeen(state: GameState): GameState {
 type ClaimCodexSubsetAction = Extract<GameAction, { type: 'CLAIM_CODEX_SUBSET' }>;
 
 /** #2 (v28): activate a COMPLETE codex subset's reward (click-to-claim). No-op if
- *  already claimed or not actually complete (defends against a stale UI click). */
+ *  already claimed or not actually complete (defends against a stale UI click).
+ *  Persona L: a successful claim fires the transient lastCodexClaimEvent (the
+ *  collection-peak celebration), flagging isFullSet when this claim completed
+ *  every subset of its parent set. Uses its own event id (nextEventId), mirroring
+ *  the lastDropEvent reveal — transient, never persisted. */
 export function handleClaimCodexSubset(state: GameState, action: ClaimCodexSubsetAction): GameState {
   if (state.claimedCodexSubsetIds.includes(action.subsetId)) return state;
   if (!getClaimableCodexSubsetIds(state.almanacCollected, state.claimedCodexSubsetIds).includes(action.subsetId)) {
     return state;
   }
-  return { ...state, claimedCodexSubsetIds: [...state.claimedCodexSubsetIds, action.subsetId] };
+  const claimed = [...state.claimedCodexSubsetIds, action.subsetId];
+  // isFullSet: find the set owning this subset, then check every sibling subset
+  // is now claimed (the claim above already includes this one). Subset ids are
+  // globally unique across CODEX_SETS, so the first owning set is the only one.
+  const parentSet = CODEX_SETS.find((set) => set.subsets.some((sub) => sub.id === action.subsetId));
+  const isFullSet = parentSet ? parentSet.subsets.every((sub) => claimed.includes(sub.id)) : false;
+  const eventId = nextEventId(state);
+  return {
+    ...state,
+    claimedCodexSubsetIds: claimed,
+    eventCounter: eventId,
+    lastCodexClaimEvent: { id: eventId, subsetId: action.subsetId, isFullSet },
+  };
+}
+
+type ClearCodexClaimEventAction = Extract<GameAction, { type: 'CLEAR_CODEX_CLAIM_EVENT' }>;
+export function handleClearCodexClaimEvent(state: GameState, action: ClearCodexClaimEventAction): GameState {
+  return state.lastCodexClaimEvent?.id === action.id ? { ...state, lastCodexClaimEvent: null } : state;
 }
 
 /** Record a first-visit panel hint as shown (idempotent). */
