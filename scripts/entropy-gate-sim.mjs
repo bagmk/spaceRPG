@@ -102,7 +102,8 @@ const FUSION_FAIL_STONES = { common: 1, rare: 2, epic: 4, legendary: 7 };
 // Overhaul-3: geometric rarity climb (k=3.5) — lockstep with balance.ts. The sim's
 // burst scale saturates at 1.0 for bestRarity (legendary) either way, so this does
 // not move the calibration; mirrored for consistency.
-const FUSION_FLAT_COST = { common: 0.04, rare: 0.14, epic: 0.49, legendary: 1.715 };
+// ~100×/tier (user) — mirrors balance.ts. Off-gate: burst saturates at 1 (cost ≫ refCost).
+const FUSION_FLAT_COST = { common: 0.04, rare: 4, epic: 400, legendary: 40000 };
 const ENHANCE_BUDGET_FRAC = 0.5; // spend ≤ this share of stage income on levels (gate calibration)
 // GEAR-ONLY ECONOMY CRANK (2026-06-21): cumulative enhance budget for the carried
 // flagship in the AFFORDABILITY model, expressed in current-stage anchors. A geared

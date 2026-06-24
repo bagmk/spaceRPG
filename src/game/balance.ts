@@ -484,8 +484,14 @@ export const FUSION_UP_CHANCE_CAP = 0.65;
 // the entropy burst's burstCostScale saturates at 1.0 for everything above
 // common and is then span-capped (FUSION_BURST_SPAN_CAP), and burstRefCost stays
 // stage-1-anchored — so steeper cost does NOT inflate the burst.
+// RARITY STEEPENING (user 2026-06-23 "융합비용 커먼→레어, 레어→에픽 갈 때 적어도 100배는
+// 올려야지"): each tier now costs ~100× the previous (was ~3.5×/tier — fusing epics barely
+// cost more than commons). The bank scales with stage, so a higher-rarity fusion becomes
+// affordable a few stages after its items appear — a meaningful per-tier matter investment.
+// Off-gate in the sim: the burst saturates at 1 (costPaid ≫ anchor×burstRefCostFrac at every
+// tier) and burstRefCost stays stage-1-anchored, so steeper cost is a SINK change, not pacing.
 export const FUSION_FLAT_COST: Record<EntityRarity, number> = {
-  common: 0.04, rare: 0.14, epic: 0.49, legendary: 1.715, mythic: 6.0,
+  common: 0.04, rare: 4, epic: 400, legendary: 40000, mythic: 4000000,
 };
 // P2b bonuses (R9): fusing 3 of the SAME entity, or 3 from the same codex category.
 export const FUSION_SAME_ENTITY_UP_BONUS = 0.10;       // +10% rarity-up chance

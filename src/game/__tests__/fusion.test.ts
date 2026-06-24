@@ -120,9 +120,13 @@ describe('fusion (Phase 3)', () => {
     // cost = FUSION_ENHANCE_COST_BASE × FUSION_FLAT_COST[rarity] — same at every stage.
     expect(getFusionQuantaCost('common', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.common));
     expect(getFusionQuantaCost('legendary', 3)).toBe(Math.ceil(FUSION_ENHANCE_COST_BASE * FUSION_FLAT_COST.legendary));
-    // Geometric rarity climb (k=3.5): legendary ≈ 43× a common fuse, epic/rare ≈ 3.5×.
-    expect(getFusionQuantaCost('legendary', 3)).toBeGreaterThan(getFusionQuantaCost('common', 3) * 30);
-    expect(getFusionQuantaCost('epic', 3) / getFusionQuantaCost('rare', 3)).toBeCloseTo(3.5, 1);
+    // Steep ~100×/tier rarity climb (user "융합비용 … 적어도 100배는 올려야지"): each tier
+    // costs ≥ 100× the previous (was ~3.5×/tier).
+    expect(FUSION_FLAT_COST.rare / FUSION_FLAT_COST.common).toBeGreaterThanOrEqual(100);
+    expect(FUSION_FLAT_COST.epic / FUSION_FLAT_COST.rare).toBeGreaterThanOrEqual(100);
+    expect(FUSION_FLAT_COST.legendary / FUSION_FLAT_COST.epic).toBeGreaterThanOrEqual(100);
+    // …and the resolved cost reflects it (ceil rounding negligible at these magnitudes).
+    expect(getFusionQuantaCost('epic', 3) / getFusionQuantaCost('rare', 3)).toBeGreaterThan(90);
     // Cost does NOT change with the player's stage (user direction: rarity-only).
     expect(getFusionQuantaCost('common', 10)).toBe(getFusionQuantaCost('common', 3));
     expect(getFusionQuantaCost('legendary', 16)).toBe(getFusionQuantaCost('legendary', 1));
