@@ -22,8 +22,8 @@ import {
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
 import { generateDailyShop, toDateKey } from '../game/shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount } from '../game/shop/pricing';
-import { STONE_BUNDLES, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
+import { shopItemMatterCost, shopStoneMatterCost, shopProtectMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount } from '../game/shop/pricing';
+import { STONE_BUNDLES, PROTECT_BUNDLES, ENHANCE_PROTECT_ITEM_NAME, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { findEntityById, entityName } from '../game/entities/stageItems';
 import { isTailQuality } from '../game/entities/quality';
@@ -392,6 +392,28 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                     <span className="shop-ribbon">{t(language, 'shopDiscountRibbon').replace('{n}', String(Math.round(stoneBulkDiscount(count) * 100)))}</span>
                   ) : null}
                   <span className="shop-stone-card__amount">◆ {count}</span>
+                  <span className="shop-card__price"><span className="qsym">⚛</span>{formatGameNumberShort(cost)}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* 강화 보호 (인과 닻, v30): a matter-bought consumable directly under the 강화석 card —
+              one charge absorbs a failed risk-phase enhance so the item isn't destroyed. */}
+          <div className="shop-fs__section-title">{`🛡 ${t(language, 'shopProtectTitle')} · ${ENHANCE_PROTECT_ITEM_NAME[language]} (🛡 ${formatGameNumberShort(state.enhanceProtectCharges)})`}</div>
+          <div className="shop-fs__stones">
+            {PROTECT_BUNDLES.map((count) => {
+              const cost = shopProtectMatterCost(playerStageId, count);
+              const afford = quanta >= cost;
+              return (
+                <button
+                  key={count}
+                  type="button"
+                  className="shop-card shop-stone-card shop-protect-card"
+                  style={{ '--rarity-color': '#4a8fff' } as CSSProperties}
+                  disabled={!afford}
+                  onClick={() => { dispatch({ type: 'BUY_ENHANCE_PROTECT', count }); onSfx?.(); }}
+                >
+                  <span className="shop-stone-card__amount">🛡 {count}</span>
                   <span className="shop-card__price"><span className="qsym">⚛</span>{formatGameNumberShort(cost)}</span>
                 </button>
               );

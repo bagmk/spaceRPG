@@ -227,6 +227,74 @@ describe('enhancement (강화소)', () => {
   });
 });
 
+// ── 강화 RISK phase + matter-bought protection (user "실패·파괴 부활 + 보호 아이템") ──
+describe('enhancement RISK phase (fail / destroy / protection)', () => {
+  const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
+
+  // Anchor at Lv2 so the next step (Lv2 → Lv3) LANDS on the risk threshold (3).
+  // 5 spares = exactly need(2), so a single risky merge step is afforded.
+  const riskyState = (extra: Partial<GameState> = {}): GameState => ({
+    ...createInitialGameState(0),
+    inventory: [
+      { entityId: entity.id, instanceId: 'a', count: 1, level: 2 },
+      ...Array.from({ length: 5 }, (_, k) => ({ entityId: entity.id, instanceId: `f${k}`, count: 1, level: 1 })),
+    ],
+    ...extra,
+  });
+
+  it('Lv1→2 is guaranteed (below the threshold) — a forced-fail roll still succeeds', () => {
+    const state: GameState = {
+      ...createInitialGameState(0),
+      inventory: [
+        { entityId: entity.id, instanceId: 'a', count: 1, level: 1 },
+        ...Array.from({ length: 3 }, (_, k) => ({ entityId: entity.id, instanceId: `f${k}`, count: 1, level: 1 })),
+      ],
+    };
+    // failRoll 0 would fail IF this were risky — but Lv1→2 is guaranteed, so it levels up.
+    const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, useProtect: false });
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(2);
+    expect(next.lastEnhanceEvent?.outcome).toBe('up');
+  });
+
+  it('Lv2→3 (risk phase): a failed UNPROTECTED attempt DESTROYS the copy + mints 강화석', () => {
+    const before = riskyState({ enhanceStones: 0 });
+    // failRoll 0 < failChance → fail; useProtect off → destroy.
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, breakRoll: 0.5, useProtect: false });
+    expect(next.inventory.find((e) => e.instanceId === 'a')).toBeUndefined(); // destroyed
+    expect(next.lastEnhanceEvent?.outcome).toBe('break');
+    expect(next.enhanceStones).toBeGreaterThan(0); // consolation 강화석 minted
+    expect(next.lastEnhanceEvent?.stonesEarned).toBe(next.enhanceStones);
+    // the cost copies were consumed too (only the anchor + its spares existed).
+    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(0);
+  });
+
+  it('Lv2→3 (risk phase): a SUCCESSFUL attempt levels up like normal', () => {
+    const before = riskyState();
+    // failRoll 0.99 ≥ failChance → success.
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0.99, useProtect: false });
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(3);
+    expect(next.lastEnhanceEvent?.outcome).toBe('up');
+  });
+
+  it('protection absorbs a fail: spends ONE charge, the item SURVIVES unchanged', () => {
+    const before = riskyState({ enhanceProtectCharges: 2 });
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, useProtect: true });
+    // survives at the same level, one charge spent.
+    const anchor = next.inventory.find((e) => e.instanceId === 'a');
+    expect(anchor?.level).toBe(2); // no level gain
+    expect(next.enhanceProtectCharges).toBe(1); // exactly one charge consumed
+    expect(next.lastEnhanceEvent?.outcome).toBe('protected');
+  });
+
+  it('protection toggle ON but ZERO charges → a fail still destroys', () => {
+    const before = riskyState({ enhanceProtectCharges: 0 });
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, breakRoll: 0.5, useProtect: true });
+    expect(next.inventory.find((e) => e.instanceId === 'a')).toBeUndefined(); // destroyed (no charge to spend)
+    expect(next.lastEnhanceEvent?.outcome).toBe('break');
+    expect(next.enhanceProtectCharges).toBe(0);
+  });
+});
+
 describe('gear system (category purity + refunds)', () => {
   it('substats are category-pure: click gear never rolls auto stats and vice versa', () => {
     for (const entity of STAGE_ENTITIES) {
@@ -246,18 +314,20 @@ describe('gear system (category purity + refunds)', () => {
     expect(mods.autoRateMult).toBe(1);
   });
 
-  it('P7b: one merge greedily spends the pool to the highest affordable level', () => {
+  it('P7b: a greedy merge climbs ONLY through the guaranteed band, stopping at the risk threshold', () => {
     const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
-    // Lv1→2 needs 3, Lv2→3 needs 5 → 8 spare copies lift the anchor two levels at once.
+    // Lv1→2 needs 3, Lv2→3 needs 5. Risk starts at the step LANDING on Lv3 (the threshold),
+    // so the greedy merge climbs only Lv1→2 (guaranteed) and stops — the Lv2→3 step is a
+    // separate, single, insurable risky attempt. 3 of the 8 spares are spent, 5 retained.
     const fodder = Array.from({ length: 8 }, (_, k) => ({ entityId: entity.id, instanceId: `f${k}`, count: 1, level: 1 }));
     const state: GameState = {
       ...createInitialGameState(0),
       inventory: [{ entityId: entity.id, instanceId: 'a', count: 1, level: 1 }, ...fodder],
     };
     const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'a' });
-    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(3);
-    expect(next.inventory.length).toBe(1); // all 8 fodder consumed
-    expect(next.lastEnhanceEvent?.mergedCount).toBe(8);
+    expect(next.inventory.find((e) => e.instanceId === 'a')?.level).toBe(2);
+    expect(next.inventory.length).toBe(1 + 5); // anchor + 5 unspent spares
+    expect(next.lastEnhanceEvent?.mergedCount).toBe(3);
   });
 
   it('P7b: not enough spare copies → enhance is a no-op', () => {

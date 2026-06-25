@@ -59,8 +59,10 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
  *  default 0/'' for pre-v27 saves. v28: claimedCodexSubsetIds (codex click-to-activate)
  *  — additive string[], default [] (pre-v28 complete subsets become claimable).
  *  v29: stageQuestProgress (past-stage quest snapshots) — additive
- *  Record<number, Record<string, number>>, default {} for pre-v29 saves. */
-export const SAVE_SCHEMA_VERSION = 29;
+ *  Record<number, Record<string, number>>, default {} for pre-v29 saves.
+ *  v30: enhanceProtectCharges (강화 보호 consumable, 인과 닻) — additive number,
+ *  default 0 for pre-v30 saves (the enhance risk phase / protection is new). */
+export const SAVE_SCHEMA_VERSION = 30;
 
 /** P6: per-entity ceiling when exploding a count-stack into flat copies, for
  *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
@@ -269,6 +271,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     codexSeenIds: state.codexSeenIds,
     seenPanelHints: state.seenPanelHints,
     enhanceStones: state.enhanceStones,
+    enhanceProtectCharges: state.enhanceProtectCharges,
     activeQuests: state.activeQuests,
     completedQuestIds: state.completedQuestIds,
     favoriteEntityIds: state.favoriteEntityIds,
@@ -452,6 +455,9 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
   // v19: 강화석 — veterans start at 0 (their existing levels were all matter-
   // bought; the stone phase did not exist, so no stone debt is owed).
   const enhanceStones = sourceVersion < 19 ? 0 : (state.enhanceStones ?? 0);
+  // v30: 강화 보호 charges — veterans start at 0 (the consumable is brand new; they
+  // simply buy protection from the shop going forward).
+  const enhanceProtectCharges = sourceVersion < 30 ? 0 : Math.max(0, state.enhanceProtectCharges ?? 0);
   // v20 quests: veterans (sourceVersion < 20) start with a fresh active set for
   // their current stage + no completed quests; v20+ saves keep their stored ids
   // (refilled/validated). completedQuestIds always survive (once-only quests).
@@ -469,6 +475,7 @@ function finalizeV17(legacy: LegacyMigratedState, sourceVersion: number): Persis
     codexSeenIds,
     seenPanelHints,
     enhanceStones,
+    enhanceProtectCharges,
     activeQuests,
     completedQuestIds,
     favoriteEntityIds: state.favoriteEntityIds ?? [],
@@ -583,7 +590,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29 || v === 30) {
       // v14..v26 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added

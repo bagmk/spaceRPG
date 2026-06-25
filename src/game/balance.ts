@@ -343,22 +343,30 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // reference profile is re-pinned to realPlayTargetSec and these are the freshly-printed
   // thresholds. ALL invariants pass (crit spread 2.76×, casual/hardcore 140.8×). The v16
   // ladder stays FROZEN in storage/migrate.ts.
-  1: 1.479e3,
-  2: 9.526e3,
-  3: 2.969e4,
-  4: 6.421e4,
-  5: 1.580e5,
-  6: 5.611e5,
-  7: 1.646e6,
-  8: 4.262e6,
-  9: 6.218e6,
-  10: 9.154e6,
-  11: 1.403e7,
-  12: 2.138e7,
-  13: 2.963e7,
-  14: 9.345e7,
-  15: 2.603e8,
-  16: 3.256e8,
+  // ENHANCE-RISK + MATTER PROTECTION re-pin (2026-06-24, scripts/entropy-gate-sim.mjs):
+  // RISK is back (user "실패·파괴 부활 + 보호 아이템") — enhancing can FAIL from Lv3 up, and
+  // protection is now a MATTER-bought consumable (인과 닻, ENHANCE_PROTECT_MATTER_FRAC ×
+  // anchor/charge) instead of free 강화석. A rational player pays the protection matter on
+  // every risky attempt, so the matter-reachable risk-phase LEVEL drops (sim: rare Lv7 /
+  // epic Lv4 / legendary Lv3 at the checkpoints), lowering gear power → the whole ladder
+  // re-pins DOWN. These are the freshly-printed calibrated spans; ALL invariants pass
+  // (worst 1.00×, crit spread 2.74×, casual/hardcore 137.6×). v16 ladder stays FROZEN.
+  1: 1.516e3,
+  2: 9.776e3,
+  3: 3.066e4,
+  4: 6.642e4,
+  5: 1.478e5,
+  6: 3.914e5,
+  7: 8.868e5,
+  8: 1.924e6,
+  9: 3.865e6,
+  10: 6.801e6,
+  11: 1.168e7,
+  12: 1.903e7,
+  13: 2.727e7,
+  14: 9.106e7,
+  15: 2.579e8,
+  16: 3.231e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -714,9 +722,27 @@ export const ENHANCE_FAIL_MAX = 0.55;
  *  the loss is softened). The granted count is the only thing shown on the card. */
 export const ENHANCE_BREAK_STONE_MIN: Record<EntityRarity, number> = { common: 1, rare: 2, epic: 3, legendary: 5, mythic: 8 };
 export const ENHANCE_BREAK_STONE_MAX: Record<EntityRarity, number> = { common: 4, rare: 7, epic: 11, legendary: 16, mythic: 24 };
-/** Protection ("보호 강화") costs this × the level's stone cost EXTRA; a failed
- *  protected attempt loses no level and destroys nothing (stones still spent). */
+/** Legacy: protection used to cost 강화석 (this × the level's stone cost). SUPERSEDED
+ *  by the matter-bought protection CONSUMABLE below (user decision "강화 보호용 사는거"):
+ *  protection is now a named item bought with 물질 in the shop, tracked as
+ *  enhanceProtectCharges, and one charge is consumed to absorb a failed attempt.
+ *  Kept only so the sim's protect-cost proxy (≈ a 강화석 unit) still pins the gate. */
 export const ENHANCE_PROTECT_STONE_MULT = 1.0;
+
+// ── 강화 보호 CONSUMABLE (user: "강화 보호용 사는거 + 그 아이템으로 강화 실패시 안터지게") ──
+//    A named protection item bought with 물질(matter) in the shop. When the player
+//    toggles "보호 사용" ON and holds ≥1 charge, a FAILED risk-phase enhance consumes
+//    ONE charge and the item SURVIVES (no level gain, no destroy) instead of being
+//    destroyed. Persisted as enhanceProtectCharges (save v30).
+/** Display name of the protection consumable (bilingual, NO mixed-language). */
+export const ENHANCE_PROTECT_ITEM_NAME = { en: 'Causal Anchor', ko: '인과 닻' } as const;
+/** Matter price of ONE protection charge = ENTITY_COST_ANCHORS[playerStage] × this.
+ *  Priced a BIT HIGH per the user — protection should feel like a real, deliberate
+ *  outlay (one charge ≈ a whole common shop item's matter cost, 0.10×anchor), so the
+ *  player weighs insuring a risky attempt vs just re-farming the copy. */
+export const ENHANCE_PROTECT_MATTER_FRAC = 0.5;
+/** Protection bundles offered for matter in the shop (mirrors STONE_BUNDLES). */
+export const PROTECT_BUNDLES: number[] = [1, 5, 10];
 /**
  * Geometric per-level growth for the MATTER-ONLY click multiplier (#40). Each
  * click-gear level multiplies its clickMatterMult contribution by this — so

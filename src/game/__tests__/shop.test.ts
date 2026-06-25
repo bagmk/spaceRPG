@@ -68,6 +68,20 @@ describe('matter packs + 강화석 purchase', () => {
     expect(after.enhanceStones).toBe(broke.enhanceStones);
     expect(after.quanta).toBe(0);
   });
+
+  it('buys 강화 보호 charges (인과 닻) with matter, incrementing the charge count', () => {
+    const rich = { ...s3(), quanta: 1e15, enhanceProtectCharges: 0 };
+    const after = gameReducer(rich, { type: 'BUY_ENHANCE_PROTECT', count: 5 });
+    expect(after.enhanceProtectCharges).toBe(5);
+    expect(after.quanta).toBeLessThan(rich.quanta);
+  });
+
+  it('rejects a 강화 보호 purchase the player cannot afford', () => {
+    const broke = { ...s3(), quanta: 0, enhanceProtectCharges: 2 };
+    const after = gameReducer(broke, { type: 'BUY_ENHANCE_PROTECT', count: 10 });
+    expect(after.enhanceProtectCharges).toBe(2); // unchanged
+    expect(after.quanta).toBe(0);
+  });
 });
 
 describe('daily shop', () => {

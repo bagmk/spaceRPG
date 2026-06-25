@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 29;
+  version: 30;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -291,6 +291,10 @@ export interface SaveState {
   seenPanelHints: string[];
   /** 강화석 (enhance stones) balance — Lv5+ enhancement currency, minted by fusion fails (v19). */
   enhanceStones: number;
+  /** 강화 보호 charges (인과 닻, v30): matter-bought consumable. When the "보호 사용" toggle
+   *  is on and ≥1 is held, a FAILED risk-phase enhance spends one charge and the item
+   *  survives instead of being destroyed. Default 0. */
+  enhanceProtectCharges: number;
   /** 🅠5 (v20): quest ids currently offered (refilled as stages unlock + quests claim). */
   activeQuests: string[];
   /** 🅠5 (v20): claimed quest ids — survive prestige so quests are once-only. */

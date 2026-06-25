@@ -74,6 +74,8 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     codexSeenIds: payload.codexSeenIds ?? [],
     seenPanelHints: payload.seenPanelHints ?? [],
     enhanceStones: payload.enhanceStones ?? 0,
+    // v30 강화 보호 charges — PERSISTED; ?? 0 guards a hand-built/pre-v30 payload.
+    enhanceProtectCharges: payload.enhanceProtectCharges ?? 0,
     // v29 past-stage quest snapshots — PERSISTED, carried verbatim (default {}
     // only guards a hand-built payload that predates the field).
     stageQuestProgress: payload.stageQuestProgress ?? {},

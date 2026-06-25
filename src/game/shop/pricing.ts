@@ -14,6 +14,7 @@ import {
   SHOP_STONE_PRICE_FRAC,
   SHOP_REFRESH_FRAC,
   SHOP_PACK_MATTER_FRAC,
+  ENHANCE_PROTECT_MATTER_FRAC,
   GACHA_BOXES,
 } from '../balance';
 import type { EntityRarity } from '../entities/types';
@@ -49,6 +50,14 @@ export function stoneBulkDiscount(count: number): number {
 export function shopStoneMatterCost(stageId: number, count: number): number {
   const n = Math.max(1, Math.floor(count));
   return Math.ceil(anchor(stageId) * SHOP_STONE_PRICE_FRAC * n * (1 - stoneBulkDiscount(n)));
+}
+
+/** Matter cost of `count` 강화 보호 charges (인과 닻) at the player's stage. Priced a
+ *  bit high (ENHANCE_PROTECT_MATTER_FRAC) so insuring a risky enhance is a real
+ *  deliberate outlay, not a trivial buy. No bulk discount (it's already premium). */
+export function shopProtectMatterCost(stageId: number, count: number): number {
+  const n = Math.max(1, Math.floor(count));
+  return Math.ceil(anchor(stageId) * ENHANCE_PROTECT_MATTER_FRAC * n);
 }
 
 /** Matter cost of the next daily refresh (escalating by refreshCount). */

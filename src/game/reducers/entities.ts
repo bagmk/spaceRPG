@@ -18,7 +18,12 @@ import {
   getEnhanceLevelCap,
   applyMergeCopies,
   getEnhanceStoneCost,
+  needCopiesForLevel,
+  isEnhanceRiskLevel,
+  getEnhanceFailChance,
+  rollBreakStones,
 } from '../entities/enhance';
+import { ENHANCE_STONE_THRESHOLD } from '../balance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
 import {
@@ -469,14 +474,20 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
 }
 
 /**
- * ENHANCE_ENTITY (강화소): Overhaul-4 P7b — level a copy by MERGING spare duplicate
- * copies of the SAME item (collect, don't pay). Anchor = the equipped copy of that
- * entity if one is equipped, else its highest-level copy. Fodder = its OTHER copies
- * (spares), excluding the anchor and any equipped copy; consumed lowest-level then
- * lowest-quality first, greedily spending need(L)=3,5,7… per level up to the rarity
- * cap. The anchor inherits the best quality among itself + everything consumed. No
- * matter cost, no failure. (★ favorite is a Fuse-All guard only — merging is a
- * deliberate single-item action, so an item's own spares are fair fodder.)
+ * ENHANCE_ENTITY (강화소): level a copy by MERGING spare duplicate copies of the SAME
+ * item (collect, don't pay), or — when you have no spares — paying the 강화석 escape.
+ * Anchor = the equipped copy of that entity if one is equipped, else its highest-level
+ * copy. Fodder = its OTHER copies (spares), excluding the anchor and any equipped copy;
+ * consumed lowest-level then lowest-quality first. The anchor inherits the best quality
+ * among itself + everything consumed.
+ *
+ * RISK (user "실패·파괴 부활 + 보호 아이템"): the Lv1→2 and Lv2→3 steps are GUARANTEED. From
+ * the step landing on ENHANCE_STONE_THRESHOLD (Lv3) up, each attempt is a SINGLE level
+ * that can FAIL (getEnhanceFailChance). On an unprotected fail the anchor copy is
+ * DESTROYED + consolation 강화석 minted; if "보호 사용" is on AND a charge is held, one
+ * enhanceProtectCharge is spent instead and the copy survives unchanged. The merge path
+ * still climbs MULTIPLE levels at once, but ONLY through the guaranteed band — it stops
+ * at the threshold so every risky step is a deliberate, single, insurable attempt.
  */
 export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
@@ -502,6 +513,8 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   const cap = getEnhanceLevelCap(entity);
   if (anchor.level >= cap) return state;
   const anchorId = anchor.instanceId;
+  const prevLevel = anchor.level;
+  const risky = isEnhanceRiskLevel(prevLevel); // this step (prev → prev+1) can fail
 
   // Fodder = same-entity spares (not the anchor, not equipped), weakest first.
   const fodder = state.inventory
@@ -509,15 +522,108 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     .sort((a, b) => a.level - b.level || (a.quality ?? 1) - (b.quality ?? 1));
   const spares = fodder.reduce((s, e) => s + (e.count ?? 1), 0);
 
-  const merge = applyMergeCopies(anchor.level, spares, cap);
-  if (merge.levelsGained <= 0) {
+  // Guaranteed multi-level merge climbs only THROUGH the threshold; the risky step is
+  // always taken one level at a time so each fail roll covers exactly one attempt.
+  const mergeCap = risky ? prevLevel : Math.min(cap, ENHANCE_STONE_THRESHOLD - 1);
+  const merge = applyMergeCopies(prevLevel, spares, mergeCap);
+
+  // ── Determine COST & path. The risk step is single-level on whichever path is open;
+  //    the guaranteed band uses the existing greedy merge / 강화석 escape. ──
+  const usingMerge = merge.levelsGained > 0; // spares cover at least one guaranteed level
+  let consumedIds = new Set<string | undefined>();
+  let consumedInstances = fodder.slice(0, 0);
+  let stoneSpend = 0;
+  let resultLevel: number;
+
+  if (risky) {
+    // Single risky level: pay with copies if you have need(prevLevel), else the 강화석
+    // escape, else no-op. Resolve the fail roll, then apply protect/break/up.
+    const needCopies = needCopiesForLevel(prevLevel);
+    const stoneCost = getEnhanceStoneCost(entity, prevLevel);
+    const payWithCopies = spares >= needCopies;
+    if (!payWithCopies && state.enhanceStones < stoneCost) return state;
+    if (payWithCopies) {
+      consumedInstances = fodder.slice(0, needCopies);
+      consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
+    } else {
+      stoneSpend = stoneCost;
+    }
+    resultLevel = prevLevel + 1;
+
+    const failRoll = action.failRoll ?? Math.random();
+    const failed = failRoll < getEnhanceFailChance(prevLevel);
+    const eventId = nextEventId(state);
+
+    if (!failed) {
+      // SUCCESS — same as a guaranteed level-up (consume the cost, raise one level).
+      const mergedQuality = consumedInstances.reduce<number | undefined>((q, e) => bestQuality(q, e.quality), anchor.quality);
+      const nextInventory = state.inventory
+        .filter((e) => !consumedIds.has(e.instanceId))
+        .map((e) => {
+          if (e.instanceId !== anchorId) return e;
+          const next = { ...e, level: resultLevel };
+          if (mergedQuality !== undefined) next.quality = mergedQuality;
+          return next;
+        });
+      return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+        ...state,
+        enhanceStones: state.enhanceStones - stoneSpend,
+        inventory: nextInventory,
+        eventCounter: eventId,
+        lastEnhanceEvent: {
+          id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+          outcome: 'up', level: resultLevel, prevLevel,
+          mergedCount: payWithCopies ? needCopies : 0,
+        },
+      }));
+    }
+
+    // FAILED. The cost (copies / stones) is consumed either way.
+    const protectAvailable = !!action.useProtect && state.enhanceProtectCharges > 0;
+    if (protectAvailable) {
+      // PROTECTED — spend one charge; the anchor survives at its current level.
+      const nextInventory = state.inventory.filter((e) => !consumedIds.has(e.instanceId));
+      return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+        ...state,
+        enhanceStones: state.enhanceStones - stoneSpend,
+        enhanceProtectCharges: state.enhanceProtectCharges - 1,
+        inventory: nextInventory,
+        eventCounter: eventId,
+        lastEnhanceEvent: {
+          id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+          outcome: 'protected', level: prevLevel, prevLevel,
+        },
+      }));
+    }
+
+    // UNPROTECTED FAIL — DESTROY the anchor copy + mint consolation 강화석.
+    const breakStones = rollBreakStones(entity.rarity, action.breakRoll);
+    const destroyedIds = new Set<string | undefined>([anchorId, ...consumedIds]);
+    const nextInventory = state.inventory.filter((e) => !destroyedIds.has(e.instanceId));
+    return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+      ...state,
+      enhanceStones: state.enhanceStones - stoneSpend + breakStones,
+      // The destroyed anchor may be equipped (you can enhance worn gear) — scrub its slot.
+      equippedSlots: state.equippedSlots.filter((id) => !destroyedIds.has(id)),
+      riftSlots: state.riftSlots.filter((id) => !destroyedIds.has(id)),
+      wildSlot: destroyedIds.has(state.wildSlot) ? '' : state.wildSlot,
+      inventory: nextInventory,
+      eventCounter: eventId,
+      lastEnhanceEvent: {
+        id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+        outcome: 'break', level: prevLevel, prevLevel, stonesEarned: breakStones,
+      },
+    }));
+  }
+
+  // ── GUARANTEED band (resulting level < threshold): unchanged behaviour. ──
+  if (!usingMerge) {
     // #8 (user): no spare copies for even one level → the 강화석 escape valve
     // ("카드가 없으면 비싸게 업그레이트"). Pay an escalating 강화석 price for ONE level; no
-    // copies consumed. Replaces the removed copy-token BUY ("카드 사는건 안 됨") and
-    // keeps 강화석 a live sink. Copies remain the cheap (free) path when you have them.
-    const stoneCost = getEnhanceStoneCost(entity, anchor.level);
+    // copies consumed. Copies remain the cheap (free) path when you have them.
+    const stoneCost = getEnhanceStoneCost(entity, prevLevel);
     if (state.enhanceStones < stoneCost) return state;
-    const nextLevel = anchor.level + 1;
+    const nextLevel = prevLevel + 1;
     const eventId = nextEventId(state);
     const nextInventory = state.inventory.map((e) =>
       e.instanceId === anchorId ? { ...e, level: nextLevel } : e);
@@ -527,19 +633,14 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       inventory: nextInventory,
       eventCounter: eventId,
       lastEnhanceEvent: {
-        id: eventId,
-        entityId: anchor.entityId,
-        instanceId: anchorId,
-        outcome: 'up',
-        level: nextLevel,
-        prevLevel: anchor.level,
-        mergedCount: 0,
+        id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+        outcome: 'up', level: nextLevel, prevLevel, mergedCount: 0,
       },
     }));
   }
 
-  const consumedInstances = fodder.slice(0, merge.consumed); // each flat copy = 1
-  const consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
+  consumedInstances = fodder.slice(0, merge.consumed); // each flat copy = 1
+  consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
   const mergedQuality = consumedInstances.reduce<number | undefined>((q, e) => bestQuality(q, e.quality), anchor.quality);
 
   const eventId = nextEventId(state);
@@ -561,13 +662,8 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     inventory: nextInventory,
     eventCounter: eventId,
     lastEnhanceEvent: {
-      id: eventId,
-      entityId: anchor.entityId,
-      instanceId: anchorId,
-      outcome: 'up',
-      level: merge.newLevel,
-      prevLevel: anchor.level,
-      mergedCount: merge.consumed,
+      id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+      outcome: 'up', level: merge.newLevel, prevLevel, mergedCount: merge.consumed,
     },
   }));
 }

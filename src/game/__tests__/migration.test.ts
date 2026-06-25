@@ -328,6 +328,23 @@ describe('save migration', () => {
     expect(loadGame()!.enhanceStones).toBe(42); // genuine v19 keeps its balance
   });
 
+  it('v30 seeds enhanceProtectCharges=0 for pre-v30 saves and round-trips it for v30', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    // A pre-v30 save has no enhanceProtectCharges field → defaults to 0 (consumable is new).
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 29, enhanceProtectCharges: 7 }));
+    expect(loadGame()!.enhanceProtectCharges).toBe(0); // veteran: brand-new field, not retroactive
+    // A genuine v30 save keeps its purchased charges.
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 30, enhanceProtectCharges: 7 }));
+    expect(loadGame()!.enhanceProtectCharges).toBe(7);
+    // A corrupt (negative) value clamps to 0.
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 30, enhanceProtectCharges: -5 }));
+    expect(loadGame()!.enhanceProtectCharges).toBe(0);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

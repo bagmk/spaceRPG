@@ -1,10 +1,15 @@
 /**
  * Enhancement (강화소): Overhaul-4 P7b — level an owned copy by MERGING spare
- * duplicate copies (collect, don't pay). Levels multiply the primary effect AND
- * secondary stats (+ENTITY_LEVEL_EFFECT_BONUS per level) and are capped by rarity.
- * The old matter-cost + 강화석 risk(fail/break)/protect mechanic is GONE; 물질/강화석
- * now buy a copy-token instead. Tunables live in balance.ts (ENHANCE_* / ENH_DUP_* /
- * COPY_TOKEN_*).
+ * duplicate copies (collect, don't pay), with the 강화석 escape valve when you have
+ * no spares. Levels multiply the primary effect AND secondary stats
+ * (+ENTITY_LEVEL_EFFECT_BONUS per level) and are capped by rarity.
+ *
+ * RISK is back (user "실패·파괴 부활 + 보호 아이템"): enhancing is GUARANTEED through Lv2;
+ * from the step that lands on ENHANCE_STONE_THRESHOLD (Lv3) up, an attempt can FAIL.
+ * An unprotected fail DESTROYS the copy (minting consolation 강화석); a matter-bought
+ * 보호 charge (인과 닻, enhanceProtectCharges) absorbs the fail instead. The fail curve
+ * + break-refund + protection price all live in balance.ts (ENHANCE_FAIL_* /
+ * ENHANCE_BREAK_STONE_* / ENHANCE_PROTECT_*).
  */
 
 import {
@@ -15,8 +20,14 @@ import {
   ENH_DUP_STEP,
   ENHANCE_STONE_BASE,
   ENHANCE_STONE_GROWTH,
+  ENHANCE_STONE_THRESHOLD,
+  ENHANCE_FAIL_BASE,
+  ENHANCE_FAIL_PER_LEVEL,
+  ENHANCE_FAIL_MAX,
+  ENHANCE_BREAK_STONE_MIN,
+  ENHANCE_BREAK_STONE_MAX,
 } from '../balance';
-import { type StageEntity } from './types';
+import { type StageEntity, type EntityRarity } from './types';
 
 export function getEnhanceLevelCap(entity: StageEntity): number {
   return ENHANCE_LEVEL_CAPS[entity.rarity] ?? 10;
@@ -34,6 +45,45 @@ export function getEnhanceStoneCost(entity: StageEntity, level: number): number 
   const safeLevel = Math.max(1, Math.floor(level));
   const base = ENHANCE_STONE_BASE[entity.rarity] ?? 2;
   return Math.ceil(base * Math.pow(ENHANCE_STONE_GROWTH, safeLevel - 1));
+}
+
+// ── 강화 RISK phase (user: "실패·파괴 부활 + 보호 아이템") ─────────────────────────
+//   Enhancing is GUARANTEED through Lv2 (i.e. the Lv1→2 and Lv2→3 steps). From the
+//   step that LANDS on ENHANCE_STONE_THRESHOLD (3) and above, an attempt can FAIL.
+//   On an unprotected fail the enhanced copy is DESTROYED (and mints consolation
+//   강화석); a held protection charge (인과 닻) absorbs the fail instead. Applies to
+//   BOTH the copy-merge and 강화석-escape paths.
+
+/** True when enhancing FROM `level` (level → level+1) is in the risk phase — i.e. the
+ *  resulting level is ≥ ENHANCE_STONE_THRESHOLD. Lv1→2 / Lv2→3 stay guaranteed. */
+export function isEnhanceRiskLevel(level: number): boolean {
+  return Math.floor(level) + 1 >= ENHANCE_STONE_THRESHOLD;
+}
+
+/**
+ * Fail chance for the level → level+1 step. 0 below the risk phase; in the risk
+ * phase it is min(MAX, BASE + (resultLevel − THRESHOLD)·PER_LEVEL) so it rises with
+ * level and caps at ENHANCE_FAIL_MAX. The "level above the threshold" is measured on
+ * the RESULTING level (the first risky step, landing on THRESHOLD, pays BASE exactly).
+ */
+export function getEnhanceFailChance(level: number): number {
+  if (!isEnhanceRiskLevel(level)) return 0;
+  const resultLevel = Math.floor(level) + 1;
+  const over = resultLevel - ENHANCE_STONE_THRESHOLD;
+  return Math.min(ENHANCE_FAIL_MAX, ENHANCE_FAIL_BASE + over * ENHANCE_FAIL_PER_LEVEL);
+}
+
+/**
+ * Consolation 강화석 minted when an UNPROTECTED fail destroys a copy — a random
+ * integer in [min, max] by rarity (losing a rarer item softens the loss more). The
+ * caller passes a [0,1) roll (deterministic in tests); defaults to Math.random().
+ */
+export function rollBreakStones(rarity: EntityRarity, roll: number = Math.random()): number {
+  const min = ENHANCE_BREAK_STONE_MIN[rarity] ?? 1;
+  const max = ENHANCE_BREAK_STONE_MAX[rarity] ?? min;
+  const span = Math.max(0, max - min);
+  const r = Math.min(0.999999, Math.max(0, roll));
+  return min + Math.floor(r * (span + 1));
 }
 
 // ── Overhaul-4 P7b: duplicate-collection enhance (pure merge math) ────────────

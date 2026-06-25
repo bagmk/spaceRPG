@@ -137,6 +137,7 @@ export function createInitialGameState(now: number): GameState {
     codexSeenIds: [],
     seenPanelHints: [],
     enhanceStones: 0,
+    enhanceProtectCharges: 0,
     // 🅠5: fresh game starts at stage 1 — offer the stage-1-eligible quests.
     activeQuests: pickActiveQuests([], 1),
     completedQuestIds: [],

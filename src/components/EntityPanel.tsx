@@ -5,6 +5,7 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   ENHANCE_UNLOCK_STAGE_ID,
+  ENHANCE_PROTECT_ITEM_NAME,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_BATCH_MAX_TRIOS,
@@ -28,7 +29,7 @@ import {
 import { computeHexBingo } from '../game/entities/hexBingo';
 import { getWalletAnchorFlat, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
-import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost } from '../game/entities/enhance';
+import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost, isEnhanceRiskLevel, getEnhanceFailChance } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
@@ -451,6 +452,8 @@ interface Props {
   quanta: number;
   /** 강화석 balance — Lv5+ enhancement currency (v19). */
   enhanceStones?: number;
+  /** 강화 보호 charges (인과 닻, v30) — spent to absorb a failed risk-phase enhance. */
+  enhanceProtectCharges?: number;
   lastEnhanceEvent?: EnhanceEvent | null;
   stats: PanelStats;
   language: Lang;
@@ -458,7 +461,8 @@ interface Props {
   /** #44: equip into the hexagon CENTER (wild) slot — dispatches EQUIP_ENTITY {wild:true}. */
   onEquipWild?: (entityId: string) => void;
   onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
-  onEnhance: (instanceId: string) => void;
+  /** Risk phase (v30): useProtect = spend a 강화 보호 charge on a fail (the "보호 사용" toggle). */
+  onEnhance: (instanceId: string, useProtect?: boolean) => void;
   onFuse: (inputEntityIds: string[]) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
   onFuseBatch: (inputEntityIds: string[]) => void;
@@ -486,7 +490,7 @@ function levelTextStyle(level: number): CSSProperties {
   return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -553,6 +557,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // id being enhanced so the charge core can show its glyph.
   const [enhancing, setEnhancing] = useState<string | null>(null);
   const enhanceTimerRef = useRef<number | null>(null);
+  // Risk phase (v30): the "보호 사용" toggle — when ON and a charge is held, a failed
+  // risk-phase enhance spends one 강화 보호 charge instead of destroying the item.
+  const [useProtect, setUseProtect] = useState(true);
   // Overhaul-4 (v26): Fuse-All protection is now the PERSISTENT ★ favorite
   // (favoriteEntityIds prop) — the old per-session excludedIds Set was replaced.
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
@@ -598,7 +605,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     onUITap?.();
     enhanceTimerRef.current = window.setTimeout(() => {
       setEnhancing(null);
-      onEnhance(id);
+      onEnhance(id, useProtect);
     }, 550 + Math.random() * 450); // ~0.55–1.0s, slightly random
   };
 
@@ -2002,6 +2009,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
               {ev.outcome === 'up' && (ev.mergedCount ?? 0) > 0 ? (
                 <div className="enhance-result-card__payout">{`🧬 ${t(language, 'enhanceMerged').replace('{n}', String(ev.mergedCount))}`}</div>
               ) : null}
+              {/* Risk phase: a destroyed copy mints consolation 강화석 — show the haul. */}
+              {ev.outcome === 'break' && (ev.stonesEarned ?? 0) > 0 ? (
+                <div className="enhance-result-card__payout">{`◆ +${ev.stonesEarned}`}</div>
+              ) : null}
             </article>
           </div>
         );
@@ -2043,6 +2054,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
         // ("카드 없으면 비싸게"). Copies stay the cheap (free) path; the buy is gone.
         const stoneCost = getEnhanceStoneCost(ent, lvl);
         const canStone = !atCap && !canMerge && enhanceStones >= stoneCost;
+        // Risk phase (v30): from the step landing on the threshold up, this attempt can
+        // FAIL (destroying the copy) unless a 보호 charge absorbs it. Show the odds + warn.
+        const risky = !atCap && isEnhanceRiskLevel(lvl);
+        const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
+        const protectActive = risky && useProtect && enhanceProtectCharges > 0;
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
@@ -2072,6 +2088,28 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
                 ) : null}
               </div>
+              {/* Risk phase (v30): fail % + a destroy warning, and the 보호 사용 toggle with
+                  the held charge count. Protection ON+charge → the fail is absorbed. */}
+              {risky && enhanceUnlocked ? (
+                <div className="enhance-risk">
+                  <div className="enhance-risk__warn" style={{ color: '#e2554a' }}>
+                    {`⚠ ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))} · ${t(language, protectActive ? 'enhanceProtectSafe' : 'enhanceRiskDestroy')}`}
+                  </div>
+                  <button
+                    type="button"
+                    className={`enhance-protect-toggle ${useProtect ? 'enhance-protect-toggle--on' : ''}`}
+                    role="switch"
+                    aria-checked={useProtect}
+                    disabled={enhancing !== null}
+                    onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
+                  >
+                    {`${useProtect ? '☑' : '☐'} ${t(language, 'enhanceUseProtect')} · 🛡 ${enhanceProtectCharges}`}
+                  </button>
+                  {useProtect && enhanceProtectCharges <= 0 ? (
+                    <div className="enhance-risk__no-charge">{t(language, 'enhanceNoProtect').replace('{n}', ENHANCE_PROTECT_ITEM_NAME[language])}</div>
+                  ) : null}
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"

@@ -74,18 +74,31 @@ const GATE_RAMP = 3;
 //   gentler ramp so high levels are reachable (the crank that funds the shop).
 const ENHANCE_COST_FACTOR = 0.5;
 const ENHANCE_COST_GROWTH = 1.15;
-// #47 reinterpretation: enhance is now MATTER-ONLY at every level. 강화석 are spent
-// only to 보호(protect) a risk-phase attempt; an unprotected fail DESTROYS the item.
-// A rational player climbs the risk phase by protecting every attempt, so the
-// reliably-reachable level is still gated by the 강화석 budget — protectCost ≈
-// ENHANCE_STONE_BASE (PROTECT_STONE_MULT = 1.0), so `derivedLevel`'s stone-phase
-// loop is unchanged: it now counts "levels you can afford to PROTECT" rather than
-// "levels you can afford to BUY". The entropy-side level math is therefore identical.
-// Stone budget per stage = expected fusions × fail rate × stones-per-fail(best rarity)
-// (enhance-break refunds add more, ignored here for a conservative lower bound).
-const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 (was 5) — lockstep with balance.ts.
+// RISK + MATTER-BOUGHT PROTECTION (user "실패·파괴 부활 + 보호 아이템"): enhance is GUARANTEED
+// through Lv2; from the step landing on ENHANCE_STONE_THRESHOLD (Lv3) up, each attempt
+// can FAIL (getEnhanceFailChance), and an unprotected fail DESTROYS the copy. Protection
+// is NO LONGER 강화석-bought — it is a MATTER-bought consumable (인과 닻, ENHANCE_PROTECT_
+// MATTER_FRAC × anchor per charge). A rational player buys protection with matter and
+// protects EVERY risk-phase attempt, so the reliably-reachable level is gated by the
+// MATTER budget: each risky level costs (a) its enhance matter cost PLUS (b) the
+// protection matter for its expected fails — failChance/(1−failChance) charges, each
+// ENHANCE_PROTECT_MATTER_FRAC × anchor (a protected fail keeps the item, so you simply
+// retry). This is modeled inside derivedLevel's risk loop, gated on the SAME matter
+// budget as the guaranteed phase (no separate 강화석 gate). The 강화석 budget now only
+// funds break-refund consolation (ignored here — conservative). The fail curve lowers
+// the matter-reachable level vs the old free-protect model, so the thresholds re-pin.
+const ENHANCE_STONE_THRESHOLD = 3; // #40: fail/break risk from Lv3 — lockstep with balance.ts.
 const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.3; // Overhaul-3 (user): 1.5 → 1.3 — lockstep with balance.ts.
+// Matter-bought protection (인과 닻) — lockstep with balance.ts ENHANCE_PROTECT_MATTER_FRAC
+// + the fail curve (ENHANCE_FAIL_BASE/PER_LEVEL/MAX). Charge cost = this × stage anchor.
+const ENHANCE_PROTECT_MATTER_FRAC = 0.5;
+const ENHANCE_FAIL_BASE = 0.25;
+const ENHANCE_FAIL_PER_LEVEL = 0.06;
+const ENHANCE_FAIL_MAX = 0.55;
+// Fail chance for the step landing on `resultLevel` (≥ THRESHOLD) — mirrors enhance.ts.
+const enhanceFailChance = (resultLevel) =>
+  Math.min(ENHANCE_FAIL_MAX, ENHANCE_FAIL_BASE + (resultLevel - ENHANCE_STONE_THRESHOLD) * ENHANCE_FAIL_PER_LEVEL);
 // Tiered fusion up-odds (P2) — lockstep with balance.ts FUSION_UP1/UP2_CHANCE_BY_TIER.
 // A fusion that does NOT rarity-up mints 강화석, so failRate = 1 − up1 − up2 for
 // the tier being fused. P6 fix: this was a flat 0.55 (a P1 leftover from before
@@ -226,24 +239,35 @@ function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined
   // enhance (current stage) the budget/cost ratio is unchanged vs the old
   // model. Only held PAST-stage gear got cheaper. Pacing-neutral here.
   const base = ENTITY_COST_ANCHORS[stageId] * RARITY_FACTOR[rarity] * ENHANCE_COST_FACTOR;
+  // Matter-bought protection charge cost at this stage (인과 닻).
+  const protectChargeCost = ENTITY_COST_ANCHORS[stageId] * ENHANCE_PROTECT_MATTER_FRAC;
   let total = 0;
   let level = 1;
-  // Matter phase: levels up to the stone threshold (or the budget runs out).
+  // Guaranteed phase: levels up to the risk threshold (or the matter budget runs out).
   while (level < Math.min(ENHANCE_STONE_THRESHOLD, LEVEL_CAPS[rarity])) {
     const next = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
     if (total + next > budget) return level;
     total += next;
     level += 1;
   }
-  // Risk phase (#47): matter-funded but reliably gated by the 강화석 budget you can
-  // spend on 보호(protect) — protectCost ≈ ENHANCE_STONE_BASE, so this loop is the
-  // same as the old stone-purchase loop (protected attempts ≈ stone-bought levels).
-  let stoneTotal = 0;
+  // Risk phase: each risky step costs its enhance matter PLUS the protection matter
+  // for its expected fails. A rational player protects every attempt, so each level
+  // takes 1 successful attempt + failChance/(1−failChance) failed (protected) retries
+  // on average; every attempt (success or fail) pays the enhance cost, and each FAILED
+  // attempt also burns one protection charge. So the expected matter for the level →
+  // level+1 step is enhanceCost × E[attempts] + protectChargeCost × E[failedAttempts].
+  // ALL of it comes out of the SAME matter budget (강화석 only funds break-refund, which
+  // we ignore — conservative). stoneBudget is retained for signature compatibility.
+  void stoneBudget;
   while (level < LEVEL_CAPS[rarity]) {
-    const over = level - ENHANCE_STONE_THRESHOLD;
-    const nextStone = ENHANCE_STONE_BASE[rarity] * Math.pow(ENHANCE_STONE_GROWTH, over);
-    if (stoneTotal + nextStone > stoneBudget) break;
-    stoneTotal += nextStone;
+    const resultLevel = level + 1; // this step lands here (≥ THRESHOLD)
+    const fail = enhanceFailChance(resultLevel);
+    const expectedAttempts = 1 / Math.max(1e-6, 1 - fail);
+    const expectedFails = expectedAttempts - 1;
+    const enhanceCost = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
+    const stepCost = enhanceCost * expectedAttempts + protectChargeCost * expectedFails;
+    if (total + stepCost > budget) break;
+    total += stepCost;
     level += 1;
   }
   return level;

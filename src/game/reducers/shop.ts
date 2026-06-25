@@ -7,6 +7,7 @@ import { generateDailyShop, toDateKey } from '../shop/daily';
 import {
   shopItemMatterCost,
   shopStoneMatterCost,
+  shopProtectMatterCost,
   shopRefreshMatterCost,
   packMatterPayout,
   gachaBoxMatterCost,
@@ -27,6 +28,7 @@ type CompleteShopPurchaseAction = Extract<GameAction, { type: 'COMPLETE_SHOP_PUR
 type ClaimAdRewardAction = Extract<GameAction, { type: 'CLAIM_AD_REWARD' }>;
 type ResumeBoostsAction = Extract<GameAction, { type: 'RESUME_BOOSTS' }>;
 type BuyEnhanceStonesAction = Extract<GameAction, { type: 'BUY_ENHANCE_STONES' }>;
+type BuyEnhanceProtectAction = Extract<GameAction, { type: 'BUY_ENHANCE_PROTECT' }>;
 type BuyDailyItemAction = Extract<GameAction, { type: 'BUY_DAILY_ITEM' }>;
 type RefreshDailyShopAction = Extract<GameAction, { type: 'REFRESH_DAILY_SHOP' }>;
 type SyncDailyShopAction = Extract<GameAction, { type: 'SYNC_DAILY_SHOP' }>;
@@ -150,6 +152,21 @@ export function handleBuyEnhanceStones(state: GameState, action: BuyEnhanceStone
     ...state,
     quanta: state.quanta - cost,
     enhanceStones: state.enhanceStones + count,
+  };
+}
+
+/** Buy 강화 보호 charges (인과 닻) with matter: cost = stage anchor ×
+ *  ENHANCE_PROTECT_MATTER_FRAC × count (user: "강화 보호용 사는거"). One charge absorbs a
+ *  failed risk-phase enhance so the item isn't destroyed. */
+export function handleBuyEnhanceProtect(state: GameState, action: BuyEnhanceProtectAction): GameState {
+  if (!isCashShopUnlocked(state)) return state;
+  const count = Math.max(1, Math.floor(action.count));
+  const cost = shopProtectMatterCost(playerStageId(state), count);
+  if (state.quanta < cost) return state;
+  return {
+    ...state,
+    quanta: state.quanta - cost,
+    enhanceProtectCharges: state.enhanceProtectCharges + count,
   };
 }
 
