@@ -825,6 +825,8 @@ export function GameScreen({
               dropStageRoll: Math.random(),
               qualityRoll1: Math.random(),
               qualityRoll2: Math.random(),
+              // Stage-revisit: clicking while viewing a past stage drops from THAT stage's pool.
+              viewedStageId: isViewingPastStage ? displayStage.id : undefined,
               x: ox,
               y: oy,
               forceCrit: forceCrit || mechanicResult?.forceCrit,
@@ -851,6 +853,7 @@ export function GameScreen({
               dropStageRoll: Math.random(),
               qualityRoll1: Math.random(),
               qualityRoll2: Math.random(),
+              viewedStageId: isViewingPastStage ? displayStage.id : undefined,
             })
           }
         />

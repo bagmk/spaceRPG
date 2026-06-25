@@ -232,10 +232,16 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const clickEntropy = (gained + boostedMechanicQuanta) * ENTROPY_W_CLICK;
   const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
   // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
+  // Stage-revisit: when viewing a PAST stage, draw the drop from THAT stage's pool so the
+  // player can revisit earlier eras to fill their codex (absent/current → current stage).
+  const dropStageId =
+    action.viewedStageId !== undefined && action.viewedStageId >= 1 && action.viewedStageId < stage.id
+      ? action.viewedStageId
+      : stage.id;
   const droppedEntity =
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
-          stage.id,
+          dropStageId,
           getClickDropChance(isCrit) * modifiers.dropChanceMult * getMultiverseLensDropMult(state),
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit, combo },
@@ -322,10 +328,15 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
   const tierSpanCap = COLLISION_ENTROPY_SPAN_CAP[action.tier] ?? COLLISION_ENTROPY_SPAN_CAP.minor;
   const entropyGained = Math.min(rawEntropyGain, entropySpan * tierSpanCap);
   const eventId = nextEventId(state);
+  // Stage-revisit: absorb a comet while viewing a PAST stage → drop from that stage's pool.
+  const dropStageId =
+    action.viewedStageId !== undefined && action.viewedStageId >= 1 && action.viewedStageId < stage.id
+      ? action.viewedStageId
+      : stage.id;
   const droppedEntity =
     action.dropRoll !== undefined && action.dropPickRoll !== undefined
       ? rollEntityDrop(
-          stage.id,
+          dropStageId,
           getCollisionDropChance() * modifiers.dropChanceMult * getMultiverseLensDropMult(state),
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit: true },

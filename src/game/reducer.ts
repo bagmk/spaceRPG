@@ -94,6 +94,9 @@ export type GameAction =
       /** #50 — two 0..1 rolls → gaussian quality for a dropped copy (absent → neutral). */
       qualityRoll1?: number;
       qualityRoll2?: number;
+      /** Stage-revisit: when viewing a PAST stage, drops come from THAT stage's pool so
+       *  the player can revisit to collect its codex (absent → current stage). */
+      viewedStageId?: number;
     }
   | { type: 'START_CONDENSE'; now: number }
   | { type: 'ADVANCE_STAGE'; now: number }
@@ -123,6 +126,9 @@ export type GameAction =
       /** #50 — two 0..1 rolls → gaussian quality for a dropped copy (absent → neutral). */
       qualityRoll1?: number;
       qualityRoll2?: number;
+      /** Stage-revisit: when viewing a PAST stage, drops come from THAT stage's pool so
+       *  the player can revisit to collect its codex (absent → current stage). */
+      viewedStageId?: number;
     }
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
