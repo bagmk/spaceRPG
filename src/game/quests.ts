@@ -129,6 +129,47 @@ export function isPastQuestClaimable(quest: QuestDef, state: GameState): boolean
   return pastQuestProgress(quest, state) >= quest.target;
 }
 
+type RevisitBump = { mode: 'inc' | 'max'; value: number };
+
+/**
+ * Stage-revisit (action tracks): advance a PAST stage's OPEN milestone snapshot when the
+ * player revisits and performs the matching action, so a revisit can finish those quests
+ * too. Reuses the persisted stageQuestProgress (no new save field). Only the play-area
+ * tracks map to a viewed stage: pulse(click) + combo (handleClick), comet (handleAbsorbComet).
+ * forge (global fusion) and expanse (already-cleared gate) do NOT map to revisiting. The
+ * codex/archive track needs nothing here — it fills live off the almanac (see pastQuestProgress).
+ * `inc` adds value; `max` lifts to ≥ value. Clamped to target. Returns the SAME reference when
+ * nothing changes, so the click hot path pays nothing outside a past-stage view.
+ */
+export function bumpRevisitMilestones(
+  stageQuestProgress: Record<number, Record<string, number>>,
+  stageId: number,
+  completedQuestIds: string[],
+  bumps: Record<string, RevisitBump | undefined>,
+): Record<number, Record<string, number>> {
+  const openByTrack = new Map<string, string>();
+  for (const id of getStageMilestoneActiveIds(stageId, completedQuestIds)) {
+    const tr = milestoneTrack(id);
+    if (tr) openByTrack.set(tr, id);
+  }
+  const forStage: Record<string, number> = { ...(stageQuestProgress[stageId] ?? {}) };
+  let changed = false;
+  for (const [track, bump] of Object.entries(bumps)) {
+    if (!bump) continue;
+    const questId = openByTrack.get(track);
+    if (!questId) continue;
+    const quest = getQuest(questId);
+    if (!quest) continue;
+    const cur = forStage[questId] ?? 0;
+    const next = Math.min(quest.target, bump.mode === 'inc' ? cur + bump.value : Math.max(cur, bump.value));
+    if (next !== cur) {
+      forStage[questId] = next;
+      changed = true;
+    }
+  }
+  return changed ? { ...stageQuestProgress, [stageId]: forStage } : stageQuestProgress;
+}
+
 /**
  * Compute the active quest set: keep the still-valid current ones and top up
  * with the next eligible (minStage ≤ stageId, not completed, not already active)

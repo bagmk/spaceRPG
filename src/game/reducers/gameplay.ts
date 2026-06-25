@@ -35,6 +35,7 @@ import {
 import { rollQualityScore } from '../entities/quality';
 import { getEquippedInstances } from '../entities/effects';
 import { syncSlotUnlocks } from './entities';
+import { bumpRevisitMilestones } from '../quests';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
@@ -255,9 +256,19 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const dropIsNew =
     droppedEntity !== null && isNewDiscovery(state.almanacCollected, droppedEntity.stageId, droppedEntity.id);
   const dropEventId = dropIsNew ? eventId + 1 : eventId;
+  // Stage-revisit: a click in a PAST era advances that era's pulse(click) + combo milestone
+  // snapshots so a revisit can finish them (same-ref no-op outside a past-stage view).
+  const stageQuestProgress =
+    action.viewedStageId !== undefined && action.viewedStageId >= 1 && action.viewedStageId < stage.id
+      ? bumpRevisitMilestones(state.stageQuestProgress, action.viewedStageId, state.completedQuestIds, {
+          pulse: { mode: 'inc', value: 1 },
+          combo: { mode: 'max', value: combo },
+        })
+      : state.stageQuestProgress;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: nextQuanta,
+    stageQuestProgress,
     entropy: safeAdd(state.entropy, entropyGained),
     totalClicks: state.totalClicks + 1,
     combo,
@@ -347,9 +358,17 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
   const dropIsNew =
     droppedEntity !== null && isNewDiscovery(state.almanacCollected, droppedEntity.stageId, droppedEntity.id);
   const dropEventId = dropIsNew ? eventId + 1 : eventId;
+  // Stage-revisit: absorbing a comet while viewing a PAST era advances that era's comet milestone.
+  const stageQuestProgress =
+    action.viewedStageId !== undefined && action.viewedStageId >= 1 && action.viewedStageId < stage.id
+      ? bumpRevisitMilestones(state.stageQuestProgress, action.viewedStageId, state.completedQuestIds, {
+          comet: { mode: 'inc', value: 1 },
+        })
+      : state.stageQuestProgress;
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: safeAdd(state.quanta, boostedBonus),
+    stageQuestProgress,
     entropy: safeAdd(state.entropy, entropyGained),
     collisions: state.collisions + 1,
     cometsThisStage: state.cometsThisStage + 1, // milestones: per-stage comet counter

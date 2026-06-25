@@ -67,4 +67,28 @@ describe('stage-revisit quests', () => {
     };
     expect(pastQuestProgress(quest, state)).toBe(3);
   });
+
+  it('clicking while viewing a past stage advances THAT stage\'s pulse(click) snapshot', () => {
+    const base = {
+      ...createInitialGameState(0),
+      stageIdx: 7, // current stage 8
+      stageQuestProgress: { 2: { 'm.2.pulse.0': 5 } },
+      completedQuestIds: [],
+    };
+    const next = gameReducer(base, {
+      type: 'CLICK', now: 1000, randomValue: 0.99, x: 0, y: 0, viewedStageId: 2,
+    });
+    expect(next.stageQuestProgress[2]?.['m.2.pulse.0']).toBe(6); // 5 → 6
+  });
+
+  it('clicking with no past-stage view leaves every stage snapshot untouched', () => {
+    const base = {
+      ...createInitialGameState(0),
+      stageIdx: 7,
+      stageQuestProgress: { 2: { 'm.2.pulse.0': 5 } },
+      completedQuestIds: [],
+    };
+    const next = gameReducer(base, { type: 'CLICK', now: 1000, randomValue: 0.99, x: 0, y: 0 });
+    expect(next.stageQuestProgress[2]?.['m.2.pulse.0']).toBe(5); // unchanged
+  });
 });
