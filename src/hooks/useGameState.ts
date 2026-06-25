@@ -106,7 +106,7 @@ export function useGameState(): UseGameStateResult {
           stageId: stage.id,
           gateProgress01: getEntropyGateProgress(payload.entropy ?? 0, payload.stageIdx),
         },
-        getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? [])]),
+        getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? []), payload.wildSlot ?? '']),
         payload.prestigeUpgrades,
         payload.almanacCollected,
       );
