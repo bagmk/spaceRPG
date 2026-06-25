@@ -284,6 +284,8 @@ interface ParticleFieldProps {
   /** Ever-collected entity ids per stage — lets Stage 11's Earth keep built-up surface
    *  features once seen (they don't shrink/vanish when copies are fused away). */
   almanacCollected?: Record<number, string[]>;
+  /** Universe count — resets Stage 11's Earth surface high-water-mark on a new run. */
+  runId?: number;
   /** Rift gear ids — shapes the auto-income motes leaking from the rift. */
   riftSlots: string[];
   /** Click gear ids — shapes the click emission motes (스펙 §8). */
@@ -868,6 +870,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   anomaly,
   inventory,
   almanacCollected,
+  runId,
   riftSlots,
   clickSlots,
   riftPower,
@@ -1524,7 +1527,7 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     if (stage.clusterMode !== 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
-    drawEntities(ctx, cx, cy, actualStageId, inventory, now, pointerPressure, world.cluster, almanacCollected);
+    drawEntities(ctx, cx, cy, actualStageId, inventory, now, pointerPressure, world.cluster, almanacCollected, runId);
     if (stage.clusterMode === 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
