@@ -88,6 +88,12 @@ export function milestoneStageId(id: string): number {
   return parts[0] === 'm' ? Number(parts[1]) : NaN;
 }
 
+/** Track segment of a milestone id (`m.{stage}.{track}.{step}`), else undefined. */
+export function milestoneTrack(id: string): string | undefined {
+  const parts = id.split('.');
+  return parts[0] === 'm' ? parts[2] : undefined;
+}
+
 // ── #42: 1:1 milestone ↔ era-record (StageLog) mapping ──────────────────────
 // Every milestone unlocks one era-record. The milestone is TITLED after that
 // record, and claiming it reveals the record in the almanac timeline — so

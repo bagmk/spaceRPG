@@ -26,7 +26,7 @@ export function handleClaimQuest(state: GameState, action: ClaimQuestAction): Ga
   if (!quest) return state;
   if (state.completedQuestIds.includes(action.questId)) return state;
   const isLive = state.activeQuests.includes(action.questId) && isQuestClaimable(quest, state);
-  const isPast = isPastQuestClaimable(quest, state.stageQuestProgress, state.completedQuestIds);
+  const isPast = isPastQuestClaimable(quest, state);
   if (!isLive && !isPast) return state;
 
   const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;

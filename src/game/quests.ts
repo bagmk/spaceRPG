@@ -18,7 +18,7 @@
 
 import type { GameState } from './types';
 import type { Lang } from '../i18n';
-import { buildMilestone, getStageMilestoneActiveIds, isMilestoneId, milestoneStageId } from './milestones';
+import { buildMilestone, getStageMilestoneActiveIds, isMilestoneId, milestoneStageId, milestoneTrack } from './milestones';
 
 interface L { en: string; ko: string; }
 
@@ -100,21 +100,33 @@ export function snapshotStageQuestProgress(
 }
 
 /**
- * Past-stage claim check: a quest is claimable from a PAST stage when its frozen
- * snapshot progress met the target AND it has not already been claimed. Used by
- * CLAIM_QUEST so a stage you already left can still hand out an earned reward
- * (the live activeQuests/live-progress path only covers the current stage).
+ * Progress for a quest shown under a PAST-stage tab.
+ *
+ * Codex/archive quests (the `archive` track, metric `collectThisStage`) read the
+ * PERSISTENT almanac, which keeps growing when you revisit a past stage to collect
+ * its entities — so their progress is always LIVE, never frozen, and a revisit can
+ * finish them. quest.progress() already keys the almanac by the quest's own stage,
+ * so getQuestProgress is correct for any current stage. Every other track is a
+ * per-stage action counter that resets on stage exit, so it reads the frozen
+ * snapshot taken when the stage was left.
  */
-export function isPastQuestClaimable(
-  quest: QuestDef,
-  stageQuestProgress: Record<number, Record<string, number>>,
-  completedQuestIds: readonly string[],
-): boolean {
-  if (completedQuestIds.includes(quest.id)) return false;
+export function pastQuestProgress(quest: QuestDef, state: GameState): number {
+  if (milestoneTrack(quest.id) === 'archive') return getQuestProgress(quest, state);
+  const stageId = milestoneStageId(quest.id);
+  return Math.min(quest.target, state.stageQuestProgress[stageId]?.[quest.id] ?? 0);
+}
+
+/**
+ * Past-stage claim check: a quest is claimable from a PAST stage when its (live for
+ * archive, frozen-snapshot otherwise) progress met the target AND it has not already
+ * been claimed. Used by CLAIM_QUEST so a stage you already left can still hand out an
+ * earned reward — including a codex quest finished by revisiting to collect.
+ */
+export function isPastQuestClaimable(quest: QuestDef, state: GameState): boolean {
+  if (state.completedQuestIds.includes(quest.id)) return false;
   const stageId = milestoneStageId(quest.id);
   if (!Number.isFinite(stageId)) return false;
-  const snap = stageQuestProgress[stageId]?.[quest.id];
-  return snap !== undefined && snap >= quest.target;
+  return pastQuestProgress(quest, state) >= quest.target;
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   getQuest,
   getQuestProgress,
   isQuestClaimable,
+  pastQuestProgress,
   questDesc,
   questTitle,
   type QuestDef,
@@ -177,10 +178,10 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
                 );
               }
               if (status === 'past') {
-                // v29: a left stage's open quest — render its FROZEN snapshot progress
-                // ("{snap}/{target}"); if the snapshot met the target it is still
-                // CLAIMABLE here (the reward was earned, just never collected).
-                const snap = Math.min(quest.target, state.stageQuestProgress[tabStage]?.[quest.id] ?? 0);
+                // A left stage's open quest. Codex/archive quests read LIVE (revisiting to
+                // collect keeps filling them); other tracks render their FROZEN snapshot
+                // ("{snap}/{target}"). Either way, hitting the target keeps it CLAIMABLE here.
+                const snap = pastQuestProgress(quest, state);
                 const claimable = snap >= quest.target;
                 const pct = Math.round((snap / quest.target) * 100);
                 return (
