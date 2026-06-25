@@ -58,7 +58,6 @@ import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { DropDiscoveryToast } from './DropDiscoveryToast';
 import { CodexClaimCelebration } from './CodexClaimCelebration';
-import { StageLogToast } from './StageLogToast';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
 import { toDateKey } from '../game/shop/daily';
 import { milestoneEraLog } from '../game/milestones';
@@ -961,20 +960,17 @@ export function GameScreen({
                 <div className="hud-stage-title-line">
                   <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                 </div>
-                {/* Panel E: matter (the most-watched number) gets its OWN row below the
-                    title — it was crammed onto the wrapping title line with a · separator.
-                    ⚛ glyph + big value lead; auto-rate + 강화석 (◆) demote to a secondary token. */}
-                <div className="hud-entropy-readout hud-matter-line">
-                  <span className="qsym hud-quanta-glyph" aria-label={t(language, 'hudQuanta')}>⚛</span>
-                  <strong className="hud-quanta-value">{formatGameNumberShort(state.quanta)}</strong>
-                  <span className="hud-readout-secondary">
-                    {displayedAutoRate > 0 && !isViewingPastStage ? (
-                      <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
-                    ) : null}
-                    <span className="hud-stones-readout">{`◆ ${formatGameNumberShort(state.enhanceStones)}`}</span>
-                  </span>
-                </div>
               </div>
+              {/* User: matter / auto / ◆ all the SAME font size, right-aligned on the stage
+                  title's line (its own grid column) — not a second row under the title. */}
+              <span className="hud-entropy-readout">
+                <span className="qsym hud-quanta-glyph" aria-label={t(language, 'hudQuanta')}>⚛</span>
+                <strong className="hud-quanta-value">{formatGameNumberShort(state.quanta)}</strong>
+                {displayedAutoRate > 0 && !isViewingPastStage ? (
+                  <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
+                ) : null}
+                <span className="hud-stones-readout">{`◆ ${formatGameNumberShort(state.enhanceStones)}`}</span>
+              </span>
             </div>
             {!showCondenseGate ? (
               <div className="hud-progress-stack">
@@ -1283,15 +1279,6 @@ export function GameScreen({
           onDismiss={() => dispatch({ type: 'CLEAR_CODEX_CLAIM_EVENT', id: state.lastCodexClaimEvent!.id })}
         />
       ) : null}
-
-      {/* Panel I: ambient era-narrative drip. STAGE_LOGS' flavor lines fire at their
-          gate-progress points as you advance (no claim) — the component was fully built
-          but never mounted. It self-manages queue/auto-dismiss + resets on stage change. */}
-      <StageLogToast
-        stageId={rawStage.id}
-        progressPercent={entropyGateProgress01 * 100}
-        language={language}
-      />
 
       {settingsOpen ? (
         <SettingsPanel

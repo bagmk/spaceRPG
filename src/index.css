@@ -1951,7 +1951,9 @@ button.hud-stage-title--clickable:hover {
    the rollup card look + EntityGlyph; rarity color rides --rarity-color. */
 .drop-discovery-toast {
   position: fixed;
-  top: 84px;
+  /* User: anchor at the BOTTOM near the quest alarm (top felt off). Sits just ABOVE
+     the quest-milestone-toast slot (bottom:72px) so the two stack instead of overlap. */
+  bottom: 130px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 210;
@@ -2013,7 +2015,7 @@ button.hud-stage-title--clickable:hover {
   background: color-mix(in srgb, var(--rarity-color, #6db86d) 16%, transparent);
 }
 @keyframes drop-discovery-in {
-  0%   { transform: translateX(-50%) translateY(-14px) scale(0.82); opacity: 0; }
+  0%   { transform: translateX(-50%) translateY(14px) scale(0.82); opacity: 0; }
   60%  { transform: translateX(-50%) translateY(0) scale(1.04); opacity: 1; }
   100% { transform: translateX(-50%) translateY(0) scale(1); }
 }
@@ -11727,10 +11729,10 @@ button.stat-header-item {
 
 .hud-topline {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 18px auto;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  min-height: 72px;
+  min-height: 56px;
 }
 
 .hud-stage-chip {
@@ -11797,33 +11799,28 @@ button.stat-header-item {
   align-items: center;
   gap: 7px;
   min-width: 0;
-  color: rgba(247, 241, 232, 0.68);
+  color: rgba(247, 241, 232, 0.85);
   font-family: var(--mono);
-  font-size: clamp(10px, 1vw, 13px);
+  font-size: clamp(12px, 1.05vw, 15px);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .hud-entropy-readout strong {
   color: #fff2d0;
-  font-size: 1.08em;
   font-variant-numeric: tabular-nums;
 }
-/* Panel #7: matter is the headline number — bump it + give the ⚛ glyph an accent tint. */
-.hud-entropy-readout .hud-quanta-value { font-size: 1.5em; opacity: 1; }
-.hud-entropy-readout .hud-quanta-glyph { color: var(--accent, #ffd27f); opacity: 1; }
-/* Panel E: matter sits on its own row under the title; auto-rate + ◆ stones demote
-   to a smaller, dimmer secondary token so the matter value reads as THE headline. */
-.hud-matter-line { margin-top: 1px; }
-.hud-readout-secondary {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-left: 2px;
-  font-size: 0.78em;
-  opacity: 0.6;
-}
+/* User: matter / auto-rate / ◆ stones are ALL the same font size, right-aligned on the
+   stage-title line (the ⚛ matter glyph keeps its accent tint). Colors still differ. */
+.hud-entropy-readout strong,
+.hud-entropy-readout .hud-quanta-value,
+.hud-entropy-readout .hud-auto-rate,
+.hud-entropy-readout .hud-stones-readout,
+.hud-entropy-readout .hud-quanta-glyph { font-size: 1em; opacity: 1; }
+.hud-entropy-readout .hud-quanta-glyph { color: var(--accent, #ffd27f); }
+.hud-entropy-readout .hud-auto-rate,
+.hud-entropy-readout .hud-stones-readout { margin-left: 8px; }
 
 .hud-entropy-unit {
   color: color-mix(in srgb, var(--accent) 76%, #fff4df);
