@@ -141,7 +141,6 @@ export const STRINGS = {
   codexMeterFound:  { en: 'found', ko: '발견' },
   codexMassFactor:  { en: 'Condensed mass', ko: '응축 질량' },
   codexPurpose:     { en: 'Collect discovered particles — complete sets for bonuses', ko: '발견한 입자를 모으세요 — 세트를 완성하면 보너스' },
-  codexShowMissing: { en: 'Missing only', ko: '빈칸만' },
   codexSubsetDone:  { en: 'COMPLETE', ko: '완료' },
   codexClaim:       { en: 'Activate', ko: '효과 발동' },
   codexBestDrop:    { en: 'Best drop stage', ko: '최적 획득 시대' },

@@ -280,6 +280,25 @@ export function isSetComplete(set: CodexSet, collected: Set<string>, allEntities
   return set.subsets.every((sub) => isSubsetComplete(sub, collected, allEntities));
 }
 
+/**
+ * The stage at which a codex set becomes browsable = the MIN stageId among all of
+ * the set's member entities (union across its subsets). Mirrors equip/fusion stage
+ * locking so unreached eras' sets stay locked. The Mythic set's members live in the
+ * stage-17 fusion-only sentinel bucket; capped at 16 (the last real stage) so it
+ * unlocks at the final era rather than at an unreachable stage 17.
+ */
+const MAX_REAL_STAGE_ID = 16;
+export function getCodexSetUnlockStage(set: CodexSet): number {
+  let min = Infinity;
+  for (const sub of set.subsets) {
+    for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) {
+      if (m.stageId < min) min = m.stageId;
+    }
+  }
+  if (!Number.isFinite(min)) return 1; // empty set guard — treat as always unlocked
+  return Math.min(min, MAX_REAL_STAGE_ID);
+}
+
 // ── Labels ──────────────────────────────────────────────────────────────────
 
 export function codexSetLabel(set: CodexSet, lang: Lang): string {

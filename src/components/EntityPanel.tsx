@@ -33,7 +33,7 @@ import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat
 import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
 import { familyLabel, familyRole } from '../game/entities/families';
-import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
+import { CODEX_SETS, codexRewardLabel, codexSetLabel, codexSubsetLabel, collectedIdSet, getCodexSetUnlockStage, getCodexSubsetIdForEntity, getSubsetMembers, isSetComplete, isSubsetComplete } from '../game/entities/codexSets';
 import { LoreSection } from './LoreSection';
 import { entityLoreId } from '../game/loreLinks';
 import { defaultModifiers } from '../game/skills/effects';
@@ -501,8 +501,28 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   void onStageSelect;
   // Live gear-power context — all effect labels derive from this (label == applied).
   const power: GearPower = { stageId: currentStageId, gateProgress01 };
-  const [selectedSetId, setSelectedSetId] = useState<string>('all');
-  const [showMissing, setShowMissing] = useState(false);
+  // Codex sets are stage-locked (mirror equip/fusion locking): a set unlocks once
+  // the player reaches its earliest-member stage. Precompute each set's unlock
+  // stage once. Default tab = the current stage's set if unlocked, else the
+  // HIGHEST unlocked set; never 'all' (the All tab was removed per user request).
+  const codexSetUnlockStage = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const cs of CODEX_SETS) m.set(cs.id, getCodexSetUnlockStage(cs));
+    return m;
+  }, []);
+  const isCodexSetUnlocked = (id: string) => (codexSetUnlockStage.get(id) ?? 1) <= currentStageId;
+  const defaultCodexSetId = () => {
+    const unlocked = CODEX_SETS.filter((cs) => isCodexSetUnlocked(cs.id));
+    if (unlocked.length === 0) return CODEX_SETS[0]?.id ?? '';
+    // Prefer the set whose earliest era == the current stage (the "current" set);
+    // else the highest unlocked set (largest unlock stage).
+    const current = unlocked.find((cs) => codexSetUnlockStage.get(cs.id) === currentStageId);
+    if (current) return current.id;
+    return unlocked.reduce((best, cs) =>
+      (codexSetUnlockStage.get(cs.id) ?? 0) >= (codexSetUnlockStage.get(best.id) ?? 0) ? cs : best,
+    ).id;
+  };
+  const [selectedSetId, setSelectedSetId] = useState<string>(defaultCodexSetId);
   // v18: NEW-discovery badge snapshot + first-visit hint visibility (per session).
   const [codexNew, setCodexNew] = useState<Set<string>>(new Set());
   const [hintShow, setHintShow] = useState<Record<string, boolean>>({});
@@ -841,6 +861,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [inspectedEntityId]);
 
+  // Keep the selected codex set on an UNLOCKED tab: if it's locked (e.g. legacy
+  // state, or the player hasn't reached its era), clamp to the highest unlocked
+  // set. Re-runs when the player's stage changes.
+  useEffect(() => {
+    if (!isCodexSetUnlocked(selectedSetId)) setSelectedSetId(defaultCodexSetId());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStageId, selectedSetId]);
+
   // Every discovered id (almanac record ∪ owned stacks) — drives the NEW badge.
   const collectedAllIds = useMemo(() => {
     const s = new Set<string>(collectedIdSet(almanacCollected));
@@ -932,38 +960,47 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
 
 
         {tab === 'lab' ? (() => {
-          // Codex: a glyph wall crowned by ONE completion meter. Sets→subsets
-          // span all eras; chips are an opt-in filter (default = all).
+          // Codex: a glyph wall of stage-locked set tabs. Each tab is ONE concrete
+          // set (the All tab was removed per user request); the selected set shows
+          // EVERY member slot — collected cards + empty placeholders for the rest.
           const collectedSet = collectedIdSet(almanacCollected);
           const claimedSet = new Set(claimedCodexSubsetIds);
           const isCollected = (e: StageEntity) => collectedSet.has(e.id) || countOf(e) > 0;
           // #45: entries from eras the player hasn't reached are LOCKED (blur + 🔒)
-          // — distinct from merely-uncollected. The full-roster totals below are
-          // left untouched, so "collected/total" still counts these in the denominator.
+          // — distinct from merely-uncollected.
           const isFutureStage = (e: StageEntity) => e.stageId > currentStageId;
-          // 🅠6 codex cleanup: the completion meter, prestige-mass factor,
-          // "closest set" nudge and per-rarity drop-rate legend are gone — the
-          // set/subset dividers carry the only signal (the set-completion benefit).
-          const totalAll = STAGE_ENTITIES.length;
-          const collectedAll = STAGE_ENTITIES.filter(isCollected).length;
 
-          const setsToRender = selectedSetId === 'all'
-            ? CODEX_SETS
-            : CODEX_SETS.filter((cs) => cs.id === selectedSetId);
+          // The selected set is always a single concrete unlocked set (clamped by
+          // the effect above), so render exactly it. Guard against an empty roster.
+          const selectedSet = CODEX_SETS.find((cs) => cs.id === selectedSetId);
+          const setsToRender = selectedSet ? [selectedSet] : [];
 
           return (
             <>
-              {/* Set filter chips (default 전체) + missing-only toggle. No mini-bar. */}
+              {/* Stage-locked set tabs (no All tab, no missing-only toggle). A set
+                  whose unlock stage > the player's stage is dimmed + 🔒 + not
+                  selectable; mirrors the equip/fusion slot locking. */}
               <div className="codex-sets">
-                <button
-                  type="button"
-                  className={`codex-set-chip ${selectedSetId === 'all' ? 'codex-set-chip--active' : ''}`}
-                  onClick={() => { setSelectedSetId('all'); onUITap?.(); }}
-                >
-                  <span className="codex-set-chip__label">{t(language, 'rarityAll')}</span>
-                  <span className="codex-set-chip__count">{`${collectedAll}/${totalAll}`}</span>
-                </button>
                 {CODEX_SETS.map((cs) => {
+                  const unlockStage = codexSetUnlockStage.get(cs.id) ?? 1;
+                  const locked = unlockStage > currentStageId;
+                  if (locked) {
+                    return (
+                      <button
+                        key={cs.id}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="codex-set-chip codex-set-chip--locked"
+                        style={{ '--set-accent': cs.accent } as CSSProperties}
+                        title={t(language, 'equipSlotLockedStage').replace('{n}', String(unlockStage))}
+                      >
+                        <span className="codex-set-chip__icon" aria-hidden="true">🔒</span>
+                        <span className="codex-set-chip__label">{codexSetLabel(cs, language)}</span>
+                        <span className="codex-set-chip__count">{t(language, 'equipSlotLockedStage').replace('{n}', String(unlockStage))}</span>
+                      </button>
+                    );
+                  }
                   const ids = new Set<string>();
                   for (const sub of cs.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) ids.add(m.id);
                   const members = STAGE_ENTITIES.filter((e) => ids.has(e.id));
@@ -986,38 +1023,22 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  className={`codex-set-chip codex-set-chip--toggle ${showMissing ? 'codex-set-chip--active' : ''}`}
-                  onClick={() => { setShowMissing((v) => !v); onUITap?.(); }}
-                >
-                  <span className="codex-set-chip__label">{t(language, 'codexShowMissing')}</span>
-                </button>
               </div>
 
-              {/* The glyph wall — thin set/subset dividers, dense cards. */}
+              {/* The glyph wall — thin set/subset dividers, dense cards. The
+                  selected set always shows EVERY member slot: collected cards +
+                  empty placeholders for the undiscovered (so remaining count is
+                  visible). The All tab + 미수집 toggle were removed (user). */}
               {setsToRender.map((cs) => {
-                // Hide a SET whose subsets contribute zero visible cards in the
-                // current view (collected-only default OR 미수집 toggle) — mirrors
-                // the per-subset line-977 guard so empty set headers/reward lines
-                // don't render as bare blanks. .some() across subsets keeps a set
-                // alive when ANY subset has a visible card; fully-empty sets vanish
-                // (header + all subset blocks) together via the null Fragment.
-                const setHasVisible = cs.subsets.some((sub) =>
-                  getSubsetMembers(sub, STAGE_ENTITIES).some((m) =>
-                    showMissing ? !isCollected(m) : isCollected(m),
-                  ),
-                );
-                if (!setHasVisible) return null;
                 return (
                   <Fragment key={cs.id}>
-                    {selectedSetId === 'all' ? (
-                      <div className="codex-divider codex-divider--set" style={{ '--set-accent': cs.accent } as CSSProperties}>
-                        <span className="codex-divider__icon">{cs.icon}</span>
-                        <span className="codex-divider__label">{codexSetLabel(cs, language)}</span>
-                        {/* Set-level reward removed (user) — only subset rewards are shown. */}
-                      </div>
-                    ) : null}
+                    {/* A single concrete set is always selected now, so its set
+                        divider always renders (no All-tab gate). */}
+                    <div className="codex-divider codex-divider--set" style={{ '--set-accent': cs.accent } as CSSProperties}>
+                      <span className="codex-divider__icon">{cs.icon}</span>
+                      <span className="codex-divider__label">{codexSetLabel(cs, language)}</span>
+                      {/* Set-level reward removed (user) — only subset rewards are shown. */}
+                    </div>
                     {cs.subsets.map((sub) => {
                       const members = getSubsetMembers(sub, STAGE_ENTITIES)
                         .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
@@ -1026,11 +1047,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                       const subClaimed = claimedSet.has(sub.id);
                       const subClaimable = subDone && !subClaimed;
                       const subGot = members.filter(isCollected).length;
-                      // User: 빈칸(empty/locked placeholders) 지워줘 — default view shows
-                      // ONLY collected cards (a clean trophy case); the 미수집 toggle
-                      // flips to the uncollected list for hunting. No empty cells either way.
-                      const visible = showMissing ? members.filter((m) => !isCollected(m)) : members.filter(isCollected);
-                      if (visible.length === 0) return null;
+                      // User reversal: show ALL member slots (collected cards +
+                      // empty placeholders) so remaining count is visible.
                       return (
                         <div className={`codex-subset ${subClaimed ? 'codex-subset--complete' : ''} ${subClaimable ? 'codex-subset--claimable' : ''}`} key={sub.id}>
                           <div className="codex-divider">
@@ -1056,7 +1074,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                             <span className="codex-divider__rule" />
                           </div>
                           <div className="almanac-grid">
-                            {visible.map((entity, idx) => {
+                            {members.map((entity, idx) => {
                               const collected = isCollected(entity);
                               const future = !collected && isFutureStage(entity);
                               const rarityColor = RARITY_COLORS[entity.rarity];
@@ -1066,7 +1084,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                 <button
                                   key={entity.id}
                                   type="button"
-                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}
+                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : `codex-card--empty ${future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}`}
                                   style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
                                   onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
                                 >

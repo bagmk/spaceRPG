@@ -14506,6 +14506,17 @@ button.stat-header-item {
   cursor: default;
   opacity: 0.7;
 }
+/* Empty placeholder slot for an undiscovered set member — keeps the rarity frame
+   at low opacity so the player still reads the slot's rarity, shows a centered
+   muted "?" (the .almanac-card__mystery glyph), and has no name/glyph/specialty
+   (those are gated on `collected` in JSX). Sits on top of --locked. */
+.codex-card--empty {
+  border-color: color-mix(in srgb, var(--rarity-color, #8090b0) 22%, transparent);
+  opacity: 0.5;
+}
+.codex-card--empty .almanac-card__mystery {
+  color: rgba(255, 255, 255, 0.3);
+}
 .almanac-card__glyph {
   position: relative;
   width: 42px;
@@ -14597,6 +14608,21 @@ button.stat-header-item {
 }
 .codex-set-chip--full {
   box-shadow: 0 0 10px color-mix(in srgb, var(--set-accent) 55%, transparent);
+}
+/* Stage-locked set tab — dimmed, 🔒, not selectable (mirrors the equip slot lock
+   visuals). The 🔒 lives in the chip's __icon span; the unlock hint replaces the
+   count. Border drops to a faint dashed frame to read as "not yet". */
+.codex-set-chip--locked {
+  opacity: 0.45;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.015);
+  cursor: not-allowed;
+}
+.codex-set-chip--locked .codex-set-chip__count {
+  font-family: inherit;
+  font-size: 7.5px;
+  opacity: 0.85;
 }
 .codex-set-chip__icon { font-size: 15px; }
 .codex-set-chip__label {
