@@ -7,6 +7,7 @@ import {
   getBaseRarityDropShare,
   getEntityDropShare,
   isNewDiscovery,
+  pickEntityByRarity,
   rollEntityDrop,
 } from '../entities/drops';
 import {
@@ -195,5 +196,38 @@ describe('codex drop-rate display (R6)', () => {
     const mythic = getEntitiesForStage(17)[0];
     expect(mythic.rarity).toBe('mythic');
     expect(getEntityDropShare(mythic)).toBe(0);
+  });
+});
+
+describe('era-ordered within-rarity drop bias (stage 11)', () => {
+  const commons = getEntitiesForStage(11).filter((e) => e.rarity === 'common');
+  // Average within-rarity index of the picked common over the whole pick01 range.
+  const avgEra = (eraBias: number) => {
+    let sum = 0, n = 0;
+    for (let p = 0; p < 1; p += 0.001) {
+      const e = pickEntityByRarity(11, 'common', p, false, eraBias)!;
+      sum += commons.findIndex((c) => c.id === e.id);
+      n++;
+    }
+    return sum / n;
+  };
+
+  it('low gate progress favors EARLIER-era entities than near-full progress', () => {
+    expect(commons.length).toBeGreaterThan(1);
+    expect(avgEra(0.05)).toBeLessThan(avgEra(0.95));
+  });
+
+  it('without eraBias the pick is unbiased (spans every candidate)', () => {
+    const seen = new Set<string>();
+    for (let p = 0; p < 1; p += 0.01) seen.add(pickEntityByRarity(11, 'common', p, false)!.id);
+    expect(seen.size).toBe(commons.length);
+  });
+
+  it('era bias does NOT apply to a non-ERA_BIAS stage (uniform)', () => {
+    // Stage 4 is not in ERA_BIAS_STAGES → eraBias is ignored, low/high give the same spread.
+    const s4 = getEntitiesForStage(4).filter((e) => e.rarity === 'common');
+    const idAt = (p: number, bias: number) => pickEntityByRarity(4, 'common', p, false, bias)!.id;
+    expect(idAt(0.5, 0.05)).toBe(idAt(0.5, 0.95));
+    expect(s4.length).toBeGreaterThan(1);
   });
 });

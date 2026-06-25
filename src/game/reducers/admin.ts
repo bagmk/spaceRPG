@@ -12,6 +12,7 @@ import { resetMechanicState, hasUnlock } from './helpers';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { entityMatchesId } from '../entities/stageItems';
 import { makeInstance } from '../entities/instances';
+import { refillActiveQuests, snapshotStageQuestProgress } from '../quests';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type AdminNextStageAction = Extract<GameAction, { type: 'ADMIN_NEXT_STAGE' }>;
@@ -59,6 +60,11 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    // Debug stage-jump must refresh quests like the live advance (stage.ts) does — otherwise the
+    // leaving stage's quest ids linger on the new stage's tab, titled with the wrong era's lore
+    // (e.g. S12 "태양 소멸" showing on the S11 tab). Snapshot the era we leave + derive the new set.
+    stageQuestProgress: snapshotStageQuestProgress(state, STAGES[state.stageIdx].id),
+    activeQuests: refillActiveQuests(state.activeQuests, state.completedQuestIds, STAGES[nextStageIdx].id),
   };
   return { ...nextState, ...resetMechanicState(nextState) };
 }
@@ -87,6 +93,8 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    stageQuestProgress: snapshotStageQuestProgress(state, STAGES[state.stageIdx].id),
+    activeQuests: refillActiveQuests(state.activeQuests, state.completedQuestIds, STAGES[prevStageIdx].id),
   };
   return { ...prevState, ...resetMechanicState(prevState) };
 }

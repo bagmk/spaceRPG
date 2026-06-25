@@ -19,6 +19,9 @@ import {
   RARITY_STAGE_GATES,
   DROP_HOME_AFFINITY_FALLOFF,
   DROP_HOME_AFFINITY_FLOOR,
+  ERA_BIAS_STAGES,
+  ERA_BIAS_FLOOR,
+  ERA_BIAS_SIGMA,
 } from '../balance';
 import { getEntitiesForStage } from './stageItems';
 import { makeInstance } from './instances';
@@ -180,6 +183,7 @@ export function pickEntityByRarity(
   rarity: EntityRarity,
   pick01: number,
   excludeTime = false,
+  eraBias?: number,
 ): StageEntity | null {
   let pool = getEntitiesForStage(stageId);
   if (excludeTime) pool = pool.filter((e) => e.effect.type !== 'time');
@@ -192,7 +196,29 @@ export function pickEntityByRarity(
   }
   if (candidates.length === 0) candidates = pool;
   // Re-spread the roll so one 0..1 value covers both rarity and index decisions.
-  const index = Math.floor(((pick01 * 9973) % 1) * candidates.length);
+  const spread = (pick01 * 9973) % 1;
+  // Era-ordered bias (Stage 11): candidates are in evolutionary order within the rarity tier;
+  // weight each by a gaussian centred on the gate progress (0..1), so low progress favours the
+  // EARLIEST era entity of the rolled rarity (Earth/Moon/Ocean) and near-full progress the LATEST
+  // (City Lights/Satellite). FLOOR keeps every era reachable. Rarity weights stay untouched.
+  if (eraBias !== undefined && candidates.length > 1 && ERA_BIAS_STAGES.includes(stageId)) {
+    const n = candidates.length;
+    const twoSigmaSq = 2 * ERA_BIAS_SIGMA * ERA_BIAS_SIGMA;
+    let total = 0;
+    const weights = candidates.map((_, i) => {
+      const d = i / (n - 1) - eraBias;
+      const w = ERA_BIAS_FLOOR + Math.exp(-(d * d) / twoSigmaSq);
+      total += w;
+      return w;
+    });
+    let acc = spread * total;
+    for (let i = 0; i < n; i++) {
+      acc -= weights[i];
+      if (acc < 0) return candidates[i];
+    }
+    return candidates[n - 1];
+  }
+  const index = Math.floor(spread * candidates.length);
   return candidates[Math.min(index, candidates.length - 1)];
 }
 
@@ -208,6 +234,7 @@ export function rollEntityDrop(
   rolls: DropRoll,
   context: DropContext = {},
   almanacCollected: Record<number, string[]> = {},
+  gateProgress?: number,
 ): StageEntity | null {
   if (rolls.roll >= chance) return null;
   const rarity = pickRarity(rolls.pickRoll, getRarityWeights(playerStageId, context));
@@ -215,7 +242,10 @@ export function rollEntityDrop(
     rolls.stageRoll !== undefined
       ? pickDropStage(playerStageId, rolls.stageRoll, almanacCollected)
       : playerStageId;
-  return pickEntityByRarity(poolStageId, rarity, rolls.pickRoll, poolStageId !== playerStageId);
+  const isHomeStage = poolStageId === playerStageId;
+  // Era-bias only applies to a CURRENT-stage drop (the gate progress is the player's own stage);
+  // past-stage backfills pass undefined → uniform within-rarity pick.
+  return pickEntityByRarity(poolStageId, rarity, rolls.pickRoll, !isHomeStage, isHomeStage ? gateProgress : undefined);
 }
 
 /** Collision drops use a flat, higher chance. */

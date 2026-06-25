@@ -568,6 +568,20 @@ export const DROP_CURRENT_STAGE_WEIGHT = 0.6;
 export const DROP_HOME_AFFINITY_FALLOFF = 0.8;
 export const DROP_HOME_AFFINITY_FLOOR = 0.25;
 
+/**
+ * Era-ordered within-rarity drop bias (Stage 11 "Life on Earth"). Entities sit in
+ * evolutionary order within a stage (array position = era), so as the entropy gate
+ * fills (progress 0→1) the drop should track the timeline: early progress favours the
+ * EARLIEST entity of whatever rarity rolled (Earth/Moon/Ocean), near-full progress the
+ * LATEST (City Lights/Satellite/Spacefaring). This only re-weights the WITHIN-rarity
+ * pick — rarity weights and total drop rate are untouched, so the entropy gate / sim
+ * are unaffected (the sim has no per-entity-pick model). A gaussian centred on progress
+ * with FLOOR keeping every era reachable. ERA_BIAS_STAGES gates which stages use it.
+ */
+export const ERA_BIAS_STAGES: readonly number[] = [11];
+export const ERA_BIAS_FLOOR = 0.18;
+export const ERA_BIAS_SIGMA = 0.32;
+
 // ── Fusion / gacha (entity redesign Phase 3) ─────────────────────────────────
 
 /** Copies consumed per fusion (all inputs must share one rarity). */

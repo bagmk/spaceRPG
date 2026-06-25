@@ -247,6 +247,8 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit, combo },
           state.almanacCollected,
+          // Era-ordered drops only for a live current-stage drop (not a past-stage revisit).
+          dropStageId === stage.id ? getEntropyGateProgress(state.entropy, state.stageIdx) : undefined,
         )
       : null;
   // Persona #10: a drop that adds an entity not yet in the almanac is a genuine
@@ -352,6 +354,7 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
           { roll: action.dropRoll, pickRoll: action.dropPickRoll, stageRoll: action.dropStageRoll },
           { isCrit: true },
           state.almanacCollected,
+          dropStageId === stage.id ? getEntropyGateProgress(state.entropy, state.stageIdx) : undefined,
         )
       : null;
   // Persona #10: same NEW-discovery reveal for comet-absorb drops.

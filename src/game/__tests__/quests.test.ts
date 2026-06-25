@@ -1,11 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { getQuest, getQuestProgress } from '../quests';
-import { getStageMilestoneActiveIds } from '../milestones';
+import { getStageMilestoneActiveIds, milestoneStageId } from '../milestones';
 import { migrateToCurrent, createSaveSnapshot, SAVE_SCHEMA_VERSION } from '../storage';
 import { getEntitiesForStage } from '../entities/stageItems';
 
 describe('🅠5 quests', () => {
+  it('debug stage-jump refreshes activeQuests to the NEW stage (no stale next-episode quests)', () => {
+    // Regression: ADMIN_NEXT/PREV_STAGE used to leave the previous stage's quest ids on the new
+    // tab, titled with the wrong era's lore (e.g. S12 "태양 소멸" showing on the S11 tab).
+    let s = createInitialGameState(0);
+    s = gameReducer(s, { type: 'ADMIN_NEXT_STAGE', now: 1 }); // → stage 2
+    s = gameReducer(s, { type: 'ADMIN_NEXT_STAGE', now: 2 }); // → stage 3
+    expect(s.stageIdx).toBe(2);
+    expect(s.activeQuests.length).toBeGreaterThan(0);
+    for (const id of s.activeQuests) expect(milestoneStageId(id)).toBe(3);
+    s = gameReducer(s, { type: 'ADMIN_PREV_STAGE', now: 3 }); // back → stage 2
+    expect(s.stageIdx).toBe(1);
+    for (const id of s.activeQuests) expect(milestoneStageId(id)).toBe(2);
+  });
+
   it('a new game offers the stage-1 milestone steps (fusion track locked)', () => {
     const state = createInitialGameState(0);
     expect(state.activeQuests).toContain('m.1.pulse.0');
