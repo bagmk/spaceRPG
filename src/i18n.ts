@@ -216,7 +216,7 @@ export const STRINGS = {
   enhanceOutcomeDown:  { en: 'Downgraded', ko: '강등…' },
   enhanceOutcomeBreak: { en: 'SHATTERED', ko: '파괴됨!' },
   enhanceOutcomeProtected: { en: 'Protected', ko: '보호됨' },
-  fuseStonesEarned: { en: '+{n} 강화석', ko: '+{n} 강화석' },
+  fuseStonesEarned: { en: '+{n} stones', ko: '+{n} 강화석' },
   fuseBonusSameEntity:   { en: 'Same entity ×3 — better odds', ko: '같은 아이템 ×3 — 확률 ↑' },
   fuseBonusSameCategory: { en: 'Same codex set ×3 — bigger burst', ko: '같은 도감 계열 ×3 — 버스트 ↑' },
   hudViewInfo:   { en: 'View Info / Tutorial', ko: '정보 / 튜토리얼 보기' },
