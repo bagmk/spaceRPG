@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 28;
+  version: 29;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -317,6 +317,11 @@ export interface SaveState {
   cometsThisStage: number;
   /** Milestones (v22): peak combo reached in the current stage (reset on stage entry). */
   comboThisStage: number;
+  /** Past-stage quest snapshots (v29): stageId → questId → final progress (clamped
+   *  to the quest target), frozen on stage exit before the per-stage counters reset.
+   *  Lets PAST-stage tabs show "{snap}/{target}", and lets a quest that hit its
+   *  target but was left unclaimed stay claimable later. */
+  stageQuestProgress: Record<number, Record<string, number>>;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

@@ -150,6 +150,7 @@ export function createInitialGameState(now: number): GameState {
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    stageQuestProgress: {},
     questProgress: {},
     lastEnhanceEvent: null,
     lastQuestClaimEvent: null,

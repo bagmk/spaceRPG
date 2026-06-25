@@ -18,7 +18,7 @@
 
 import type { GameState } from './types';
 import type { Lang } from '../i18n';
-import { buildMilestone, getStageMilestoneActiveIds, isMilestoneId } from './milestones';
+import { buildMilestone, getStageMilestoneActiveIds, isMilestoneId, milestoneStageId } from './milestones';
 
 interface L { en: string; ko: string; }
 
@@ -73,6 +73,48 @@ export function getQuestProgress(quest: QuestDef, state: GameState): number {
 /** True when an active quest has met its target and can be claimed. */
 export function isQuestClaimable(quest: QuestDef, state: GameState): boolean {
   return getQuestProgress(quest, state) >= quest.target;
+}
+
+/**
+ * Snapshot the CURRENT stage's active quests' progress into stageQuestProgress
+ * just before the per-stage counters reset on stage exit. The map is keyed
+ * stageId → questId → final progress (already clamped to the target), and the
+ * leaving stage's entries are MERGED in (other stages untouched). This lets a
+ * PAST-stage tab show frozen progress ("620/840"), and lets a quest that was
+ * completed-but-unclaimed before leaving stay claimable later.
+ */
+export function snapshotStageQuestProgress(
+  state: GameState,
+  leavingStageId: number,
+): Record<number, Record<string, number>> {
+  const merged: Record<number, Record<string, number>> = { ...state.stageQuestProgress };
+  const forStage: Record<string, number> = { ...(merged[leavingStageId] ?? {}) };
+  for (const id of state.activeQuests) {
+    const quest = getQuest(id);
+    if (!quest) continue;
+    // getQuestProgress already clamps at quest.target.
+    forStage[id] = getQuestProgress(quest, state);
+  }
+  merged[leavingStageId] = forStage;
+  return merged;
+}
+
+/**
+ * Past-stage claim check: a quest is claimable from a PAST stage when its frozen
+ * snapshot progress met the target AND it has not already been claimed. Used by
+ * CLAIM_QUEST so a stage you already left can still hand out an earned reward
+ * (the live activeQuests/live-progress path only covers the current stage).
+ */
+export function isPastQuestClaimable(
+  quest: QuestDef,
+  stageQuestProgress: Record<number, Record<string, number>>,
+  completedQuestIds: readonly string[],
+): boolean {
+  if (completedQuestIds.includes(quest.id)) return false;
+  const stageId = milestoneStageId(quest.id);
+  if (!Number.isFinite(stageId)) return false;
+  const snap = stageQuestProgress[stageId]?.[quest.id];
+  return snap !== undefined && snap >= quest.target;
 }
 
 /**

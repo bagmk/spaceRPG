@@ -293,6 +293,7 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    stageQuestProgress: {},
     ...convertEntityModelV14(record),
   };
 }
@@ -444,8 +445,31 @@ export function validateV5(
     fusionsThisStage: isFiniteNumber((parsed as any).fusionsThisStage) ? Math.max(0, (parsed as any).fusionsThisStage) : 0,
     cometsThisStage: isFiniteNumber((parsed as any).cometsThisStage) ? Math.max(0, (parsed as any).cometsThisStage) : 0,
     comboThisStage: isFiniteNumber((parsed as any).comboThisStage) ? Math.max(0, (parsed as any).comboThisStage) : 0,
+    // v29 past-stage quest snapshots — WHITELIST: omit and it's silently dropped on
+    // every load + cloud pull. Default {} for pre-v29 saves (no frozen progress yet).
+    stageQuestProgress: sanitizeStageQuestProgress((parsed as any).stageQuestProgress),
     ...convertEntityModelV14(parsed),
   };
+}
+
+/**
+ * Validate a parsed stageQuestProgress map (v29): keep only numeric stage keys
+ * mapping to questId → finite, non-negative progress. Anything malformed (from a
+ * corrupt save or a future shape) is dropped rather than failing the whole load.
+ */
+function sanitizeStageQuestProgress(raw: unknown): Record<number, Record<string, number>> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<number, Record<string, number>> = {};
+  for (const [stageKey, perQuest] of Object.entries(raw as Record<string, unknown>)) {
+    const stageId = Number(stageKey);
+    if (!Number.isFinite(stageId) || !perQuest || typeof perQuest !== 'object') continue;
+    const cleaned: Record<string, number> = {};
+    for (const [questId, value] of Object.entries(perQuest as Record<string, unknown>)) {
+      if (typeof value === 'number' && Number.isFinite(value) && value >= 0) cleaned[questId] = value;
+    }
+    out[stageId] = cleaned;
+  }
+  return out;
 }
 
 export function reconstructEndingProgressForCurrentRules(

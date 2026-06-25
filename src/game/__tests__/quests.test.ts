@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { getQuest, getQuestProgress } from '../quests';
+import { getStageMilestoneActiveIds } from '../milestones';
 import { migrateToCurrent, createSaveSnapshot, SAVE_SCHEMA_VERSION } from '../storage';
 import { getEntitiesForStage } from '../entities/stageItems';
 
@@ -81,6 +82,86 @@ describe('🅠5 quests', () => {
     expect(migrated).not.toBeNull();
     expect(migrated!.activeQuests.length).toBeGreaterThan(0);
     expect(migrated!.completedQuestIds).toEqual([]);
+  });
+
+  it('leaving a stage (ADVANCE_STAGE) snapshots its active quests progress, capped at target', () => {
+    // Stage 2 (stageIdx 1). forge target is 6; set partial (3) and full (6) progress
+    // across the active set, then advance and read the frozen snapshot for stage 2.
+    const forge = getQuest('m.2.forge.0')!;
+    const base = {
+      ...createInitialGameState(0),
+      stageIdx: 1,
+      activeQuests: getStageMilestoneActiveIds(2, []),
+      fusionsThisStage: forge.target, // forge fully met → snapshot should equal target
+      cometsThisStage: 3,             // comet target 28 → snapshot 3 (partial)
+      pendingCondenseStageIdx: 1,     // required for ADVANCE_STAGE to fire
+    };
+    const advanced = gameReducer(base, { type: 'ADVANCE_STAGE', now: 1000 });
+    expect(advanced.stageIdx).toBe(2); // moved to stage 3
+    const snap2 = advanced.stageQuestProgress[2];
+    expect(snap2).toBeDefined();
+    expect(snap2['m.2.forge.0']).toBe(forge.target); // capped at target
+    expect(snap2['m.2.comet.0']).toBe(3);            // partial frozen
+    // the per-stage counters themselves reset on entry.
+    expect(advanced.fusionsThisStage).toBe(0);
+    expect(advanced.cometsThisStage).toBe(0);
+  });
+
+  it('a past completed-but-unclaimed quest is claimable from its snapshot, once', () => {
+    const forge = getQuest('m.2.forge.0')!;
+    const state = {
+      ...createInitialGameState(0),
+      stageIdx: 3, // player has moved on to stage 4
+      quanta: 0,
+      // forge from stage 2 hit its target but was never claimed before leaving.
+      stageQuestProgress: { 2: { 'm.2.forge.0': forge.target } },
+      activeQuests: getStageMilestoneActiveIds(4, []), // forge is NOT in the live set
+      completedQuestIds: [],
+    };
+    const claimed = gameReducer(state, { type: 'CLAIM_QUEST', questId: 'm.2.forge.0' });
+    expect(claimed.completedQuestIds).toContain('m.2.forge.0');
+    expect(claimed.quanta).toBeGreaterThan(0); // reward granted at the current stage anchor
+    expect(claimed.lastQuestClaimEvent?.questId).toBe('m.2.forge.0');
+    // claiming it again is a no-op (guarded on completedQuestIds → no double-grant).
+    const again = gameReducer(claimed, { type: 'CLAIM_QUEST', questId: 'm.2.forge.0' });
+    expect(again).toBe(claimed);
+  });
+
+  it('a past quest whose snapshot did NOT meet the target is not claimable', () => {
+    const forge = getQuest('m.2.forge.0')!;
+    const state = {
+      ...createInitialGameState(0),
+      stageIdx: 3,
+      stageQuestProgress: { 2: { 'm.2.forge.0': forge.target - 1 } }, // short of target
+      activeQuests: getStageMilestoneActiveIds(4, []),
+    };
+    const after = gameReducer(state, { type: 'CLAIM_QUEST', questId: 'm.2.forge.0' });
+    expect(after).toBe(state);
+  });
+
+  it('a pre-v29 save loads with stageQuestProgress defaulting to {}', () => {
+    const snapshot = createSaveSnapshot(createInitialGameState(0));
+    const v28 = { ...snapshot, version: 28 } as Record<string, unknown>;
+    delete v28.stageQuestProgress;
+    const migrated = migrateToCurrent(v28);
+    expect(migrated).not.toBeNull();
+    expect(migrated!.stageQuestProgress).toEqual({});
+  });
+
+  it('a v29 save round-trips stageQuestProgress through migration', () => {
+    const base = {
+      ...createInitialGameState(0),
+      stageIdx: 3,
+      stageQuestProgress: { 2: { 'm.2.forge.0': 6, 'm.2.comet.0': 3 }, 1: { 'm.1.pulse.0': 80 } },
+    };
+    const snapshot = createSaveSnapshot(base);
+    expect(snapshot.version).toBe(SAVE_SCHEMA_VERSION);
+    const migrated = migrateToCurrent(snapshot);
+    expect(migrated).not.toBeNull();
+    expect(migrated!.stageQuestProgress).toEqual({
+      1: { 'm.1.pulse.0': 80 },
+      2: { 'm.2.forge.0': 6, 'm.2.comet.0': 3 },
+    });
   });
 
   it('a v22 save round-trips claimed milestones + per-stage counters through migration', () => {

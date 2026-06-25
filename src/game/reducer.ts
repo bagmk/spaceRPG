@@ -234,6 +234,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     fusionsThisStage: state.fusionsThisStage,
     cometsThisStage: state.cometsThisStage,
     comboThisStage: state.comboThisStage,
+    stageQuestProgress: state.stageQuestProgress,
   };
 }
 

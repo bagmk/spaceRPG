@@ -5,21 +5,28 @@ import type { GameAction } from '../reducer';
 import { ENTITY_COST_ANCHORS } from '../balance';
 import { STAGES } from '../stages';
 import { safeAdd } from '../formulas';
-import { getQuest, isQuestClaimable, refillActiveQuests } from '../quests';
+import { getQuest, isPastQuestClaimable, isQuestClaimable, refillActiveQuests } from '../quests';
 
 type ClaimQuestAction = Extract<GameAction, { type: 'CLAIM_QUEST' }>;
 
 /**
- * Claim a completed active quest: grant its (era-relative) matter + flat 강화석
- * reward, move it to completedQuestIds (once-only), drop its transient counter,
- * and refill the active set with the next eligible quest.
+ * Claim a completed quest: grant its (era-relative) matter + flat 강화석 reward,
+ * move it to completedQuestIds (once-only), drop its transient counter, and
+ * refill the active set with the next eligible quest.
+ *
+ * Two claim paths share one grant:
+ *  - LIVE  — a current-stage active quest whose live progress met the target.
+ *  - PAST  — a quest from a stage already left whose FROZEN snapshot progress
+ *            (stageQuestProgress) met the target but was never claimed. The
+ *            completedQuestIds guard prevents any double-grant across both paths.
  */
 export function handleClaimQuest(state: GameState, action: ClaimQuestAction): GameState {
   const quest = getQuest(action.questId);
   if (!quest) return state;
-  if (!state.activeQuests.includes(action.questId)) return state;
   if (state.completedQuestIds.includes(action.questId)) return state;
-  if (!isQuestClaimable(quest, state)) return state;
+  const isLive = state.activeQuests.includes(action.questId) && isQuestClaimable(quest, state);
+  const isPast = isPastQuestClaimable(quest, state.stageQuestProgress, state.completedQuestIds);
+  if (!isLive && !isPast) return state;
 
   const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
   const anchor = ENTITY_COST_ANCHORS[stageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];

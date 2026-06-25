@@ -57,8 +57,10 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
  *  favoriteEntityIds (★ lock) — additive string[], default [] for pre-v26 saves.
  *  v27: daily attendance (attendanceStreak + attendanceClaimedDate) — additive,
  *  default 0/'' for pre-v27 saves. v28: claimedCodexSubsetIds (codex click-to-activate)
- *  — additive string[], default [] (pre-v28 complete subsets become claimable). */
-export const SAVE_SCHEMA_VERSION = 28;
+ *  — additive string[], default [] (pre-v28 complete subsets become claimable).
+ *  v29: stageQuestProgress (past-stage quest snapshots) — additive
+ *  Record<number, Record<string, number>>, default {} for pre-v29 saves. */
+export const SAVE_SCHEMA_VERSION = 29;
 
 /** P6: per-entity ceiling when exploding a count-stack into flat copies, for
  *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
@@ -279,6 +281,7 @@ export function createSaveSnapshot(state: GameState): SaveState {
     fusionsThisStage: state.fusionsThisStage,
     cometsThisStage: state.cometsThisStage,
     comboThisStage: state.comboThisStage,
+    stageQuestProgress: state.stageQuestProgress,
   };
 }
 
@@ -580,7 +583,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29) {
       // v14..v26 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added

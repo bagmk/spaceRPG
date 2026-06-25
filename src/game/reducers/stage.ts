@@ -19,7 +19,7 @@ import {
   withCurrentUniverseEndingProgress,
 } from '../multiverse';
 import { createInitialGameState } from '../defaults';
-import { pickActiveQuests, refillActiveQuests } from '../quests';
+import { pickActiveQuests, refillActiveQuests, snapshotStageQuestProgress } from '../quests';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
@@ -97,6 +97,12 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
   const nextClickRateLog = recordLateStageClickRate(progressedState, action.now);
   const nextStageIdx = progressedState.stageIdx + 1;
   const nextStageId = nextStageIdx + 1;
+  // v29: FREEZE the leaving stage's active-quest progress BEFORE the per-stage
+  // counters reset below — so a past-stage tab can show "{snap}/{target}" and a
+  // quest that hit its target but wasn't claimed stays claimable later. The
+  // leaving stage's id = current stageIdx + 1.
+  const leavingStageId = progressedState.stageIdx + 1;
+  const stageQuestProgress = snapshotStageQuestProgress(progressedState, leavingStageId);
   const nextCosmicClockSec = stage.cosmicTimeSec;
   const nextTimeGauge = getTimeGaugeForCosmicClock(nextStageIdx, nextCosmicClockSec);
   const nextState = {
@@ -125,6 +131,8 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    // v29: carry the frozen snapshot of the stage we just left.
+    stageQuestProgress,
     // 🅠5: top up the active quest set with any quests newly eligible at this stage.
     activeQuests: refillActiveQuests(progressedState.activeQuests, progressedState.completedQuestIds, nextStageId),
   };
