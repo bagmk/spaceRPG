@@ -5,22 +5,26 @@ import type { MoteCluster } from '../game/types/canvas';
 import { findEntityById } from '../game/entities/stageItems';
 
 // ── Stage 11 entity ID lookup ───────────────────────────────────────────────
-// IDs follow `s${stageId}_${index padded to 2 digits}_${slug(name)}`.
-const S11 = {
-  CRUST:       's11_01_earth_formation',
-  MOON:        's11_02_moon_formation',
-  OCEAN:       's11_03_first_ocean',
-  ATMO:        's11_04_atmosphere',
-  CONTINENTS:  's11_05_continents_rise',
-  PHOTO:       's11_06_photosynthesis',
-  PROKARYOTE:  's11_07_prokaryote',
-  CAMBRIAN:    's11_08_cambrian_explosion',
-  NEURON:      's11_09_neuron',
-  SAPIENS:     's11_10_homo_sapiens',
-  CITY_LIGHTS: 's11_11_city_lights',
-  SATELLITE:   's11_12_artificial_satellite',
-  SPACEFARING: 's11_13_spacefaring_humanity',
-  ARK:         's11_14_interstellar_ark',
+// CHRONIC-BUG FIX (2026): entity ids are POSITION-ONLY since the v15 id-decoupling
+// (`s${stageId}_${position}` → s11_01…s11_14); the old name-slug ids here were never
+// converted, so makeS11Lookup keyed on `s11_01_earth_formation` and got 0 for every
+// part → sphereR=0 → the whole Earth body stayed behind the `sphereR>0.5` gate and
+// NEVER drew. Canonical position ids fix it (positions are frozen — never reordered).
+export const S11 = {
+  CRUST:       's11_01',
+  MOON:        's11_02',
+  OCEAN:       's11_03',
+  ATMO:        's11_04',
+  CONTINENTS:  's11_05',
+  PHOTO:       's11_06',
+  PROKARYOTE:  's11_07',
+  CAMBRIAN:    's11_08',
+  NEURON:      's11_09',
+  SAPIENS:     's11_10',
+  CITY_LIGHTS: 's11_11',
+  SATELLITE:   's11_12',
+  SPACEFARING: 's11_13',
+  ARK:         's11_14',
 } as const;
 
 // Persistent velocity cache for entity n-body simulation
@@ -2089,7 +2093,11 @@ interface S11Lookup {
 function makeS11Lookup(items: EntityDrawItem[]): S11Lookup {
   const counts = new Map<string, number>();
   for (const it of items) {
-    if (!counts.has(it.id)) counts.set(it.id, it.ownedCount);
+    // P1 (recurrence-proof): key by the CANONICAL position id (resolving any legacy
+    // name-slug/alias id) so the S11 map always matches — this is what kept silently
+    // breaking when ids/aliases changed and nothing here was updated.
+    const canonicalId = findEntityById(it.id, 11)?.id ?? it.id;
+    counts.set(canonicalId, (counts.get(canonicalId) ?? 0) + it.ownedCount);
   }
   return {
     has: (id) => (counts.get(id) ?? 0) > 0,
