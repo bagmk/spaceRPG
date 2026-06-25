@@ -6,6 +6,7 @@ import { ENTITY_COST_ANCHORS } from '../balance';
 import { STAGES } from '../stages';
 import { safeAdd } from '../formulas';
 import { getQuest, isPastQuestClaimable, isQuestClaimable, refillActiveQuests } from '../quests';
+import { milestoneStageId } from '../milestones';
 
 type ClaimQuestAction = Extract<GameAction, { type: 'CLAIM_QUEST' }>;
 
@@ -29,7 +30,12 @@ export function handleClaimQuest(state: GameState, action: ClaimQuestAction): Ga
   if (!isLive && !isPast) return state;
 
   const stageId = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
-  const anchor = ENTITY_COST_ANCHORS[stageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
+  // User: a quest's reward is FIXED to the stage it BELONGS to — a past-stage quest must pay
+  // what that stage gave, not the inflated current-stage anchor. milestoneStageId → quest's stage
+  // (NaN for any non-milestone id → fall back to the current stage, i.e. unchanged for live).
+  const qStage = milestoneStageId(action.questId);
+  const rewardStageId = Number.isFinite(qStage) ? qStage : stageId;
+  const anchor = ENTITY_COST_ANCHORS[rewardStageId as keyof typeof ENTITY_COST_ANCHORS] ?? ENTITY_COST_ANCHORS[16];
   const matter = Math.floor(anchor * (quest.reward.matterAnchorFrac ?? 0));
   const stones = quest.reward.stones ?? 0;
 

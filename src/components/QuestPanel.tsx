@@ -140,9 +140,10 @@ export function QuestPanel({ state, language, onClaim, onClaimAttendance, onClos
         ) : (
           <div className="quest-list">
             {questRows.map(({ quest, status }) => {
-              // Reward is granted at the CURRENT stage anchor (handleClaimQuest), so a
-              // past-stage claim shows the matter it will actually pay, not the old era's.
-              const matter = rewardMatter(quest, status === 'past' ? stageId : tabStage);
+              // User: a quest's reward is FIXED to ITS stage (the tab's stage = where the quest
+              // belongs) — not the inflated current stage. Matches handleClaimQuest, which anchors
+              // to milestoneStageId(quest). So a past-era quest shows + pays that era's amount.
+              const matter = rewardMatter(quest, tabStage);
               const stones = quest.reward.stones ?? 0;
               if (status === 'active') {
                 const progress = getQuestProgress(quest, state);
