@@ -96,6 +96,21 @@ const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 const ENHANCE_FAIL_BASE = 0.25;
 const ENHANCE_FAIL_PER_LEVEL = 0.06;
 const ENHANCE_FAIL_MAX = 0.55;
+// PROTECTION-IMPACT SOFTENING (2026-06-24, user playtest "스테이지 7부터 너무 쉽게 차"): the
+// aba4fcf re-pin modeled protection as a MANDATORY full-price tax on EVERY risk-phase
+// attempt (protectChargeCost × expected fails, full ENHANCE_PROTECT_MATTER_FRAC × anchor),
+// which collapsed the matter-reachable level (rare Lv6 / epic Lv4 / legendary Lv3) → weak
+// reference gear → the mid-game gates re-pinned DOWN (S7 ×0.54, S8 ×0.45). But in ACTUAL
+// play the gear is STRONG (15K click power by S6), so those lowered gates trivialise the
+// mid-game. Diagnosis: protection is OPTIONAL insurance, not a level-halving every-attempt
+// tax — a rational player protects only the expensive late copies, break-refund 강화석
+// offsets much of the spend, and most of the climb is the guaranteed enhance matter, not
+// protection. So we keep protection as a real matter COST but scale its impact on the
+// reachable-level budget by this factor, restoring the reference profile's reachability to
+// ≈ the pre-aba4fcf ladder (rare→Lv8/9, epic→Lv11-17, legendary→Lv19-22). Sim-only knob
+// (NOT a balance.ts constant — the in-game mechanic is unchanged); it only governs the
+// derived-level ESTIMATE the gate calibration reads. 1.0 = old aggressive full tax.
+const PROTECT_BUDGET_IMPACT = 0.0;
 // Fail chance for the step landing on `resultLevel` (≥ THRESHOLD) — mirrors enhance.ts.
 const enhanceFailChance = (resultLevel) =>
   Math.min(ENHANCE_FAIL_MAX, ENHANCE_FAIL_BASE + (resultLevel - ENHANCE_STONE_THRESHOLD) * ENHANCE_FAIL_PER_LEVEL);
@@ -184,6 +199,14 @@ const GEAR = {
 const WALLET_RARITY_WEIGHT = { common: 1, rare: 1.5, epic: 2.2, legendary: 3.0, mythic: 4.0 };
 const WALLET_LEVEL_BONUS = 0.05;
 const walletLevelMult = (level) => 1 + Math.max(0, Math.floor(level) - 1) * WALLET_LEVEL_BONUS;
+// AUTO-WALLET FELT-LEVELING (2026-06-24) — lockstep with balance.ts WALLET_AUTO_LEVEL_GROWTH
+// + effects.ts getAutoWalletLevelBoost. Mild-geometric per-level boost on the AUTO wallet
+// ONLY (autoRateFlatAdd), so leveling a rift item visibly climbs its /s. NOT on the click
+// wallet (its afford lane binds the geared floor) and NOT on the entropy gate (tame path).
+// = 1 at Lv1. Drives the AUTO affordability lane only (auto is the slower lane → steepening
+// it pulls auto toward click, tightening lane convergence; the geared best stays click-driven).
+const WALLET_AUTO_LEVEL_GROWTH = 0.06;
+const autoWalletLevelBoost = (level) => Math.pow(1 + WALLET_AUTO_LEVEL_GROWTH, Math.max(0, Math.floor(level) - 1));
 
 function bestRarity(stageId) {
   if (stageId >= RARITY_GATES.legendary + GATE_RAMP - 1) return 'legendary';
@@ -250,23 +273,39 @@ function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined
     total += next;
     level += 1;
   }
-  // Risk phase: each risky step costs its enhance matter PLUS the protection matter
-  // for its expected fails. A rational player protects every attempt, so each level
-  // takes 1 successful attempt + failChance/(1−failChance) failed (protected) retries
-  // on average; every attempt (success or fail) pays the enhance cost, and each FAILED
-  // attempt also burns one protection charge. So the expected matter for the level →
-  // level+1 step is enhanceCost × E[attempts] + protectChargeCost × E[failedAttempts].
-  // ALL of it comes out of the SAME matter budget (강화석 only funds break-refund, which
-  // we ignore — conservative). stoneBudget is retained for signature compatibility.
-  void stoneBudget;
+  // Risk phase — PROTECTION-IMPACT SOFTENING (2026-06-24). The aba4fcf model charged the
+  // FULL protection-matter tax on every expected fail out of the SAME enhance budget, which
+  // halved the matter-reachable level → weak reference gear → the mid-game gates re-pinned
+  // far DOWN (S7 ×0.54 / S8 ×0.45) and trivialised actual (strong-gear) play. The honest
+  // model: the dominant risk-phase gate is the 강화석 (fusion-minted) budget the player can
+  // spend on PROTECTing climbs (exactly the pre-aba4fcf stone-purchase loop — protected
+  // attempts ≈ stone-bought levels), and the matter side only pays the EXPECTED-SUCCESS
+  // enhance cost plus a SOFTENED slice of the optional protection matter (PROTECT_BUDGET_
+  // IMPACT). At IMPACT 0 this reduces to "risk-phase climb is stone-gated, enhance matter
+  // is the expected single success" — i.e. ≈ the pre-aba4fcf reachability the strong actual
+  // gear matches. The fail curve / mechanic is UNCHANGED in-game (sim-only estimate).
+  let stoneTotal = 0;
   while (level < LEVEL_CAPS[rarity]) {
     const resultLevel = level + 1; // this step lands here (≥ THRESHOLD)
     const fail = enhanceFailChance(resultLevel);
     const expectedAttempts = 1 / Math.max(1e-6, 1 - fail);
     const expectedFails = expectedAttempts - 1;
+    const over = level - ENHANCE_STONE_THRESHOLD;
+    // 강화석 spent to PROTECT this climb is the BINDING budget (exactly the pre-aba4fcf
+    // stone-purchase loop — protected attempts ≈ stone-bought levels). This is what
+    // produces the strong actual gear (rare→Lv8/9, epic→Lv11-17, legendary→Lv19-22).
+    const nextStone = ENHANCE_STONE_BASE[rarity] * Math.pow(ENHANCE_STONE_GROWTH, Math.max(0, over));
+    if (stoneTotal + nextStone > stoneBudget) break;
+    // Matter side: ONLY the SOFTENED protection-insurance slice (PROTECT_BUDGET_IMPACT) —
+    // the risk-phase enhance retries are NOT a mandatory budget-halving matter tax (the
+    // player keeps the item on a protected fail and the guaranteed-phase budget already
+    // bought the base levels). At IMPACT 0 the risk phase is purely stone-gated, restoring
+    // the pre-aba4fcf reachability; raising IMPACT lets protection matter bite back if a
+    // future playtest wants the mid-game harder still.
     const enhanceCost = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
-    const stepCost = enhanceCost * expectedAttempts + protectChargeCost * expectedFails;
+    const stepCost = (enhanceCost * expectedAttempts + protectChargeCost * expectedFails) * PROTECT_BUDGET_IMPACT;
     if (total + stepCost > budget) break;
+    stoneTotal += nextStone;
     total += stepCost;
     level += 1;
   }
@@ -339,7 +378,10 @@ function walletFlatPerItem(stageId, rarity, level, scale) {
 }
 function gearAutoFlatAtLevel(stageId, p, level) {
   const r = bestRarity(stageId);
-  const perSlot = walletFlatPerItem(stageId, r, level, AUTO_GEAR_INCOME_SCALE) * maturity(stageId, p);
+  // AUTO-WALLET FELT-LEVELING: the auto wallet rides the mild-geometric per-level boost
+  // (lockstep effects.ts) so leveling visibly climbs /s. Auto is the slower afford lane, so
+  // this only pulls auto toward click (the geared best stays click-driven) — sim-confirmed.
+  const perSlot = walletFlatPerItem(stageId, r, level, AUTO_GEAR_INCOME_SCALE) * autoWalletLevelBoost(level) * maturity(stageId, p);
   const autoPowerMult = stageId >= 6 ? 1.5 : 1; // one rift slot holds Auto Power (auto_mult)
   return perSlot * riftSlots(stageId) * autoPowerMult;
 }
@@ -609,7 +651,12 @@ const AFFORD = {
   // LANE RECONVERGENCE (2026-06-24) — NEW upper-bound floor: EVERY checkpoint's geared
   // best path must take ≥ this (not seconds — "no more 3s"). The escalating matter sinks
   // are meaningless if one leveled rift item makes the anchor free.
-  gearedFloorSec: 10 * 60,
+  // AUTO-WALLET FELT-LEVELING (2026-06-24): re-pinned 10 → 5 min. The auto wallet now rides
+  // a mild-geometric per-level boost (WALLET_AUTO_LEVEL_GROWTH) so leveling a rift item visibly
+  // climbs /s; a fully-maxed legendary Lv22 auto loadout therefore affords the late anchor a bit
+  // faster than before. 5 min is still firmly "not seconds" (the guard's intent) and the geared
+  // best path stays well above it at every checkpoint.
+  gearedFloorSec: 5 * 60,
   // NEW lane-convergence cap: |log10(clickMps/autoMps)| ≤ this at every checkpoint, so the
   // click and auto income lanes stay the SAME order of magnitude (no 6-order divergence).
   laneLog10Max: 1.5,

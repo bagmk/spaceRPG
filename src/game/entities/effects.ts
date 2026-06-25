@@ -18,6 +18,7 @@ import {
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
+  WALLET_AUTO_LEVEL_GROWTH,
   WALLET_LEVEL_BONUS,
   WALLET_RARITY_WEIGHT,
 } from '../balance';
@@ -154,6 +155,18 @@ export function getWalletAnchorFlat(
 }
 
 /**
+ * AUTO-WALLET FELT-LEVELING (2026-06-24) — the mild-geometric per-level boost layered ON TOP
+ * of getWalletAnchorFlat for the AUTO wallet ONLY (autoRateFlatAdd), so leveling a rift item
+ * visibly climbs the /s readout (and quickly clears AUTO_WALLET_MIN_PER_ITEM), mirroring the
+ * click side's geometric clickMatterMult felt-leveling. = (1 + WALLET_AUTO_LEVEL_GROWTH)^(L-1),
+ * so it equals 1 at Lv1 (no change to base income). NOT applied to the click wallet (its afford
+ * lane is the binding geared-floor) and NOT to the entropy gate (which reads autoEntropyFlatAdd).
+ */
+export function getAutoWalletLevelBoost(level: number): number {
+  return Math.pow(1 + WALLET_AUTO_LEVEL_GROWTH, Math.max(0, Math.floor(level || 1) - 1));
+}
+
+/**
  * TAME (pre-crank) auto anchor — the ORIGINAL stage-1-pinned model. Feeds the
  * ENTROPY gate only (Modifiers.autoEntropyFlatAdd), so progression pacing is
  * EXACTLY as calibrated (no gate re-sim) while getAutoOutputAnchor's player-stage
@@ -223,10 +236,14 @@ export function applyEntityModifiers(
         //    value — so the entropy gate stays EXACTLY as calibrated (no re-sim, all
         //    pacing invariants hold). Mirrors clickMatterMult ↔ clickPowerMult.
         // WALLET (off-gate): LANE RECONVERGENCE — decoupled from the per-effect value,
-        // rides the shared item-anchored getWalletAnchorFlat (gentle rarity + level).
+        // rides the shared item-anchored getWalletAnchorFlat (gentle rarity + level) ×
+        // the AUTO-only mild-geometric felt-leveling boost (getAutoWalletLevelBoost), so a
+        // rift item's /s visibly climbs as you enhance it (and clears the floor). The boost
+        // is applied BEFORE the floor so a leveled item overtakes AUTO_WALLET_MIN_PER_ITEM.
         mods.autoRateFlatAdd += Math.max(
           AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5,
-          getWalletAnchorFlat(entity, entry.level ?? 1, qMult, AUTO_GEAR_INCOME_SCALE, power, carried) * count,
+          getWalletAnchorFlat(entity, entry.level ?? 1, qMult, AUTO_GEAR_INCOME_SCALE, power, carried)
+            * getAutoWalletLevelBoost(entry.level ?? 1) * count,
         );
         mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;

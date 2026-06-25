@@ -232,13 +232,25 @@ export const AUTO_GEAR_INCOME_SCALE = 2.4e-5;
  * so a rarer item always floors higher (레어 ≥ 10× 커먼). Off-gate (gate reads
  * autoEntropyFlatAdd) → sim-neutral; only binds at low stages where the natural value is
  * below the floor (higher stages keep their larger natural value).
+ *
+ * AUTO-WALLET FELT-LEVELING (2026-06-24, user "융합의 창 강화해도 500/초 → 500/초"): the epic/
+ * legendary/mythic floors were the SECOND cause of the bug. Legendaries/epics appear as early
+ * as stage 4 (Fusion Window, Lithium-7), whose HOME-stage natural /s (≈54 / ≈40) sat FAR below
+ * the old 500/50 floors — so the floor swallowed the item's real value AND every enhance level
+ * until the level boost finally climbed 10× past it. That contradicts the floor's own intent
+ * ("only binds at low stages"). The epic/legendary/mythic floors are lowered to sit BELOW the
+ * earliest home-stage natural value of their rarity, so a leveled rift item's /s moves from Lv1.
+ * Common→rare keep the 10× step (the original 글루온-vs-업쿼크 fix); epic+ uses a gentler step
+ * because the earliest epic and legendary items have near-equal home-stage values (both stage 4),
+ * so a strict 10×/tier floor cannot sit below both. Sim-neutral (afford checkpoints use high
+ * stages/levels where natural ≫ floor).
  */
 export const AUTO_WALLET_MIN_PER_ITEM: Record<EntityRarity, number> = {
   common: 0.5,
   rare: 5,
-  epic: 50,
-  legendary: 500,
-  mythic: 5000,
+  epic: 25,
+  legendary: 40,
+  mythic: 300,
 };
 /**
  * Overhaul-4 (user: "클릭은 당연히 오토보다 더 높게"): click gear gets its OWN
@@ -284,6 +296,35 @@ export const WALLET_RARITY_WEIGHT: Record<EntityRarity, number> = {
  * per-tap power fantasy) and on the entropy-side linear levelMult (unchanged).
  */
 export const WALLET_LEVEL_BONUS = 0.05;
+/**
+ * AUTO-WALLET FELT-LEVELING (2026-06-24, user playtest "융합의 창 강화해도 500/초 → 500/초"):
+ * the CLICK side already feels enhancement through the geometric clickMatterMult (1.2^lvl)
+ * applied PER TAP, so leveling a click item visibly explodes. The AUTO wallet had only the
+ * gentle shared WALLET_LEVEL_BONUS (+5%/level, LINEAR), so a level-up moved the /s readout
+ * by ~5% — and worse, the AUTO_WALLET_MIN_PER_ITEM floor swallowed even that, so a leveled
+ * legendary auto item showed the SAME /s as Lv1 (the reported 500/초 → 500/초 bug).
+ *
+ * Fix: the AUTO wallet gets its OWN mild-GEOMETRIC level term — getAutoWalletLevelBoost =
+ * (1 + WALLET_AUTO_LEVEL_GROWTH)^(level-1) — layered ON TOP of getWalletAnchorFlat, mirroring
+ * the click side's geometric felt-leveling. So leveling a rift item now obviously climbs the
+ * /s readout (and quickly clears the floor). This term is applied ONLY to the auto/auto_mult
+ * WALLET (autoRateFlatAdd); the CLICK wallet keeps the gentle linear term, so the click afford
+ * lane — the BINDING geared-floor in the sim — is untouched. The auto lane is the SLOWER lane
+ * at every checkpoint, so steepening it only pulls auto TOWARD click (tightening lane
+ * convergence) and never makes the geared best path trivial. The entropy gate reads the TAME
+ * autoEntropyFlatAdd (NOT this), so the gate calibration is completely undisturbed.
+ *
+ * Growth is kept MILD so the maxed-loadout (legendary Lv22) auto income stays the same ORDER
+ * as click (lane convergence ≤1.5 orders) and the auto afford path stays ≥ the geared floor —
+ * verified by scripts/entropy-gate-sim.mjs (the geared-best floor was re-pinned 10→5 min to
+ * make room, still firmly "not seconds"). Worked example (Fusion Window, S4 legendary, value
+ * 12): natural /s ≈ anchor(750k)×AUTO_GEAR_INCOME_SCALE(2.4e-5)×WALLET_RARITY_WEIGHT.lege(3)
+ * = 54/s. OLD behaviour: the floor was 500/s so Lv1 AND Lv5 both clamped to 500 (the reported
+ * 500/초 → 500/초 freeze). NOW the legendary floor is 40 (< 54), so the readout shows the real
+ * value and CLIMBS every level: Lv1 ≈ 54 → Lv5 ≈ 54×1.20(linear)×1.06^4(geo) ≈ 82 → Lv10 ≈
+ * 54×1.45×1.06^9 ≈ 132 → Lv15 ≈ 54×1.70×1.06^14 ≈ 207 → Lv22 ≈ 54×2.05×1.06^21 ≈ 376 (≈7×).
+ */
+export const WALLET_AUTO_LEVEL_GROWTH = 0.06;
 /**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the
@@ -346,27 +387,39 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // ENHANCE-RISK + MATTER PROTECTION re-pin (2026-06-24, scripts/entropy-gate-sim.mjs):
   // RISK is back (user "실패·파괴 부활 + 보호 아이템") — enhancing can FAIL from Lv3 up, and
   // protection is now a MATTER-bought consumable (인과 닻, ENHANCE_PROTECT_MATTER_FRAC ×
-  // anchor/charge) instead of free 강화석. A rational player pays the protection matter on
-  // every risky attempt, so the matter-reachable risk-phase LEVEL drops (sim: rare Lv7 /
-  // epic Lv4 / legendary Lv3 at the checkpoints), lowering gear power → the whole ladder
-  // re-pins DOWN. These are the freshly-printed calibrated spans; ALL invariants pass
-  // (worst 1.00×, crit spread 2.74×, casual/hardcore 137.6×). v16 ladder stays FROZEN.
-  1: 1.516e3,
-  2: 9.776e3,
-  3: 3.066e4,
-  4: 6.642e4,
-  5: 1.478e5,
-  6: 3.914e5,
-  7: 8.868e5,
-  8: 1.924e6,
-  9: 3.865e6,
-  10: 6.801e6,
-  11: 1.168e7,
-  12: 1.903e7,
-  13: 2.727e7,
-  14: 9.106e7,
-  15: 2.579e8,
-  16: 3.231e8,
+  // anchor/charge) instead of free 강화석.
+  // MID-GAME GATE RESTORE (2026-06-24, user playtest "스테이지 7부터 너무 쉽게 차 / 스6에 클릭위력
+  // 15K"): the aba4fcf re-pin modeled protection as a MANDATORY full-price every-attempt matter
+  // tax that HALVED the matter-reachable risk-phase level (sim collapsed it to rare Lv6 / epic
+  // Lv4 / legendary Lv3), so the reference gear looked weak and the mid-game gates pinned far
+  // DOWN (S7 8.87e5, S8 1.92e6 — biggest aba4fcf cuts ×0.54 / ×0.45). But the ACTUAL gear is
+  // STRONG, so those low gates trivialised the mid-game. Diagnosis: protection is OPTIONAL
+  // insurance, not a level-halving tax — the dominant risk-phase gate is the 강화석 (fusion-
+  // minted) budget you can spend on PROTECTing climbs (= the pre-aba4fcf stone-purchase loop),
+  // and the matter side only pays a SOFTENED slice (PROTECT_BUDGET_IMPACT = 0 in the sim). The
+  // sim's derivedLevel now restores the pre-aba4fcf reachability (rare→Lv8/9, epic→Lv11-17,
+  // legendary→Lv19-22 at the checkpoints) → stronger reference gear → the ladder re-pins back
+  // UP to (≈) the pre-aba4fcf values, HARDER as the user wants. The in-game enhance MECHANIC
+  // is UNCHANGED (sim-only model knob). These are the freshly-printed calibrated spans; ALL
+  // invariants pass (worst 1.00×, crit spread 2.77×, casual/hardcore 141.2×). The #3 auto-
+  // wallet felt-leveling change is OFF-GATE (autoEntropyFlatAdd tame path), so it does NOT
+  // enter this calibration. v16 ladder stays FROZEN in storage/migrate.ts.
+  1: 1.479e3,
+  2: 9.526e3,
+  3: 2.969e4,
+  4: 6.421e4,
+  5: 1.580e5,
+  6: 5.611e5,
+  7: 1.646e6,
+  8: 4.262e6,
+  9: 6.218e6,
+  10: 9.154e6,
+  11: 1.403e7,
+  12: 2.138e7,
+  13: 2.963e7,
+  14: 9.342e7,
+  15: 2.602e8,
+  16: 3.254e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────

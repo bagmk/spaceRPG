@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { EndingId } from '../types';
 import { STAGE_ENTITIES, getEntitiesForStage, getPurchasedEntityCount } from '../entities/stageItems';
-import { applyEntityModifiers } from '../entities/effects';
+import { applyEntityModifiers, getAutoWalletLevelBoost } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
-import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE, AUTO_GEAR_INCOME_SCALE, WALLET_RARITY_WEIGHT, AUTO_WALLET_MIN_PER_ITEM } from '../balance';
+import { ENTITY_BASE_COST_FACTOR, ENTITY_MAX_COUNT, ENTITY_TIME_MAX_COUNT, ENTITY_COST_ANCHORS, AUTO_STAGE_POWER_BASE, AUTO_GEAR_INCOME_SCALE, WALLET_RARITY_WEIGHT, AUTO_WALLET_MIN_PER_ITEM, WALLET_AUTO_LEVEL_GROWTH, WALLET_LEVEL_BONUS } from '../balance';
 import { getAutoRate } from '../formulas';
 
 const STAGE_IDS = Array.from({ length: 16 }, (_, index) => index + 1);
@@ -232,5 +232,35 @@ describe('stage entity definitions', () => {
     // Floor must not bind (it's tiny vs the stage-10 anchor income).
     expect(expectedFlat).toBeGreaterThan(AUTO_WALLET_MIN_PER_ITEM[sun.rarity]);
     expect(getAutoRate(withSun) - getAutoRate(baseline)).toBeCloseTo(expectedFlat, 0);
+  });
+
+  // AUTO-WALLET FELT-LEVELING (2026-06-24, #3 "융합의 창 강화해도 500/초 → 500/초"): leveling an
+  // auto item must VISIBLY raise its /s — the wallet now rides a mild-GEOMETRIC per-level boost
+  // (getAutoWalletLevelBoost), not the old gentle +5%/level linear that a level-up barely moved.
+  it('makes leveling an auto item visibly raise its wallet /s (geometric, not the old +5%)', () => {
+    const sun = getEntitiesForStage(10).find((entity) => entity.name === 'Sun');
+    expect(sun).toBeDefined();
+    if (!sun) return;
+
+    const autoAt = (level: number): number => {
+      const mods = defaultModifiers();
+      // Stage-10 anchor income so the floor never binds; isolate the level term.
+      applyEntityModifiers(mods, [{ entityId: sun.id, count: 1, level }], { stageId: 10, gateProgress01: 0 });
+      return mods.autoRateFlatAdd;
+    };
+
+    const lv1 = autoAt(1);
+    const lv10 = autoAt(10);
+    const ratio = lv10 / lv1;
+    // The boost is exactly (1 + WALLET_AUTO_LEVEL_GROWTH)^(level-1) ON TOP of the gentle linear
+    // WALLET_LEVEL_BONUS term — leveling is no longer invisible.
+    const expectedRatio =
+      (1 + (10 - 1) * WALLET_LEVEL_BONUS) * getAutoWalletLevelBoost(10);
+    expect(ratio).toBeCloseTo(expectedRatio, 5);
+    // Sanity: Lv10 must be MORE than double Lv1 (the old linear-only term gave just 1.45×, the
+    // "barely changes" feel the user reported) — proves the geometric term meaningfully bites.
+    expect(ratio).toBeGreaterThan(2);
+    // Lv1 boost is the identity (no change to base income).
+    expect(getAutoWalletLevelBoost(1)).toBe(1);
   });
 });
