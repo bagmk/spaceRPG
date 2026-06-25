@@ -12341,7 +12341,7 @@ button.stat-header-item {
   }
 
   .hud-topline {
-    grid-template-columns: 44px minmax(0, 1fr) 18px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     gap: 11px;
     min-height: 56px;
   }
@@ -12407,7 +12407,7 @@ button.stat-header-item {
   }
 
   .hud-topline {
-    grid-template-columns: 38px minmax(0, 1fr) 16px;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
     gap: 8px;
   }
 
@@ -12546,7 +12546,7 @@ button.stat-header-item {
   }
 
   .hud-topline {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     min-height: 38px;
     gap: 10px;
   }
@@ -12828,7 +12828,7 @@ button.stat-header-item {
   }
 
   .hud-topline {
-    grid-template-columns: 32px minmax(0, 1fr) 104px;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
     gap: 6px;
   }
 
@@ -13602,7 +13602,7 @@ button.stat-header-item {
   }
 
   .hud-topline {
-    grid-template-columns: 36px minmax(0, 1fr) !important;
+    grid-template-columns: 36px minmax(0, 1fr) auto !important;
     min-height: 36px !important;
     gap: 7px !important;
   }
@@ -13718,7 +13718,7 @@ button.stat-header-item {
 
 @media (max-width: 560px) {
   .hud-topline {
-    grid-template-columns: 34px minmax(0, 1fr) !important;
+    grid-template-columns: 34px minmax(0, 1fr) auto !important;
   }
 
   .hud-stage-chip {
@@ -14390,6 +14390,37 @@ button.stat-header-item {
   padding: 1px 8px;
   border-radius: 999px;
   background: rgba(226, 85, 74, 0.22);
+}
+
+/* User: the 보호 사용 toggle was an unstyled button (default WHITE background) — make it a
+   dark pill that highlights purple when ON. */
+.enhance-protect-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(187, 140, 255, 0.35);
+  background: rgba(20, 18, 26, 0.72);
+  color: rgba(247, 241, 232, 0.8);
+  font: inherit;
+  font-size: 0.82em;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.enhance-protect-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.enhance-protect-toggle--on {
+  background: color-mix(in srgb, #bb8cff 24%, rgba(20, 18, 26, 0.72));
+  border-color: #bb8cff;
+  color: #fff;
+}
+.enhance-risk__no-charge {
+  margin-top: 4px;
+  font-size: 0.78em;
+  color: #e2554a;
+  opacity: 0.92;
 }
 
 .fusion-tray__cap {

@@ -92,7 +92,7 @@ const ENHANCE_STONE_BASE = { common: 2, rare: 3, epic: 5, legendary: 8 };
 const ENHANCE_STONE_GROWTH = 1.3; // Overhaul-3 (user): 1.5 → 1.3 — lockstep with balance.ts.
 // Matter-bought protection (인과 닻) — lockstep with balance.ts ENHANCE_PROTECT_MATTER_FRAC
 // + the fail curve (ENHANCE_FAIL_BASE/PER_LEVEL/MAX). Charge cost = this × stage anchor.
-const ENHANCE_PROTECT_MATTER_FRAC = 0.5;
+const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 const ENHANCE_FAIL_BASE = 0.25;
 const ENHANCE_FAIL_PER_LEVEL = 0.06;
 const ENHANCE_FAIL_MAX = 0.55;

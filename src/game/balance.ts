@@ -740,7 +740,7 @@ export const ENHANCE_PROTECT_ITEM_NAME = { en: 'Causal Anchor', ko: '인과 닻'
  *  Priced a BIT HIGH per the user — protection should feel like a real, deliberate
  *  outlay (one charge ≈ a whole common shop item's matter cost, 0.10×anchor), so the
  *  player weighs insuring a risky attempt vs just re-farming the copy. */
-export const ENHANCE_PROTECT_MATTER_FRAC = 0.5;
+export const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 /** Protection bundles offered for matter in the shop (mirrors STONE_BUNDLES). */
 export const PROTECT_BUNDLES: number[] = [1, 5, 10];
 /**
