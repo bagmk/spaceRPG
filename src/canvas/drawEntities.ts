@@ -2167,6 +2167,13 @@ function smoothstep01(t: number): number {
   return x * x * (3 - 2 * x);
 }
 
+// Once a Stage-11 SURFACE feature has ever been collected (almanac), its count floors to
+// this so every downstream grow ramp / budget / sphereR maxes out — the built-up Earth then
+// stays fixed instead of shrinking away when copies are fused/consumed. 20 saturates all the
+// surface ramps (the largest divisor is /20). Orbiting bodies (moon, satellite) are NOT floored
+// — the user wants those to come and go with live ownership.
+const S11_PERSIST_COUNT = 20;
+
 function drawLifeEarthEntities(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -2175,6 +2182,7 @@ function drawLifeEarthEntities(
   now: number,
   pointerPressure?: PointerPressureVisualField | null,
   cluster?: MoteCluster | null,
+  almanacIds?: string[],
 ): void {
   const R = TUNING.LIFE_SURFACE_R;
   // Earth rotation: prefer the shared cluster counter so day/night stays in
@@ -2185,19 +2193,26 @@ function drawLifeEarthEntities(
 
   const L = makeS11Lookup(items);
 
+  // SURFACE/INTERIOR features persist: once an entity was ever collected (almanac), its count
+  // floors so the built-up Earth stays fixed instead of shrinking/vanishing when copies are
+  // fused away. ORBITING bodies (moon, satellite) keep their LIVE count and may come and go.
+  const seen = new Set<string>();
+  for (const id of almanacIds ?? []) seen.add(findEntityById(id, 11)?.id ?? id);
+  const persist = (id: string, c: number) => (seen.has(id) ? Math.max(c, S11_PERSIST_COUNT) : c);
+
   // Raw counts (0..20 for commons, 0..10 rares, 0..5 epics, 0..3 legendaries).
-  const crustC      = L.count(S11.CRUST);
-  const oceanC      = L.count(S11.OCEAN);
-  const atmoC       = L.count(S11.ATMO);
-  const moonC       = L.count(S11.MOON);
-  const proC        = L.count(S11.PROKARYOTE);
-  const photoC      = L.count(S11.PHOTO);
-  const cambrianC   = L.count(S11.CAMBRIAN);
-  const contC       = L.count(S11.CONTINENTS);
-  const neuronC     = L.count(S11.NEURON);
-  const sapiensC    = L.count(S11.SAPIENS);
-  const cityC       = L.count(S11.CITY_LIGHTS);
-  const satC        = L.count(S11.SATELLITE);
+  const crustC      = persist(S11.CRUST, L.count(S11.CRUST));
+  const oceanC      = persist(S11.OCEAN, L.count(S11.OCEAN));
+  const atmoC       = persist(S11.ATMO, L.count(S11.ATMO));
+  const moonC       = L.count(S11.MOON);          // orbiting — live ownership
+  const proC        = persist(S11.PROKARYOTE, L.count(S11.PROKARYOTE));
+  const photoC      = persist(S11.PHOTO, L.count(S11.PHOTO));
+  const cambrianC   = persist(S11.CAMBRIAN, L.count(S11.CAMBRIAN));
+  const contC       = persist(S11.CONTINENTS, L.count(S11.CONTINENTS));
+  const neuronC     = persist(S11.NEURON, L.count(S11.NEURON));
+  const sapiensC    = persist(S11.SAPIENS, L.count(S11.SAPIENS));
+  const cityC       = persist(S11.CITY_LIGHTS, L.count(S11.CITY_LIGHTS));
+  const satC        = L.count(S11.SATELLITE);      // orbiting — live ownership
 
   const hasCrust   = crustC > 0;
   const hasOcean   = oceanC > 0;
@@ -3788,6 +3803,7 @@ export function drawEntities(
   now: number,
   pointerPressure?: PointerPressureVisualField | null,
   cluster?: MoteCluster | null,
+  almanacCollected?: Record<number, string[]>,
 ): void {
   if (purchasedEntities.length === 0) return;
 
@@ -3876,7 +3892,7 @@ export function drawEntities(
 
   // Stage 11 uses its own entity lookup — skip the generic draw cap
   if (stageId === 11) {
-    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure, cluster);
+    drawLifeEarthEntities(ctx, cx, cy, items, now, pointerPressure, cluster, almanacCollected?.[11]);
     return;
   }
 

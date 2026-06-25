@@ -796,6 +796,7 @@ export function GameScreen({
           gravityMod={state.currentUniverseSeed.gravityMod}
           anomaly={state.currentUniverseSeed.anomaly}
           inventory={state.inventory}
+          almanacCollected={state.almanacCollected}
           riftSlots={state.riftSlots}
           clickSlots={state.equippedSlots}
           riftPower={modifiers.autoFlatMult}
