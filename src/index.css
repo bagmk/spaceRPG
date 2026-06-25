@@ -14517,6 +14517,22 @@ button.stat-header-item {
 .codex-card--empty .almanac-card__mystery {
   color: rgba(255, 255, 255, 0.3);
 }
+/* User: a freshly-discovered item glows on its codex card for ~60s, then fades. */
+.codex-card--fresh {
+  animation: codex-fresh-glow 1.8s ease-in-out infinite;
+}
+@keyframes codex-fresh-glow {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--rarity-color, #ffd27f) 55%, transparent),
+                         0 0 12px -2px color-mix(in srgb, var(--rarity-color, #ffd27f) 50%, transparent); }
+  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--rarity-color, #ffd27f) 80%, transparent),
+                         0 0 22px 0 color-mix(in srgb, var(--rarity-color, #ffd27f) 80%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .codex-card--fresh {
+    animation: none;
+    box-shadow: 0 0 14px -2px color-mix(in srgb, var(--rarity-color, #ffd27f) 60%, transparent);
+  }
+}
 .almanac-card__glyph {
   position: relative;
   width: 42px;

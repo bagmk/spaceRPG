@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EntityInstance, FusionEvent, EnhanceEvent } from '../game/types';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
@@ -430,6 +430,8 @@ interface Props {
   /** Which gear category the equip page edits — click gear or the rift (auto). */
   equipCategory: EquipCategory;
   currentStageId: number;
+  /** entityId → discovery timestamp (ms); recently-found items glow on their codex card. */
+  recentDiscoveries?: Record<string, number>;
   /** Entropy-gate progress 0..1 — fractional gear power exponent (label == applied). */
   gateProgress01: number;
   inventory: EntityInstance[];
@@ -490,7 +492,7 @@ function levelTextStyle(level: number): CSSProperties {
   return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -503,6 +505,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
   // Stage browsing is gone — items show across all eras at once. The prop stays
   // for API compatibility but is no longer driven from here.
   void onStageSelect;
+  // User: a freshly-discovered item glows on its codex card for ~60s, then fades.
+  // A cheap 5s tick (only while something is still fresh) drops the glow live.
+  const NEW_GLOW_MS = 60_000;
+  const [, forceTick] = useReducer((x: number) => x + 1, 0);
+  const isFreshDiscovery = (id: string) => Date.now() - (recentDiscoveries[id] ?? 0) < NEW_GLOW_MS;
+  const anyFresh = Object.values(recentDiscoveries).some((tms) => Date.now() - tms < NEW_GLOW_MS);
+  useEffect(() => {
+    if (!anyFresh) return undefined;
+    const iv = window.setInterval(forceTick, 5000);
+    return () => window.clearInterval(iv);
+  }, [anyFresh]);
   // Live gear-power context — all effect labels derive from this (label == applied).
   const power: GearPower = { stageId: currentStageId, gateProgress01 };
   // Codex sets are stage-locked (mirror equip/fusion locking): a set unlocks once
@@ -1091,7 +1104,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, gateProgress0
                                 <button
                                   key={entity.id}
                                   type="button"
-                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? '' : `codex-card--empty ${future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}`}
+                                  className={`almanac-card almanac-card--${entity.rarity} ${collected ? (isFreshDiscovery(entity.id) ? 'codex-card--fresh' : '') : `codex-card--empty ${future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}`}
                                   style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
                                   onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
                                 >

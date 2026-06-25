@@ -601,9 +601,16 @@ export function GameScreen({
   // handles its own auto-dismiss + click-to-dismiss. Keyed on the event id so it
   // fires exactly once per discovery.
   const dropEventId = state.lastDropEvent?.id ?? null;
+  // User: a newly-discovered item glows on its codex card for ~60s then fades.
+  // Session-only (transient) — "new" resets on reload. Recorded off lastDropEvent
+  // (which only fires for genuinely NEW discoveries).
+  const [recentDiscoveries, setRecentDiscoveries] = useState<Record<string, number>>({});
   useEffect(() => {
     if (dropEventId === null) return;
     soundManager?.playQuestClaim();
+    const ent = state.lastDropEvent?.entityId;
+    if (ent) setRecentDiscoveries((prev) => ({ ...prev, [ent]: Date.now() }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropEventId, soundManager]);
 
   // Persona L: triumphant sting when a codex sub-collection's reward is claimed
@@ -855,6 +862,7 @@ export function GameScreen({
             page={panelView.page}
             equipCategory={panelView.category}
             currentStageId={stage.id}
+            recentDiscoveries={recentDiscoveries}
             gateProgress01={entropyGateProgress01}
             inventory={state.inventory}
             equippedSlots={state.equippedSlots}
