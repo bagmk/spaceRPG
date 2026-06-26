@@ -193,7 +193,7 @@ export const AUTO_OUTPUT_MULTIPLIER = 1;
  * multiply so the click path and the (now-fixed) auto path stay the same order of
  * magnitude. Still off-gate matter only — no re-sim needed for THIS knob.
  */
-export const CLICK_GEAR_MATTER_BOOST = 2;
+export const CLICK_GEAR_MATTER_BOOST = 3;
 /**
  * GEAR-ONLY ECONOMY CRANK (2026-06-21): single scale knob on the now-fixed,
  * player-stage-anchored auto FLAT income (getAutoOutputAnchor). The raw
@@ -826,7 +826,7 @@ export const PROTECT_BUNDLES: number[] = [1, 5, 10];
  * each rarity (geoBase = this × ENHANCE_RARITY_GROWTH) while keeping a maxed
  * loadout's income comparable to — not millions of × past — the shop anchor.
  */
-export const ENHANCE_MATTER_LEVEL_GROWTH = 1.2;
+export const ENHANCE_MATTER_LEVEL_GROWTH = 1.3;
 
 /**
  * Per-rarity multiplier ON the geometric enhance-power base (GEAR-ONLY ECONOMY

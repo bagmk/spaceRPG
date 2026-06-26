@@ -319,9 +319,9 @@ const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.85;
 // from the entropy gate, grow GEOMETRICALLY per level with a per-rarity scalar.
 // Lockstep with balance.ts ENHANCE_MATTER_LEVEL_GROWTH × ENHANCE_RARITY_GROWTH and
 // effects.ts getEnhanceGeoLevelMult. Drives the affordability assertions below.
-const ENHANCE_MATTER_LEVEL_GROWTH = 1.2; // lockstep with balance.ts (1.3 → 1.2)
+const ENHANCE_MATTER_LEVEL_GROWTH = 1.3; // lockstep with balance.ts ("강화 팍팍")
 const ENHANCE_RARITY_GROWTH = { common: 1.0, rare: 1.03, epic: 1.06, legendary: 1.09, mythic: 1.12 }; // lockstep
-const CLICK_GEAR_MATTER_BOOST = 2; // lockstep with balance.ts (6 → 2)
+const CLICK_GEAR_MATTER_BOOST = 3; // lockstep with balance.ts (2 -> 3)
 const AUTO_GEAR_INCOME_SCALE = 2.4e-5; // LANE RECONVERGENCE — lockstep with balance.ts (0.16 → 2.4e-5, new wallet structure)
 const geoLevelMult = (rarity, level) =>
   Math.pow(ENHANCE_MATTER_LEVEL_GROWTH * (ENHANCE_RARITY_GROWTH[rarity] ?? 1), Math.max(0, Math.floor(level) - 1));
