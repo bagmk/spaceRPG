@@ -1269,8 +1269,10 @@ export function GameScreen({
       ) : null}
 
       {/* Persona #10: floating "발견!" reveal when a drop collects a NEW entity.
-          Mirrors the gacha/fusion reveals — transient, self-clearing, clickable. */}
-      {state.lastDropEvent ? (
+          Mirrors the gacha/fusion reveals — transient (auto-dismisses ~2.5s), clickable.
+          Shares ONE bottom slot with the quest-ready toast and YIELDS to it (the quest needs a
+          tap) so the two never stack/overlap — the held drop event re-shows once the quest clears. */}
+      {state.lastDropEvent && !questToast ? (
         <DropDiscoveryToast
           key={state.lastDropEvent.id}
           entityId={state.lastDropEvent.entityId}

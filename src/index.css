@@ -1951,9 +1951,9 @@ button.hud-stage-title--clickable:hover {
    the rollup card look + EntityGlyph; rarity color rides --rarity-color. */
 .drop-discovery-toast {
   position: fixed;
-  /* User: anchor at the BOTTOM near the quest alarm (top felt off). Sits just ABOVE
-     the quest-milestone-toast slot (bottom:72px) so the two stack instead of overlap. */
-  bottom: 130px;
+  /* Shares the single bottom toast slot with .quest-milestone-toast (bottom:72px). The two never
+     render together (the discovery yields to the quest in GameScreen), so one slot = no overlap. */
+  bottom: 72px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 210;
