@@ -1208,10 +1208,16 @@ export const RIFT_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacC
   { slot: 3, minStageId: 12 },
 ];
 
-/** Set bonus by number of equipped entities sharing a codex CATEGORY (P5/R8). */
-export const SET_BONUS: Record<number, { clickAutoMult: number; critChanceAdd: number }> = {
-  2: { clickAutoMult: 1.25, critChanceAdd: 0 },
-  3: { clickAutoMult: 1.6, critChanceAdd: 0.05 },
+/** Set bonus by number of equipped entities sharing a codex CATEGORY (P5/R8).
+ *  `clickAutoMult` is the small ON-GATE edge (entropy-relevant, kept modest). `matterMult` is the
+ *  BIG OFF-GATE felt jump on the matter wallet (matter/tap & matter/s) — matching a family makes
+ *  the number the player watches leap (user: "맞으면 ×10·×100"). Each matched family compounds
+ *  (a full hexagon with a click set AND a rift set stacks both), so a matched click trio reads ~×20
+ *  on the wallet on top of the per-item ×2 (CLICK_GEAR_MATTER_BOOST) — a ~×100-class jump combined.
+ *  Off-gate so the entropy gate stays calibrated; the sim treats matched sets as optional upside. */
+export const SET_BONUS: Record<number, { clickAutoMult: number; matterMult: number; critChanceAdd: number }> = {
+  2: { clickAutoMult: 1.25, matterMult: 6,  critChanceAdd: 0 },
+  3: { clickAutoMult: 1.6,  matterMult: 20, critChanceAdd: 0.05 },
 };
 
 // ── Combo cap growth (P5, R10) ───────────────────────────────────────────────

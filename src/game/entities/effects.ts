@@ -362,16 +362,20 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
     if (key === null) continue;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  let best = 0;
-  for (const count of counts.values()) best = Math.max(best, count);
-  // Use the highest defined tier at or below the best matching family size.
-  for (let tier = Math.min(best, 3); tier >= 2; tier--) {
-    const bonus = SET_BONUS[tier];
-    if (!bonus) continue;
-    mods.clickPowerMult *= bonus.clickAutoMult;
-    mods.autoRateMult *= bonus.clickAutoMult;
-    mods.critChanceAdd += bonus.critChanceAdd;
-    return;
+  // EACH matched family contributes its best-tier bonus, and families COMPOUND (a full hexagon
+  // with both a click set and a rift set stacks both) — the small clickAutoMult on-gate edge plus
+  // the BIG off-gate matterMult felt jump on the wallet.
+  for (const count of counts.values()) {
+    for (let tier = Math.min(count, 3); tier >= 2; tier--) {
+      const bonus = SET_BONUS[tier];
+      if (!bonus) continue;
+      mods.clickPowerMult *= bonus.clickAutoMult;
+      mods.autoRateMult *= bonus.clickAutoMult;
+      mods.clickMatterMult *= bonus.matterMult;
+      mods.autoMatterMult *= bonus.matterMult;
+      mods.critChanceAdd += bonus.critChanceAdd;
+      break; // highest tier for THIS family only, then move to the next family
+    }
   }
 }
 
