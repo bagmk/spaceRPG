@@ -11,7 +11,7 @@
  * Pure function of the 7-slot id array — easy to unit test and to mirror.
  */
 
-import { HEX_BINGO_LINES, HEX_LINE_BONUS, HEX_PURE_LINE_MULT, HEX_HARMONY_BONUS, HEX_BONUS_CAP } from '../balance';
+import { HEX_BINGO_LINES, HEX_LINE_BONUS, HEX_PURE_LINE_MULT, HEX_HARMONY_BONUS, HEX_BONUS_CAP, HEX_BOARD_TIERS } from '../balance';
 import { findEntityById } from './stageItems';
 import { getEquipSetKey } from './effects';
 import type { EntityRarity } from './types';
@@ -69,9 +69,12 @@ export function computeHexBingo(hexSlots: (string | null | undefined)[]): HexBin
     else autoSum += amount;
   });
 
+  // BOARD escalation: more completed lines at once → a bigger multiplier on top of the (capped)
+  // lane sum, so a near-full hexagon is a spectacular payoff rather than a flat per-line bonus.
+  const boardTier = HEX_BOARD_TIERS[Math.min(completedLines.length, HEX_BOARD_TIERS.length - 1)] ?? 1;
   return {
-    clickMult: 1 + Math.min(HEX_BONUS_CAP, clickSum),
-    autoMult: 1 + Math.min(HEX_BONUS_CAP, autoSum),
+    clickMult: (1 + Math.min(HEX_BONUS_CAP, clickSum)) * boardTier,
+    autoMult: (1 + Math.min(HEX_BONUS_CAP, autoSum)) * boardTier,
     completedLines,
   };
 }

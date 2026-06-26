@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeHexBingo } from '../entities/hexBingo';
 import { STAGE_ENTITIES } from '../entities/stageItems';
 import { getEquipSetKey, getEquipCategory } from '../entities/effects';
-import { HEX_BINGO_LINES } from '../balance';
+import { HEX_BINGO_LINES, HEX_BONUS_CAP, HEX_BOARD_TIERS } from '../balance';
 import type { EquipCategory } from '../entities/types';
 
 /** Find 3 entity ids that share an equip family within one category (for a pure line). */
@@ -66,7 +66,13 @@ describe('#44 hexagon bingo bonus', () => {
     })();
     const board = Array.from({ length: 7 }, (_, i) => fam[i % fam.length] ?? null);
     const r = computeHexBingo(board);
-    expect(r.clickMult).toBeLessThanOrEqual(6); // 1 + HEX_BONUS_CAP(5)
-    expect(r.autoMult).toBeLessThanOrEqual(6);
+    // The LANE sum stays capped (≤ 1+HEX_BONUS_CAP); the BOARD tier multiplies on top but is
+    // still bounded by the largest tier — so it escalates without running away.
+    const maxBoard = HEX_BOARD_TIERS[HEX_BOARD_TIERS.length - 1];
+    expect(r.clickMult).toBeLessThanOrEqual((1 + HEX_BONUS_CAP) * maxBoard);
+    expect(r.autoMult).toBeLessThanOrEqual((1 + HEX_BONUS_CAP) * maxBoard);
+    // A fully-matched board completes many lines → the board tier lifts it past the lane cap.
+    expect(r.completedLines.length).toBeGreaterThan(2);
+    expect(r.clickMult).toBeGreaterThan(1 + HEX_BONUS_CAP);
   });
 });

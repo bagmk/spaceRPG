@@ -1140,6 +1140,11 @@ export const HEX_PURE_LINE_MULT = 2;
 export const HEX_HARMONY_BONUS = 0.3;
 /** Bonus SUM per lane is capped here → lane multiplier maxes at 1 + this. */
 export const HEX_BONUS_CAP = 5;
+/** BOARD escalation (user: "보너스 더 재미있게/다양하게"): the more bingo LINES you complete at
+ *  once, the bigger an extra multiplier on top of the (capped) lane sum — so a near-full hexagon
+ *  is a spectacular off-gate payoff, not just a flat per-line bonus. Indexed by completed-line
+ *  count (0..9 lines). Off-gate (feeds clickMatterMult/autoMatterMult) → entropy gate untouched. */
+export const HEX_BOARD_TIERS: number[] = [1, 1, 1.5, 2.2, 3.2, 4.5, 6.5, 9, 12, 16];
 /** Stage at which the 7th (center/wild) slot unlocks. */
 // Wild center slot — moved 9→6 (user: the 3rd click slot ALSO unlocks at stage 9, so two
 // hex slots opened at once; staggering the wild to stage 6 makes the progression less flat).
