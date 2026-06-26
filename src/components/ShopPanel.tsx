@@ -22,7 +22,7 @@ import {
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
 import { generateDailyShop, toDateKey } from '../game/shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopProtectMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount } from '../game/shop/pricing';
+import { shopItemMatterCost, shopStoneMatterCost, shopProtectMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount, protectBulkDiscount } from '../game/shop/pricing';
 import { STONE_BUNDLES, PROTECT_BUNDLES, ENHANCE_PROTECT_ITEM_NAME, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { findEntityById, entityName } from '../game/entities/stageItems';
@@ -413,6 +413,9 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   disabled={!afford}
                   onClick={() => { dispatch({ type: 'BUY_ENHANCE_PROTECT', count }); onSfx?.(); }}
                 >
+                  {protectBulkDiscount(count) > 0 ? (
+                    <span className="shop-ribbon">{t(language, 'shopDiscountRibbon').replace('{n}', String(Math.round(protectBulkDiscount(count) * 100)))}</span>
+                  ) : null}
                   <span className="shop-stone-card__amount">🛡 {count}</span>
                   <span className="shop-card__price"><span className="qsym">⚛</span>{formatGameNumberShort(cost)}</span>
                 </button>

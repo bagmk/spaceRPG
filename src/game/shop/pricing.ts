@@ -52,12 +52,22 @@ export function shopStoneMatterCost(stageId: number, count: number): number {
   return Math.ceil(anchor(stageId) * SHOP_STONE_PRICE_FRAC * n * (1 - stoneBulkDiscount(n)));
 }
 
+/** Bulk discount on 강화 보호 bundles (user: "많이 사면 할인해줘"). Slightly more generous
+ *  than stones since you stock protection in bulk before a risky leveling session. */
+export function protectBulkDiscount(count: number): number {
+  if (count >= 50) return 0.35;
+  if (count >= 25) return 0.25;
+  if (count >= 10) return 0.15;
+  if (count >= 5) return 0.08;
+  return 0;
+}
+
 /** Matter cost of `count` 강화 보호 charges (인과 닻) at the player's stage. Priced a
- *  bit high (ENHANCE_PROTECT_MATTER_FRAC) so insuring a risky enhance is a real
- *  deliberate outlay, not a trivial buy. No bulk discount (it's already premium). */
+ *  bit high (ENHANCE_PROTECT_MATTER_FRAC) so insuring a risky enhance is a real deliberate
+ *  outlay, with a bulk discount that rewards stocking up before a leveling session. */
 export function shopProtectMatterCost(stageId: number, count: number): number {
   const n = Math.max(1, Math.floor(count));
-  return Math.ceil(anchor(stageId) * ENHANCE_PROTECT_MATTER_FRAC * n);
+  return Math.ceil(anchor(stageId) * ENHANCE_PROTECT_MATTER_FRAC * n * (1 - protectBulkDiscount(n)));
 }
 
 /** Matter cost of the next daily refresh (escalating by refreshCount). */

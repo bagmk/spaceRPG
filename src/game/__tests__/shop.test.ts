@@ -3,7 +3,7 @@ import { getActiveShopBoostMultiplier, getOfflineRewardCapSec, shiftBoostExpiry 
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { generateDailyShop, toDateKey } from '../shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost } from '../shop/pricing';
+import { shopItemMatterCost, shopStoneMatterCost, shopRefreshMatterCost, shopProtectMatterCost, protectBulkDiscount } from '../shop/pricing';
 
 const AD = 'free_matter_burst';
 const MIN5 = 5 * 60 * 1000;
@@ -232,5 +232,16 @@ describe('daily attendance (출석체크, v27)', () => {
     // day 8 keeps giving (loops back to day 1 matter)
     const d8 = claim(s, 7);
     expect(d8.attendanceStreak).toBe(8);
+  });
+});
+
+describe('강화 보호 bulk discount (user: 많이 사면 할인)', () => {
+  it('bigger protect bundles cost less per charge', () => {
+    expect(protectBulkDiscount(1)).toBe(0);
+    expect(protectBulkDiscount(5)).toBeGreaterThan(0);
+    expect(protectBulkDiscount(25)).toBeGreaterThan(protectBulkDiscount(10));
+    // a 25-pack is strictly cheaper than 25 singles at the same stage.
+    const single = shopProtectMatterCost(5, 1);
+    expect(shopProtectMatterCost(5, 25)).toBeLessThan(single * 25);
   });
 });
