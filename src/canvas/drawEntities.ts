@@ -2175,8 +2175,13 @@ function smoothstep01(t: number): number {
 // are NOT tracked here — the user wants those to come and go with live ownership. The cache is
 // cleared when the run (universe) changes so a prestige doesn't inherit the prior Earth.
 const s11PeakCache = new Map<string, number>();
+// Per-feature ANIMATED size that eases toward the peak each frame, so a feature grows/appears
+// smoothly instead of popping from nothing to full size. Snaps to target on the first frame
+// (existing Earth shows instantly, no replay); only a CHANGED target (a fresh collect) animates.
+const s11AnimCache = new Map<string, number>();
 let s11PeakRun = -1;
 const S11_SEEN_FLOOR = 4;
+const S11_GROW_EASE = 0.05; // fraction toward target per frame (~0.8s to converge @60fps)
 
 function drawLifeEarthEntities(
   ctx: CanvasRenderingContext2D,
@@ -2201,15 +2206,19 @@ function drawLifeEarthEntities(
   // SURFACE/INTERIOR features grow with live count but never shrink: track a per-feature peak so
   // the Earth builds up gradually and stays put when copies are fused away. ORBITING bodies (moon,
   // satellite) keep their LIVE count and may come and go.
-  if (runId !== undefined && runId !== s11PeakRun) { s11PeakCache.clear(); s11PeakRun = runId; }
+  if (runId !== undefined && runId !== s11PeakRun) { s11PeakCache.clear(); s11AnimCache.clear(); s11PeakRun = runId; }
   const seen = new Set<string>();
   for (const id of almanacIds ?? []) seen.add(findEntityById(id, 11)?.id ?? id);
   const persist = (id: string, liveC: number) => {
     const peak = Math.max(s11PeakCache.get(id) ?? 0, liveC);
     s11PeakCache.set(id, peak);
-    // Built this run → grow gradually from 1 and hold at the peak. Only when nothing is held this
-    // run (peak 0) does an ever-seen feature fall back to a faint floor so a reload doesn't blank it.
-    return peak > 0 ? peak : seen.has(id) ? S11_SEEN_FLOOR : 0;
+    // Target = the high-water-mark (or a faint floor for an ever-seen-but-empty feature). Then EASE
+    // the rendered size toward it each frame so a new collect grows in smoothly instead of popping.
+    const target = peak > 0 ? peak : seen.has(id) ? S11_SEEN_FLOOR : 0;
+    const prev = s11AnimCache.get(id) ?? target; // first frame snaps (no build-up replay)
+    const anim = prev + (target - prev) * S11_GROW_EASE;
+    s11AnimCache.set(id, anim);
+    return anim;
   };
 
   // Raw counts (0..20 for commons, 0..10 rares, 0..5 epics, 0..3 legendaries).
@@ -2254,8 +2263,10 @@ function drawLifeEarthEntities(
   // Earth size scales for the ENTIRE 1→20 range so every Earth Formation
   // purchase makes the planet visibly bigger. count=1 ≈ small proto-Earth
   // (~22% radius), count=20 = full radius R.
+  // The 0.22 base would make the planet POP from nothing to 22% the instant crust appears; scale it
+  // by the (eased) crust amount up to 1 so the proto-Earth instead swells out of nothing smoothly.
   const sphereR      = hasCrust
-    ? R * (0.22 + 0.78 * smoothstep01(crustC / 20))
+    ? R * (0.22 + 0.78 * smoothstep01(crustC / 20)) * Math.min(1, crustC)
     : 0;
   const oceanBlobs   = Math.min(22, oceanC * 2);                     // pools growing into seas
   const atmoLayers   = Math.min(4, 1 + Math.floor(atmoC / 5));       // halo intensity steps
