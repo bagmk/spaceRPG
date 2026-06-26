@@ -1,7 +1,7 @@
 import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier, getCondensationCoreMultiplier } from '../prestige';
-import { applyCollectionRewards, applyEntityModifiers, applySetBonuses } from '../entities/effects';
+import { applyCollectionRewards, applyEntityModifiers, applySetBonuses, applyLaneMatch } from '../entities/effects';
 import { computeHexBingo } from '../entities/hexBingo';
 import { CRIT_MULT_GEAR_CAP } from '../balance';
 
@@ -157,6 +157,7 @@ export function getActiveModifiers(
   if (inventory && inventory.length > 0) {
     applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });
     applySetBonuses(mods, inventory);
+    applyLaneMatch(mods, inventory);
   }
 
   // CRIT GEAR CAP (P fix, 2026-06-24): CRIT_MULT_GEAR_CAP was defined but NEVER applied

@@ -1225,6 +1225,13 @@ export const SET_BONUS: Record<number, { clickAutoMult: number; matterMult: numb
   3: { clickAutoMult: 1.6,  matterMult: 20, critChanceAdd: 0.05 },
 };
 
+/** LANE / full-loadout match (user: "전부 같은 등급 → ×100"): a big OFF-GATE matter multiplier
+ *  when your WHOLE equipped loadout (≥ LANE_MATCH_MIN_SLOTS items) is themed. Rarity and glyph are
+ *  independent dimensions (compound); allMythic supersedes allSameRarity. Hard endgame goal (7
+ *  near-identical items), so it leans big per "조금 과해도". Off-gate → entropy gate untouched. */
+export const LANE_MATCH_MIN_SLOTS = 5;
+export const LANE_MATCH_MULTS = { allSameRarity: 4, allSameGlyph: 4, allMythic: 15 };
+
 // ── Combo cap growth (P5, R10) ───────────────────────────────────────────────
 // The combo MULTIPLIER cap starts low and GROWS with progression (a stage of
 // its own). Effective cap = min(CEIL, BASE + perStage·stageIdx + codex + gear +

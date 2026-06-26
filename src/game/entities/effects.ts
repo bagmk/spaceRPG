@@ -18,6 +18,8 @@ import {
   LEGACY_TIME_ENTITY_EFFECT_FACTOR,
   RIFT_SLOT_UNLOCKS,
   SET_BONUS,
+  LANE_MATCH_MIN_SLOTS,
+  LANE_MATCH_MULTS,
   WALLET_AUTO_LEVEL_GROWTH,
   WALLET_LEVEL_BONUS,
   WALLET_RARITY_WEIGHT,
@@ -376,6 +378,30 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
       mods.critChanceAdd += bonus.critChanceAdd;
       break; // highest tier for THIS family only, then move to the next family
     }
+  }
+}
+
+/**
+ * LANE / full-loadout match (user: "전부 같은 등급 → ×100"): a big OFF-GATE matter multiplier when
+ * your WHOLE equipped loadout (≥ LANE_MATCH_MIN_SLOTS items) shares a theme. Rarity and glyph are
+ * independent dimensions and compound; allMythic supersedes the plain same-rarity tier. A hard
+ * endgame goal (many near-identical items), so it pays big without touching the entropy gate.
+ */
+export function applyLaneMatch(mods: Modifiers, equipped: EntityInstance[]): void {
+  const items = equipped
+    .map((e) => findEntityById(e.entityId))
+    .filter((e): e is NonNullable<typeof e> => Boolean(e));
+  if (items.length < LANE_MATCH_MIN_SLOTS) return;
+  const allMythic = items.every((e) => e.rarity === 'mythic');
+  const allSameRarity = items.every((e) => e.rarity === items[0].rarity);
+  const allSameGlyph = items.every((e) => e.visual.glyph === items[0].visual.glyph);
+  let mult = 1;
+  if (allMythic) mult *= LANE_MATCH_MULTS.allMythic;
+  else if (allSameRarity) mult *= LANE_MATCH_MULTS.allSameRarity;
+  if (allSameGlyph) mult *= LANE_MATCH_MULTS.allSameGlyph;
+  if (mult > 1) {
+    mods.clickMatterMult *= mult;
+    mods.autoMatterMult *= mult;
   }
 }
 
