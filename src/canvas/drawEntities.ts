@@ -1,8 +1,14 @@
 import { hexToRgba } from '../game/formulas';
 import { TUNING, CANVAS_SCALE } from '../game/constants';
+import {
+  SOLAR_ORBIT_BASE_OMEGA,
+  SOLAR_ORBIT_OMEGA_FALLOFF,
+  SOLAR_ORBIT_DEPTH_DIM,
+} from '../game/balance';
 import type { EntityEffectType, EntityGlyph, EntityRarity, PurchasedEntityEntry, StageEntity } from '../game/entities/types';
 import type { MoteCluster } from '../game/types/canvas';
 import { findEntityById } from '../game/entities/stageItems';
+import { SOLAR_BODIES, SOLAR_ORBIT_SQUASH } from './drawCluster';
 
 // ── Stage 11 entity ID lookup ───────────────────────────────────────────────
 // CHRONIC-BUG FIX (2026): entity ids are POSITION-ONLY since the v15 id-decoupling
@@ -2167,6 +2173,171 @@ function smoothstep01(t: number): number {
   return x * x * (3 - 2 * x);
 }
 
+// Shared per-entity render: the same glow halo + legendary ring + glyph the
+// generic n-body path draws (see the positions loop in drawEntities), factored
+// out so the dedicated stage layers (drawSpiralGalaxyEntities / drawSolarOrbitEntities)
+// render identical-looking icons. The generic path keeps its own inlined copy
+// (which also calls drawLocalEntityEffect) so it stays byte-for-byte unchanged.
+// `alphaMul` lets a layer dim icons (e.g. solar far-arc depth); `compactGlow`
+// mirrors the stage 5/6 tighter halo (the dedicated stages don't use it).
+function drawEntityWithGlow(
+  ctx: CanvasRenderingContext2D,
+  position: EntityPosition,
+  now: number,
+  alphaMul = 1,
+  compactGlow = false,
+): void {
+  const { item, x, y, size, glowRadius } = position;
+  const isLegend = item.rarity === 'legendary';
+  const outerGlowRadius = compactGlow ? glowRadius * 0.56 : glowRadius;
+  const innerGlowRadius = compactGlow ? glowRadius * 0.28 : glowRadius * 0.5;
+  const outerGlowAlpha = (compactGlow ? (isLegend ? 0.09 : 0.045) : (isLegend ? 0.18 : 0.10)) * alphaMul;
+  const innerGlowAlpha = (compactGlow ? (isLegend ? 0.18 : 0.11) : (isLegend ? 0.28 : 0.16)) * alphaMul;
+  ctx.fillStyle = hexToRgba(item.glowColor, outerGlowAlpha);
+  ctx.beginPath();
+  ctx.arc(x, y, outerGlowRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = hexToRgba(item.glowColor, innerGlowAlpha);
+  ctx.beginPath();
+  ctx.arc(x, y, innerGlowRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (isLegend) {
+    ctx.strokeStyle = hexToRgba(item.glowColor, 0.28 * alphaMul);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(x, y, glowRadius * 0.76 + Math.sin(now * 0.001 + item.seed) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  drawEntityGlyph(ctx, item, x, y, size, now);
+}
+
+// Build the EntityPosition wrapper used by drawEntityWithGlow from a draw item
+// and a placed (x, y). Mirrors how the generic path seeds size/glowRadius.
+function placedEntityPosition(item: EntityDrawItem, x: number, y: number): EntityPosition {
+  return {
+    item,
+    x,
+    y,
+    size: ICON_SIZE[item.rarity],
+    glowRadius: GLOW_RADIUS[item.rarity],
+  };
+}
+
+// ── Stage 9: spiral-galaxy entity layer ──────────────────────────────────────
+// Collected entities arrange ONTO the galaxy's spiral arms (the same Archimedean-ish
+// strokes drawGalaxyDisk paints in drawCluster.ts), building outward as you collect,
+// instead of scattering as n-body dots. The layer is STATIC (no time rotation) —
+// the background strokes are static, so a spinning foreground would drift off them.
+// A high-water mark keeps arms EXTENDED once filled (the Stage-11 "never retract"
+// feel) so fusing copies away doesn't shorten the arms.
+const galaxyArmPeak = { n: 0 };
+let galaxyPeakRun = -1;
+
+function drawSpiralGalaxyEntities(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  items: EntityDrawItem[],
+  now: number,
+  pointerPressure?: PointerPressureVisualField | null,
+  runId?: number,
+): void {
+  // Hard ceiling (the stage-11 branch returns before the generic slice, so apply it here too).
+  if (items.length > HARD_CEILING) items.length = HARD_CEILING;
+  if (items.length === 0) return;
+
+  // High-water mark: arms only ever extend, never retract on fusion/consume.
+  if (runId !== undefined && runId !== galaxyPeakRun) { galaxyArmPeak.n = 0; galaxyPeakRun = runId; }
+  const liveCount = items.length;
+  const armFillCount = Math.max(galaxyArmPeak.n, liveCount);
+  galaxyArmPeak.n = armFillCount;
+
+  // Seed-sorted order → deterministic, stable across frames. Round-robin arm
+  // assignment off this order keeps arms balanced; new copies tack onto the OUTER end.
+  const sorted = items.slice().sort((a, b) => a.seed - b.seed);
+
+  const armCount = Math.max(1, TUNING.GALAXY_ARM_COUNT);
+  // Disk extent — mirror drawGalaxyDisk's `outer`. The cluster physicalRadius isn't
+  // available here, so use the tuned disk max as the outer span (matches the late-stage disk).
+  const outer = TUNING.GALAXY_DISK_MAX_RADIUS;
+  // Per-arm capacity from the high-water-mark count so the along-arm parameter u
+  // (rank within an arm) reaches the tip only when the arm is "full".
+  const perArm = Math.max(1, Math.ceil(armFillCount / armCount));
+
+  ctx.save();
+  for (let i = 0; i < sorted.length; i += 1) {
+    const item = sorted[i];
+    const arm = i % armCount;
+    const rank = Math.floor(i / armCount); // 0-based position along this arm
+    // smoothstep gives an inner-fills-first feel (denser core, sparser tips).
+    const u = smoothstep01((rank + 0.5) / perArm);
+
+    // SAME parametric form as drawGalaxyDisk's arm strokes (Archimedean-ish, NOT a log spiral):
+    //   angle = arm*PI + u*sweep ;  dist = outer*(innerFrac + u*outerSpan)
+    const angle = arm * Math.PI + u * TUNING.GALAXY_ARM_SWEEP;
+    const dist = outer * (TUNING.GALAXY_ARM_INNER_FRAC + u * TUNING.GALAXY_ARM_OUTER_SPAN);
+
+    // Deterministic perpendicular jitter so the arm reads as a star stream, not a wire.
+    const jitter = (unit(item.seed, 5) - 0.5) * 2 * TUNING.GALAXY_ARM_JITTER;
+    const perpAngle = angle + Math.PI / 2;
+    let lx = Math.cos(angle) * dist + Math.cos(perpAngle) * jitter;
+    let ly = Math.sin(angle) * dist + Math.sin(perpAngle) * jitter;
+    // Disk vertical flatten matching drawGalaxyDisk's `ctx.scale(1, 0.55)`.
+    ly *= 0.55;
+
+    let x = cx + lx;
+    let y = cy + ly;
+    const pushed = applyPointerVisualDisplacement(x, y, pointerPressure, 12);
+    x = pushed.x;
+    y = pushed.y;
+
+    drawEntityWithGlow(ctx, placedEntityPosition(item, x, y), now);
+  }
+  ctx.restore();
+}
+
+// ── Stage 10: solar orbital entity layer ─────────────────────────────────────
+// Collected entities sit ON the visible orbital ellipse rings (SOLAR_BODIES orbits,
+// squashed by SOLAR_ORBIT_SQUASH) and revolve along them. Outer rings revolve
+// slower (Kepler feel). Deterministic per-entity ring/phase/direction from the seed.
+function drawSolarOrbitEntities(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  items: EntityDrawItem[],
+  now: number,
+  pointerPressure?: PointerPressureVisualField | null,
+): void {
+  if (items.length === 0) return;
+  const rings = SOLAR_BODIES.map((b) => b.orbit);
+  if (rings.length === 0) return;
+
+  ctx.save();
+  for (const item of items) {
+    // Distinct unit() channels (17/19/23) to avoid clashing with drawEntityGlyph's 10/11/12.
+    const ringIdx = Math.min(rings.length - 1, Math.floor(unit(item.seed, 17) * rings.length));
+    const baseAngle = unit(item.seed, 19) * Math.PI * 2;
+    const dir = unit(item.seed, 23) > 0.5 ? 1 : -1;
+    // Outer rings slower: omega = base / (1 + idx * falloff).
+    const omega = SOLAR_ORBIT_BASE_OMEGA / (1 + ringIdx * SOLAR_ORBIT_OMEGA_FALLOFF);
+    const angle = baseAngle + dir * omega * now;
+    const rx = rings[ringIdx];
+    const ry = rx * SOLAR_ORBIT_SQUASH;
+    let x = cx + Math.cos(angle) * rx;
+    let y = cy + Math.sin(angle) * ry; // ON the ellipse line
+    const pushed = applyPointerVisualDisplacement(x, y, pointerPressure, 14);
+    x = pushed.x;
+    y = pushed.y;
+    // Far-arc depth dim: back half of the ellipse (sin(angle) < 0) fades for depth.
+    const depth = (Math.sin(angle) + 1) / 2; // 0 (back) .. 1 (front)
+    const alphaMul = 1 - SOLAR_ORBIT_DEPTH_DIM * (1 - depth);
+    drawEntityWithGlow(ctx, placedEntityPosition(item, x, y), now, alphaMul);
+  }
+  ctx.restore();
+}
+
 // Stage-11 Earth SURFACE high-water-mark. Each surface feature GROWS with its live owned count
 // but never shrinks back down once built — so the Earth grows gradually as you collect and stays
 // put when copies are later fused/consumed (no sudden full-size pop, no shrink). The peak is a
@@ -3840,11 +4011,14 @@ export function drawEntities(
     if (entry.count <= 0) continue;
     const entity = findEntityById(entry.entityId, stageId);
     if (!entity) continue;
-    // Stage 10: Sun glyph is represented by the evolving sun animation, skip it
-    // Stage 10: Sun + planet-related entities are drawn by the cluster renderer
+    // Stage 10: Sun + planet bodies are already drawn by the cluster renderer
+    // (drawPlanetarySystem: the Sun animation + the SOLAR_BODIES planets +
+    // Earth's Moon). Skip those entity NAMES so the orbital entity layer
+    // (drawSolarOrbitEntities) only snaps the *other* collectibles and doesn't
+    // stack a second icon on top of an already-drawn planet/moon/sun.
     if (stageId === 10) {
       const n = entity.name;
-      if (n === 'Sun') continue;
+      if (n === 'Sun' || n === 'Rocky Planet' || n === 'Moon') continue;
     }
     const existing = entitiesById.get(entity.id);
     if (existing) {
@@ -3920,12 +4094,27 @@ export function drawEntities(
     return;
   }
 
+  // Stage 9: arrange entities onto the galaxy's spiral arms (builds outward, static).
+  // Returns before the generic HARD_CEILING slice, so the cap is applied inside the fn.
+  if (stageId === 9) {
+    drawSpiralGalaxyEntities(ctx, cx, cy, items, now, pointerPressure, runId);
+    return;
+  }
+
   // Soft total cap: simple truncation in insertion order (no rarity priority).
   // The original rarity-priority cap erased Common entities when Rare/Epic
   // were added, so we just slice from the end if we ever exceed the ceiling.
   // Per-entity cap (MAX_VISIBLE_PER_ENTITY = 6) usually keeps us well under.
   if (items.length > HARD_CEILING) {
     items.length = HARD_CEILING;
+  }
+
+  // Stage 10: snap entities onto the visible orbital ellipse rings (after the
+  // HARD_CEILING slice, before the n-body block). Sun/Rocky Planet/Moon are
+  // skipped above so they don't stack on the cluster-drawn planet bodies.
+  if (stageId === 10) {
+    drawSolarOrbitEntities(ctx, cx, cy, items, now, pointerPressure);
+    return;
   }
 
   // ── N-body physics simulation for entity particles ──────────────────────

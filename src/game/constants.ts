@@ -20,6 +20,13 @@ export const STORAGE_KEYS = {
   muted: 'cosmic_coalescence_muted',
 } as const;
 
+// Number of galaxy spiral arms. Hoisted to a module-level const so the background
+// disk strokes (GALAXY_SPIRAL_ARMS) and the stage-9 entity layer (GALAXY_ARM_COUNT)
+// share ONE value — the collected-entity dots must sit on the SAME arms the disk
+// draws, so these must stay equal. (An object-literal property cannot reference a
+// sibling key, hence the hoist.)
+const GALAXY_SPIRAL_ARMS_COUNT = 2;
+
 export const TUNING = {
   COMBO_TIMEOUT_MS: 700,
   COMBO_CLEAR_MS: 1200,
@@ -94,11 +101,25 @@ export const TUNING = {
   MOTE_SPAWN_RADIUS_FRAC: 0.1,
 
   GALAXY_TANGENTIAL_BOOST: 1.4,
-  GALAXY_SPIRAL_ARMS: 2,
+  GALAXY_SPIRAL_ARMS: GALAXY_SPIRAL_ARMS_COUNT,
   GALAXY_FLAT_BIAS: 0.85,
   GALAXY_DISK_MIN_RADIUS: 46 * CANVAS_SCALE,
   GALAXY_DISK_MAX_RADIUS: 170 * CANVAS_SCALE,
   GALAXY_DISK_GROW_PER_SQRT_MOTE: 8 * CANVAS_SCALE,
+
+  // ── Stage 9 spiral-galaxy entity layer (drawSpiralGalaxyEntities) ──────────
+  // Collected entities arrange ONTO the galaxy's spiral arms (built outward as
+  // you collect) instead of scattering as n-body dots. The arm parametric form
+  // MUST match drawGalaxyDisk's strokes (Archimedean-ish:
+  //   dist = outer * (GALAXY_ARM_INNER_FRAC + u * GALAXY_ARM_OUTER_SPAN),
+  //   angle = arm * Math.PI + u * GALAXY_ARM_SWEEP)
+  // so the dots sit on the existing strokes. Layer is STATIC (no rotation) —
+  // the background strokes are static, so spinning would drift off them.
+  GALAXY_ARM_COUNT: GALAXY_SPIRAL_ARMS_COUNT, // keep == GALAXY_SPIRAL_ARMS
+  GALAXY_ARM_INNER_FRAC: 0.18,   // matches drawGalaxyDisk: dist starts at 0.18*outer
+  GALAXY_ARM_OUTER_SPAN: 0.82,   // matches drawGalaxyDisk: +0.82*outer at the tip
+  GALAXY_ARM_SWEEP: Math.PI * 2.4, // matches drawGalaxyDisk: u * Math.PI * 2.4
+  GALAXY_ARM_JITTER: 7 * CANVAS_SCALE, // perpendicular star-stream scatter (px)
 
   PLANETARY_ORBIT_LOCK: 0.58,
   PLANETARY_ORBIT_MIN_RADIUS: 46 * CANVAS_SCALE,

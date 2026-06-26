@@ -33,6 +33,13 @@ function drawMilestoneFlash(
   }
 }
 
+// Vertical squash applied to the solar-system orbital ellipses (rings + planet
+// positions): `ry = orbit * SOLAR_ORBIT_SQUASH`. Single source of truth so the
+// stage-10 entity layer (drawSolarOrbitEntities) can snap collected icons onto
+// the very same rings. Only the SOLAR sites use this — other stages keep their
+// own 0.42 literals.
+export const SOLAR_ORBIT_SQUASH = 0.42;
+
 // V9 planet formation: each planet appears individually from dust → proto → sphere → final
 function drawFormingPlanet(
   ctx: CanvasRenderingContext2D,
@@ -45,12 +52,12 @@ function drawFormingPlanet(
   const body = SOLAR_BODIES[bodyIdx];
   const angle = now / (1400 + bodyIdx * 190) + bodyIdx * 0.72;
   const px = cx + Math.cos(angle) * body.orbit;
-  const py = cy + Math.sin(angle) * body.orbit * 0.42;
+  const py = cy + Math.sin(angle) * body.orbit * SOLAR_ORBIT_SQUASH;
 
   ctx.strokeStyle = hexToRgba(body.color, easeIO(Math.min(1, localT * 3)) * 0.1);
   ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, body.orbit, body.orbit * SOLAR_ORBIT_SQUASH, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   if (localT < 0.25) {
@@ -60,7 +67,7 @@ function drawFormingPlanet(
       const dr = body.r * (0.55 + Math.sin(now / 280 + i + bodyIdx) * 0.35);
       ctx.fillStyle = hexToRgba(body.color, a);
       ctx.beginPath();
-      ctx.arc(px + Math.cos(da) * dr, py + Math.sin(da) * dr * 0.42, 1.3, 0, Math.PI * 2);
+      ctx.arc(px + Math.cos(da) * dr, py + Math.sin(da) * dr * SOLAR_ORBIT_SQUASH, 1.3, 0, Math.PI * 2);
       ctx.fill();
     }
   } else if (localT < 0.5) {
@@ -625,7 +632,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
       ctx.strokeStyle = hexToRgba(stage.accent, 0.06 * diskT * (1 - ring / 5));
       ctx.lineWidth = 0.9;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, rr, rr * 0.42, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, rr, rr * SOLAR_ORBIT_SQUASH, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
@@ -637,7 +644,7 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
       const angle = now / 900 + i * 0.72;
       const orbit = 64 + (i % 6) * 22;
       const baseX = cx + Math.cos(angle) * orbit;
-      const baseY = cy + Math.sin(angle) * orbit * 0.42;
+      const baseY = cy + Math.sin(angle) * orbit * SOLAR_ORBIT_SQUASH;
       const pushed = applyPointerVisualDisplacement(baseX, baseY, pointerPressure, 14);
       const x = pushed.x;
       const y = pushed.y;
@@ -714,11 +721,11 @@ function drawPlanetarySystem(args: DrawClusterArgs): void {
       ctx.strokeStyle = hexToRgba(body.color, idx === 2 ? 0.16 : 0.12);
       ctx.lineWidth = idx === 2 ? 1.35 : 0.95;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, body.orbit, body.orbit * 0.42, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, body.orbit, body.orbit * SOLAR_ORBIT_SQUASH, 0, 0, Math.PI * 2);
       ctx.stroke();
       const angle = now / (1400 + idx * 190) + idx * 0.72;
       const basePx = cx + Math.cos(angle) * body.orbit;
-      const basePy = cy + Math.sin(angle) * body.orbit * 0.42;
+      const basePy = cy + Math.sin(angle) * body.orbit * SOLAR_ORBIT_SQUASH;
       const pushed = applyPointerVisualDisplacement(basePx, basePy, pointerPressure, 14);
       const px = pushed.x;
       const py = pushed.y;
@@ -854,7 +861,7 @@ function drawSolarSun(
   }
 }
 
-const SOLAR_BODIES = [
+export const SOLAR_BODIES = [
   { name: 'Mercury', orbit: 54, r: 4.5, color: '#b7a28a', showAt: 0.28 },
   { name: 'Venus', orbit: 76, r: 7.0, color: '#e7bb79', showAt: 0.36 },
   { name: 'Earth', orbit: 100, r: 7.8, color: '#5aa7ff', showAt: 0.44 },

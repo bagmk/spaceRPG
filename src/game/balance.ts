@@ -1231,6 +1231,20 @@ export const COMBO_CAP_CODEX_MAX = 2.0;
 /** Combo cap from the free_combo singularity unlock. */
 export const COMBO_CAP_SINGULARITY = 2.0;
 
+// ── Stage 10 solar orbital entity layer ───────────────────────────────────────
+// Collected stage-10 entities snap onto the visible orbital ellipse rings drawn
+// by drawPlanetarySystem and revolve along them (Kepler-ish: outer rings slower).
+// The ring squash (ry = rx * squash) lives in drawCluster.ts as SOLAR_ORBIT_SQUASH
+// (single source of truth) so the entity layer and the background rings stay
+// perfectly aligned; it is re-exported here for convenience/documentation.
+
+/** Base angular speed (rad/ms) for the innermost ring; ~35s/rev. */
+export const SOLAR_ORBIT_BASE_OMEGA = 0.00018;
+/** Per-ring-index slowdown: omega = base / (1 + idx * falloff). Outer = slower. */
+export const SOLAR_ORBIT_OMEGA_FALLOFF = 0.18;
+/** Far-arc depth dimming: icons on the back half of the ellipse fade by up to this. */
+export const SOLAR_ORBIT_DEPTH_DIM = 0.15;
+
 // ── Intro / Big Bang timing ──────────────────────────────────────────────────
 
 /** Time the "Let there be light" line is held before the big bang flash (ms). */
@@ -1305,5 +1319,10 @@ export const BALANCE = {
     slotUnlocks: EQUIP_SLOT_UNLOCKS,
     riftSlotUnlocks: RIFT_SLOT_UNLOCKS,
     setBonus: SET_BONUS,
+  },
+  solarOrbit: {
+    baseOmega: SOLAR_ORBIT_BASE_OMEGA,
+    omegaFalloff: SOLAR_ORBIT_OMEGA_FALLOFF,
+    depthDim: SOLAR_ORBIT_DEPTH_DIM,
   },
 } as const;
