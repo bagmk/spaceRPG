@@ -2243,6 +2243,7 @@ function drawSpiralGalaxyEntities(
   now: number,
   pointerPressure?: PointerPressureVisualField | null,
   runId?: number,
+  cluster?: MoteCluster | null,
 ): void {
   // Hard ceiling (the stage-11 branch returns before the generic slice, so apply it here too).
   if (items.length > HARD_CEILING) items.length = HARD_CEILING;
@@ -2259,9 +2260,9 @@ function drawSpiralGalaxyEntities(
   const sorted = items.slice().sort((a, b) => a.seed - b.seed);
 
   const armCount = Math.max(1, TUNING.GALAXY_ARM_COUNT);
-  // Disk extent — mirror drawGalaxyDisk's `outer`. The cluster physicalRadius isn't
-  // available here, so use the tuned disk max as the outer span (matches the late-stage disk).
-  const outer = TUNING.GALAXY_DISK_MAX_RADIUS;
+  // Disk extent — mirror drawGalaxyDisk's `outer` EXACTLY (live cluster radius) so the entity arms
+  // track the disk at every size instead of overshooting a small early-game disk with a fixed max.
+  const outer = Math.max(TUNING.GALAXY_DISK_MIN_RADIUS, cluster?.physicalRadius ?? TUNING.GALAXY_DISK_MAX_RADIUS);
   // Per-arm capacity from the high-water-mark count so the along-arm parameter u
   // (rank within an arm) reaches the tip only when the arm is "full".
   const perArm = Math.max(1, Math.ceil(armFillCount / armCount));
@@ -4097,7 +4098,7 @@ export function drawEntities(
   // Stage 9: arrange entities onto the galaxy's spiral arms (builds outward, static).
   // Returns before the generic HARD_CEILING slice, so the cap is applied inside the fn.
   if (stageId === 9) {
-    drawSpiralGalaxyEntities(ctx, cx, cy, items, now, pointerPressure, runId);
+    drawSpiralGalaxyEntities(ctx, cx, cy, items, now, pointerPressure, runId, cluster);
     return;
   }
 
