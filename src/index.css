@@ -14495,6 +14495,32 @@ button.stat-header-item {
   background: rgba(226, 85, 74, 0.22);
 }
 
+/* Risk-phase block: a live 🎯 성공 / 💥 파괴 readout above the two ☑ toggles
+   (✨ 특수강화 · 🛡 보호), centred and wrapping on narrow screens. */
+.enhance-risk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.enhance-risk__readout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  font-family: var(--mono);
+  font-size: 0.84em;
+  font-weight: 700;
+}
+.enhance-risk__pct--ok { color: #7fe08a; }
+.enhance-risk__pct--bad { color: #e2554a; }
+.enhance-risk__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 /* User: the 보호 사용 toggle was an unstyled button (default WHITE background) — make it a
    dark pill that highlights purple when ON. */
 .enhance-protect-toggle {

@@ -154,8 +154,9 @@ export type GameAction =
   // Risk phase (user "실패·파괴 부활"): the UI passes RNG rolls so the reducer stays
   // pure/deterministic in tests. failRoll/breakRoll default to fresh Math.random()
   // in the handler when omitted. useProtect = the "보호 사용" toggle (spend a charge
-  // to absorb a fail). Guaranteed levels ignore all three.
-  | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; breakRoll?: number; useProtect?: boolean }
+  // to absorb a fail). useSpecial = the 특수강화 toggle — when OFF, force the 강화석 path
+  // even if spare copies exist (default ON). Guaranteed levels ignore all of them.
+  | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; breakRoll?: number; useProtect?: boolean; useSpecial?: boolean }
   | { type: 'TOGGLE_FAVORITE'; entityId: string }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }

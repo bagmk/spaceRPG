@@ -29,7 +29,7 @@ import {
 import { computeHexBingo } from '../game/entities/hexBingo';
 import { getWalletAnchorFlat, getAutoWalletLevelBoost, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
-import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost, isEnhanceRiskLevel, getEnhanceFailChance } from '../game/entities/enhance';
+import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost, isEnhanceRiskLevel, getEnhanceFailChance, getSpecialEnhanceFailChance } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
 import { getBestDropStage } from '../game/entities/drops';
 import { qualityMult, isTailQuality } from '../game/entities/quality';
@@ -360,6 +360,8 @@ const EFFECT_HELP_ROWS: { key: string; icon: string; labelKey: Parameters<typeof
   { key: 'dropRate',    icon: SUBSTAT_TRAIT.dropRate,       labelKey: 'substatDropRate',    descKey: 'helpStatDropRate' },
   { key: 'fusionBurst', icon: SUBSTAT_TRAIT.fusionBurst,    labelKey: 'substatFusionBurst', descKey: 'helpStatFusionBurst' },
   { key: 'offlineEff',  icon: SUBSTAT_TRAIT.offlineEff,     labelKey: 'statOffline',        descKey: 'helpStatOffline' },
+  { key: 'successRate', icon: '🎯', labelKey: 'helpStatSuccessRate', descKey: 'helpStatSuccessRateDesc' },
+  { key: 'destroyChance', icon: '💥', labelKey: 'helpStatDestroy',   descKey: 'helpStatDestroyDesc' },
 ];
 
 /** Legend explaining what each trait shape means (#42-fix: 도형 직관화).
@@ -466,7 +468,7 @@ interface Props {
   onEquipWild?: (entityId: string) => void;
   onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
   /** Risk phase (v30): useProtect = spend a 강화 보호 charge on a fail (the "보호 사용" toggle). */
-  onEnhance: (instanceId: string, useProtect?: boolean) => void;
+  onEnhance: (instanceId: string, useProtect?: boolean, useSpecial?: boolean) => void;
   onFuse: (inputEntityIds: string[]) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
   onFuseBatch: (inputEntityIds: string[]) => void;
@@ -575,6 +577,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // Risk phase (v30): the "보호 사용" toggle — when ON and a charge is held, a failed
   // risk-phase enhance spends one 강화 보호 charge instead of destroying the item.
   const [useProtect, setUseProtect] = useState(true);
+  // Risk phase: the 특수강화 toggle — ON (default) + ≥3 spare copies spends 3 cards at
+  // HALVED fail odds; OFF forces the 강화석 path at full odds. Default ON = sim-neutral.
+  const [useSpecial, setUseSpecial] = useState(true);
   // Overhaul-4 (v26): Fuse-All protection is now the PERSISTENT ★ favorite
   // (favoriteEntityIds prop) — the old per-session excludedIds Set was replaced.
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
@@ -620,7 +625,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
     onUITap?.();
     enhanceTimerRef.current = window.setTimeout(() => {
       setEnhancing(null);
-      onEnhance(id, useProtect);
+      onEnhance(id, useProtect, useSpecial);
     }, 550 + Math.random() * 450); // ~0.55–1.0s, slightly random
   };
 
@@ -1954,7 +1959,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                 ? (['helpFuseRule1', 'helpFuseRule2', 'helpFuseRule3', 'helpFuseRule4'] as const)
                 : tab === 'lab'
                   ? (['helpCodexRule1', 'helpCodexRule2', 'helpCodexRule3'] as const)
-                  : (['helpEquipRule1', 'helpEquipRule2', 'helpEquipRule3', 'helpEquipRule4'] as const)
+                  : (['helpEquipRule1', 'helpEquipRule2', 'helpEquipRule3', 'helpEquipRule4', 'helpEquipRule5', 'helpEquipRule6'] as const)
               ).map((k) => (
                 <li key={k}>{t(language, k)}</li>
               ))}
@@ -2078,6 +2083,16 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         // ("카드 없으면 비싸게"). Copies stay the cheap (free) path; the buy is gone.
         const stoneCost = getEnhanceStoneCost(ent, lvl);
         const canStone = !atCap && !canMerge && enhanceStones >= stoneCost;
+        // 특수강화 / 보호 live readout. specialActive = the copy path is ACTUALLY taken
+        // (toggle ON + ≥3 spares); it gates BOTH the % and the button so the UI and the
+        // reducer agree (no dead clicks when 특수강화 is OFF and stones can't afford it).
+        const specialActive = risky && useSpecial && spares >= SPECIAL_ENHANCE_CARD_COST;
+        const canMergeEff = risky ? specialActive : canMerge;
+        const canStoneEff = !atCap && !canMergeEff && enhanceStones >= stoneCost;
+        const failChance = atCap ? 0 : !risky ? 0 : specialActive ? getSpecialEnhanceFailChance(lvl) : getEnhanceFailChance(lvl);
+        const protectActive = useProtect && enhanceProtectCharges > 0;
+        const successPct = Math.round((1 - failChance) * 100); // 🎯 성공 (level-up)
+        const destroyPct = protectActive ? 0 : Math.round(failChance * 100); // 💥 파괴 (item loss)
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
@@ -2107,28 +2122,46 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
                 ) : null}
               </div>
-              {/* Risk phase (v30): a single clean 보호 사용 toggle (check + shield + held
-                  charge count). Protection ON+charge → a failed 특수강화 is absorbed. */}
+              {/* Risk phase: live 🎯 성공 / 💥 파괴 readout, then the two ☑ toggles
+                  (✨ 특수강화 — 3 cards, halved fail · 🛡 보호 — absorb a fail). The (?) help
+                  explains all four symbols. */}
               {risky && enhanceUnlocked ? (
                 <div className="enhance-risk">
-                  <button
-                    type="button"
-                    className={`enhance-protect-toggle ${useProtect ? 'enhance-protect-toggle--on' : ''}`}
-                    role="switch"
-                    aria-checked={useProtect}
-                    aria-label={t(language, 'enhanceUseProtect')}
-                    disabled={enhancing !== null}
-                    onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
-                  >
-                    {`${useProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
-                  </button>
+                  <div className="enhance-risk__readout" aria-live="polite">
+                    <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${t(language, 'enhanceReadoutSuccess')} ${successPct}%`}</span>
+                    <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${t(language, 'enhanceReadoutDestroy')} ${destroyPct}%`}</span>
+                  </div>
+                  <div className="enhance-risk__toggles">
+                    <button
+                      type="button"
+                      className={`enhance-protect-toggle ${useSpecial ? 'enhance-protect-toggle--on' : ''}`}
+                      role="switch"
+                      aria-checked={useSpecial}
+                      aria-label={t(language, 'specialEnhanceToggleAria')}
+                      disabled={enhancing !== null}
+                      onClick={(e) => { e.stopPropagation(); setUseSpecial((v) => !v); onUITap?.(); }}
+                    >
+                      {`${useSpecial ? '☑' : '☐'} ✨ ${t(language, 'specialEnhanceLabel')}`}
+                    </button>
+                    <button
+                      type="button"
+                      className={`enhance-protect-toggle ${useProtect ? 'enhance-protect-toggle--on' : ''}`}
+                      role="switch"
+                      aria-checked={useProtect}
+                      aria-label={t(language, 'enhanceUseProtect')}
+                      disabled={enhancing !== null}
+                      onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
+                    >
+                      {`${useProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
+                    </button>
+                  </div>
                 </div>
               ) : null}
               <button
                 type="button"
                 className="entity-detail-card__equip entity-detail-card__enhance"
-                style={(canMerge || canStone) && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
-                disabled={(!canMerge && !canStone) || !enhanceUnlocked || enhancing !== null}
+                style={(canMergeEff || canStoneEff) && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
+                disabled={(!canMergeEff && !canStoneEff) || !enhanceUnlocked || enhancing !== null}
                 onClick={() => triggerEnhance(slotVal)}
               >
                 {!enhanceUnlocked
@@ -2139,9 +2172,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       <>
                         <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
-                        {/* Cost line: 특수강화 (risky) shows the hint "카드 3장 · 성공률↑"; the
-                            guaranteed band shows only the ◆ 강화석 escape when not a free merge. */}
-                        <span className="enhance-btn__cost">{risky ? t(language, 'specialEnhanceHint') : (canMerge ? '' : `◆ ${stoneCost}`)}</span>
+                        {/* Cost line reflects the ACTIVE path: 특수강화 → 🎴 cards; otherwise
+                            the ◆ 강화석 escape (blank only on a free guaranteed-band merge). */}
+                        <span className="enhance-btn__cost">{specialActive ? `🎴 ${SPECIAL_ENHANCE_CARD_COST}` : (canMergeEff && !risky ? '' : `◆ ${stoneCost}`)}</span>
                       </>
                     )}
               </button>

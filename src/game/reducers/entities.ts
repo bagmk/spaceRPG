@@ -542,7 +542,8 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     // escape keeps the normal (un-reduced) odds.
     const needCopies = SPECIAL_ENHANCE_CARD_COST;
     const stoneCost = getEnhanceStoneCost(entity, prevLevel);
-    const payWithCopies = spares >= needCopies;
+    // useSpecial OFF (default ON) forces the 강화석 path even when copies are spare.
+    const payWithCopies = (action.useSpecial ?? true) && spares >= needCopies;
     if (!payWithCopies && state.enhanceStones < stoneCost) return state;
     if (payWithCopies) {
       consumedInstances = fodder.slice(0, needCopies);
