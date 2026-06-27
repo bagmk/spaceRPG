@@ -53,6 +53,76 @@ const GLOW_RADIUS: Record<EntityRarity, number> = {
   mythic: 34 * CANVAS_SCALE,
 };
 
+// ── Stage 13 vs 14 era mood tinting ─────────────────────────────────────────
+// These two stages used to look alike: both ENTITY_STAGE_ACCENT colours are
+// cool, desaturated mid-tones (13 = #8a90a8 grey-blue, 14 = #8e69c9 muted
+// purple) and both stages run through the same generic n-body renderer, so
+// every entity read as a "cool greyish blob" with no era character. We retint
+// each entity's color/glowColor by luminance onto an era-specific temperature
+// ramp (cheap, computed once per item per frame, no extra per-frame allocation
+// in the physics loop) and add a cheap per-frame mood overlay in the glow loop.
+//
+//   • Stage 13 "Stelliferous End" — the LAST starlight cooling white→red→dark.
+//     Warm amber → orange → deep ember red. A slow warm "cooling pulse": a
+//     faint warm glow that breathes brighter then ebbs, like heat leaking away.
+//   • Stage 14 "Degenerate Era" — no stars, only remnants in near-total dark
+//     while proton decay evaporates matter. Cold blue-white → steel → near-dark.
+//     A slow cold "decay flicker": entities occasionally wink/dim as if matter
+//     is quietly disappearing.
+//
+// Ramps run dark→bright (index 0 = coolest/dimmest end of that era's palette).
+// Luminance picks the entry, so rarity/dupe brightness ordering is preserved.
+const ERA13_WARM_RAMP: readonly string[] = [
+  '#3a1206', '#7a2a0e', '#b8451c', '#e2682a', '#ff9a44', '#ffc878',
+];
+const ERA14_COLD_RAMP: readonly string[] = [
+  '#0a1626', '#1c3450', '#2f5680', '#4f86b8', '#8fb8e0', '#d6e8ff',
+];
+// Cooling pulse (S13): slow warm breathing of the glow. Rate in rad/ms.
+const ERA13_COOLING_PULSE_RATE = 0.00045;
+const ERA13_COOLING_PULSE_DEPTH = 0.32;   // glow-alpha swing fraction (ebb amount)
+// Decay flicker (S14): per-entity slow wink. Rate in rad/ms; depth = how far it dims.
+const ERA14_DECAY_FLICKER_RATE = 0.0011;
+const ERA14_DECAY_FLICKER_DEPTH = 0.5;    // up to 50% dimming at the wink trough
+
+/** Relative luminance (0..1) of a #rrggbb hex (perceptual weights). */
+function hexLuminance(hex: string): number {
+  const n = hex.replace('#', '');
+  const r = parseInt(n.slice(0, 2), 16);
+  const g = parseInt(n.slice(2, 4), 16);
+  const b = parseInt(n.slice(4, 6), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return 0.5;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/** Sample a hex ramp at t∈[0,1] with linear interpolation between stops. */
+function sampleHexRamp(ramp: readonly string[], t: number): string {
+  const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
+  const scaled = clamped * (ramp.length - 1);
+  const i = Math.min(ramp.length - 2, Math.floor(scaled));
+  const f = scaled - i;
+  const a = ramp[i].replace('#', '');
+  const b = ramp[i + 1].replace('#', '');
+  const ar = parseInt(a.slice(0, 2), 16), ag = parseInt(a.slice(2, 4), 16), ab = parseInt(a.slice(4, 6), 16);
+  const br = parseInt(b.slice(0, 2), 16), bg = parseInt(b.slice(2, 4), 16), bb = parseInt(b.slice(4, 6), 16);
+  const r = Math.round(ar + (br - ar) * f);
+  const g = Math.round(ag + (bg - ag) * f);
+  const bch = Math.round(ab + (bb - ab) * f);
+  const hx = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${hx(r)}${hx(g)}${hx(bch)}`;
+}
+
+/**
+ * Retint a source entity colour onto the stage's era temperature ramp,
+ * preserving its luminance (so rarity/dupe brightness ordering survives).
+ * Returns the original colour unchanged for any stage other than 13/14.
+ */
+function eraTint(hex: string, stageId: number): string {
+  if (stageId === 13) return sampleHexRamp(ERA13_WARM_RAMP, hexLuminance(hex));
+  if (stageId === 14) return sampleHexRamp(ERA14_COLD_RAMP, hexLuminance(hex));
+  return hex;
+}
+
 /**
  * Visible-particle thresholds for the dynamic cap.
  *
@@ -4294,8 +4364,11 @@ export function drawEntities(
         stageId,
         name: entity.name,
         formula: entity.formula,
-        color: entity.visual.color,
-        glowColor: entity.visual.glowColor,
+        // Stage 13/14 get an era temperature retint (warm dying embers vs cold
+        // decay) so the two near-identical cool accents read as distinct moods.
+        // eraTint is a no-op for every other stage.
+        color: eraTint(entity.visual.color, stageId),
+        glowColor: eraTint(entity.visual.glowColor, stageId),
         glyph: entity.visual.glyph,
         rarity: entity.rarity,
         effectType: entity.effect.type,
@@ -4577,8 +4650,27 @@ export function drawEntities(
     const compactGlow = stageId === 5 || stageId === 6;
     const outerGlowRadius = compactGlow ? glowRadius * 0.56 : glowRadius;
     const innerGlowRadius = compactGlow ? glowRadius * 0.28 : glowRadius * 0.5;
-    const outerGlowAlpha = compactGlow ? (isLegend ? 0.09 : 0.045) : (isLegend ? 0.18 : 0.10);
-    const innerGlowAlpha = compactGlow ? (isLegend ? 0.18 : 0.11) : (isLegend ? 0.28 : 0.16);
+    let outerGlowAlpha = compactGlow ? (isLegend ? 0.09 : 0.045) : (isLegend ? 0.18 : 0.10);
+    let innerGlowAlpha = compactGlow ? (isLegend ? 0.18 : 0.11) : (isLegend ? 0.28 : 0.16);
+
+    // ── Era mood overlay (stages 13 & 14 only) ──────────────────────────────
+    // Cheap per-frame, no allocation. S13 = slow warm cooling pulse (heat
+    // ebbing); S14 = slow per-entity cold decay flicker (matter winking out).
+    if (stageId === 13) {
+      // Whole-field warm breathing: glow swells then ebbs, offset per entity.
+      const cool = 0.5 + 0.5 * Math.sin(now * ERA13_COOLING_PULSE_RATE + item.seed * 0.0003);
+      const mult = 1 - ERA13_COOLING_PULSE_DEPTH * (1 - cool);
+      outerGlowAlpha *= mult;
+      innerGlowAlpha *= mult;
+    } else if (stageId === 14) {
+      // Per-entity wink: most of the cycle it sits near full, then dips toward
+      // dark — a remnant briefly fading as proton decay nibbles at it.
+      const phase = Math.sin(now * ERA14_DECAY_FLICKER_RATE + item.seed * 0.0007);
+      const wink = 1 - ERA14_DECAY_FLICKER_DEPTH * Math.pow(Math.max(0, -phase), 1.6);
+      outerGlowAlpha *= wink;
+      innerGlowAlpha *= wink;
+    }
+
     drawLocalEntityEffect(ctx, position, now);
     ctx.fillStyle = hexToRgba(item.glowColor, outerGlowAlpha);
     ctx.beginPath();
@@ -4588,6 +4680,16 @@ export function drawEntities(
     ctx.beginPath();
     ctx.arc(x, y, innerGlowRadius, 0, Math.PI * 2);
     ctx.fill();
+
+    // S13 warm ember halo: a faint extra warm-white glow that breathes with the
+    // cooling pulse — last heat radiating before the lights go out.
+    if (stageId === 13) {
+      const ember = 0.5 + 0.5 * Math.sin(now * ERA13_COOLING_PULSE_RATE + item.seed * 0.0003);
+      ctx.fillStyle = hexToRgba('#ffb15a', (isLegend ? 0.07 : 0.04) * ember);
+      ctx.beginPath();
+      ctx.arc(x, y, outerGlowRadius * 1.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     if (isLegend) {
       ctx.strokeStyle = hexToRgba(item.glowColor, 0.28);
