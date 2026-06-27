@@ -2235,6 +2235,40 @@ function placedEntityPosition(item: EntityDrawItem, x: number, y: number): Entit
 const galaxyArmPeak = { n: 0 };
 let galaxyPeakRun = -1;
 
+// ── Stage 9 spiral-galaxy ORGANIC DRIFT (drawSpiralGalaxyEntities) ──────────
+// Soft potential-well drift: each copy is spring-pulled toward a point on a
+// SLOWLY ROTATING spiral arm (pattern omega), plus a gentle orbital nudge about
+// center, plus a tiny seeded wander, then damped + clamped inside the live disk.
+// Physics runs in ROUND (un-flattened) local space; the 0.55 squash is applied on
+// the y OUTPUT line only (mirrors drawGalaxyDisk's ctx.scale(1,0.55)). The arm
+// TARGET still uses the live-radius `outer` + the Archimedean dist/angle form that
+// MUST match drawGalaxyDisk (do NOT regress the 1a94e7e live-radius fix).
+// Damping note (per adversarial verify): with k=0.018 / d=0.90 the integrator is
+// LIGHTLY UNDERDAMPED — it rings subtly into a moving target; the ring is absorbed
+// by the hard radial clamp so it never overshoots the live disk or flies off.
+const GALAXY_SPRING_K = 0.018;                  // soft pull toward the arm target (per frame)
+const GALAXY_DAMP = 0.90;                       // velocity retained per frame (anti-jitter)
+const GALAXY_WANDER_ACC = 0.020 * CANVAS_SCALE; // organic breathing acceleration
+const GALAXY_WANDER_FREQ = 0.00045;             // rad/ms primary wander frequency
+const GALAXY_WANDER_FREQ2 = 0.00097;            // rad/ms second incommensurate component
+const GALAXY_ORBIT_SPEED = 0.040 * CANVAS_SCALE; // tangential carousel speed at mid-disk
+const GALAXY_ORBIT_SOFTEN = 0.35;               // radius soften (r→0 doesn't blow up orbit speed)
+const GALAXY_ORBIT_GAIN = 0.06;                 // how hard tangential vel is steered toward target
+const GALAXY_PATTERN_OMEGA = 0.000010;          // rad/ms spiral-arm pattern sweep (~10.5 min/rev)
+const GALAXY_SHEAR = 0.15;                       // inner-faster differential winding (0 disables)
+const GALAXY_SEED_SPEED = 0.06 * CANVAS_SCALE;  // initial tangential speed on first sight
+const GALAXY_MAX_SPEED = 0.9 * CANVAS_SCALE;    // hard speed cap (anti-fling)
+const GALAXY_DISK_MARGIN = 1.02;                // hard radial clamp = outer * this (just past tip)
+const GALAXY_DRIFT_STALE_MS = 2000;             // drop a copy's drift state 2s after last seen
+
+// Per-copy persisted position+velocity in LOCAL un-flattened galaxy space (origin
+// at cx,cy, before the 0.55 y-squash). Keyed `${stageId}:${id}:${copyIndex}` so two
+// copies of the same entity drift independently; cleared on runId change (prestige/
+// stage-exit) and stale-pruned by lastSeen, mirroring s11PeakCache / _entityBodyCache.
+interface GalaxyDrift { lx: number; ly: number; vx: number; vy: number; lastSeen: number }
+const galaxyDriftCache = new Map<string, GalaxyDrift>();
+let galaxyDriftRun = -1;
+
 function drawSpiralGalaxyEntities(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -2251,6 +2285,9 @@ function drawSpiralGalaxyEntities(
 
   // High-water mark: arms only ever extend, never retract on fusion/consume.
   if (runId !== undefined && runId !== galaxyPeakRun) { galaxyArmPeak.n = 0; galaxyPeakRun = runId; }
+  // Drift cache: clear persisted positions/velocities on a run change (prestige /
+  // stage-exit) so a new universe doesn't inherit the prior galaxy's bodies.
+  if (runId !== undefined && runId !== galaxyDriftRun) { galaxyDriftCache.clear(); galaxyDriftRun = runId; }
   const liveCount = items.length;
   const armFillCount = Math.max(galaxyArmPeak.n, liveCount);
   galaxyArmPeak.n = armFillCount;
@@ -2267,6 +2304,13 @@ function drawSpiralGalaxyEntities(
   // (rank within an arm) reaches the tip only when the arm is "full".
   const perArm = Math.max(1, Math.ceil(armFillCount / armCount));
 
+  // Slowly rotating spiral pattern: the whole arm TARGET field sweeps about the
+  // center over time, so bodies (chasing their targets) carousel with it.
+  const thetaPat = now * GALAXY_PATTERN_OMEGA;
+  // Hard radial clamp lives just past the disk tip; recomputed from the LIVE `outer`
+  // each frame, so it tracks a growing AND shrinking disk (1a94e7e preserved).
+  const rMax = outer * GALAXY_DISK_MARGIN;
+
   ctx.save();
   for (let i = 0; i < sorted.length; i += 1) {
     const item = sorted[i];
@@ -2275,34 +2319,134 @@ function drawSpiralGalaxyEntities(
     // smoothstep gives an inner-fills-first feel (denser core, sparser tips).
     const u = smoothstep01((rank + 0.5) / perArm);
 
-    // SAME parametric form as drawGalaxyDisk's arm strokes (Archimedean-ish, NOT a log spiral):
-    //   angle = arm*PI + u*sweep ;  dist = outer*(innerFrac + u*outerSpan)
-    const angle = arm * Math.PI + u * TUNING.GALAXY_ARM_SWEEP;
+    // --- TARGET on the rotating spiral arm (potential well) ---
+    // SAME parametric form as drawGalaxyDisk's arm strokes (Archimedean-ish, NOT a
+    // log spiral): angle = arm*PI + u*sweep ; dist = outer*(innerFrac + u*outerSpan).
+    // PLUS a slow pattern rotation (thetaPat) so the arms turn, with optional
+    // inner-faster differential winding (GALAXY_SHEAR).
+    const angleT = arm * Math.PI + u * TUNING.GALAXY_ARM_SWEEP + thetaPat + (1 - u) * GALAXY_SHEAR * thetaPat;
     const dist = outer * (TUNING.GALAXY_ARM_INNER_FRAC + u * TUNING.GALAXY_ARM_OUTER_SPAN);
-
     // Deterministic perpendicular jitter so the arm reads as a star stream, not a wire.
     const jitter = (unit(item.seed, 5) - 0.5) * 2 * TUNING.GALAXY_ARM_JITTER;
-    const perpAngle = angle + Math.PI / 2;
-    let lx = Math.cos(angle) * dist + Math.cos(perpAngle) * jitter;
-    let ly = Math.sin(angle) * dist + Math.sin(perpAngle) * jitter;
-    // Disk vertical flatten matching drawGalaxyDisk's `ctx.scale(1, 0.55)`.
-    ly *= 0.55;
+    const perpAngle = angleT + Math.PI / 2;
+    const tx = Math.cos(angleT) * dist + Math.cos(perpAngle) * jitter;
+    const ty = Math.sin(angleT) * dist + Math.sin(perpAngle) * jitter;
 
-    let x = cx + lx;
-    let y = cy + ly;
+    // --- fetch / seed persisted state (round, un-flattened local space) ---
+    const key = `${item.stageId}:${item.id}:${item.copyIndex}`;
+    let st = galaxyDriftCache.get(key);
+    if (st === undefined) {
+      // Seed snapped to the current target (no fly-in from center on re-entry),
+      // with a small seeded tangential velocity so it starts drifting immediately.
+      const tr = Math.hypot(tx, ty) + 1e-3;
+      const v0 = GALAXY_SEED_SPEED * (0.5 + unit(item.seed, 31));
+      const spin = (unit(item.seed, 37) - 0.5) >= 0 ? 1 : -1;
+      st = {
+        lx: tx,
+        ly: ty,
+        vx: (-ty / tr) * v0 * spin,
+        vy: (tx / tr) * v0 * spin,
+        lastSeen: now,
+      };
+      galaxyDriftCache.set(key, st);
+    }
+    st.lastSeen = now;
+
+    // 1) ORGANIC WANDER — tiny seeded, time-varying acceleration (two incommensurate
+    //    sines per axis), so each body breathes on its own phase. No per-frame RNG.
+    const wph = item.seed * 0.0011;
+    const wx = Math.sin(now * GALAXY_WANDER_FREQ + wph) + 0.5 * Math.sin(now * GALAXY_WANDER_FREQ2 + wph * 1.7);
+    const wy = Math.cos(now * GALAXY_WANDER_FREQ + wph * 1.3) + 0.5 * Math.cos(now * GALAXY_WANDER_FREQ2 + wph * 2.1);
+    const axWander = wx * GALAXY_WANDER_ACC;
+    const ayWander = wy * GALAXY_WANDER_ACC;
+
+    // 2) SOFT SPRING toward the arm target.
+    const axSpring = (tx - st.lx) * GALAXY_SPRING_K;
+    const aySpring = (ty - st.ly) * GALAXY_SPRING_K;
+
+    // 3) GENTLE ORBITAL nudge about center — steer tangential velocity toward a
+    //    radius-falloff target speed (Kepler-ish; inner core swirls faster). Steer,
+    //    not impulse, so it can't accumulate and the wander survives.
+    const r = Math.hypot(st.lx, st.ly) + 1e-3;
+    const tnx = -st.ly / r;
+    const tny = st.lx / r;
+    const vorb = (GALAXY_ORBIT_SPEED * (outer * 0.5)) / (r + outer * GALAXY_ORBIT_SOFTEN);
+    const vtanNow = st.vx * tnx + st.vy * tny;
+    const axOrbit = tnx * (vorb - vtanNow) * GALAXY_ORBIT_GAIN;
+    const ayOrbit = tny * (vorb - vtanNow) * GALAXY_ORBIT_GAIN;
+
+    // 4) INTEGRATE (fixed step per frame — matches the generic n-body house style).
+    st.vx = (st.vx + axWander + axSpring + axOrbit) * GALAXY_DAMP;
+    st.vy = (st.vy + ayWander + aySpring + ayOrbit) * GALAXY_DAMP;
+    const sp = Math.hypot(st.vx, st.vy);
+    if (sp > GALAXY_MAX_SPEED) {
+      const s = GALAXY_MAX_SPEED / sp;
+      st.vx *= s;
+      st.vy *= s;
+    }
+    st.lx += st.vx;
+    st.ly += st.vy;
+
+    // 5) HARD DISK CLAMP — never fly off; absorbs any spring ring and tracks the
+    //    live disk (rMax from `outer`). Kill outward radial velocity at the wall
+    //    so bodies don't buzz against it.
+    const rr = Math.hypot(st.lx, st.ly);
+    if (rr > rMax) {
+      const s = rMax / rr;
+      st.lx *= s;
+      st.ly *= s;
+      const nx = st.lx / (rMax + 1e-3);
+      const ny = st.ly / (rMax + 1e-3);
+      const vdotn = st.vx * nx + st.vy * ny;
+      if (vdotn > 0) {
+        st.vx -= vdotn * nx;
+        st.vy -= vdotn * ny;
+      }
+    }
+
+    // --- output: apply the SAME 0.55 vertical flatten as before (physics is round). ---
+    let x = cx + st.lx;
+    let y = cy + st.ly * 0.55;
     const pushed = applyPointerVisualDisplacement(x, y, pointerPressure, 12);
     x = pushed.x;
     y = pushed.y;
 
     drawEntityWithGlow(ctx, placedEntityPosition(item, x, y), now);
   }
+
+  // Stale-prune: a removed copy stops being seen and ages out (~2s), freeing its slot.
+  for (const [k, st] of galaxyDriftCache) {
+    if (now - st.lastSeen > GALAXY_DRIFT_STALE_MS) galaxyDriftCache.delete(k);
+  }
   ctx.restore();
 }
 
 // ── Stage 10: solar orbital entity layer ─────────────────────────────────────
-// Collected entities sit ON the visible orbital ellipse rings (SOLAR_BODIES orbits,
-// squashed by SOLAR_ORBIT_SQUASH) and revolve along them. Outer rings revolve
-// slower (Kepler feel). Deterministic per-entity ring/phase/direction from the seed.
+// Collected entities are PLANETS, each on its own ellipse orbit (its assigned
+// SOLAR_BODIES ring, squashed by SOLAR_ORBIT_SQUASH). Instead of pinning each frame
+// exactly on the ring, every planet runs a soft simulation: it (a) advances along
+// its orbit (faster inner — Kepler), (b) carries a small per-planet eccentricity/
+// wobble so the orbit isn't a perfect circle, (c) is softly spring-held near its
+// orbital ring so it never drifts off, and (d) bobs on a tiny seeded wander. Per-
+// planet position+velocity persist in a Map keyed `${stageId}:${id}:${copyIndex}`,
+// cleared on runId change and stale-pruned — same pattern as the galaxy drift cache
+// and s11PeakCache. The sun + orbital-ring drawing is elsewhere (drawPlanetarySystem)
+// and is untouched; only the planet POSITIONS become a soft sim.
+const SOLAR_SPRING_K = 0.020;                  // soft pull toward the orbital ring point (per frame)
+const SOLAR_DAMP = 0.90;                        // velocity retained per frame (anti-jitter)
+const SOLAR_WANDER_ACC = 0.014 * CANVAS_SCALE;  // gentle per-planet bob acceleration
+const SOLAR_WANDER_FREQ = 0.00052;              // rad/ms primary wander frequency
+const SOLAR_WANDER_FREQ2 = 0.00113;             // rad/ms second incommensurate component
+const SOLAR_ECC = 0.06;                         // per-planet eccentricity scale (orbit not a perfect circle)
+const SOLAR_RING_MARGIN = 0.22;                 // hard clamp = excursion ≤ rx*this off the ring radius
+const SOLAR_MAX_SPEED = 0.9 * CANVAS_SCALE;     // hard speed cap (anti-fling)
+const SOLAR_SEED_SPEED = 0.05 * CANVAS_SCALE;   // initial tangential speed on first sight
+const SOLAR_DRIFT_STALE_MS = 2000;              // drop a planet's drift state 2s after last seen
+
+interface SolarDrift { x: number; y: number; vx: number; vy: number; lastSeen: number }
+const solarDriftCache = new Map<string, SolarDrift>();
+let solarDriftRun = -1;
+
 function drawSolarOrbitEntities(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -2310,10 +2454,14 @@ function drawSolarOrbitEntities(
   items: EntityDrawItem[],
   now: number,
   pointerPressure?: PointerPressureVisualField | null,
+  runId?: number,
 ): void {
   if (items.length === 0) return;
   const rings = SOLAR_BODIES.map((b) => b.orbit);
   if (rings.length === 0) return;
+
+  // Drift cache: clear persisted planet positions/velocities on a run change.
+  if (runId !== undefined && runId !== solarDriftRun) { solarDriftCache.clear(); solarDriftRun = runId; }
 
   ctx.save();
   for (const item of items) {
@@ -2326,8 +2474,79 @@ function drawSolarOrbitEntities(
     const angle = baseAngle + dir * omega * now;
     const rx = rings[ringIdx];
     const ry = rx * SOLAR_ORBIT_SQUASH;
-    let x = cx + Math.cos(angle) * rx;
-    let y = cy + Math.sin(angle) * ry; // ON the ellipse line
+    // Per-planet eccentricity/wobble so the orbit isn't a perfect circle: a small
+    // seeded radial breathing on the planet's own slow phase.
+    const eccPhase = unit(item.seed, 41) * Math.PI * 2;
+    const ecc = 1 + SOLAR_ECC * Math.sin(angle * 2 + eccPhase)
+      + 0.5 * SOLAR_ECC * Math.sin(now * 0.00031 + eccPhase * 1.7);
+    // TARGET point on (near) the orbital ring, in LOCAL (cx,cy) space.
+    const tx = Math.cos(angle) * rx * ecc;
+    const ty = Math.sin(angle) * ry * ecc; // ON the (slightly eccentric) ellipse
+
+    // --- fetch / seed persisted state ---
+    const key = `${item.stageId}:${item.id}:${item.copyIndex}`;
+    let st = solarDriftCache.get(key);
+    if (st === undefined) {
+      // Seed snapped to the current target with a small seeded tangential velocity.
+      const tr = Math.hypot(tx, ty) + 1e-3;
+      const v0 = SOLAR_SEED_SPEED * (0.5 + unit(item.seed, 43));
+      st = {
+        x: tx,
+        y: ty,
+        vx: (-ty / tr) * v0 * dir,
+        vy: (tx / tr) * v0 * dir,
+        lastSeen: now,
+      };
+      solarDriftCache.set(key, st);
+    }
+    st.lastSeen = now;
+
+    // 1) ORGANIC WANDER — tiny seeded, time-varying bob (two incommensurate sines).
+    const wph = item.seed * 0.0013;
+    const wx = Math.sin(now * SOLAR_WANDER_FREQ + wph) + 0.5 * Math.sin(now * SOLAR_WANDER_FREQ2 + wph * 1.7);
+    const wy = Math.cos(now * SOLAR_WANDER_FREQ + wph * 1.3) + 0.5 * Math.cos(now * SOLAR_WANDER_FREQ2 + wph * 2.1);
+    const axWander = wx * SOLAR_WANDER_ACC;
+    const ayWander = wy * SOLAR_WANDER_ACC;
+
+    // 2) SOFT SPRING toward the orbital ring target (keeps the planet near its ring
+    //    while the analytic `angle` advance carries the target around — so the planet
+    //    follows its orbit but jiggles freely rather than being pinned exactly).
+    const axSpring = (tx - st.x) * SOLAR_SPRING_K;
+    const aySpring = (ty - st.y) * SOLAR_SPRING_K;
+
+    // 3) INTEGRATE (fixed step per frame — matches house style).
+    st.vx = (st.vx + axWander + axSpring) * SOLAR_DAMP;
+    st.vy = (st.vy + ayWander + aySpring) * SOLAR_DAMP;
+    const sp = Math.hypot(st.vx, st.vy);
+    if (sp > SOLAR_MAX_SPEED) {
+      const s = SOLAR_MAX_SPEED / sp;
+      st.vx *= s;
+      st.vy *= s;
+    }
+    st.x += st.vx;
+    st.y += st.vy;
+
+    // 4) HARD CLAMP — bound the excursion off the orbital ring so a planet never
+    //    drifts away from its orbit (and back-onto-ring radial velocity is killed).
+    const ex = st.x - tx;
+    const ey = st.y - ty;
+    const ed = Math.hypot(ex, ey);
+    const eMax = rx * SOLAR_RING_MARGIN;
+    if (ed > eMax) {
+      const s = eMax / ed;
+      st.x = tx + ex * s;
+      st.y = ty + ey * s;
+      const nx = ex / (ed + 1e-3);
+      const ny = ey / (ed + 1e-3);
+      const vdotn = st.vx * nx + st.vy * ny;
+      if (vdotn > 0) {
+        st.vx -= vdotn * nx;
+        st.vy -= vdotn * ny;
+      }
+    }
+
+    let x = cx + st.x;
+    let y = cy + st.y;
     const pushed = applyPointerVisualDisplacement(x, y, pointerPressure, 14);
     x = pushed.x;
     y = pushed.y;
@@ -2335,6 +2554,11 @@ function drawSolarOrbitEntities(
     const depth = (Math.sin(angle) + 1) / 2; // 0 (back) .. 1 (front)
     const alphaMul = 1 - SOLAR_ORBIT_DEPTH_DIM * (1 - depth);
     drawEntityWithGlow(ctx, placedEntityPosition(item, x, y), now, alphaMul);
+  }
+
+  // Stale-prune: a removed planet stops being seen and ages out (~2s), freeing its slot.
+  for (const [k, st] of solarDriftCache) {
+    if (now - st.lastSeen > SOLAR_DRIFT_STALE_MS) solarDriftCache.delete(k);
   }
   ctx.restore();
 }
@@ -4114,7 +4338,7 @@ export function drawEntities(
   // HARD_CEILING slice, before the n-body block). Sun/Rocky Planet/Moon are
   // skipped above so they don't stack on the cluster-drawn planet bodies.
   if (stageId === 10) {
-    drawSolarOrbitEntities(ctx, cx, cy, items, now, pointerPressure);
+    drawSolarOrbitEntities(ctx, cx, cy, items, now, pointerPressure, runId);
     return;
   }
 
