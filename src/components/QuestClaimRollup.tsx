@@ -23,6 +23,11 @@ export function QuestClaimRollup({ matter, stones, title, language, onDone }: Pr
   const [shown, setShown] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
+  // onDone via ref: GameScreen passes a fresh inline onDone every render and re-renders every tick,
+  // so keeping it in the deps reset the dismiss timer forever (the rollup never auto-closed). The
+  // component is keyed by event id in GameScreen, so the effect runs once per claim.
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     const step = (ts: number) => {
@@ -33,12 +38,12 @@ export function QuestClaimRollup({ matter, stones, title, language, onDone }: Pr
       if (p < 1) rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);
-    const dismiss = window.setTimeout(onDone, ROLL_MS + 1100);
+    const dismiss = window.setTimeout(() => onDoneRef.current(), ROLL_MS + 1100);
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       window.clearTimeout(dismiss);
     };
-  }, [matter, onDone]);
+  }, [matter]);
 
   return (
     <div className="quest-claim-rollup" role="status" onClick={onDone}>

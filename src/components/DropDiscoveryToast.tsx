@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { t, type Lang } from '../i18n';
 import { findEntityById, entityName } from '../game/entities/stageItems';
 import type { EntityRarity } from '../game/entities/types';
@@ -31,7 +31,7 @@ const ESCALATED: Record<EntityRarity, boolean> = {
   mythic: true,
 };
 
-const DISMISS_MS = 2500;
+const DISMISS_MS = 3000;
 
 /**
  * Persona #10: floating "발견! / Discovered!" reveal when a field drop collects a
@@ -40,10 +40,17 @@ const DISMISS_MS = 2500;
  * EntityGlyph + rarity-color styling of the inventory/shop cards.
  */
 export function DropDiscoveryToast({ entityId, stageId, rarity, language, onDismiss }: Props) {
+  // Auto-dismiss after DISMISS_MS. The timer must run ONCE per discovery — the toast already
+  // remounts per new drop (GameScreen keys it by lastDropEvent.id). Keeping `onDismiss` out of
+  // the deps (read via a ref) is critical: GameScreen passes a fresh inline onDismiss every
+  // render and re-renders every tick, so a [onDismiss] dep would reset the timer forever and the
+  // toast would never disappear.
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
   useEffect(() => {
-    const dismiss = window.setTimeout(onDismiss, DISMISS_MS);
+    const dismiss = window.setTimeout(() => onDismissRef.current(), DISMISS_MS);
     return () => window.clearTimeout(dismiss);
-  }, [onDismiss]);
+  }, []);
 
   const entity = findEntityById(entityId, stageId) ?? findEntityById(entityId);
   if (!entity) return null;

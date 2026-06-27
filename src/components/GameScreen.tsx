@@ -1260,6 +1260,7 @@ export function GameScreen({
       {/* #42: slot-machine matter rollup when a milestone/era-record is claimed. */}
       {state.lastQuestClaimEvent ? (
         <QuestClaimRollup
+          key={state.lastQuestClaimEvent.id}
           matter={state.lastQuestClaimEvent.matter}
           stones={state.lastQuestClaimEvent.stones}
           title={(() => { const q = getQuest(state.lastQuestClaimEvent.questId); return q ? questTitle(q, language) : '✦'; })()}

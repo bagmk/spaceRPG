@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { t, type Lang } from '../i18n';
 import { findCodexSubsetById, codexSubsetLabel, codexSetLabel, codexRewardLabel } from '../game/entities/codexSets';
 
@@ -25,10 +25,15 @@ const DISMISS_MS_SET = 3600;
  * sound is played by the claim site (GameScreen), mirroring lastDropEvent.
  */
 export function CodexClaimCelebration({ subsetId, isFullSet, language, onDismiss }: Props) {
+  // Run ONCE per claim (the component is keyed by event id in GameScreen → remounts each time).
+  // onDismiss is read via a ref: GameScreen passes a fresh inline onDismiss every render and
+  // re-renders every tick, so an [onDismiss] dep would reset the timer forever (it'd never fire).
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
   useEffect(() => {
-    const dismiss = window.setTimeout(onDismiss, isFullSet ? DISMISS_MS_SET : DISMISS_MS);
+    const dismiss = window.setTimeout(() => onDismissRef.current(), isFullSet ? DISMISS_MS_SET : DISMISS_MS);
     return () => window.clearTimeout(dismiss);
-  }, [onDismiss, isFullSet]);
+  }, [isFullSet]);
 
   const found = findCodexSubsetById(subsetId);
   if (!found) return null;
