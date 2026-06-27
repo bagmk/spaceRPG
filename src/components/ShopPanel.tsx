@@ -256,7 +256,54 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
       </header>
 
       <div className="shop-fs__body cc-scroll">
-        {/* 1) Today's Shop — the loudest board so daily items read distinct. */}
+        {/* 1) Boosts & storage — free ad boost lives at the top so it reads first. */}
+        <ShopBoard title={t(language, 'shopTabBoosts')}>
+          <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
+          <div className="shop-fs__boosts">
+            {REWARDED_AD_PRODUCTS.map((ad) => {
+              const remaining = formatRemainingMs(getBoostRemainingMs(state.shopBoosts, ad.id, now));
+              return (
+                <article key={ad.id} className="shop-boost-card shop-boost-card--free" style={{ '--boost-color': ad.color } as CSSProperties}>
+                  <div className="shop-boost-card__icon">{ad.icon}</div>
+                  <div className="shop-boost-card__body">
+                    <div className="shop-boost-card__name">{ad.name[language]}</div>
+                    <div className="shop-boost-card__desc">{ad.description[language]}</div>
+                    {remaining ? <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div> : null}
+                  </div>
+                  <button type="button" className="shop-boost-card__buy shop-boost-card__buy--free" disabled={pendingId !== null} onClick={() => handleRewardedAd(ad)}>
+                    {ad.button[language]}
+                  </button>
+                </article>
+              );
+            })}
+            {(() => {
+              const owned = state.hasOfflineStorageUpgrade;
+              const p = DEEP_SPACE_STORAGE;
+              return (
+                <article className="shop-boost-card" style={{ '--boost-color': p.color } as CSSProperties}>
+                  <div className="shop-boost-card__icon">{p.icon}</div>
+                  <div className="shop-boost-card__body">
+                    <div className="shop-boost-card__name">{p.name[language]}</div>
+                    <div className="shop-boost-card__desc">{p.description[language]}</div>
+                  </div>
+                  <button type="button" className="shop-boost-card__buy" disabled={owned || pendingId !== null} onClick={() => handlePaid(p)}>
+                    {owned ? (language === 'ko' ? '보유중' : 'Owned') : (pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`)}
+                  </button>
+                </article>
+              );
+            })()}
+          </div>
+          {Capacitor.isNativePlatform() ? (
+            <div className="shop-fs__restore">
+              <button type="button" onClick={handleRestore} disabled={pendingId !== null}>
+                {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
+              </button>
+              {restoreMsg ? <div className="shop-fs__restore-msg">{restoreMsg}</div> : null}
+            </div>
+          ) : null}
+        </ShopBoard>
+
+        {/* 2) Today's Shop — the loudest board so daily items read distinct. */}
         <ShopBoard
           title={t(language, 'shopDailyTitle')}
           modifier="shop-board--daily"
@@ -305,7 +352,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
           <div className="shop-fs__daily-hint">{t(language, 'shopDailyHint')}</div>
         </ShopBoard>
 
-        {/* 2) Nebula Boxes (gacha) — buy with matter, reveal in place. */}
+        {/* 3) Nebula Boxes (gacha) — buy with matter, reveal in place. */}
         <ShopBoard title={t(language, 'shopGachaTitle')} modifier="shop-board--feature">
           <div className="shop-gacha-row">
             {GACHA_BOXES.map((box) => {
@@ -373,7 +420,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
           })() : null}
         </ShopBoard>
 
-        {/* 3) Enhance Stones + Matter Packs. */}
+        {/* 4) Enhance Stones + 강화 보호. */}
         <ShopBoard title={t(language, 'shopStonesTitle')}>
           <div className="shop-fs__stones">
             {STONE_BUNDLES.map((count) => {
@@ -422,7 +469,10 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               );
             })}
           </div>
-          <div className="shop-fs__section-title">{t(language, 'shopPacksTitle')}</div>
+        </ShopBoard>
+
+        {/* 4) Matter packs (USD) — own board so it reads distinct from 강화석. */}
+        <ShopBoard title={t(language, 'shopPacksTitle')}>
           <div className="shop-fs__packs">
             {MATTER_PACK_PRODUCTS.map((p, i) => {
               // Bigger packs give more matter per $ — show that as a "+X%" value ribbon (vs pack 1).
@@ -446,53 +496,6 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               );
             })}
           </div>
-        </ShopBoard>
-
-        {/* 4) Boosts & storage. */}
-        <ShopBoard title={t(language, 'shopTabBoosts')}>
-          <ActiveSummary boosts={state.shopBoosts} now={now} language={language} />
-          <div className="shop-fs__boosts">
-            {REWARDED_AD_PRODUCTS.map((ad) => {
-              const remaining = formatRemainingMs(getBoostRemainingMs(state.shopBoosts, ad.id, now));
-              return (
-                <article key={ad.id} className="shop-boost-card shop-boost-card--free" style={{ '--boost-color': ad.color } as CSSProperties}>
-                  <div className="shop-boost-card__icon">{ad.icon}</div>
-                  <div className="shop-boost-card__body">
-                    <div className="shop-boost-card__name">{ad.name[language]}</div>
-                    <div className="shop-boost-card__desc">{ad.description[language]}</div>
-                    {remaining ? <div className="shop-boost-card__timer">{`${remaining} ${t(language, 'shopLeft')}`}</div> : null}
-                  </div>
-                  <button type="button" className="shop-boost-card__buy shop-boost-card__buy--free" disabled={pendingId !== null} onClick={() => handleRewardedAd(ad)}>
-                    {ad.button[language]}
-                  </button>
-                </article>
-              );
-            })}
-            {(() => {
-              const owned = state.hasOfflineStorageUpgrade;
-              const p = DEEP_SPACE_STORAGE;
-              return (
-                <article className="shop-boost-card" style={{ '--boost-color': p.color } as CSSProperties}>
-                  <div className="shop-boost-card__icon">{p.icon}</div>
-                  <div className="shop-boost-card__body">
-                    <div className="shop-boost-card__name">{p.name[language]}</div>
-                    <div className="shop-boost-card__desc">{p.description[language]}</div>
-                  </div>
-                  <button type="button" className="shop-boost-card__buy" disabled={owned || pendingId !== null} onClick={() => handlePaid(p)}>
-                    {owned ? (language === 'ko' ? '보유중' : 'Owned') : (pendingId === p.id ? '…' : `$${p.priceUSD.toFixed(2)}`)}
-                  </button>
-                </article>
-              );
-            })()}
-          </div>
-          {Capacitor.isNativePlatform() ? (
-            <div className="shop-fs__restore">
-              <button type="button" onClick={handleRestore} disabled={pendingId !== null}>
-                {pendingId === '__restore__' ? '…' : t(language, 'shopRestore')}
-              </button>
-              {restoreMsg ? <div className="shop-fs__restore-msg">{restoreMsg}</div> : null}
-            </div>
-          ) : null}
         </ShopBoard>
       </div>
       </section>

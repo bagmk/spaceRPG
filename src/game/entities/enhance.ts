@@ -26,6 +26,7 @@ import {
   ENHANCE_FAIL_MAX,
   ENHANCE_BREAK_STONE_MIN,
   ENHANCE_BREAK_STONE_MAX,
+  SPECIAL_ENHANCE_FAIL_MULT,
 } from '../balance';
 import { type StageEntity, type EntityRarity } from './types';
 
@@ -71,6 +72,15 @@ export function getEnhanceFailChance(level: number): number {
   const resultLevel = Math.floor(level) + 1;
   const over = resultLevel - ENHANCE_STONE_THRESHOLD;
   return Math.min(ENHANCE_FAIL_MAX, ENHANCE_FAIL_BASE + over * ENHANCE_FAIL_PER_LEVEL);
+}
+
+/**
+ * 특수강화 fail chance: the same risk curve scaled DOWN by SPECIAL_ENHANCE_FAIL_MULT
+ * — the special copy-paid path (flat 3 cards) trades a fixed card cost for a higher
+ * success rate. Mirrored in scripts/entropy-gate-sim.mjs.
+ */
+export function getSpecialEnhanceFailChance(level: number): number {
+  return getEnhanceFailChance(level) * SPECIAL_ENHANCE_FAIL_MULT;
 }
 
 /**

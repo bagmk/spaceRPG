@@ -96,6 +96,10 @@ const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 const ENHANCE_FAIL_BASE = 0.25;
 const ENHANCE_FAIL_PER_LEVEL = 0.06;
 const ENHANCE_FAIL_MAX = 0.55;
+// 특수강화 (special enhance) copy-path fail reduction — lockstep with balance.ts
+// SPECIAL_ENHANCE_FAIL_MULT. The risk-phase climb here is the copy-paid special path
+// (flat 3 cards), so it pays the reduced fail odds.
+const SPECIAL_ENHANCE_FAIL_MULT = 0.5;
 // PROTECTION-IMPACT SOFTENING (2026-06-24, user playtest "스테이지 7부터 너무 쉽게 차"): the
 // aba4fcf re-pin modeled protection as a MANDATORY full-price tax on EVERY risk-phase
 // attempt (protectChargeCost × expected fails, full ENHANCE_PROTECT_MATTER_FRAC × anchor),
@@ -205,7 +209,7 @@ const walletLevelMult = (level) => 1 + Math.max(0, Math.floor(level) - 1) * WALL
 // wallet (its afford lane binds the geared floor) and NOT on the entropy gate (tame path).
 // = 1 at Lv1. Drives the AUTO affordability lane only (auto is the slower lane → steepening
 // it pulls auto toward click, tightening lane convergence; the geared best stays click-driven).
-const WALLET_AUTO_LEVEL_GROWTH = 0.06;
+const WALLET_AUTO_LEVEL_GROWTH = 0.07;
 const autoWalletLevelBoost = (level) => Math.pow(1 + WALLET_AUTO_LEVEL_GROWTH, Math.max(0, Math.floor(level) - 1));
 
 function bestRarity(stageId) {
@@ -287,7 +291,7 @@ function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined
   let stoneTotal = 0;
   while (level < LEVEL_CAPS[rarity]) {
     const resultLevel = level + 1; // this step lands here (≥ THRESHOLD)
-    const fail = enhanceFailChance(resultLevel);
+    const fail = enhanceFailChance(resultLevel) * SPECIAL_ENHANCE_FAIL_MULT;
     const expectedAttempts = 1 / Math.max(1e-6, 1 - fail);
     const expectedFails = expectedAttempts - 1;
     const over = level - ENHANCE_STONE_THRESHOLD;

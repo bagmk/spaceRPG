@@ -5,7 +5,7 @@ import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
   ENHANCE_UNLOCK_STAGE_ID,
-  ENHANCE_PROTECT_ITEM_NAME,
+  SPECIAL_ENHANCE_CARD_COST,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_BATCH_MAX_TRIOS,
@@ -27,7 +27,7 @@ import {
   type SecondaryStatType,
 } from '../game/balance';
 import { computeHexBingo } from '../game/entities/hexBingo';
-import { getWalletAnchorFlat, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
+import { getWalletAnchorFlat, getAutoWalletLevelBoost, getEffectiveCount, getEquipCategory, getEquipSetKey, type EquipCategory } from '../game/entities/effects';
 import { getMaxFusionRarityIdx, getFusionQuantaCost } from '../game/entities/fusion';
 import { getEnhanceLevelCap, needCopiesForLevel, getEnhanceStoneCost, isEnhanceRiskLevel, getEnhanceFailChance } from '../game/entities/enhance';
 import { getGearPowerMult, getSecondaryStats, type GearPower, type SecondaryStat } from '../game/entities/substats';
@@ -117,12 +117,14 @@ function formatPct(value: number): string {
 // per-effect-value × geometric level — so the shown /s equals the applied /s.
 function getEntityAutoRate(entity: StageEntity, power: GearPower, count = 1, level = 1, carried = false): number {
   const effCount = getEffectiveCount(count, entity.maxCount, false);
-  // Floor mirrors the live modifier (effects.ts) so the shop/forge label matches the
-  // applied value — early common auto reads ≥ the floor, not ~0.02/s.
+  // Mirror the live modifier (effects.ts) EXACTLY: floor, then the geometric felt-leveling
+  // boost factored OUTSIDE the Math.max so the card/enhance-modal climbs every level even
+  // when floor-clamped (the "+5/초 → +5/초" enhance freeze). Previously this dropped the
+  // boost entirely, so the card under-reported leveled auto vs the income it actually earns.
   return Math.max(
     AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5,
     getWalletAnchorFlat(entity, level, 1, AUTO_GEAR_INCOME_SCALE, power, carried) * effCount,
-  );
+  ) * getAutoWalletLevelBoost(level);
 }
 
 function getEntityTimeFillRate(entity: StageEntity, count: number, level: number, playerStageId: number): number {
@@ -1747,7 +1749,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                             <span className="owned-card__name">{entityName(entity, language)}</span>
                             <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
                             {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
-                            <CollectionBar entity={entity} level={entry.level} copies={copiesOf(entity.id)} />
                           </button>
                           {/* Overhaul-4 (v26): ★ favorite toggle — protects this item's
                               copies from Fuse-All (and, later, pooled enhance fodder).
@@ -2061,9 +2062,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         const lvl = entry?.level ?? 1;
         const cap = getEnhanceLevelCap(ent);
         const atCap = lvl >= cap;
+        // Risk phase (v30): from the step landing on the threshold up, this attempt can
+        // FAIL (destroying the copy) unless a 보호 charge absorbs it. The risky step is 특수강화.
+        const risky = !atCap && isEnhanceRiskLevel(lvl);
         // P7b: level by MERGING spare copies of this item. need(L) copies per level;
         // fodder = its copies that aren't the anchor and aren't equipped elsewhere.
-        const need = needCopiesForLevel(lvl);
+        // 특수강화 (risky step): a FLAT SPECIAL_ENHANCE_CARD_COST cards instead of need(L).
+        const need = risky ? SPECIAL_ENHANCE_CARD_COST : needCopiesForLevel(lvl);
         const gearIdSet = new Set([...equippedSlots, ...riftSlots, wildSlot].filter(Boolean) as string[]);
         const spares = inventory
           .filter((e) => e.entityId === ent.id && e.instanceId !== slotVal && !gearIdSet.has(e.instanceId ?? ''))
@@ -2073,11 +2078,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         // ("카드 없으면 비싸게"). Copies stay the cheap (free) path; the buy is gone.
         const stoneCost = getEnhanceStoneCost(ent, lvl);
         const canStone = !atCap && !canMerge && enhanceStones >= stoneCost;
-        // Risk phase (v30): from the step landing on the threshold up, this attempt can
-        // FAIL (destroying the copy) unless a 보호 charge absorbs it. Show the odds + warn.
-        const risky = !atCap && isEnhanceRiskLevel(lvl);
-        const failPct = Math.round(getEnhanceFailChance(lvl) * 100);
-        const protectActive = risky && useProtect && enhanceProtectCharges > 0;
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
@@ -2100,33 +2100,28 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
                   })}
                 </div>
-                {/* quiet footer: level + owned count (+ quality) under the chip cluster. */}
-                <span className="entity-detail-card__lvl" style={levelTextStyle(lvl)}>{`Lv.${lvl} · ×${copiesOf(ent.id)}`}</span>
+                {/* quiet footer: level (+ quality) under the chip cluster. */}
+                <span className="entity-detail-card__lvl" style={levelTextStyle(lvl)}>{`Lv.${lvl}`}</span>
                 {/* #50: a tail (gold) specimen shows its quality percentile. */}
                 {isTailQuality(entry?.quality) ? (
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
                 ) : null}
               </div>
-              {/* Risk phase (v30): fail % + a destroy warning, and the 보호 사용 toggle with
-                  the held charge count. Protection ON+charge → the fail is absorbed. */}
+              {/* Risk phase (v30): a single clean 보호 사용 toggle (check + shield + held
+                  charge count). Protection ON+charge → a failed 특수강화 is absorbed. */}
               {risky && enhanceUnlocked ? (
                 <div className="enhance-risk">
-                  <div className="enhance-risk__warn" style={{ color: '#e2554a' }}>
-                    {`⚠ ${t(language, 'enhanceFailLabel').replace('{n}', String(failPct))} · ${t(language, protectActive ? 'enhanceProtectSafe' : 'enhanceRiskDestroy')}`}
-                  </div>
                   <button
                     type="button"
                     className={`enhance-protect-toggle ${useProtect ? 'enhance-protect-toggle--on' : ''}`}
                     role="switch"
                     aria-checked={useProtect}
+                    aria-label={t(language, 'enhanceUseProtect')}
                     disabled={enhancing !== null}
                     onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
                   >
-                    {`${useProtect ? '☑' : '☐'} ${t(language, 'enhanceUseProtect')} · 🛡 ${enhanceProtectCharges}`}
+                    {`${useProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
                   </button>
-                  {useProtect && enhanceProtectCharges <= 0 ? (
-                    <div className="enhance-risk__no-charge">{t(language, 'enhanceNoProtect').replace('{n}', ENHANCE_PROTECT_ITEM_NAME[language])}</div>
-                  ) : null}
                 </div>
               ) : null}
               <button
@@ -2144,10 +2139,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       <>
                         <span className="enhance-btn__label">{t(language, 'enhanceLabel')}</span>
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
-                        {/* Panel N: show BOTH enhance paths — the copy-merge progress (free
-                            when full) AND the ◆ 강화석 escape — so neither path is hidden.
-                            When you have enough copies it merges free (◆ not shown). */}
-                        <span className="enhance-btn__cost">{canMerge ? `🧬 ${spares}/${need}` : `🧬 ${spares}/${need} · ◆ ${stoneCost}`}</span>
+                        {/* Cost line: 특수강화 (risky) shows the hint "카드 3장 · 성공률↑"; the
+                            guaranteed band shows only the ◆ 강화석 escape when not a free merge. */}
+                        <span className="enhance-btn__cost">{risky ? t(language, 'specialEnhanceHint') : (canMerge ? '' : `◆ ${stoneCost}`)}</span>
                       </>
                     )}
               </button>

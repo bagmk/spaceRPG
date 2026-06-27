@@ -241,12 +241,14 @@ export function applyEntityModifiers(
         // rides the shared item-anchored getWalletAnchorFlat (gentle rarity + level) ×
         // the AUTO-only mild-geometric felt-leveling boost (getAutoWalletLevelBoost), so a
         // rift item's /s visibly climbs as you enhance it (and clears the floor). The boost
-        // is applied BEFORE the floor so a leveled item overtakes AUTO_WALLET_MIN_PER_ITEM.
+        // is factored OUTSIDE the Math.max so the FLOOR itself climbs with level too — a
+        // low-rarity auto whose natural /s sits below AUTO_WALLET_MIN_PER_ITEM no longer
+        // freezes at the same clamped /s on every enhance (the "+5/초 → +5/초" bug). For
+        // items already above the floor this is identical to applying it inside (boost ≥ 1).
         mods.autoRateFlatAdd += Math.max(
           AUTO_WALLET_MIN_PER_ITEM[entity.rarity] ?? 0.5,
-          getWalletAnchorFlat(entity, entry.level ?? 1, qMult, AUTO_GEAR_INCOME_SCALE, power, carried)
-            * getAutoWalletLevelBoost(entry.level ?? 1) * count,
-        );
+          getWalletAnchorFlat(entity, entry.level ?? 1, qMult, AUTO_GEAR_INCOME_SCALE, power, carried) * count,
+        ) * getAutoWalletLevelBoost(entry.level ?? 1);
         mods.autoEntropyFlatAdd += Math.max(0, getTameAutoOutputAnchor(entity, power, carried) * (total / 100));
         break;
       case 'auto_mult':

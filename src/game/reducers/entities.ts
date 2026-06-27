@@ -18,12 +18,12 @@ import {
   getEnhanceLevelCap,
   applyMergeCopies,
   getEnhanceStoneCost,
-  needCopiesForLevel,
   isEnhanceRiskLevel,
   getEnhanceFailChance,
+  getSpecialEnhanceFailChance,
   rollBreakStones,
 } from '../entities/enhance';
-import { ENHANCE_STONE_THRESHOLD } from '../balance';
+import { ENHANCE_STONE_THRESHOLD, SPECIAL_ENHANCE_CARD_COST } from '../balance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
 import {
@@ -538,7 +538,9 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   if (risky) {
     // Single risky level: pay with copies if you have need(prevLevel), else the 강화석
     // escape, else no-op. Resolve the fail roll, then apply protect/break/up.
-    const needCopies = needCopiesForLevel(prevLevel);
+    // 특수강화: the copy path is a FLAT 3 cards with a reduced fail chance; the 강화석
+    // escape keeps the normal (un-reduced) odds.
+    const needCopies = SPECIAL_ENHANCE_CARD_COST;
     const stoneCost = getEnhanceStoneCost(entity, prevLevel);
     const payWithCopies = spares >= needCopies;
     if (!payWithCopies && state.enhanceStones < stoneCost) return state;
@@ -551,7 +553,8 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
     resultLevel = prevLevel + 1;
 
     const failRoll = action.failRoll ?? Math.random();
-    const failed = failRoll < getEnhanceFailChance(prevLevel);
+    const effFail = payWithCopies ? getSpecialEnhanceFailChance(prevLevel) : getEnhanceFailChance(prevLevel);
+    const failed = failRoll < effFail;
     const eventId = nextEventId(state);
 
     if (!failed) {

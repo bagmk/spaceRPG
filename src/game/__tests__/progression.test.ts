@@ -232,7 +232,7 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
   const entity = getEntitiesForStage(1).find((e) => e.rarity === 'common')!;
 
   // Anchor at Lv2 so the next step (Lv2 → Lv3) LANDS on the risk threshold (3).
-  // 5 spares = exactly need(2), so a single risky merge step is afforded.
+  // 5 spares ≥ SPECIAL_ENHANCE_CARD_COST (3), so the 특수강화 copy path is afforded.
   const riskyState = (extra: Partial<GameState> = {}): GameState => ({
     ...createInitialGameState(0),
     inventory: [
@@ -264,8 +264,10 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
     expect(next.lastEnhanceEvent?.outcome).toBe('break');
     expect(next.enhanceStones).toBeGreaterThan(0); // consolation 강화석 minted
     expect(next.lastEnhanceEvent?.stonesEarned).toBe(next.enhanceStones);
-    // the cost copies were consumed too (only the anchor + its spares existed).
-    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(0);
+    // 특수강화 (special enhance) pays a FLAT 3 cards: anchor + 3 consumed spares are
+    // destroyed on the fail, leaving 2 of the original 5 spares (was: full wipe when the
+    // copy cost equalled need(2)=5; the special path decouples cost from level).
+    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(2);
   });
 
   it('Lv2→3 (risk phase): a SUCCESSFUL attempt levels up like normal', () => {

@@ -209,14 +209,12 @@ export const STRINGS = {
   tutQuestMilestoneOpen:  { en: 'Open quests', ko: '퀘스트 열기' },
   fuseLoopHint:     { en: 'Feed 3 of the same rarity to forge a stronger one — get lucky and the rarity climbs', ko: '같은 등급 3개를 넣으면 더 강한 하나로 — 운이 좋으면 등급 상승' },
   hudStones:        { en: 'Stones', ko: '강화석' },
-  enhanceFailLabel: { en: 'fail {n}%', ko: '실패 {n}%' },
   enhanceProtect:   { en: 'Protect', ko: '보호 강화' },
   enhanceMerged:    { en: 'merged {n}', ko: '{n}개 병합' },
-  // Risk phase (v30): destroy warning, protect toggle + states.
-  enhanceRiskDestroy: { en: 'fail destroys it', ko: '실패 시 파괴' },
-  enhanceProtectSafe: { en: 'protected — survives a fail', ko: '보호됨 — 실패해도 안전' },
+  // Risk phase (v30): the 특수강화 protect toggle (label used as the toggle's aria-label).
   enhanceUseProtect:  { en: 'Use protection', ko: '보호 사용' },
-  enhanceNoProtect:   { en: 'No charges — buy {n} in the shop', ko: '보호 충전 없음 — 상점에서 {n} 구매' },
+  specialEnhanceLabel: { en: 'Special Enhance', ko: '특수강화' },
+  specialEnhanceHint: { en: '3 copies · higher success', ko: '카드 3장 · 성공률↑' },
   copyTokenBuy:     { en: 'Buy copy', ko: '복제 구매' },
   qualityTail:          { en: 'Pristine', ko: '명품' },
   enhanceOutcomeUp:    { en: 'ENHANCED!', ko: '강화 성공!' },

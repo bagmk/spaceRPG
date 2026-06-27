@@ -321,10 +321,17 @@ export const WALLET_LEVEL_BONUS = 0.05;
  * 12): natural /s ≈ anchor(750k)×AUTO_GEAR_INCOME_SCALE(2.4e-5)×WALLET_RARITY_WEIGHT.lege(3)
  * = 54/s. OLD behaviour: the floor was 500/s so Lv1 AND Lv5 both clamped to 500 (the reported
  * 500/초 → 500/초 freeze). NOW the legendary floor is 40 (< 54), so the readout shows the real
- * value and CLIMBS every level: Lv1 ≈ 54 → Lv5 ≈ 54×1.20(linear)×1.06^4(geo) ≈ 82 → Lv10 ≈
- * 54×1.45×1.06^9 ≈ 132 → Lv15 ≈ 54×1.70×1.06^14 ≈ 207 → Lv22 ≈ 54×2.05×1.06^21 ≈ 376 (≈7×).
+ * value and CLIMBS every level: Lv1 ≈ 54 → Lv5 ≈ 54×1.20(linear)×1.07^4(geo) ≈ 85 → Lv10 ≈
+ * 54×1.45×1.07^9 ≈ 144 → Lv15 ≈ 54×1.70×1.07^14 ≈ 237 → Lv22 ≈ 54×2.05×1.07^21 ≈ 458 (≈8.5×).
+ *
+ * 2026-06-27 (user "강화 성공해도 안 바뀜"): bumped 0.06 → 0.07 so a single AUTO enhance crosses
+ * the rounded /s readout instead of rounding back. 0.18/0.12/0.10/0.08 were tried first but the
+ * geometric Lv22 boost overshot the S16 auto gate (geared anchor fell below the 5-min floor in
+ * the sim); 0.07 is the highest growth that keeps ALL INVARIANTS PASS. ENTROPY_THRESHOLDS were
+ * NOT re-pinned — the auto wallet feeds the OFF-GATE autoEntropyFlatAdd tame path, so the sim's
+ * calibrated ladder is byte-identical to the existing one.
  */
-export const WALLET_AUTO_LEVEL_GROWTH = 0.06;
+export const WALLET_AUTO_LEVEL_GROWTH = 0.07;
 /**
  * Base passive auto income (matter/sec) with NO gear equipped — so auto-speed
  * upgrades always have a base to scale and the early game isn't dead before the
@@ -752,6 +759,15 @@ export const ENHANCE_REFUND_RATE = 0.6;
 export const ENH_DUP_BASE = 3;
 export const ENH_DUP_STEP = 2;
 
+/**
+ * 특수강화 (special enhance) — the risky copy-paid enhance path. Instead of the
+ * escalating need(prevLevel) copies, a special enhance always costs a FLAT
+ * SPECIAL_ENHANCE_CARD_COST copies but carries a REDUCED fail chance
+ * (base fail × SPECIAL_ENHANCE_FAIL_MULT). Mirrored in scripts/entropy-gate-sim.mjs.
+ */
+export const SPECIAL_ENHANCE_CARD_COST = 3;
+export const SPECIAL_ENHANCE_FAIL_MULT = 0.5;
+
 // #8 (user): the copy-token BUY is removed ("카드 사는건 안 됨"). Leveling is COPIES
 // (free merge) when you have spares, else the 강화석 escape valve (getEnhanceStoneCost,
 // reusing ENHANCE_STONE_BASE/GROWTH below) — so 강화석 stays a live sink.
@@ -1010,14 +1026,11 @@ export const SHOP_UNLOCK_STAGE_ID = 3;
 export interface MatterPackSpec { id: string; priceUSD: number; }
 export const MATTER_PACKS: MatterPackSpec[] = [
   { id: 'pack_1', priceUSD: 0.99 },
-  { id: 'pack_2', priceUSD: 1.99 },
-  { id: 'pack_3', priceUSD: 4.99 },
-  { id: 'pack_4', priceUSD: 9.99 },
-  { id: 'pack_5', priceUSD: 19.99 },
-  { id: 'pack_6', priceUSD: 49.99 },
+  { id: 'pack_2', priceUSD: 4.99 },
+  { id: 'pack_3', priceUSD: 9.99 },
 ];
 /** Matter granted by each USD pack = ENTITY_COST_ANCHORS[stage] × this[packIndex]. */
-export const SHOP_PACK_MATTER_FRAC: number[] = [0.5, 1.1, 3, 6.5, 14, 37];
+export const SHOP_PACK_MATTER_FRAC: number[] = [5, 11, 30];
 /** 강화석 bundles offered for matter. */
 export const STONE_BUNDLES: number[] = [1, 10, 100];
 
