@@ -1759,6 +1759,19 @@ button.hud-stage-title--clickable:hover {
 .entity-inv__filter--on { background: rgba(255, 255, 255, 0.13); color: #fff; }
 
 .owned-card { position: relative; }
+/* Type chip on the level line — at-a-glance 공격(click, amber) vs 자동(rift, teal). */
+.owned-card__type {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0 4px;
+  border-radius: 5px;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+.owned-card__type--click { color: #ffcf8f; background: rgba(255, 167, 77, 0.18); }
+.owned-card__type--rift  { color: #8fe3ef; background: rgba(77, 208, 225, 0.18); }
 .owned-card__delta {
   position: absolute;
   top: -6px;

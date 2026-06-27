@@ -1532,6 +1532,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       // copy exists, even if another copy of the same item is already
                       // worn. Dim only when every copy is already equipped.
                       const noFree = freeCountOf(entity.id) <= 0;
+                      const cat = getEquipCategory(entity); // 'click' = 공격 (top slots), 'rift' = 자동 (bottom)
                       let delta: number | null = null;
                       if (pickingSlot !== null && pickBase > 0 && !noFree) {
                         const d = Math.round((gearStrength(entity, entry) / pickBase - 1) * 100);
@@ -1566,9 +1567,14 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                           <TraitBadge entity={entity} className="trait-badge--card" />
                           <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                           <span className="owned-card__name">{entityName(entity, language)}</span>
-                          {/* 🅠6 (req ⑫) card format: Lv.N · count/threshold · ⬆ (when below cap). */}
+                          {/* User: top slots are 공격(click), bottom are 자동(rift) but the cards didn't say
+                              which — a coloured type chip (amber=공격, teal=자동) on the level line makes it
+                              obvious. Also drop the unused 20-card owned cap (/20) — show the LEVEL only. */}
                           <span className="owned-card__count" style={levelTextStyle(entry.level)}>
-                            {`Lv.${entry.level} · ${entry.count}/${entity.maxCount}`}
+                            <span className={`owned-card__type owned-card__type--${cat}`}>
+                              {t(language, cat === 'click' ? 'equipTypeClick' : 'equipTypeAuto')}
+                            </span>
+                            {` Lv.${entry.level}`}
                             {entry.level < getEnhanceLevelCap(entity) ? <span className="owned-card__up"> ⬆</span> : null}
                           </span>
                           <CollectionBar entity={entity} level={entry.level} copies={copiesOf(entity.id)} />

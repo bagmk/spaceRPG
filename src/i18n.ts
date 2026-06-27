@@ -127,6 +127,9 @@ export const STRINGS = {
   codexCardDropTitle:  { en: 'Drop chance from this stage', ko: '이 스테이지에서의 드랍 확률' },
   setBonusLabel:  { en: 'Set bonus', ko: '세트 보너스' },
   equipClickTitle: { en: 'Click Gear', ko: '클릭 장착' },
+  /** Card type chip — which slot kind a card belongs to (top=공격/click, bottom=자동/rift). */
+  equipTypeClick: { en: 'Click', ko: '공격' },
+  equipTypeAuto: { en: 'Auto', ko: '자동' },
   equipPickEmpty: { en: 'No owned entities yet — collect drops or buy in the Lab', ko: '보유한 엔티티가 없습니다 — 드랍을 모으거나 연구소에서 구매하세요' },
   tabCodex:       { en: 'Codex', ko: '도감' },
   tabEquip:       { en: 'Equip', ko: '장착' },
