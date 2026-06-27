@@ -28,7 +28,6 @@ export interface TutorialStepCtx {
   canShowShop: boolean;
   hasActiveBoost: boolean;
   canCondense: boolean;
-  almanacOpen: boolean;
   hasSeenCashShopTutorial: boolean;
   flags: Record<string, boolean>;
 }
@@ -137,7 +136,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'info-hint-seen', flagId: 'info-hint-seen', anchor: 'resource',
     messageKey: 'tutStageLog', ctaKey: 'tutStageLogOpen', ctaAction: 'almanac',
     suppressedByAllDismissed: true,
-    eligible: (c) => flag(c, 'milestone-seen') && !c.almanacOpen,
+    eligible: (c) => flag(c, 'milestone-seen') && !c.questOpen,
     seen: (c) => flag(c, 'info-hint-seen'),
   },
 ];
@@ -151,7 +150,6 @@ export function selectTutorialStep(ctx: TutorialStepCtx): TutorialStep | null {
     ctx.questOpen ||
     ctx.shopOpen ||
     ctx.settingsOpen ||
-    ctx.almanacOpen ||
     ctx.universeCount !== 1
   ) {
     return null;

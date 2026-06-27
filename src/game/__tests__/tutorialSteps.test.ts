@@ -16,7 +16,6 @@ function ctx(over: Partial<TutorialStepCtx> = {}): TutorialStepCtx {
     canShowShop: false,
     hasActiveBoost: false,
     canCondense: false,
-    almanacOpen: false,
     hasSeenCashShopTutorial: false,
     flags: {},
     ...over,
@@ -34,7 +33,6 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(selectTutorialStep(ctx({ totalClicks: 0, questOpen: true }))).toBeNull();
     expect(selectTutorialStep(ctx({ totalClicks: 0, shopOpen: true }))).toBeNull();
     expect(selectTutorialStep(ctx({ totalClicks: 0, settingsOpen: true }))).toBeNull();
-    expect(selectTutorialStep(ctx({ totalClicks: 0, almanacOpen: true }))).toBeNull();
   });
 
   it('matter-time-intro shows the pre-first-click variant before any click', () => {
@@ -104,10 +102,10 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(selectTutorialStep(ctx({ ...base, hasSeenCashShopTutorial: true }))).toBeNull();
   });
 
-  it('info-hint requires the milestone flag and a closed almanac', () => {
+  it('info-hint requires the milestone flag and a closed quest panel', () => {
     const base = ctx({ flags: { 'matter-time-intro': true, 'auto-income-intro': true, 'milestone-seen': true } });
     expect(selectTutorialStep(base)?.id).toBe('info-hint-seen');
-    expect(selectTutorialStep(ctx({ ...base, almanacOpen: true }))).toBeNull();
+    expect(selectTutorialStep(ctx({ ...base, questOpen: true }))).toBeNull();
   });
 
   it('has a unique, ordered step table', () => {

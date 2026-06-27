@@ -53,13 +53,11 @@ import { OfflineProgressModal } from './OfflineProgressModal';
 import { EndingChooser } from './EndingChooser';
 import { EndingCredits } from './endings/EndingCredits';
 import { applyUniverseToStage, getEndingOptions } from '../game/multiverse';
-import { AlmanacOverlay } from './AlmanacOverlay';
 import { QuestPanel } from './QuestPanel';
 import { QuestClaimRollup } from './QuestClaimRollup';
 import { DropDiscoveryToast } from './DropDiscoveryToast';
 import { CodexClaimCelebration } from './CodexClaimCelebration';
 import { isQuestClaimable, getQuest, questTitle } from '../game/quests';
-import { toDateKey } from '../game/shop/daily';
 import { milestoneEraLog } from '../game/milestones';
 import { pickLogText } from '../game/stageLogs';
 import { SettingsPanel } from './SettingsPanel';
@@ -169,7 +167,6 @@ export function GameScreen({
   const [shopOpen, setShopOpen] = useState(false);
   const [panelView, setPanelView] = useState<null | { page: 'lab' | 'equip' | 'fuse'; category: 'click' | 'rift' }>(null);
   const entityPanelOpen = panelView !== null;
-  const [almanacOpen, setAlmanacOpen] = useState(false);
   const [questOpen, setQuestOpen] = useState(false);
   // 🅠5: badge the quest button when any active quest is claimable.
   const claimableQuestIds = state.activeQuests.filter((id) => {
@@ -177,11 +174,8 @@ export function GameScreen({
     return q ? isQuestClaimable(q, state) : false;
   });
   const hasClaimableQuest = claimableQuestIds.length > 0;
-  // Panel B: also badge the quest button when today's daily attendance reward is
-  // unclaimed — it lives in the quest panel and had no return hook. (hasClaimableQuest
-  // stays quest-only for tutorial gating; the badge uses the broader signal below.)
-  const dailyClaimable = state.attendanceClaimedDate !== toDateKey(Date.now());
-  const questPanelHasNudge = hasClaimableQuest || dailyClaimable;
+  // Badge the quest button when any active quest is claimable.
+  const questPanelHasNudge = hasClaimableQuest;
   const questMilestoneSeen = Boolean(state.tutorialFlags['quest-milestone-intro']);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewingStageId, setViewingStageId] = useState<number | null>(null);
@@ -344,7 +338,6 @@ export function GameScreen({
       canShowShop,
       hasActiveBoost,
       canCondense,
-      almanacOpen,
       hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
       flags: state.tutorialFlags,
     };
@@ -355,7 +348,7 @@ export function GameScreen({
       case 'quest': onCta = () => { setQuestOpen(true); soundManager?.playUIOpen(); }; break;
       case 'entityEquip': onCta = () => openEntityPanel('equip', 'click'); break;
       case 'shop': onCta = () => { setShopOpen(true); soundManager?.playUIOpen(); }; break;
-      case 'almanac': onCta = () => { setAlmanacOpen(true); soundManager?.playUIOpen(); }; break;
+      case 'almanac': onCta = () => { setQuestOpen(true); soundManager?.playUIOpen(); }; break;
       default: onCta = undefined;
     }
     return {
@@ -381,7 +374,6 @@ export function GameScreen({
     state.totalClicks,
     state.tutorialFlags,
     state.universeCount,
-    almanacOpen,
     questOpen,
     shopOpen,
     settingsOpen,
@@ -964,7 +956,7 @@ export function GameScreen({
                 type="button"
                 ref={infoAnchorRef}
                 className="hud-stage-chip"
-                onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
+                onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
                 title={t(language, 'hudViewInfo')}
                 aria-label={t(language, 'hudViewInfo')}
               >
@@ -972,7 +964,7 @@ export function GameScreen({
               </button>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
-                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setAlmanacOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
+                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
                 </div>
               </div>
               {/* User: matter / auto / ◆ all the SAME font size, right-aligned on the stage
@@ -1219,24 +1211,12 @@ export function GameScreen({
         />
       ) : null}
 
-      {almanacOpen ? (
-        <AlmanacOverlay
-          currentStageId={stage.id}
-          progressPercent={Math.floor(progress01 * 100)}
-          language={language}
-          onClose={() => { setAlmanacOpen(false); soundManager?.playUIClose(); }}
-          onUITap={() => soundManager?.playUITap()}
-          onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
-          completedQuestIds={state.completedQuestIds}
-        />
-      ) : null}
-
       {questOpen ? (
         <QuestPanel
           state={state}
           language={language}
           onClaim={(questId) => { dispatch({ type: 'CLAIM_QUEST', questId }); soundManager?.playQuestClaim(); }}
-          onClaimAttendance={() => { dispatch({ type: 'CLAIM_ATTENDANCE', now: Date.now(), rolls: Array.from({ length: 10 }, () => ({ rarityRoll: Math.random(), stageRoll: Math.random(), pickRoll: Math.random(), q1: Math.random(), q2: Math.random() })) }); soundManager?.playQuestClaim(); }}
+          onStageSelect={(id) => setViewingStageId(id === stage.id ? null : id)}
           onClose={() => { setQuestOpen(false); soundManager?.playUIClose(); }}
         />
       ) : null}
