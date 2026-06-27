@@ -996,7 +996,9 @@ export function GameScreen({
               </button>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
-                  <button type="button" className="hud-stage-title hud-stage-title--clickable" onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}>{displayStageLabel}</button>
+                  {/* User: the stage NAME no longer opens quests — quests open only via the
+                      quest button (rail) or the small info chip. */}
+                  <span className="hud-stage-title">{displayStageLabel}</span>
                 </div>
               </div>
               {/* User: matter / auto / ◆ all the SAME font size, right-aligned on the stage
