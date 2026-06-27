@@ -145,33 +145,10 @@ export function QuestPanel({ state, language, onClaim, onStageSelect, onClose }:
               // to milestoneStageId(quest). So a past-era quest shows + pays that era's amount.
               const matter = rewardMatter(quest, tabStage);
               const stones = quest.reward.stones ?? 0;
-              // 시대 기록 — the era-record this quest unlocks (#42 1:1 map). A CLAIMED
-              // quest shows the record in full + a → to open its LoreModal; an unclaimed
-              // quest shows a "not yet earned" placeholder (all rows visible, no padlock).
+              // 시대 기록 — the era-record this quest unlocks (#42 1:1 map). On CLAIM the card body
+              // BECOMES that era-record's lore (replacing the objective line) with a → to the full
+              // essay — one clean card per quest (no duplicate title, no separate "시대 기록" block).
               const log = milestoneEraLog(quest.id);
-              const claimed = status === 'claimed';
-              const loreRow = log ? (
-                <div className={`quest-lore ${claimed ? 'quest-lore--open' : 'quest-lore--locked'}`}>
-                  <div className="quest-lore__head">{t(language, 'almanacMilestones')}</div>
-                  {claimed ? (
-                    <div className="quest-lore__body">
-                      <div className="quest-lore__text">
-                        <div className="quest-lore__title">{pickLogText(log.title, language)}</div>
-                        <div className="quest-lore__msg">{pickLogText(log.message, language)}</div>
-                      </div>
-                      <button
-                        type="button"
-                        className="quest-lore__more"
-                        onClick={() => setOpenLoreId(milestoneLoreId(log.stageId, log.progress, log.title.en))}
-                      >
-                        →
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="quest-lore__locked">{t(language, 'almanacLogLocked')}</div>
-                  )}
-                </div>
-              ) : null;
               if (status === 'active') {
                 const progress = getQuestProgress(quest, state);
                 const claimable = isQuestClaimable(quest, state);
@@ -202,7 +179,6 @@ export function QuestPanel({ state, language, onClaim, onStageSelect, onClose }:
                         </button>
                       </div>
                     </div>
-                    {loreRow}
                   </div>
                 );
               }
@@ -242,25 +218,35 @@ export function QuestPanel({ state, language, onClaim, onStageSelect, onClose }:
                         )}
                       </div>
                     </div>
-                    {loreRow}
                   </div>
                 );
               }
-              // claimed — a compact per-stage RECORD card + its revealed era-record.
+              // claimed — title + the era-record LORE in place of the objective + → to the full essay.
               return (
                 <div key={quest.id} className="quest-card-wrap">
                   <div className={`quest-card quest-card--record quest-card--${status}`}>
                     <div className="quest-card__main">
                       <div className="quest-card__title">{questTitle(quest, language)}</div>
-                      <div className="quest-card__desc">{questDesc(quest, language)}</div>
+                      <div className="quest-card__desc quest-card__desc--lore">
+                        {log ? pickLogText(log.message, language) : questDesc(quest, language)}
+                      </div>
                     </div>
                     <div className="quest-card__side">
                       <span className={`quest-card__status quest-card__status--${status}`}>
                         {`✓ ${t(language, 'questDone')}`}
                       </span>
+                      {log ? (
+                        <button
+                          type="button"
+                          className="quest-lore__more"
+                          onClick={() => setOpenLoreId(milestoneLoreId(log.stageId, log.progress, log.title.en))}
+                          aria-label="→"
+                        >
+                          →
+                        </button>
+                      ) : null}
                     </div>
                   </div>
-                  {loreRow}
                 </div>
               );
             })}

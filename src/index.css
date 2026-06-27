@@ -7409,6 +7409,8 @@ button.stat-header-item {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
 }
+/* Claimed quest card: the objective line is replaced by the era-record lore (flavour). */
+.quest-card__desc--lore { font-style: italic; opacity: 0.82; }
 .quest-lore__more {
   all: unset;
   cursor: pointer;
