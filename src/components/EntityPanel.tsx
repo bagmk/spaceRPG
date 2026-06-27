@@ -929,7 +929,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // Shared rarity-filter chip row (equip + fusion grids).
   const rarityFilterBar = (
     <div className="rarity-filter">
-      {(['all', 'common', 'rare', 'epic', 'legendary'] as const).map((r) => (
+      {/* M: 신화(mythic) tab added — lets the fusion forge filter to mythic items
+          (RARITY_COLORS.mythic + rarityMythic label already exist). */}
+      {(['all', 'common', 'rare', 'epic', 'legendary', 'mythic'] as const).map((r) => (
         <button
           key={r}
           type="button"
@@ -1115,7 +1117,22 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                                   type="button"
                                   className={`almanac-card almanac-card--${entity.rarity} ${collected ? (isFreshDiscovery(entity.id) ? 'codex-card--fresh' : '') : `codex-card--empty ${future ? 'almanac-card--locked almanac-card--future' : 'almanac-card--locked'}`}`}
                                   style={{ '--rarity-color': rarityColor, '--card-anim-delay': `${Math.min(idx, 24) * 25}ms` } as CSSProperties}
-                                  onClick={() => { if (collected) { setInspectedEntityId(entity.id); onUITap?.(); } }}
+                                  onClick={() => {
+                                    if (!collected) return;
+                                    setInspectedEntityId(entity.id);
+                                    // C: viewing a codex entry clears its NEW mark. Drop the id
+                                    // from the live badge set (also clears the set-chip dot, which
+                                    // derives from codexNew) and persist all-collected as seen.
+                                    if (codexNew.has(entity.id)) {
+                                      setCodexNew((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(entity.id);
+                                        return next;
+                                      });
+                                      onMarkCodexSeen?.();
+                                    }
+                                    onUITap?.();
+                                  }}
                                 >
                                   {collected && codexNew.has(entity.id) ? (
                                     <span className="almanac-card__new">NEW</span>
@@ -2053,8 +2070,6 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
           count={getOwnedEntityCount(inventory, inspectedEntity)}
           language={language}
           rarityColor={RARITY_COLORS[inspectedEntity.rarity]}
-          power={power}
-          ownedLevel={ownedEntryOf(inspectedEntity)?.level ?? 1}
           onClose={() => setInspectedEntityId(null)}
         />
       ) : null}
@@ -2102,9 +2117,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         const destroyOnFail = ENHANCE_DESTROY_ON_FAIL;
         const successPct = Math.round((1 - failChance) * 100); // 🎯 성공 (level-up)
         const destroyPct = protectActive ? 0 : Math.round(failChance * destroyOnFail * 100); // 💥 파괴 (item loss)
+        // 🔄 유지 (kept, no level) is still part of the mechanic — computed here but no
+        // longer displayed (H3). void keeps it evaluated without an unused-var error.
         const keepPct = protectActive
           ? Math.round(failChance * 100)
-          : Math.round(failChance * (1 - destroyOnFail) * 100); // 🔄 유지 (kept)
+          : Math.round(failChance * (1 - destroyOnFail) * 100);
+        void keepPct;
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
@@ -2139,10 +2157,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   explains all four symbols. */}
               {risky && enhanceUnlocked ? (
                 <div className="enhance-risk">
+                  {/* H(3): emoji-only readout — 🎯 성공 / 💥 파괴. The 🔄 유지 mechanic is
+                      still computed (keepPct) but no longer shown (kept the math, dropped the chip). */}
                   <div className="enhance-risk__readout" aria-live="polite">
-                    <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${t(language, 'enhanceReadoutSuccess')} ${successPct}%`}</span>
-                    <span className="enhance-risk__pct enhance-risk__pct--keep">{`🔄 ${t(language, 'enhanceReadoutKeep')} ${keepPct}%`}</span>
-                    <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${t(language, 'enhanceReadoutDestroy')} ${destroyPct}%`}</span>
+                    <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${successPct}%`}</span>
+                    <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${destroyPct}%`}</span>
                   </div>
                   <div className="enhance-risk__toggles">
                     <button
@@ -2151,10 +2170,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       role="switch"
                       aria-checked={useSpecial}
                       aria-label={t(language, 'specialEnhanceToggleAria')}
-                      disabled={enhancing !== null}
+                      // H(2): no point toggling 특수강화 without the cards (or mid-enhance).
+                      disabled={spares < SPECIAL_ENHANCE_CARD_COST || enhancing !== null}
                       onClick={(e) => { e.stopPropagation(); setUseSpecial((v) => !v); onUITap?.(); }}
                     >
-                      {`${useSpecial ? '☑' : '☐'} ✨ ${t(language, 'specialEnhanceLabel')}`}
+                      {/* H(1): label TEXT dropped — just the checkbox + ✨. */}
+                      {`${useSpecial ? '☑' : '☐'} ✨`}
                     </button>
                     <button
                       type="button"
@@ -2162,7 +2183,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       role="switch"
                       aria-checked={useProtect}
                       aria-label={t(language, 'enhanceUseProtect')}
-                      disabled={enhancing !== null}
+                      // H(2): no charges → nothing to protect (or mid-enhance).
+                      disabled={enhanceProtectCharges === 0 || enhancing !== null}
                       onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
                     >
                       {`${useProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
@@ -2212,8 +2234,6 @@ interface DetailCardProps {
   count: number;
   language: Lang;
   rarityColor: string;
-  power: GearPower;
-  ownedLevel: number;
   onClose: () => void;
 }
 
@@ -2227,13 +2247,11 @@ function EntityDetailCard({
   count,
   language,
   rarityColor,
-  power,
-  ownedLevel,
   onClose,
 }: DetailCardProps) {
   return (
     <div
-      className="entity-detail-layer"
+      className="entity-detail-layer entity-detail-layer--codex"
       role="dialog"
       aria-modal="true"
       aria-label={entityName(entity, language)}
@@ -2268,24 +2286,20 @@ function EntityDetailCard({
           </span>
           <span className="entity-detail-card__family-role">{familyRole(entity.visual.glyph, language)}</span>
         </div>
+        {/* Collection-only card: no gameplay stat chips (위력/오토/드랍률/엔트로피 등 제거).
+            Just a quiet owned/consumed marker — gear math lives on the 장착 tab. */}
         <div className="entity-detail-card__stats">
-          {(() => {
-            const p = effectValueLabel(entity, language, power, count, ownedLevel, false, false);
-            const tr = EFFECT_TRAIT[entity.effect.type];
-            return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
-          })()}
           <span className="entity-detail-card__lvl">{entity.maxCount > 1 ? `${count}/${entity.maxCount}` : count > 0 ? t(language, 'entityLabOwned') : t(language, 'codexConsumed')}</span>
         </div>
-        {getSecondaryStats(entity).length > 0 ? (
-          <div className="entity-detail-card__substats spec-chip-row">
-            {getSecondaryStats(entity).map((sub) => {
-              const s = substatValueLabel(sub, language, ownedLevel, getGearPowerMult(power, entity.stageId));
-              return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
-            })}
-          </div>
-        ) : null}
-        {/* Flavor demoted below the mechanical specs — what it DOES reads first. */}
-        <p className="entity-detail-card__description entity-detail-card__description--flavor">{entityDescription(entity, language)}</p>
+        {/* Description is the trophy's centrepiece now — large, always shown.
+            Inline bump (CSS file is out of scope) makes it bigger/brighter than the
+            base body copy so the enriched lore reads as the focus. */}
+        <p
+          className="entity-detail-card__description entity-detail-card__description--codex"
+          style={{ fontSize: '15px', lineHeight: 1.55, color: '#cdd6ea', marginTop: '14px', maxWidth: '34ch', marginLeft: 'auto', marginRight: 'auto' }}
+        >
+          {entityDescription(entity, language)}
+        </p>
         <LoreSection loreId={entityLoreId(entity.stageId, entity.name)} language={language} />
       </article>
     </div>
