@@ -88,6 +88,29 @@ export function gachaBoxMatterCost(boxId: string, stageId: number): number {
   return box ? Math.ceil(anchor(stageId) * box.priceFrac) : 0;
 }
 
+/**
+ * Value-badge metric for a gacha box: how much CHEAPER the box is than acquiring its
+ * HEADLINE (best obtainable) rarity straight from the daily shop. A box is a CHANCE at
+ * a high-rarity item, so the value story is "up to a {best rarity} for far less than the
+ * daily-shop price of that rarity." reference = shopItemMatterCost(headlineRarity) where
+ * headlineRarity = the rarest tier the box can roll (odds > 0); the badge = how much less
+ * the box costs than that. Returns a fraction in [0,1) (0 when the box is NOT cheaper).
+ * NB: this is the optimistic best-case framing — the odds-weighted EXPECTED daily cost is
+ * lower because boxes are intentionally negative-EV sinks; the headline is what makes the
+ * value badge meaningful (matches the "up to Legendary!" gacha convention).
+ */
+export function gachaBoxDiscount(boxId: string, stageId: number): number {
+  const box = GACHA_BOXES.find((b) => b.id === boxId);
+  if (!box) return 0;
+  const order: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+  const headline = [...order].reverse().find((r) => (box.odds[r] ?? 0) > 0);
+  if (!headline) return 0;
+  const reference = shopItemMatterCost(headline, stageId);
+  const boxCost = gachaBoxMatterCost(boxId, stageId);
+  if (reference <= 0 || boxCost >= reference) return 0;
+  return 1 - boxCost / reference;
+}
+
 /** Weighted pick from a rarity odds table given a [0,1) roll. */
 export function weightedRarityPick(odds: Record<EntityRarity, number>, roll: number): EntityRarity {
   const order: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];

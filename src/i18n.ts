@@ -385,6 +385,7 @@ export const STRINGS = {
   shopGachaTitle:     { en: 'Nebula Boxes',   ko: '성운 상자' },
   shopGachaOdds:      { en: 'Odds',           ko: '확률' },
   shopGachaAgain:     { en: 'Open Again',     ko: '다시 뽑기' },
+  shopGachaDiscount:  { en: '{n}% off',       ko: '{n}% 할인' },
   shopActiveBoosts:   { en: 'Active Boosts',  ko: '활성 부스트' },
   shopTotalSpent:     { en: 'Total spent',    ko: '총 결제액' },
   shopTestMode:       { en: 'test mode',      ko: '테스트 모드' },

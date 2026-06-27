@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch } from 'react';
-import { formatGameNumberShort, getEntropyGateProgress } from '../game/formulas';
+import { formatGameNumberShort } from '../game/formulas';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { GameAction } from '../game/reducer';
 import {
@@ -22,15 +22,13 @@ import {
 } from '../game/shop/boosts';
 import type { ActiveBoostSummary } from '../game/shop/boosts';
 import { generateDailyShop, toDateKey } from '../game/shop/daily';
-import { shopItemMatterCost, shopStoneMatterCost, shopProtectMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, packMatterPayout, stoneBulkDiscount, protectBulkDiscount } from '../game/shop/pricing';
-import { STONE_BUNDLES, PROTECT_BUNDLES, ENHANCE_PROTECT_ITEM_NAME, GACHA_BOXES, EFFECT_TRAIT } from '../game/balance';
+import { shopItemMatterCost, shopStoneMatterCost, shopProtectMatterCost, shopRefreshMatterCost, gachaBoxMatterCost, gachaBoxDiscount, packMatterPayout, stoneBulkDiscount, protectBulkDiscount } from '../game/shop/pricing';
+import { STONE_BUNDLES, PROTECT_BUNDLES, ENHANCE_PROTECT_ITEM_NAME, GACHA_BOXES } from '../game/balance';
 import { STAGES } from '../game/stages';
 import { findEntityById, entityName } from '../game/entities/stageItems';
 import { isTailQuality } from '../game/entities/quality';
 import type { EntityRarity } from '../game/entities/types';
-import type { GearPower } from '../game/entities/substats';
 import { EntityGlyph } from './EntityGlyph';
-import { effectValueLabel, SpecChip, TraitBadge, TRAIT_ICON_TONE } from './EntityPanel';
 import type { GameState, ShopBoostCategory } from '../game/types';
 import { t, type Lang } from '../i18n';
 
@@ -180,8 +178,6 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
 
   const quanta = state.quanta;
   const playerStageId = STAGES[Math.min(Math.max(0, state.stageIdx), STAGES.length - 1)].id;
-  // GearPower for the inline spec preview — matches what equipping would yield.
-  const power: GearPower = { stageId: playerStageId, gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx) };
 
   // Effective daily roster — mirrors the reducer's date-rollover so display
   // matches what a buy will charge.
@@ -251,7 +247,11 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
       <section className="entity-fs__panel" onClick={(e) => e.stopPropagation()} style={{ '--stage-accent': accent } as CSSProperties}>
       <header className="entity-fs__topbar">
         <h2 className="entity-fs__screen-title">{t(language, 'hudShop')}</h2>
-        <span className="shop-fs__balance"><span className="qsym">⚛</span>{formatGameNumberShort(quanta)} · ◆{formatGameNumberShort(state.enhanceStones)}</span>
+        {/* G (user): 인과 닻(강화 보호) charges live in the header next to the matter/강화석
+            readout — NOT in the shop body (the in-body count was removed). */}
+        <span className="shop-fs__balance">
+          <span className="qsym">⚛</span>{formatGameNumberShort(quanta)} · ◆{formatGameNumberShort(state.enhanceStones)} · 🛡{formatGameNumberShort(state.enhanceProtectCharges)}
+        </span>
         <button className="entity-fs__close" aria-label={t(language, 'shopClose')} onClick={onClose}>✕</button>
       </header>
 
@@ -326,8 +326,8 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               const sold = purchased.includes(offer.slot);
               const afford = quanta >= cost;
               const rc = RARITY_COLORS[offer.rarity];
-              const spec = ent ? effectValueLabel(ent, language, power, 1, 1, false, false) : null;
-              const tr = ent ? EFFECT_TRAIT[ent.effect.type] : null;
+              // E (user): daily cards show ONLY name + price — the rarity tag and the
+              // effect/spec chip were stripped (the gold-tail border is kept).
               return (
                 <button
                   key={offer.slot}
@@ -337,11 +337,8 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   disabled={sold || !afford}
                   onClick={() => { dispatch({ type: 'BUY_DAILY_ITEM', slot: offer.slot, now }); onSfx?.(); }}
                 >
-                  {ent ? <TraitBadge entity={ent} className="trait-badge--card" /> : null}
-                  <span className="shop-item-card__rarity" style={{ color: rc }}>{t(language, RARITY_LABEL_KEY[offer.rarity])}</span>
                   {ent ? <EntityGlyph entity={ent} color={rc} /> : null}
                   <span className="shop-item-card__name">{ent ? entityName(ent, language) : offer.entityId}</span>
-                  {spec && tr ? <SpecChip icon={tr.icon} value={spec.value} label={spec.label} accent={TRAIT_ICON_TONE} /> : null}
                   <span className="shop-card__price">
                     {sold ? t(language, 'shopSoldOut') : `⚛${formatGameNumberShort(cost)}`}
                   </span>
@@ -362,6 +359,9 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                 .filter((r) => (box.odds[r] ?? 0) > 0)
                 .map((r) => `${t(language, RARITY_LABEL_KEY[r])} ${box.odds[r]}%`)
                 .join(' · ');
+              // F (user): value badge — how much cheaper the box is vs buying its
+              // headline (best obtainable) rarity straight from the daily shop.
+              const discount = Math.round(gachaBoxDiscount(box.id, playerStageId) * 100);
               return (
                 <button
                   key={box.id}
@@ -372,6 +372,9 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
                   onClick={() => openBox(box.id)}
                   title={`${t(language, 'shopGachaOdds')}: ${odds}`}
                 >
+                  {discount > 0 ? (
+                    <span className="shop-ribbon shop-ribbon--value">{t(language, 'shopGachaDiscount').replace('{n}', String(discount))}</span>
+                  ) : null}
                   <span className="shop-gacha-card__icon" aria-hidden="true">🎁</span>
                   <span className="shop-gacha-card__name">{GACHA_BOX_NAME[box.id]?.[language] ?? box.id}</span>
                   <span className="shop-gacha-card__odds">{odds}</span>
@@ -420,7 +423,7 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
           })() : null}
         </ShopBoard>
 
-        {/* 4) Enhance Stones + 강화 보호. */}
+        {/* 4) Enhance Stones (강화석). */}
         <ShopBoard title={t(language, 'shopStonesTitle')}>
           <div className="shop-fs__stones">
             {STONE_BUNDLES.map((count) => {
@@ -444,9 +447,12 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
               );
             })}
           </div>
-          {/* 강화 보호 (인과 닻, v30): a matter-bought consumable directly under the 강화석 card —
-              one charge absorbs a failed risk-phase enhance so the item isn't destroyed. */}
-          <div className="shop-fs__section-title">{`🛡 ${t(language, 'shopProtectTitle')} · ${ENHANCE_PROTECT_ITEM_NAME[language]} (🛡 ${formatGameNumberShort(state.enhanceProtectCharges)})`}</div>
+        </ShopBoard>
+
+        {/* 5) 강화 보호 (인과 닻, v30) — its own board (mirrors the matter-packs board).
+            A matter-bought consumable: one charge absorbs a failed risk-phase enhance so
+            the item isn't destroyed. The live charge COUNT lives in the header readout. */}
+        <ShopBoard title={`${t(language, 'shopProtectTitle')} · ${ENHANCE_PROTECT_ITEM_NAME[language]}`}>
           <div className="shop-fs__stones">
             {PROTECT_BUNDLES.map((count) => {
               const cost = shopProtectMatterCost(playerStageId, count);

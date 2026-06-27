@@ -15525,6 +15525,13 @@ button.stat-header-item {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
+/* F (user): gacha "N% 할인" value badge — green so it reads as a SAVING vs the
+   red discount/bonus ribbon, and pinned top-right so it never covers the box icon. */
+.shop-ribbon--value {
+  left: auto;
+  right: 5px;
+  background: linear-gradient(95deg, #1faf6a, #3ad29a);
+}
 /* User: the ⚛ matter symbol reads too small inline — bump it ~+2pt relative to its text. */
 .qsym { font-size: 1.2em; line-height: 1; }
 .shop-card {

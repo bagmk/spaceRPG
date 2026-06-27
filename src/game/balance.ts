@@ -870,8 +870,9 @@ export const ENHANCE_PROTECT_ITEM_NAME = { en: 'Causal Anchor', ko: '인과 닻'
  *  player weighs insuring a risky attempt vs just re-farming the copy. */
 export const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 /** Protection bundles offered for matter in the shop (mirrors STONE_BUNDLES). The bigger
- *  bundles carry a bulk discount (protectBulkDiscount): 5 −8%, 10 −15%, 25 −25%. */
-export const PROTECT_BUNDLES: number[] = [1, 5, 10, 25];
+ *  bundles carry a bulk discount (protectBulkDiscount): 5 −8%, 10 −15%. (The 25-pack was
+ *  dropped per user; protectBulkDiscount keeps its 25/50 tiers, simply unused here.) */
+export const PROTECT_BUNDLES: number[] = [1, 5, 10];
 /**
  * Geometric per-level growth for the MATTER-ONLY click multiplier (#40). Each
  * click-gear level multiplies its clickMatterMult contribution by this — so
