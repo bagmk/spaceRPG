@@ -79,13 +79,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'quest-milestone-intro'),
   },
   {
-    id: 'time-gauge-visible', flagId: 'time-gauge-visible', anchor: 'resource',
-    messageKey: 'tutTimeGauge', autoCloseMs: 7000,
-    suppressedByAllDismissed: true,
-    eligible: (c) => c.stageId >= 2,
-    seen: (c) => flag(c, 'time-gauge-visible'),
-  },
-  {
     // ONBOARDING SPINE (user: "장착에서 여러번 나와"): the two guaranteed-fusion
     // equip bubbles (first-fuse-equip / second-fuse-equip) were removed — they
     // chained three back-to-back "go equip" prompts. The single equip prompt below

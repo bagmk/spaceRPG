@@ -309,8 +309,6 @@ export const STRINGS = {
                           ko: '구매한 엔티티가 중심을 공전합니다. 더 구매할수록 단순한 숫자가 아니라 실제 객체가 늘어납니다.' },
   tutRogueEncounter:    { en: 'A wandering comet has appeared. Click it to absorb it instantly — entropy plus a chance at a drop.',
                           ko: '떠도는 혜성이 나타났습니다. 클릭하면 즉시 흡수합니다 — 엔트로피와 드랍 획득 기회.' },
-  tutTimeGauge:         { en: 'This is Entropy — the gate to the next era. Clicking, collecting and condensing all feed it.',
-                          ko: '이것이 엔트로피입니다 — 다음 시대로 가는 관문이에요. 클릭, 수집, 응축이 모두 엔트로피를 키웁니다.' },
   tutShop:              { en: 'The shop is open. Ads grant short boosts, and purchases extend temporary boosts without stacking multipliers.',
                           ko: '상점이 열렸습니다. 광고는 짧은 부스트를 주고, 같은 부스트 구매는 배율 중첩 없이 시간을 연장합니다.' },
   tutShopOpen:          { en: 'Open Shop', ko: '상점 열기' },

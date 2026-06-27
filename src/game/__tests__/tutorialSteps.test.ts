@@ -112,7 +112,7 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     const ids = TUTORIAL_STEPS.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
-      'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro', 'time-gauge-visible',
+      'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro',
       'entity-lab-intro', 'fusion-intro',
       'hasSeenCashShopTutorial', 'boost-hud-seen', 'condense-ready', 'info-hint-seen',
     ]);
