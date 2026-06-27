@@ -23,7 +23,7 @@ import {
   getSpecialEnhanceFailChance,
   rollBreakStones,
 } from '../entities/enhance';
-import { ENHANCE_STONE_THRESHOLD, SPECIAL_ENHANCE_CARD_COST } from '../balance';
+import { ENHANCE_STONE_THRESHOLD, SPECIAL_ENHANCE_CARD_COST, ENHANCE_DESTROY_ON_FAIL } from '../balance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
 import {
@@ -600,7 +600,28 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
       }));
     }
 
-    // UNPROTECTED FAIL — DESTROY the anchor copy + mint consolation 강화석.
+    // UNPROTECTED FAIL — three-way (user "성공 안하고 파괴 안될 수도 있잖아"): only
+    // ENHANCE_DESTROY_ON_FAIL of unprotected fails DESTROY; the rest are the neutral
+    // 유지 outcome — the anchor is KEPT at its current level, the attempt cost
+    // (copies / stones) is still consumed, NO 강화석 refund, no level gained.
+    const destroyRoll = action.destroyRoll ?? Math.random();
+    if (destroyRoll >= ENHANCE_DESTROY_ON_FAIL) {
+      // 유지 — kept at prevLevel; consume the cost (like the protected branch) but
+      // spend NO protection charge and mint NO consolation 강화석.
+      const nextInventory = state.inventory.filter((e) => !consumedIds.has(e.instanceId));
+      return withCurrentUniverseEndingProgress(syncSlotUnlocks({
+        ...state,
+        enhanceStones: state.enhanceStones - stoneSpend,
+        inventory: nextInventory,
+        eventCounter: eventId,
+        lastEnhanceEvent: {
+          id: eventId, entityId: anchor.entityId, instanceId: anchorId,
+          outcome: 'fail', level: prevLevel, prevLevel,
+        },
+      }));
+    }
+
+    // DESTROY the anchor copy + mint consolation 강화석.
     const breakStones = rollBreakStones(entity.rarity, action.breakRoll);
     const destroyedIds = new Set<string | undefined>([anchorId, ...consumedIds]);
     const nextInventory = state.inventory.filter((e) => !destroyedIds.has(e.instanceId));

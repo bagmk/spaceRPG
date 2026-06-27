@@ -96,6 +96,10 @@ const ENHANCE_PROTECT_MATTER_FRAC = 0.75;
 const ENHANCE_FAIL_BASE = 0.25;
 const ENHANCE_FAIL_PER_LEVEL = 0.06;
 const ENHANCE_FAIL_MAX = 0.55;
+// Fraction of UNPROTECTED fails that DESTROY (rest = neutral 유지/kept) — lockstep with
+// balance.ts ENHANCE_DESTROY_ON_FAIL. A 유지 fail loses nothing, so the player only needs
+// protection for the DESTROY fraction; the protection-cost term below is scaled by this.
+const ENHANCE_DESTROY_ON_FAIL = 0.65;
 // 특수강화 (special enhance) copy-path fail reduction — lockstep with balance.ts
 // SPECIAL_ENHANCE_FAIL_MULT. The risk-phase climb here is the copy-paid special path
 // (flat 3 cards), so it pays the reduced fail odds.
@@ -307,7 +311,10 @@ function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined
     // the pre-aba4fcf reachability; raising IMPACT lets protection matter bite back if a
     // future playtest wants the mid-game harder still.
     const enhanceCost = base * Math.pow(ENHANCE_COST_GROWTH, level - 1);
-    const stepCost = (enhanceCost * expectedAttempts + protectChargeCost * expectedFails) * PROTECT_BUDGET_IMPACT;
+    // Three-way fail (user "파괴 확률을 살짝 낮춰줘"): a 유지 fail loses nothing, so the player
+    // only buys protection for the DESTROY fraction — scale the protection-matter term by
+    // ENHANCE_DESTROY_ON_FAIL (the expected DESTROYS, not all expected fails).
+    const stepCost = (enhanceCost * expectedAttempts + protectChargeCost * expectedFails * ENHANCE_DESTROY_ON_FAIL) * PROTECT_BUDGET_IMPACT;
     if (total + stepCost > budget) break;
     stoneTotal += nextStone;
     total += stepCost;

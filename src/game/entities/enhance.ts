@@ -24,6 +24,7 @@ import {
   ENHANCE_FAIL_BASE,
   ENHANCE_FAIL_PER_LEVEL,
   ENHANCE_FAIL_MAX,
+  ENHANCE_DESTROY_ON_FAIL,
   ENHANCE_BREAK_STONE_MIN,
   ENHANCE_BREAK_STONE_MAX,
   SPECIAL_ENHANCE_FAIL_MULT,
@@ -81,6 +82,15 @@ export function getEnhanceFailChance(level: number): number {
  */
 export function getSpecialEnhanceFailChance(level: number): number {
   return getEnhanceFailChance(level) * SPECIAL_ENHANCE_FAIL_MULT;
+}
+
+/**
+ * Destroy chance for the level → level+1 step: the (special or normal) fail chance
+ * scaled by ENHANCE_DESTROY_ON_FAIL — only that fraction of an UNPROTECTED fail
+ * destroys the copy; the rest is the neutral 유지 outcome (kept at level, cost spent).
+ */
+export function getEnhanceDestroyChance(level: number, special: boolean): number {
+  return (special ? getSpecialEnhanceFailChance(level) : getEnhanceFailChance(level)) * ENHANCE_DESTROY_ON_FAIL;
 }
 
 /**

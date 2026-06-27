@@ -6,6 +6,7 @@ import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, g
 import {
   ENHANCE_UNLOCK_STAGE_ID,
   SPECIAL_ENHANCE_CARD_COST,
+  ENHANCE_DESTROY_ON_FAIL,
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_BATCH_MAX_TRIOS,
@@ -362,6 +363,7 @@ const EFFECT_HELP_ROWS: { key: string; icon: string; labelKey: Parameters<typeof
   { key: 'offlineEff',  icon: SUBSTAT_TRAIT.offlineEff,     labelKey: 'statOffline',        descKey: 'helpStatOffline' },
   { key: 'successRate', icon: '🎯', labelKey: 'helpStatSuccessRate', descKey: 'helpStatSuccessRateDesc' },
   { key: 'destroyChance', icon: '💥', labelKey: 'helpStatDestroy',   descKey: 'helpStatDestroyDesc' },
+  { key: 'keptOnFail',    icon: '🔄', labelKey: 'helpStatKeep',      descKey: 'helpStatKeepDesc' },
 ];
 
 /** Legend explaining what each trait shape means (#42-fix: 도형 직관화).
@@ -1989,9 +1991,12 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
           the old tiny "파괴됨! ◆7" chip. Click anywhere or wait to dismiss. */}
       {lastEnhanceEvent ? (() => {
         const ev = lastEnhanceEvent;
-        const palette: Record<string, string> = { up: '#bb8cff', break: '#e2554a', protected: '#4a8fff' };
+        // 'fail' = the neutral 유지 outcome (kept at level): a muted amber flash, NO
+        // destroy/broken visual — treated like 'protected' for layout (Lv line stays,
+        // no delta). Only 'break' shatters the glyph.
+        const palette: Record<string, string> = { up: '#bb8cff', break: '#e2554a', protected: '#4a8fff', fail: '#c9a24a' };
         const col = palette[ev.outcome];
-        const labelKey = ({ up: 'enhanceOutcomeUp', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected' } as const)[ev.outcome];
+        const labelKey = ({ up: 'enhanceOutcomeUp', break: 'enhanceOutcomeBreak', protected: 'enhanceOutcomeProtected', fail: 'enhanceOutcomeFail' } as const)[ev.outcome];
         const ent = findEntityById(ev.entityId);
         const entry = ev.instanceId ? inventory.find((e) => e.instanceId === ev.instanceId) : undefined;
         const tr = ent ? EFFECT_TRAIT[ent.effect.type] : null;
@@ -2091,8 +2096,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         const canStoneEff = !atCap && !canMergeEff && enhanceStones >= stoneCost;
         const failChance = atCap ? 0 : !risky ? 0 : specialActive ? getSpecialEnhanceFailChance(lvl) : getEnhanceFailChance(lvl);
         const protectActive = useProtect && enhanceProtectCharges > 0;
+        // THREE-way risky outcome (user "성공 안하고 파괴 안될 수도 있잖아"): 🎯 성공 (level-up) ·
+        // 🔄 유지 (kept, no level) · 💥 파괴 (item loss). Only ENHANCE_DESTROY_ON_FAIL of the
+        // fails destroy; the rest are 유지. Protection turns ALL would-destroys into kept.
+        const destroyOnFail = ENHANCE_DESTROY_ON_FAIL;
         const successPct = Math.round((1 - failChance) * 100); // 🎯 성공 (level-up)
-        const destroyPct = protectActive ? 0 : Math.round(failChance * 100); // 💥 파괴 (item loss)
+        const destroyPct = protectActive ? 0 : Math.round(failChance * destroyOnFail * 100); // 💥 파괴 (item loss)
+        const keepPct = protectActive
+          ? Math.round(failChance * 100)
+          : Math.round(failChance * (1 - destroyOnFail) * 100); // 🔄 유지 (kept)
         const rc = RARITY_COLORS[ent.rarity];
         return (
           <div className="entity-detail-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); closeDetail(); }}>
@@ -2129,6 +2141,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                 <div className="enhance-risk">
                   <div className="enhance-risk__readout" aria-live="polite">
                     <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${t(language, 'enhanceReadoutSuccess')} ${successPct}%`}</span>
+                    <span className="enhance-risk__pct enhance-risk__pct--keep">{`🔄 ${t(language, 'enhanceReadoutKeep')} ${keepPct}%`}</span>
                     <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${t(language, 'enhanceReadoutDestroy')} ${destroyPct}%`}</span>
                   </div>
                   <div className="enhance-risk__toggles">

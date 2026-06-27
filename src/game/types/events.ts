@@ -83,8 +83,9 @@ export interface FusionEvent {
 }
 
 /** Outcome of a 강화 attempt — drives the reveal flash. #47: 'down' (level-down)
- *  is gone; a failed unprotected attempt now 'break's (destroy + 강화석 refund). */
-export type EnhanceOutcome = 'up' | 'break' | 'protected';
+ *  is gone; a failed unprotected attempt either 'break's (destroy + 강화석 refund) or,
+ *  for the larger fraction of fails, is 'fail' (유지 — kept at level, no level gained). */
+export type EnhanceOutcome = 'up' | 'break' | 'protected' | 'fail';
 
 export interface EnhanceEvent {
   id: number;

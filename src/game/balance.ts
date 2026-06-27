@@ -800,6 +800,13 @@ export const ENHANCE_FAIL_BASE = 0.25;
 export const ENHANCE_FAIL_PER_LEVEL = 0.06;
 /** Fail chance ceiling. */
 export const ENHANCE_FAIL_MAX = 0.55;
+/** Fraction of UNPROTECTED fails that DESTROY the copy (user "성공 안하고 파괴 안될 수도
+ *  있잖아 … 파괴 확률을 살짝 낮춰줘"). A risky fail is now THREE-way: 성공(level up) ·
+ *  유지(kept at level, only the attempt cost spent) · 파괴(destroyed). Only this
+ *  fraction of unprotected fails destroy; the rest are the neutral 유지 outcome.
+ *  Protection still turns ALL would-destroys into kept (파괴 0%). Mirrored in
+ *  scripts/entropy-gate-sim.mjs. */
+export const ENHANCE_DESTROY_ON_FAIL = 0.65;
 /** #47: a failed UNPROTECTED enhance destroys one copy and mints a RANDOM amount
  *  of 강화석 in [min, max] by rarity (losing a high-rarity item refunds more, so
  *  the loss is softened). The granted count is the only thing shown on the card. */

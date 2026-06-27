@@ -258,8 +258,9 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
 
   it('Lv2→3 (risk phase): a failed UNPROTECTED attempt DESTROYS the copy + mints 강화석', () => {
     const before = riskyState({ enhanceStones: 0 });
-    // failRoll 0 < failChance → fail; useProtect off → destroy.
-    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, breakRoll: 0.5, useProtect: false });
+    // failRoll 0 < failChance → fail; destroyRoll 0 < ENHANCE_DESTROY_ON_FAIL (0.65) →
+    // the DESTROY branch (not the neutral 유지); useProtect off → destroy.
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, destroyRoll: 0, breakRoll: 0.5, useProtect: false });
     expect(next.inventory.find((e) => e.instanceId === 'a')).toBeUndefined(); // destroyed
     expect(next.lastEnhanceEvent?.outcome).toBe('break');
     expect(next.enhanceStones).toBeGreaterThan(0); // consolation 강화석 minted
@@ -268,6 +269,22 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
     // destroyed on the fail, leaving 2 of the original 5 spares (was: full wipe when the
     // copy cost equalled need(2)=5; the special path decouples cost from level).
     expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(2);
+  });
+
+  it('Lv2→3 (risk phase): a fail with a high destroyRoll is the NEUTRAL 유지 — kept, no level, cost spent, no stones', () => {
+    // failRoll 0 < failChance → fail; destroyRoll 0.99 ≥ ENHANCE_DESTROY_ON_FAIL (0.65) →
+    // the neutral 유지 branch: the anchor SURVIVES at prevLevel, the copy cost (FLAT 3
+    // cards) is consumed, NO 강화석 refunded, no level gained.
+    const before = riskyState({ enhanceStones: 0 });
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, destroyRoll: 0.99, breakRoll: 0.5, useProtect: false });
+    const anchor = next.inventory.find((e) => e.instanceId === 'a');
+    expect(anchor).toBeDefined();        // survives
+    expect(anchor?.level).toBe(2);       // kept at prevLevel, no level gain
+    expect(next.lastEnhanceEvent?.outcome).toBe('fail');
+    expect(next.enhanceStones).toBe(0);  // no consolation 강화석
+    expect(next.enhanceProtectCharges).toBe(0); // no protection charge spent
+    // FLAT 3 spares consumed, leaving 2 of the original 5 (anchor + 2 spares = 3 copies).
+    expect(next.inventory.filter((e) => e.entityId === entity.id).length).toBe(3);
   });
 
   it('Lv2→3 (risk phase): a SUCCESSFUL attempt levels up like normal', () => {
@@ -290,7 +307,8 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
 
   it('protection toggle ON but ZERO charges → a fail still destroys', () => {
     const before = riskyState({ enhanceProtectCharges: 0 });
-    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, breakRoll: 0.5, useProtect: true });
+    // destroyRoll 0 < ENHANCE_DESTROY_ON_FAIL → the DESTROY branch (no charge to absorb it).
+    const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, destroyRoll: 0, breakRoll: 0.5, useProtect: true });
     expect(next.inventory.find((e) => e.instanceId === 'a')).toBeUndefined(); // destroyed (no charge to spend)
     expect(next.lastEnhanceEvent?.outcome).toBe('break');
     expect(next.enhanceProtectCharges).toBe(0);

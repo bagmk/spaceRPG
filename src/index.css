@@ -14514,6 +14514,7 @@ button.stat-header-item {
   font-weight: 700;
 }
 .enhance-risk__pct--ok { color: #7fe08a; }
+.enhance-risk__pct--keep { color: #c9a24a; }
 .enhance-risk__pct--bad { color: #e2554a; }
 .enhance-risk__toggles {
   display: flex;
