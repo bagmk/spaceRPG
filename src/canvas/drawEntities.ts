@@ -3484,7 +3484,6 @@ function drawEntityGlyph(
       fillCircle(ctx, 0, 0, s * (isSN ? 0.45 : 0.35) * pulse);
       break;
     }
-    case 'nucleus':
     case 'quark':
     case 'nucleus': {
       // Quark triplet with color charge differentiation by name
