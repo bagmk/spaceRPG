@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, gameReducer } from '../reducer';
+import { createInitialGameState, gameReducer, toPersistentState } from '../reducer';
 import { createSaveSnapshot, migrateToCurrent } from '../storage';
 import { STAGE_ENTITIES } from '../entities/stageItems';
 import { CODEX_SETS, getSubsetMembers } from '../entities/codexSets';
+import { getClaimableCodexSubsetIds } from '../entities/effects';
 
 /**
  * Codex click-to-activate (save v28, user #2). A complete codex SUBSET grants no bonus
@@ -35,5 +36,16 @@ describe('codex claim-to-activate (v28)', () => {
     delete old.claimedCodexSubsetIds;
     old.version = 27;
     expect(migrateToCurrent(old as never)!.claimedCodexSubsetIds).toEqual([]);
+  });
+
+  it('HYDRATE backfills almanacCollected from owned inventory (ownership repair)', () => {
+    // Bug repro: own every firstLight member but record NONE in the almanac — the panel
+    // showed 6/6 via ownership while the claim gate saw an empty almanac → no ✨ claim.
+    const inventory = members.map((id, i) => ({ entityId: id, instanceId: `inst-${i}`, count: 1, level: 1 }));
+    const base = createInitialGameState(0);
+    const payload = { ...toPersistentState({ ...base, inventory }), almanacCollected: {} };
+    const hydrated = gameReducer(base, { type: 'HYDRATE', payload, now: 0 });
+    // owning ⟹ discovered → the subset is claimable again
+    expect(getClaimableCodexSubsetIds(hydrated.almanacCollected, hydrated.claimedCodexSubsetIds)).toContain('first_light');
   });
 });

@@ -6,6 +6,8 @@ import type { GameState, PersistentGameState } from '../types';
 import type { GameAction } from '../reducer';
 import { getClaimableCodexSubsetIds } from '../entities/effects';
 import { CODEX_SETS } from '../entities/codexSets';
+import { findEntityById } from '../entities/stageItems';
+import { addToAlmanac } from '../entities/drops';
 import { nextEventId } from './helpers';
 import {
   createDefaultDailyCheckIns,
@@ -25,8 +27,19 @@ type ClearCollisionEventAction = Extract<GameAction, { type: 'CLEAR_COLLISION_EV
 type ClearEncounterEventAction = Extract<GameAction, { type: 'CLEAR_ENCOUNTER_EVENT' }>;
 
 function withHydratedTransient(payload: PersistentGameState): GameState {
+  // Codex repair: a card you OWN but whose discovery was never recorded showed as
+  // collected in the panel (it counts ownership: `collectedSet.has(id) || countOf>0`) yet
+  // would not complete/claim and its bonus would not apply (the claim gate + applyCollection
+  // Rewards count almanacCollected only). Backfill the almanac from inventory so
+  // "owning ⟹ discovered" — idempotent, self-heals existing saves on load.
+  let almanacCollected = payload.almanacCollected ?? {};
+  for (const inst of payload.inventory ?? []) {
+    const ent = findEntityById(inst.entityId);
+    if (ent) almanacCollected = addToAlmanac(almanacCollected, ent.stageId, ent.id);
+  }
   return {
     ...payload,
+    almanacCollected,
     combo: 0,
     lastClick: 0,
     imploding: false,
