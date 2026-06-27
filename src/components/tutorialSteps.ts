@@ -11,19 +11,26 @@
  */
 export type TutorialAnchor = 'entity' | 'equip' | 'fuse' | 'shop' | 'resource' | 'boost' | 'field' | 'focus' | 'quest';
 
-export type TutorialCtaAction = 'quest' | 'entityEquip' | 'shop' | 'almanac';
+export type TutorialCtaAction = 'quest' | 'entityEquip' | 'shop' | 'almanac' | 'fuse';
 
 export interface TutorialStepCtx {
   stageId: number;
   universeCount: number;
   entityPanelOpen: boolean;
+  /** Which entity-panel sub-page is open (null when the panel is closed). Lets the
+   *  in-panel SPARKLE selector fire only on the matching page (equip vs fuse). */
+  panelPage: 'lab' | 'equip' | 'fuse' | null;
   /** Any full-screen overlay open (quest/shop/settings panels) — suppress bubbles. */
   questOpen: boolean;
   shopOpen: boolean;
   settingsOpen: boolean;
   totalClicks: number;
   equipUnlocked: boolean;
+  /** Enhance (강화) unlocked — stage ≥ ENHANCE_UNLOCK_STAGE_ID. */
+  enhanceUnlocked: boolean;
   ownedCurrentStageEntityCount: number;
+  /** Any gear currently equipped (a worn copy in any slot) — gates the S3 enhance step. */
+  hasEquippedGear: boolean;
   hasClaimableQuest: boolean;
   canShowShop: boolean;
   hasActiveBoost: boolean;
@@ -31,6 +38,20 @@ export interface TutorialStepCtx {
   hasSeenCashShopTutorial: boolean;
   flags: Record<string, boolean>;
 }
+
+/**
+ * In-panel SPARKLE target. The floating SpeechBubble is suppressed whenever the
+ * entity panel is open, so guidance INSIDE the panel rides on this instead: a
+ * pulse-ring on the target entity card (or the enhance affordance). Returned to
+ * GameScreen which threads it into EntityPanel as `tutorialHighlight*` props.
+ *
+ * - kind 'equip-entity' / 'fuse-entity' → highlight the owned card with this entityId.
+ * - kind 'enhance' → highlight an equipped slot + the enhance button.
+ */
+export type TutorialHighlight =
+  | { kind: 'equip-entity'; entityId: string }
+  | { kind: 'fuse-entity'; entityId: string }
+  | { kind: 'enhance' };
 
 export interface TutorialStep {
   id: string;
@@ -98,11 +119,26 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     // #3 (user): after the FIRST equip, point them to fusion ("장착 하고 나오면 융합 튜토리얼").
     // first-equip-done is set by handleEquipEntity on the first successful equip.
+    // The bubble's CTA OPENS the forge; once inside, the in-panel SPARLE on 인플라톤
+    // 폭주 (selectTutorialHighlight) takes over (the bubble is suppressed over the panel).
+    // It is marked seen by the first FUSION (fuse-spark-done), not just by tapping
+    // the bubble — so it keeps reappearing as a reminder until the player actually fuses.
     id: 'fusion-intro', flagId: 'fusion-intro', anchor: 'fuse',
-    messageKey: 'tutFusionIntro',
+    messageKey: 'tutFusionIntro', ctaKey: 'tutFusionOpen', ctaAction: 'fuse',
     suppressedByAllDismissed: true,
-    eligible: (c) => flag(c, 'first-equip-done'),
-    seen: (c) => flag(c, 'fusion-intro'),
+    eligible: (c) => flag(c, 'first-equip-done') && !flag(c, 'fuse-spark-done'),
+    seen: (c) => flag(c, 'fusion-intro') && flag(c, 'fuse-spark-done'),
+  },
+  {
+    // S3 enhance (user: "장착 업그레이드(강화)도 반짝임으로 설명"). Once enhance unlocks
+    // (S3) and the player wears gear, nudge them INTO the equip page; the in-panel
+    // SPARKLE then lands on a worn slot + the enhance button. Marked seen by the
+    // first enhance (enhance-spark-done) so it persists as a reminder until done.
+    id: 'enhance-intro', flagId: 'enhance-intro', anchor: 'equip',
+    messageKey: 'tutEnhanceIntro', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
+    suppressedByAllDismissed: true,
+    eligible: (c) => c.enhanceUnlocked && c.hasEquippedGear && !flag(c, 'enhance-spark-done'),
+    seen: (c) => flag(c, 'enhance-intro') && flag(c, 'enhance-spark-done'),
   },
   {
     id: 'hasSeenCashShopTutorial', flagId: 'hasSeenCashShopTutorial', anchor: 'shop',
@@ -152,5 +188,56 @@ export function selectTutorialStep(ctx: TutorialStepCtx): TutorialStep | null {
     if (dismissed && step.suppressedByAllDismissed) continue;
     if (step.eligible(ctx) && !step.seen(ctx)) return step;
   }
+  return null;
+}
+
+/**
+ * The three guided SPARKLE targets are the STAGE-1 commons every player owns by S2
+ * (positional ids, stageItems.ts): s1_01 = 양자 요동/Quantum Fluctuation (click),
+ * s1_02 = 거짓 진공 거품/False Vacuum Bubble (auto→rift), s1_03 = 인플라톤 폭주/Inflaton
+ * Surge (crit — the FUSE target). Equip order is vacuum (rift) → quantum (click).
+ */
+export const TUT_SPARK_EQUIP_FIRST_ID = 's1_02'; // 거짓 진공 거품 (rift)
+export const TUT_SPARK_EQUIP_SECOND_ID = 's1_01'; // 양자 요동 (click)
+export const TUT_SPARK_FUSE_ID = 's1_03'; // 인플라톤 폭주 (crit)
+
+/**
+ * The in-panel SPARKLE target, or null. This is SEPARATE from selectTutorialStep:
+ * the floating bubble is suppressed while the panel is open, so once the player is
+ * INSIDE the matching page this drives a pulse-ring on the exact card/button instead.
+ * It is gated on first-universe + the relevant unlock + the matching page being open,
+ * and advances purely off the same free-form tutorialFlags the bubble chain uses.
+ */
+export function selectTutorialHighlight(ctx: TutorialStepCtx): TutorialHighlight | null {
+  // First universe only (mirrors the bubble suppression) — never re-spark for veterans.
+  if (ctx.universeCount !== 1 || Boolean(ctx.flags.allDismissed)) return null;
+
+  // S2 EQUIP page: spark the next un-equipped target (vacuum → quantum).
+  if (ctx.panelPage === 'equip' && ctx.equipUnlocked) {
+    if (!flag(ctx, 'equip-spark-vacuum-done')) {
+      return { kind: 'equip-entity', entityId: TUT_SPARK_EQUIP_FIRST_ID };
+    }
+    if (!flag(ctx, 'equip-spark-quantum-done')) {
+      return { kind: 'equip-entity', entityId: TUT_SPARK_EQUIP_SECOND_ID };
+    }
+    // S3 ENHANCE: both equips done + enhance unlocked + still un-enhanced + worn gear
+    // → spark a worn slot + the enhance button (the player enhances ON the equip page).
+    if (ctx.enhanceUnlocked && ctx.hasEquippedGear && !flag(ctx, 'enhance-spark-done')) {
+      return { kind: 'enhance' };
+    }
+    return null;
+  }
+
+  // S2 FUSE page: after the equip step is done, spark 인플라톤 폭주 to fuse three.
+  if (ctx.panelPage === 'fuse') {
+    if (
+      flag(ctx, 'equip-spark-quantum-done') &&
+      !flag(ctx, 'fuse-spark-done')
+    ) {
+      return { kind: 'fuse-entity', entityId: TUT_SPARK_FUSE_ID };
+    }
+    return null;
+  }
+
   return null;
 }

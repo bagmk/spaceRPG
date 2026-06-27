@@ -1,17 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { selectTutorialStep, TUTORIAL_STEPS, type TutorialStepCtx } from '../../components/tutorialSteps';
+import {
+  selectTutorialStep,
+  selectTutorialHighlight,
+  TUTORIAL_STEPS,
+  TUT_SPARK_EQUIP_FIRST_ID,
+  TUT_SPARK_EQUIP_SECOND_ID,
+  TUT_SPARK_FUSE_ID,
+  type TutorialStepCtx,
+} from '../../components/tutorialSteps';
 
 function ctx(over: Partial<TutorialStepCtx> = {}): TutorialStepCtx {
   return {
     stageId: 1,
     universeCount: 1,
     entityPanelOpen: false,
+    panelPage: null,
     questOpen: false,
     shopOpen: false,
     settingsOpen: false,
     totalClicks: 5,
     equipUnlocked: false,
+    enhanceUnlocked: false,
     ownedCurrentStageEntityCount: 0,
+    hasEquippedGear: false,
     hasClaimableQuest: false,
     canShowShop: false,
     hasActiveBoost: false,
@@ -113,7 +124,7 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'matter-time-intro', 'auto-income-intro', 'quest-milestone-intro',
-      'entity-lab-intro', 'fusion-intro',
+      'entity-lab-intro', 'fusion-intro', 'enhance-intro',
       'hasSeenCashShopTutorial', 'boost-hud-seen', 'condense-ready', 'info-hint-seen',
     ]);
   });
@@ -138,5 +149,97 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     // before the first equip it must NOT show
     const noEquip = ctx({ ...base, flags: { ...base.flags, 'first-equip-done': false } });
     expect(selectTutorialStep(noEquip)?.id).not.toBe('fusion-intro');
+  });
+
+  it('fusion-intro PERSISTS until the first fusion (seen needs fuse-spark-done, not just the flag)', () => {
+    const flags = {
+      'matter-time-intro': true, 'auto-income-intro': true,
+      'entity-lab-intro': true, 'first-equip-done': true,
+    };
+    const base = ctx({ stageId: 2, equipUnlocked: true, flags });
+    // dismissing the bubble alone (flag set) does NOT retire it — it re-shows
+    expect(selectTutorialStep(ctx({ ...base, flags: { ...flags, 'fusion-intro': true } }))?.id).toBe('fusion-intro');
+    // only the actual fusion (fuse-spark-done) clears it
+    expect(selectTutorialStep(ctx({ ...base, flags: { ...flags, 'fusion-intro': true, 'fuse-spark-done': true } }))?.id).not.toBe('fusion-intro');
+  });
+
+  it('S3 enhance-intro fires once enhance is unlocked AND gear is worn, persisting until the first enhance', () => {
+    const flags = {
+      'matter-time-intro': true, 'auto-income-intro': true,
+      'entity-lab-intro': true, 'first-equip-done': true, 'fuse-spark-done': true,
+    };
+    // S2 (enhance locked) → no enhance-intro
+    expect(selectTutorialStep(ctx({ stageId: 2, equipUnlocked: true, flags }))?.id).not.toBe('enhance-intro');
+    // S3, gear worn → enhance-intro
+    const s3 = ctx({ stageId: 3, equipUnlocked: true, enhanceUnlocked: true, hasEquippedGear: true, flags });
+    expect(selectTutorialStep(s3)?.id).toBe('enhance-intro');
+    // S3 but NO gear worn → no enhance-intro yet
+    expect(selectTutorialStep(ctx({ ...s3, hasEquippedGear: false }))?.id).not.toBe('enhance-intro');
+    // dismissing the bubble alone does NOT retire it
+    expect(selectTutorialStep(ctx({ ...s3, flags: { ...flags, 'enhance-intro': true } }))?.id).toBe('enhance-intro');
+    // the first enhance (enhance-spark-done) clears it
+    expect(selectTutorialStep(ctx({ ...s3, flags: { ...flags, 'enhance-intro': true, 'enhance-spark-done': true } }))?.id).not.toBe('enhance-intro');
+  });
+});
+
+describe('selectTutorialHighlight — in-panel SPARKLE (separate from the bubble)', () => {
+  const equipBase = {
+    stageId: 2, equipUnlocked: true, panelPage: 'equip' as const,
+    flags: { 'matter-time-intro': true, 'auto-income-intro': true, 'entity-lab-intro': true },
+  };
+
+  it('returns null when the panel is closed (no page open)', () => {
+    expect(selectTutorialHighlight(ctx({ ...equipBase, panelPage: null }))).toBeNull();
+  });
+
+  it('returns null for veterans (not the first universe) or after allDismissed', () => {
+    expect(selectTutorialHighlight(ctx({ ...equipBase, universeCount: 2 }))).toBeNull();
+    expect(selectTutorialHighlight(ctx({ ...equipBase, flags: { ...equipBase.flags, allDismissed: true } }))).toBeNull();
+  });
+
+  it('S2 equip: sparkles 거짓 진공 거품 (s1_02) first, then 양자 요동 (s1_01), then stops', () => {
+    // nothing equipped yet → first target is the vacuum (rift) item
+    expect(selectTutorialHighlight(ctx(equipBase))).toEqual({ kind: 'equip-entity', entityId: TUT_SPARK_EQUIP_FIRST_ID });
+    // after the vacuum is equipped → advance to quantum (click)
+    const afterVacuum = ctx({ ...equipBase, flags: { ...equipBase.flags, 'equip-spark-vacuum-done': true } });
+    expect(selectTutorialHighlight(afterVacuum)).toEqual({ kind: 'equip-entity', entityId: TUT_SPARK_EQUIP_SECOND_ID });
+    // both equipped → no more equip sparkle (and enhance not unlocked at S2)
+    const both = ctx({ ...equipBase, flags: { ...equipBase.flags, 'equip-spark-vacuum-done': true, 'equip-spark-quantum-done': true } });
+    expect(selectTutorialHighlight(both)).toBeNull();
+  });
+
+  it('S2 fuse: sparkles 인플라톤 폭주 (s1_03) only AFTER the equip step is done, until the first fusion', () => {
+    const fuseBase = ctx({
+      stageId: 2, panelPage: 'fuse',
+      flags: { 'matter-time-intro': true, 'auto-income-intro': true, 'equip-spark-quantum-done': true },
+    });
+    expect(selectTutorialHighlight(fuseBase)).toEqual({ kind: 'fuse-entity', entityId: TUT_SPARK_FUSE_ID });
+    // before the equip step completes → no fuse sparkle
+    const preEquip = ctx({ stageId: 2, panelPage: 'fuse', flags: { 'matter-time-intro': true } });
+    expect(selectTutorialHighlight(preEquip)).toBeNull();
+    // after the first fusion (fuse-spark-done) → cleared
+    const fused = ctx({ ...fuseBase, flags: { 'equip-spark-quantum-done': true, 'fuse-spark-done': true } });
+    expect(selectTutorialHighlight(fused)).toBeNull();
+  });
+
+  it('does not cross-fire: the fuse sparkle never appears on the equip page (and vice-versa)', () => {
+    const equipReadyForFuse = ctx({
+      stageId: 2, equipUnlocked: true, panelPage: 'equip',
+      flags: { 'equip-spark-vacuum-done': true, 'equip-spark-quantum-done': true },
+    });
+    // equips done, enhance locked → equip page shows nothing (fuse target stays on the fuse page)
+    expect(selectTutorialHighlight(equipReadyForFuse)).toBeNull();
+  });
+
+  it('S3 enhance: sparkles the enhance affordance on the equip page once equips are done + gear worn', () => {
+    const s3 = ctx({
+      stageId: 3, equipUnlocked: true, enhanceUnlocked: true, hasEquippedGear: true, panelPage: 'equip',
+      flags: { 'equip-spark-vacuum-done': true, 'equip-spark-quantum-done': true },
+    });
+    expect(selectTutorialHighlight(s3)).toEqual({ kind: 'enhance' });
+    // after the first enhance → cleared
+    expect(selectTutorialHighlight(ctx({ ...s3, flags: { ...s3.flags, 'enhance-spark-done': true } }))).toBeNull();
+    // no worn gear → no enhance sparkle
+    expect(selectTutorialHighlight(ctx({ ...s3, hasEquippedGear: false }))).toBeNull();
   });
 });

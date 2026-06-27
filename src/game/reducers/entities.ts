@@ -91,9 +91,17 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
     ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
     : state.endingProgressFlags;
   // #3 (user): first successful equip arms the fusion-intro tutorial step.
-  const eqFlags = state.tutorialFlags['first-equip-done']
-    ? state.tutorialFlags
-    : { ...state.tutorialFlags, 'first-equip-done': true };
+  // S2 SPARKLE: also retire the in-panel equip-sparkle for whichever guided target
+  // (거짓 진공 거품 s1_02 → 양자 요동 s1_01) was just placed. Keyed off the actual
+  // equipped entityId so the glow advances vacuum → quantum off real state, and so
+  // it never re-fires once both are worn. Free-form flags → no save-schema bump.
+  let eqFlags = state.tutorialFlags;
+  const setFlag = (key: string) => {
+    if (!eqFlags[key]) eqFlags = { ...eqFlags, [key]: true };
+  };
+  setFlag('first-equip-done');
+  if (action.entityId === 's1_02') setFlag('equip-spark-vacuum-done');
+  if (action.entityId === 's1_01') setFlag('equip-spark-quantum-done');
 
   // #44 hexagon CENTER (wild) slot — accepts ANY category. Unlocks by stage.
   if (action.wild) {
@@ -369,11 +377,17 @@ function fuseOnce(
   const burst = Math.min(rawBurst, fuseSpan * FUSION_BURST_SPAN_CAP);
   const nextEntropy = safeAdd(state.entropy, burst);
 
-  const nextTutorialFlags = isFirstFusion
+  let nextTutorialFlags = isFirstFusion
     ? { ...state.tutorialFlags, 'first-fuse-done': true }
     : isSecondFusion
       ? { ...state.tutorialFlags, 'second-fuse-done': true }
       : state.tutorialFlags;
+  // S2 SPARKLE: the first fusion that consumes 인플라톤 폭주 (s1_03) retires the in-panel
+  // fuse-sparkle (selectTutorialHighlight) AND marks the fusion-intro bubble seen.
+  // Robust to batch/Fuse-All (it inspects the consumed inputs). Free-form flag.
+  if (!nextTutorialFlags['fuse-spark-done'] && inputEntityIds.includes('s1_03')) {
+    nextTutorialFlags = { ...nextTutorialFlags, 'fuse-spark-done': true };
+  }
 
   const nextState: GameState = {
     ...state,
@@ -558,6 +572,13 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
 
   const cap = getEnhanceLevelCap(entity);
   if (anchor.level >= cap) return state;
+  // S3 SPARKLE: the player is committing to an enhance on a valid, un-capped target —
+  // retire the in-panel enhance-sparkle (selectTutorialHighlight) AND mark the
+  // enhance-intro bubble seen. Set here so EVERY outcome (성공/유지/파괴/보호/강화석 escape)
+  // carries it via the shared `...state` spreads below. Free-form flag → no schema bump.
+  if (!state.tutorialFlags['enhance-spark-done']) {
+    state = { ...state, tutorialFlags: { ...state.tutorialFlags, 'enhance-spark-done': true } };
+  }
   const anchorId = anchor.instanceId;
   const prevLevel = anchor.level;
   const risky = isEnhanceRiskLevel(prevLevel); // this step (prev → prev+1) can fail

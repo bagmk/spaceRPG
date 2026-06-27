@@ -41,6 +41,7 @@ import {
   ENTITY_COST_ANCHORS,
   EQUIP_UNLOCK_STAGE_ID,
   FUSION_UNLOCK_STAGE_ID,
+  ENHANCE_UNLOCK_STAGE_ID,
   SHOP_UNLOCK_STAGE_ID,
 } from '../game/balance';
 import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
@@ -53,7 +54,7 @@ import { ParticleField, type ParticleFieldHandle } from './ParticleField';
 import { QuoteOverlay } from './QuoteOverlay';
 import { ScaleIndicator } from './ScaleIndicator';
 import { SpeechBubble } from './SpeechBubble';
-import { selectTutorialStep, type TutorialStepCtx } from './tutorialSteps';
+import { selectTutorialStep, selectTutorialHighlight, type TutorialStepCtx } from './tutorialSteps';
 import { ShopButton, ShopPanel } from './ShopPanel';
 import { ActiveBoostHud } from './ActiveBoostHud';
 import { EntityPanel } from './EntityPanel';
@@ -309,6 +310,10 @@ export function GameScreen({
   // 🅠7: staged onboarding — equip/auto + fusion unlock at S2 (codex/quests are S1).
   const equipUnlocked = stage.id >= EQUIP_UNLOCK_STAGE_ID;
   const fusionUnlocked = stage.id >= FUSION_UNLOCK_STAGE_ID;
+  const enhanceUnlocked = stage.id >= ENHANCE_UNLOCK_STAGE_ID;
+  // S3 enhance onboarding gate — the player must already wear a piece to enhance it.
+  const hasEquippedGear =
+    state.equippedSlots.some(Boolean) || state.riftSlots.some(Boolean) || Boolean(state.wildSlot);
   const hasActiveBoost = state.shopBoosts.some((b) => b.expiresAt > wallNow);
   const hasShopNotification = canShowShop && !state.hasSeenCashShopTutorial;
   const displayStageLabel = stageName(language, displayStage.id, displayStage.name);
@@ -360,12 +365,15 @@ export function GameScreen({
       stageId: stage.id,
       universeCount: state.universeCount,
       entityPanelOpen,
+      panelPage: panelView?.page ?? null,
       questOpen,
       shopOpen,
       settingsOpen,
       totalClicks: state.totalClicks,
       equipUnlocked,
+      enhanceUnlocked,
       ownedCurrentStageEntityCount,
+      hasEquippedGear,
       hasClaimableQuest,
       canShowShop,
       hasActiveBoost,
@@ -379,6 +387,7 @@ export function GameScreen({
     switch (step.ctaAction) {
       case 'quest': onCta = () => { setQuestOpen(true); soundManager?.playUIOpen(); }; break;
       case 'entityEquip': onCta = () => openEntityPanel('equip', 'click'); break;
+      case 'fuse': onCta = () => openEntityPanel('fuse', 'click'); break;
       case 'shop': onCta = () => { setShopOpen(true); soundManager?.playUIOpen(); }; break;
       case 'almanac': onCta = () => { setQuestOpen(true); soundManager?.playUIOpen(); }; break;
       default: onCta = undefined;
@@ -395,6 +404,8 @@ export function GameScreen({
     canCondense,
     canShowShop,
     equipUnlocked,
+    enhanceUnlocked,
+    hasEquippedGear,
     hasClaimableQuest,
     entityPanelOpen,
     hasActiveBoost,
@@ -410,6 +421,47 @@ export function GameScreen({
     shopOpen,
     settingsOpen,
   ]);
+
+  // In-panel SPARKLE target (SEPARATE from the bubble, which is suppressed over the
+  // panel). selectTutorialHighlight returns the entity card / enhance affordance to
+  // pulse on the OPEN page; advancement is derived from the same free-form
+  // tutorialFlags the bubble chain uses (set on equip/fuse/enhance in the reducers).
+  const tutorialHighlight = useMemo(() => {
+    return selectTutorialHighlight({
+      stageId: stage.id,
+      universeCount: state.universeCount,
+      entityPanelOpen,
+      panelPage: panelView?.page ?? null,
+      questOpen,
+      shopOpen,
+      settingsOpen,
+      totalClicks: state.totalClicks,
+      equipUnlocked,
+      enhanceUnlocked,
+      ownedCurrentStageEntityCount,
+      hasEquippedGear,
+      hasClaimableQuest,
+      canShowShop,
+      hasActiveBoost,
+      canCondense,
+      hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
+      flags: state.tutorialFlags,
+    });
+  }, [
+    stage.id,
+    state.universeCount,
+    entityPanelOpen,
+    panelView?.page,
+    equipUnlocked,
+    enhanceUnlocked,
+    hasEquippedGear,
+    state.tutorialFlags,
+  ]);
+  const tutorialEquipSparkId =
+    tutorialHighlight?.kind === 'equip-entity' ? tutorialHighlight.entityId : null;
+  const tutorialFuseSparkId =
+    tutorialHighlight?.kind === 'fuse-entity' ? tutorialHighlight.entityId : null;
+  const tutorialEnhanceSpark = tutorialHighlight?.kind === 'enhance';
 
 
   useGameLoop((now, dt) => {
@@ -959,6 +1011,9 @@ export function GameScreen({
             onClaimCodexSubset={(subsetId) => dispatch({ type: 'CLAIM_CODEX_SUBSET', subsetId })}
             onMarkCodexSeen={() => dispatch({ type: 'MARK_CODEX_SEEN' })}
             onMarkPanelHint={(hintId) => dispatch({ type: 'MARK_PANEL_HINT', hintId })}
+            tutorialEquipSparkId={tutorialEquipSparkId}
+            tutorialFuseSparkId={tutorialFuseSparkId}
+            tutorialEnhanceSpark={tutorialEnhanceSpark}
             onClose={() => {
               // #42-fix: clear any open fusion/enhance reveal so it doesn't "pop
               // back out" when the panel is reopened.

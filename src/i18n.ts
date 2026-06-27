@@ -328,8 +328,17 @@ export const STRINGS = {
                          ko: '이제 균열이 스스로 물질을 법니다 (시작은 초당 1). 계속 클릭하세요 — 모은 엔티티는 나중에 장착할 장비가 됩니다.' },
   tutEntityLabIntro:    { en: 'You collected an entity! Equip it as gear to power up — clicking and collisions drop more.',
                           ko: '엔티티를 획득했어요! 장비로 장착하면 강해집니다 — 클릭과 충돌로 더 많이 드랍됩니다.' },
-  tutFusionIntro:       { en: 'Geared up! Now fuse duplicate entities to forge rarer, stronger ones — tap the Fuse button.',
-                          ko: '장착 완료! 이제 같은 엔티티를 융합해 더 희귀하고 강한 걸 만들어보세요 — 융합 버튼을 눌러요.' },
+  tutFusionIntro:       { en: 'Geared up! Now open the Forge and fuse three of the glowing entity to forge a rarer, stronger one.',
+                          ko: '장착 완료! 이제 융합로를 열고 반짝이는 엔티티 3개를 융합해 더 희귀하고 강한 걸 만들어보세요.' },
+  tutFusionOpen:        { en: 'Open Forge', ko: '융합로 열기' },
+  // S2/S3 in-panel SPARKLE captions — shown ON the highlighted card/button while the
+  // panel is open (the floating bubble is suppressed over the panel). KO/EN separate.
+  tutSparkEquipHere:    { en: 'Tap to equip', ko: '탭해서 장착' },
+  tutSparkFuseHere:     { en: 'Pick three to fuse', ko: '3개 골라 융합' },
+  tutSparkEnhanceHere:  { en: 'Tap, then Enhance', ko: '탭한 뒤 강화' },
+  // S3 enhance "open the panel" nudge (floating bubble, panel CLOSED).
+  tutEnhanceIntro:      { en: 'Gear can be ENHANCED now. Open Equip and tap a worn (⬆) piece to level it up.',
+                          ko: '이제 장비를 강화할 수 있어요. 장착을 열고 착용한 장비(⬆)를 탭해 레벨을 올려보세요.' },
   tutEntityLabOpen:     { en: 'Open Equip', ko: '장착 열기' },
   tutEntityLabCanvas:   { en: 'Purchased entities now orbit the center. Buying more copies adds more bodies, not just a number.',
                           ko: '구매한 엔티티가 중심을 공전합니다. 더 구매할수록 단순한 숫자가 아니라 실제 객체가 늘어납니다.' },

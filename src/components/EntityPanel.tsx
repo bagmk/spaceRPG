@@ -487,6 +487,16 @@ interface Props {
   onMarkCodexSeen?: () => void;
   /** Record a first-visit hint as shown. */
   onMarkPanelHint?: (hintId: string) => void;
+  /** S2/S3 onboarding SPARKLE: entityId of the owned card to pulse on the EQUIP page
+   *  ("탭해서 장착"). The floating bubble is suppressed over the panel, so the in-panel
+   *  glow guides the next equip target (거짓 진공 거품 → 양자 요동). Null = no sparkle. */
+  tutorialEquipSparkId?: string | null;
+  /** S2 onboarding SPARKLE: entityId of the FUEL card to pulse on the FUSE page
+   *  ("3개 골라 융합") — 인플라톤 폭주. Null = no sparkle. */
+  tutorialFuseSparkId?: string | null;
+  /** S3 onboarding SPARKLE: pulse a worn slot + the enhance button on the EQUIP page
+   *  ("탭한 뒤 강화"). True = sparkle the enhance affordance. */
+  tutorialEnhanceSpark?: boolean;
 }
 
 /** G (user): the "Lv.N" text gets a more vivid colour + bolder weight as the level
@@ -499,7 +509,7 @@ function levelTextStyle(level: number): CSSProperties {
   return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint, tutorialEquipSparkId = null, tutorialFuseSparkId = null, tutorialEnhanceSpark = false }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -1305,6 +1315,18 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
           const litSlots = new Set<number>();
           for (const li of bingo.completedLines) for (const s of HEX_BINGO_LINES[li].slots) litSlots.add(s);
 
+          // S3 onboarding SPARKLE: when the enhance step is active, pulse the FIRST worn,
+          // not-yet-maxed hex slot (0-6) so the player taps it open and sees the Enhance
+          // button (also sparkled inside the detail card). One slot only, never re-fires.
+          const enhanceSparkHexIdx = tutorialEnhanceSpark
+            ? hexIds.findIndex((id) => {
+                if (!id) return false;
+                const e = entityOfSlot(id);
+                const en = entryOfSlot(id);
+                return Boolean(e && en && en.level < getEnhanceLevelCap(e));
+              })
+            : -1;
+
           // Map a hex index (0-5 outer) to its category + per-category slot index.
           const hexAddr = (idx: number): { cat: EquipCategory; slot: number } =>
             idx < 3 ? { cat: 'click', slot: idx } : { cat: 'rift', slot: idx - 3 };
@@ -1370,10 +1392,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
             const slotEntity = entityOfSlot(slotId);
             const entry = entryOfSlot(slotId);
             const isPicking = equipCat === cat && pickingSlot === slot && !pickingWild;
+            const enhanceSparked = idx === enhanceSparkHexIdx;
             return (
               <button
                 type="button"
-                className={`hex-slot hex-slot--${cat} equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''}`}
+                className={`hex-slot hex-slot--${cat} equip-slot-card ${slotEntity ? 'equip-slot-card--filled' : ''} ${isPicking ? 'equip-slot-card--picking' : ''} ${lit ? 'hex-slot--line' : ''} ${isTailQuality(entry?.quality) ? 'equip-slot-card--tail' : ''} ${enhanceSparked ? 'equip-slot-card--tutorial' : ''}`}
                 style={slotEntity ? ({ '--rarity-color': RARITY_COLORS[slotEntity.rarity], ...posStyle } as CSSProperties) : posStyle}
                 onClick={() => {
                   setEquipCat(cat);
@@ -1383,6 +1406,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   onUITap?.();
                 }}
               >
+                {enhanceSparked ? (
+                  <span className="equip-slot-card__tutorial-hint">{t(language, 'tutSparkEnhanceHere')}</span>
+                ) : null}
                 {renderCardBody(slotEntity, entry, () => onUnequip(slot, cat))}
               </button>
             );
@@ -1569,11 +1595,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                         const d = Math.round((gearStrength(entity, entry) / pickBase - 1) * 100);
                         if (Number.isFinite(d)) delta = d;
                       }
+                      // S2 onboarding SPARKLE: pulse the guided equip target ("탭해서 장착").
+                      const sparked = !noFree && tutorialEquipSparkId === entity.id;
                       return (
                         <button
                           key={entity.id}
                           type="button"
-                          className={`owned-card ${noFree ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
+                          className={`owned-card ${noFree ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''} ${sparked ? 'owned-card--tutorial' : ''}`}
                           style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
                           disabled={noFree}
                           onClick={() => {
@@ -1590,6 +1618,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                             setPickingSlot(null);
                           }}
                         >
+                          {sparked ? (
+                            <span className="owned-card__tutorial-hint">{t(language, 'tutSparkEquipHere')}</span>
+                          ) : null}
                           {delta !== null ? (
                             <span className={`owned-card__delta ${delta > 0 ? 'owned-card__delta--up' : delta < 0 ? 'owned-card__delta--down' : ''}`}>
                               {delta > 0 ? `+${delta}%` : `${delta}%`}
@@ -1777,6 +1808,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                         usable <= usedCopies ||
                         (trayRarity !== undefined && entity.rarity !== trayRarity);
                       const fav = favoriteEntityIds.includes(entity.id);
+                      // S2 onboarding SPARKLE: pulse 인플라톤 폭주 to fuse three ("3개 골라 융합").
+                      // Stays lit while there is still a copy to add (drops once blocked/full).
+                      const sparked = !blocked && tutorialFuseSparkId === entity.id;
                       return (
                         <div
                           key={entity.id}
@@ -1785,10 +1819,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                         >
                           <button
                             type="button"
-                            className={`owned-card ${blocked ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''}`}
+                            className={`owned-card ${blocked ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''} ${sparked ? 'owned-card--tutorial' : ''}`}
                             disabled={blocked}
                             onClick={() => addFuseInput(entity)}
                           >
+                            {sparked ? (
+                              <span className="owned-card__tutorial-hint">{t(language, 'tutSparkFuseHere')}</span>
+                            ) : null}
                             <TraitBadge entity={entity} className="trait-badge--card" />
                             <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
                             <span className="owned-card__name">{entityName(entity, language)}</span>
@@ -2215,7 +2252,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
               ) : null}
               <button
                 type="button"
-                className="entity-detail-card__equip entity-detail-card__enhance"
+                className={`entity-detail-card__equip entity-detail-card__enhance ${tutorialEnhanceSpark && (canMergeEff || canStoneEff) && enhanceUnlocked && enhancing === null ? 'entity-detail-card__enhance--tutorial' : ''}`}
                 style={(canMergeEff || canStoneEff) && enhanceUnlocked ? { background: '#bb8cff' } : { borderColor: '#bb8cff', color: '#bb8cff' }}
                 disabled={(!canMergeEff && !canStoneEff) || !enhanceUnlocked || enhancing !== null}
                 onClick={() => triggerEnhance(slotVal)}
