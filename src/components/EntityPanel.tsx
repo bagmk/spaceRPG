@@ -471,7 +471,8 @@ interface Props {
   onUnequip: (slot: number, target: EquipCategory | 'wild') => void;
   /** Risk phase (v30): useProtect = spend a 강화 보호 charge on a fail (the "보호 사용" toggle). */
   onEnhance: (instanceId: string, useProtect?: boolean, useSpecial?: boolean) => void;
-  onFuse: (inputEntityIds: string[]) => void;
+  /** 보호석: useProtect = spend a charge to force a failed SINGLE fusion up one rarity. */
+  onFuse: (inputEntityIds: string[], useProtect?: boolean) => void;
   /** 🅠4: batch fuse — inputEntityIds is FUSION_INPUT_COUNT × N copies (N trios). */
   onFuseBatch: (inputEntityIds: string[]) => void;
   onClearFusionEvent: (id: number) => void;
@@ -582,6 +583,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // Risk phase: the 특수강화 toggle — ON (default) + ≥3 spare copies spends 3 cards at
   // HALVED fail odds; OFF forces the 강화석 path at full odds. Default ON = sim-neutral.
   const [useSpecial, setUseSpecial] = useState(true);
+  // 보호석 on the SINGLE-fusion lever — ON (default) + a charge held forces a failed
+  // single fusion up one rarity. SINGLE only; Fuse All never spends charges.
+  const [fuseUseProtect, setFuseUseProtect] = useState(true);
   // Overhaul-4 (v26): Fuse-All protection is now the PERSISTENT ★ favorite
   // (favoriteEntityIds prop) — the old per-session excludedIds Set was replaced.
   const trayRarity = fuseInputs.length > 0 ? findEntityById(fuseInputs[0])?.rarity : undefined;
@@ -605,7 +609,8 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
     pendingFuseRef.current = null;
     setFusing(false);
     if (!pending) return;
-    if (pending.batch) onFuseBatch(pending.ids); else onFuse(pending.ids);
+    // 보호석: single fuse forwards the toggle (only spends a charge on a fail); batch never.
+    if (pending.batch) onFuseBatch(pending.ids); else onFuse(pending.ids, fuseUseProtect && enhanceProtectCharges > 0);
     setFuseInputs([]);
   };
   const triggerFuse = (inputsArg?: string[]) => {
@@ -1707,6 +1712,22 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     {sameSubsetTray ? <span className="gacha-bonus__chip">◈ {t(language, 'fuseBonusSameCategory')}</span> : null}
                   </div>
                 ) : null}
+                {/* 보호석 toggle — SINGLE fuse only (Fuse All never spends charges). When ON
+                    and a charge is held, a failed roll is forced up one rarity. Mirrors the
+                    enhance card's .enhance-protect-toggle (role=switch · ☑/☐ 🛡 N). */}
+                <div className="enhance-risk__toggles gacha-protect-toggles">
+                  <button
+                    type="button"
+                    className={`enhance-protect-toggle ${fuseUseProtect ? 'enhance-protect-toggle--on' : ''}`}
+                    role="switch"
+                    aria-checked={fuseUseProtect}
+                    aria-label={t(language, 'fuseUseProtect')}
+                    disabled={enhanceProtectCharges === 0 || fusing}
+                    onClick={(e) => { e.stopPropagation(); setFuseUseProtect((v) => !v); onUITap?.(); }}
+                  >
+                    {`${fuseUseProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
+                  </button>
+                </div>
                 <button
                   type="button"
                   className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && affordable && !fusing ? 'gacha-fuse-btn--armed' : ''}`}

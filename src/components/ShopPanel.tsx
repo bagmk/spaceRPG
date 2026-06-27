@@ -449,10 +449,11 @@ export function ShopPanel({ state, dispatch, language, onClose, onSfx }: ShopPan
           </div>
         </ShopBoard>
 
-        {/* 5) 강화 보호 (인과 닻, v30) — its own board (mirrors the matter-packs board).
-            A matter-bought consumable: one charge absorbs a failed risk-phase enhance so
-            the item isn't destroyed. The live charge COUNT lives in the header readout. */}
-        <ShopBoard title={`${t(language, 'shopProtectTitle')} · ${ENHANCE_PROTECT_ITEM_NAME[language]}`}>
+        {/* 5) 보호석 (v30) — its own board (mirrors the matter-packs board). A matter-bought
+            consumable: one charge absorbs a failed risk-phase enhance (item not destroyed) OR
+            forces a failed single fusion up one rarity. The live COUNT lives in the header
+            readout. shopProtectTitle === the item name now, so don't double it up. */}
+        <ShopBoard title={ENHANCE_PROTECT_ITEM_NAME[language]}>
           <div className="shop-fs__stones">
             {PROTECT_BUNDLES.map((count) => {
               const cost = shopProtectMatterCost(playerStageId, count);

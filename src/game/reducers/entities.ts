@@ -10,6 +10,7 @@ import {
   consumeFusionInputs,
   getFusionEntropyBurst,
   getFusionQuantaCost,
+  getMaxFusionRarityIdx,
   pickFusionOutput,
   rollFusionRarity,
   validateFusionInputs,
@@ -39,7 +40,7 @@ import {
   FUSION_BATCH_BURST_SPAN_CAP,
   HEX_WILD_UNLOCK_STAGE,
 } from '../balance';
-import { getEntityCost } from '../entities/types';
+import { getEntityCost, type EntityRarity } from '../entities/types';
 import { getAutoEntropyRate, getEntropyGateFloor, safeAdd } from '../formulas';
 import { getPrestigeMultiplier } from '../prestige';
 import { STAGES } from '../stages';
@@ -210,7 +211,11 @@ interface OneFusionResult {
   stonesEarned: number;
   burst: number;
   refund: number;
+  /** 보호석: a charge was spent to force this (otherwise-failing) fusion up one tier. */
+  protectedUsed: boolean;
 }
+
+const FUSE_RARITY_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 
 /**
  * Core of one fusion (🅠4): validate + afford-check + roll + consume + apply,
@@ -223,6 +228,10 @@ function fuseOnce(
   state: GameState,
   inputEntityIds: string[],
   rolls: FuseRolls,
+  // 보호석: SINGLE fusion only (handleFuseEntities passes true; handleFuseBatch never
+  // does). On a roll that would FAIL (no rarity-up), spend one enhanceProtectCharge to
+  // force the output up one rarity tier instead. Default false keeps batch fuses unprotected.
+  useProtect = false,
 ): { state: GameState; result: OneFusionResult } | null {
   const equippedIds = new Set([...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[]);
   const validation = validateFusionInputs(state.inventory, inputEntityIds, equippedIds);
@@ -277,6 +286,43 @@ function fuseOnce(
   }
   if (!output) return null;
 
+  // RARITY-UP IS THE ACTUAL OUTPUT vs INPUT (#42-fix): rollFusionRarity can roll
+  // "up" but pickFusionOutput falls back to a lower rarity when the rolled output
+  // stage lacks that tier — so a common→common fusion was wrongly flagged "등급
+  // 상승". Judge by the real output rarity instead. Resolved BEFORE consuming/minting
+  // so 보호석 can swap in the forced-up output before applyFusionOutput mints it.
+  const FUSION_RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+  let rarityUp = (FUSION_RARITY_RANK[output.rarity] ?? 0) > (FUSION_RARITY_RANK[validation.rarity] ?? 0);
+
+  // 보호석 — single-fusion insurance. On a result that WOULD FAIL (no rarity-up), if the
+  // toggle is on and a charge is held, spend one charge and FORCE the output up one
+  // rarity tier (a guaranteed +1 success) — reusing the same pickFusionOutput path so the
+  // produced item is a normal next-tier entity. Bounded by the player-stage fusion cap
+  // (getMaxFusionRarityIdx); if no upgrade is even possible (input already at the cap /
+  // mythic), protection can't help, so the fail stands and no charge is spent. Runs BEFORE
+  // applyFusionOutput so the forced item is what actually gets minted into the inventory.
+  let protectedUsed = false;
+  if (!rarityUp && useProtect && state.enhanceProtectCharges > 0) {
+    const inputIdx = FUSE_RARITY_ORDER.indexOf(validation.rarity);
+    const maxIdx = getMaxFusionRarityIdx(currentStageIdForFusion);
+    const upIdx = inputIdx + 1;
+    if (inputIdx >= 0 && upIdx <= maxIdx && upIdx <= FUSE_RARITY_ORDER.length - 1) {
+      const forcedRarity = FUSE_RARITY_ORDER[upIdx];
+      const forced = pickFusionOutput(output.stageId, forcedRarity, rolls.pickRoll, {
+        category: validation.category,
+        familyKey: validation.familyKey,
+      }, output.stageId !== currentStageIdForFusion);
+      // Only commit the protection if the forced pick really lands one tier up (the
+      // rolled output stage must hold that tier — same guard #42-fix uses). If the
+      // pool can't provide it, leave the fail untouched rather than burn a charge.
+      if (forced && (FUSION_RARITY_RANK[forced.rarity] ?? 0) > (FUSION_RARITY_RANK[validation.rarity] ?? 0)) {
+        output = forced;
+        rarityUp = true;
+        protectedUsed = true;
+      }
+    }
+  }
+
   // P6: never consume an equipped copy — pass the reserved instanceIds so the
   // forge picks only spare (un-equipped) copies.
   const fuseReserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
@@ -288,14 +334,9 @@ function fuseOnce(
   // P7b: the output carries the lowest consumed level so merge-leveling survives a fuse-up.
   const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality, fusedLevel);
   const totalRefund = enhanceRefund + capRefund;
-  // RARITY-UP IS THE ACTUAL OUTPUT vs INPUT (#42-fix): rollFusionRarity can roll
-  // "up" but pickFusionOutput falls back to a lower rarity when the rolled output
-  // stage lacks that tier — so a common→common fusion was wrongly flagged "등급
-  // 상승". Judge by the real output rarity instead.
-  const FUSION_RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-  const rarityUp = (FUSION_RARITY_RANK[output.rarity] ?? 0) > (FUSION_RARITY_RANK[validation.rarity] ?? 0);
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
   // Lv5+ enhancement (R1). Stones scale with the input tier; +bonus for same-entity.
+  // A protected (forced) success is a real rarity-up, so it mints no stones either.
   const stonesEarned = rarityUp
     ? 0
     : (FUSION_FAIL_STONES_BY_TIER[validation.rarity] ?? 1) + (sameEntity ? FUSION_SAME_ENTITY_FAIL_STONE_BONUS : 0);
@@ -340,6 +381,8 @@ function fuseOnce(
     entropy: nextEntropy,
     peakEntropy: Math.max(state.peakEntropy, nextEntropy),
     enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
+    // 보호석: one charge spent only when protection actually forced a fail up a tier.
+    enhanceProtectCharges: protectedUsed ? Math.max(0, state.enhanceProtectCharges - 1) : state.enhanceProtectCharges,
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
     tutorialFlags: nextTutorialFlags,
@@ -353,6 +396,7 @@ function fuseOnce(
       stonesEarned,
       burst,
       refund: totalRefund,
+      protectedUsed,
     },
   };
 }
@@ -367,7 +411,9 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
     return state;
   }
-  const r = fuseOnce(state, action.inputEntityIds, action);
+  // 보호석 is SINGLE-fusion only — pass the toggle through. handleFuseBatch intentionally
+  // does NOT (a batch would silently drain a pile of charges on every failing trio).
+  const r = fuseOnce(state, action.inputEntityIds, action, action.useProtect ?? false);
   if (!r) return state;
   const eventId = nextEventId(r.state);
   const { result } = r;

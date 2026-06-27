@@ -278,6 +278,48 @@ describe('P6: mythic is fusion-only + tier-accurate fusion stones', () => {
     expect(up.lastFusionEvent!.stonesEarned).toBe(0);
   });
 
+  it('보호석: a FAILED single fusion + useProtect forces a rarity-up and spends one charge', () => {
+    // Mirror the fail setup above: 3 distinct rares at stage 9 (epic is droppable, so an
+    // up is POSSIBLE) with rarityRoll 0.99 → the roll fails. With useProtect on and a
+    // charge held, protection forces the output up one tier (rare → epic) instead.
+    const rares = getEntitiesForStage(2).filter((e) => e.rarity === 'rare').slice(0, 3);
+    expect(rares).toHaveLength(3);
+    const ids = rares.map((e) => e.id);
+    const base: GameState = {
+      ...createInitialGameState(0),
+      stageIdx: 8, // stage 9
+      quanta: 1e12,
+      enhanceProtectCharges: 2,
+      inventory: rares.map((e) => ({ entityId: e.id, count: 1, level: 1 })),
+    };
+
+    // PROTECTED: the failing roll is forced up — rarityUp true, no consolation stones,
+    // exactly one charge consumed, and a real epic-tier item lands in the inventory.
+    const protectedFuse = gameReducer(base, {
+      type: 'FUSE_ENTITIES', inputEntityIds: ids, rarityRoll: 0.99, pickRoll: 0.1, useProtect: true,
+    });
+    expect(protectedFuse.lastFusionEvent!.rarityUp).toBe(true);
+    expect(protectedFuse.lastFusionEvent!.stonesEarned).toBe(0);
+    expect(protectedFuse.enhanceProtectCharges).toBe(1); // exactly one spent
+    const out = STAGE_ENTITIES.find((e) => e.id === protectedFuse.lastFusionEvent!.outputEntityId);
+    expect(out!.rarity).toBe('epic'); // rare → epic (one tier up)
+
+    // useProtect OFF: the same failing roll stands, charges untouched, stones minted.
+    const unprotected = gameReducer(base, {
+      type: 'FUSE_ENTITIES', inputEntityIds: ids, rarityRoll: 0.99, pickRoll: 0.1, useProtect: false,
+    });
+    expect(unprotected.lastFusionEvent!.rarityUp).toBe(false);
+    expect(unprotected.enhanceProtectCharges).toBe(2); // unchanged
+    expect(unprotected.lastFusionEvent!.stonesEarned).toBeGreaterThan(0);
+
+    // 0 charges: even with the toggle on, the fail stands and nothing is spent.
+    const broke = gameReducer({ ...base, enhanceProtectCharges: 0 }, {
+      type: 'FUSE_ENTITIES', inputEntityIds: ids, rarityRoll: 0.99, pickRoll: 0.1, useProtect: true,
+    });
+    expect(broke.lastFusionEvent!.rarityUp).toBe(false);
+    expect(broke.enhanceProtectCharges).toBe(0);
+  });
+
   it('🅠4: FUSE_BATCH fuses each trio, accumulating success/fail counts + stones', () => {
     // #42-fix: fuse at stage 3 (its pool has rares) so a rolled "up" can actually
     // produce a higher rarity — stage 1 has only commons, so an up there isn't real.

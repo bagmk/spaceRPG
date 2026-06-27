@@ -151,7 +151,10 @@ export type GameAction =
   | { type: 'PURCHASE_ENTITY'; entityId: string; qualityRoll1?: number; qualityRoll2?: number }
   | { type: 'EQUIP_ENTITY'; entityId: string; slot?: number; wild?: boolean }
   | { type: 'UNEQUIP_ENTITY'; slot: number; target?: 'click' | 'rift' | 'wild' }
-  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number; qualityRoll?: number }
+  // useProtect (보호석): SINGLE fusion only — on a roll that would FAIL (no rarity-up),
+  // spend one enhanceProtectCharge to FORCE the result up one rarity tier. Deliberately
+  // NOT on FUSE_BATCH / 전체 융합 so a batch can't silently drain a pile of charges.
+  | { type: 'FUSE_ENTITIES'; inputEntityIds: string[]; rarityRoll: number; pickRoll: number; stageRoll?: number; qualityRoll?: number; useProtect?: boolean }
   // 🅠4: batch fusion — inputEntityIds is FUSION_INPUT_COUNT × rolls.length copies
   // the UI drew from inventory; one roll-set per trio. The reducer loops via fuseOnce.
   | { type: 'FUSE_BATCH'; inputEntityIds: string[]; rolls: { rarityRoll: number; pickRoll: number; stageRoll: number; qualityRoll?: number }[] }

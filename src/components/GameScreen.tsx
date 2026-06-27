@@ -932,8 +932,10 @@ export function GameScreen({
             onEquipWild={(entityId) => { dispatch({ type: 'EQUIP_ENTITY', entityId, wild: true }); soundManager?.playUITap(); }}
             onUnequip={(slot, target) => { dispatch({ type: 'UNEQUIP_ENTITY', slot, target }); soundManager?.playUITap(); }}
             onEnhance={(id, useProtect, useSpecial) => { dispatch({ type: 'ENHANCE_ENTITY', instanceId: id, failRoll: Math.random(), breakRoll: Math.random(), destroyRoll: Math.random(), useProtect, useSpecial }); soundManager?.playEntityLevelUp(); }}
-            onFuse={(inputEntityIds) => {
-              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(), qualityRoll: Math.random() });
+            onFuse={(inputEntityIds, useProtect) => {
+              // 보호석: single fusion only — forward the toggle so a failed roll can be
+              // forced up one rarity (Fuse All / batch deliberately omits it).
+              dispatch({ type: 'FUSE_ENTITIES', inputEntityIds, rarityRoll: Math.random(), pickRoll: Math.random(), stageRoll: Math.random(), qualityRoll: Math.random(), useProtect });
               soundManager?.playEntityLevelUp();
             }}
             onFuseBatch={(inputEntityIds) => {

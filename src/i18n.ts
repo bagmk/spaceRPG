@@ -78,8 +78,8 @@ export const STRINGS = {
                     ko: '강화하면 레벨과 위력이 오릅니다 — 같은 카드 복사본을 모으면 무료, 또는 강화석 ◆로. 클릭 장비는 곱연산(×), 오토 장비는 합연산(+)입니다.' },
   helpEquipRule5: { en: '✨ Special Enhance (on, with 3+ spare copies): spend 3 cards to enhance at HALVED fail odds. Off → pay ◆ stones at full odds.',
                     ko: '✨ 특수강화 (켜짐 + 여분 카드 3장 이상): 카드 3장을 써서 실패 확률을 절반으로 낮춰 강화합니다. 꺼짐 → 강화석 ◆로 일반 확률 강화.' },
-  helpEquipRule6: { en: '🛡 Protection (on, with a charge): a failed risky enhance is absorbed — the card is kept (no level gained), one charge spent. Destroy chance becomes 0%.',
-                    ko: '🛡 보호강화 (켜짐 + 보호 충전 보유): 위험 강화에 실패해도 흡수되어 카드를 잃지 않습니다 — 레벨은 안 오르고 충전 1개 소모. 파괴 확률이 0%가 됩니다.' },
+  helpEquipRule6: { en: '🛡 Protection Stone (on, with a charge): a failed risky enhance is absorbed — the card is kept (no level gained), one stone spent (destroy chance becomes 0%). A failed single fusion is forced up one rarity instead of wasting the 3 inputs.',
+                    ko: '🛡 보호석 (켜짐 + 보유): 위험 강화에 실패해도 흡수되어 카드를 잃지 않습니다 — 레벨은 안 오르고 보호석 1개 소모(파괴 확률 0%). 단일 융합에 실패하면 3개를 낭비하는 대신 등급이 1단계 강제 상승합니다.' },
   helpFuseRule1:  { en: 'Fuse 3 items of the same rarity into one of the next rarity (the result is random).',
                     ko: '같은 등급 아이템 3개를 융합하면 더 높은 등급 1개가 됩니다 (결과는 무작위).' },
   helpFuseRule2:  { en: 'Fusing copies of the same kind grants an extra bonus.',
@@ -235,6 +235,8 @@ export const STRINGS = {
   enhanceMerged:    { en: 'merged {n}', ko: '{n}개 병합' },
   // Risk phase (v30): the 특수강화 protect toggle (label used as the toggle's aria-label).
   enhanceUseProtect:  { en: 'Use protection', ko: '보호 사용' },
+  // 보호석 on the single-fusion lever: a failed fusion is forced up one rarity (aria-label).
+  fuseUseProtect:     { en: 'Use Protection Stone (force a failed fusion up one rarity)', ko: '보호석 사용 (융합 실패 시 등급 강제 상승)' },
   specialEnhanceLabel: { en: 'Special Enhance', ko: '특수강화' },
   specialEnhanceToggleAria: { en: 'Toggle Special Enhance', ko: '특수강화 켜기/끄기' },
   enhanceReadoutSuccess: { en: 'Success', ko: '성공' },
@@ -373,7 +375,7 @@ export const STRINGS = {
   shopTabDaily:       { en: 'Daily',          ko: '데일리' },
   shopTabBoosts:      { en: 'Boosts',         ko: '부스트' },
   shopStonesTitle:    { en: 'Buy Enhance Stones', ko: '강화석 구매' },
-  shopProtectTitle:   { en: 'Enhance Protection', ko: '강화 보호' },
+  shopProtectTitle:   { en: 'Protection Stone', ko: '보호석' },
   shopPacksTitle:     { en: 'Matter Packs',   ko: '물질 충전' },
   shopDailyTitle:     { en: "Today's Shop",   ko: '오늘의 상점' },
   shopDailyRefresh:   { en: 'Refresh',        ko: '새로고침' },

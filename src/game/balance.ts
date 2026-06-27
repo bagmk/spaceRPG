@@ -857,13 +857,17 @@ export const ENHANCE_BREAK_STONE_MAX: Record<EntityRarity, number> = { common: 4
  *  Kept only so the sim's protect-cost proxy (≈ a 강화석 unit) still pins the gate. */
 export const ENHANCE_PROTECT_STONE_MULT = 1.0;
 
-// ── 강화 보호 CONSUMABLE (user: "강화 보호용 사는거 + 그 아이템으로 강화 실패시 안터지게") ──
-//    A named protection item bought with 물질(matter) in the shop. When the player
-//    toggles "보호 사용" ON and holds ≥1 charge, a FAILED risk-phase enhance consumes
-//    ONE charge and the item SURVIVES (no level gain, no destroy) instead of being
-//    destroyed. Persisted as enhanceProtectCharges (save v30).
+// ── 보호석 CONSUMABLE (user: "강화 보호를 융합보호까지 해서 보호석이라고 하자") ──
+//    A named protection item bought with 물질(matter) in the shop. Originally only
+//    insured ENHANCE; now ALSO insures FUSION. When the player toggles "보호 사용" ON
+//    and holds ≥1 charge:
+//      • a FAILED risk-phase enhance consumes ONE charge and the item SURVIVES (no
+//        level gain, no destroy) instead of being destroyed; and
+//      • a FAILED single fusion (no rarity-up) consumes ONE charge and is FORCED up
+//        one rarity tier (a guaranteed success) instead of wasting the 3 inputs.
+//    The save FIELD name stays enhanceProtectCharges (save v30) — display only changed.
 /** Display name of the protection consumable (bilingual, NO mixed-language). */
-export const ENHANCE_PROTECT_ITEM_NAME = { en: 'Causal Anchor', ko: '인과 닻' } as const;
+export const ENHANCE_PROTECT_ITEM_NAME = { en: 'Protection Stone', ko: '보호석' } as const;
 /** Matter price of ONE protection charge = ENTITY_COST_ANCHORS[playerStage] × this.
  *  Priced a BIT HIGH per the user — protection should feel like a real, deliberate
  *  outlay (one charge ≈ a whole common shop item's matter cost, 0.10×anchor), so the
