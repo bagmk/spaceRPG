@@ -60,6 +60,7 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    condenseBurstThisStage: 0,
     // Debug stage-jump must refresh quests like the live advance (stage.ts) does — otherwise the
     // leaving stage's quest ids linger on the new stage's tab, titled with the wrong era's lore
     // (e.g. S12 "태양 소멸" showing on the S11 tab). Snapshot the era we leave + derive the new set.
@@ -93,6 +94,7 @@ export function handleAdminPrevStage(state: GameState, action: AdminPrevStageAct
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    condenseBurstThisStage: 0,
     stageQuestProgress: snapshotStageQuestProgress(state, STAGES[state.stageIdx].id),
     activeQuests: refillActiveQuests(state.activeQuests, state.completedQuestIds, STAGES[prevStageIdx].id),
   };
@@ -147,6 +149,7 @@ export function handleAdminRestartRun(state: GameState, action: AdminRestartRunA
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    condenseBurstThisStage: 0,
     tutorialFlags: state.tutorialFlags,
     hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
     shopBoosts: state.shopBoosts,

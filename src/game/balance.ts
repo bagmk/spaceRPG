@@ -222,8 +222,17 @@ export const CLICK_GEAR_MATTER_BOOST = 3;
  * a GENTLE linear level term (WALLET_LEVEL_BONUS) — see getWalletAnchorFlat. This scale
  * is re-tuned to that new structure so a maxed rift loadout affords the stage anchor in
  * the ~25–75 min band at every checkpoint, and click/auto stay within ~0.6 orders.
+ *
+ * OFF-GATE INCOME ×3 (2026-06-27, user "물질 수입을 올려줘 + 분사 게이지"): the matter WALLET
+ * is OFF-GATE (the entropy gate reads the TAME clickPower×combo×crit + tame auto channel,
+ * NOT these wallet flat-adds), so raising it lets the player AFFORD shop/enhance faster
+ * without touching the calibrated entropy ladder. Raised ×3 (NOT ×4): a clean ×4 dropped
+ * the binding S16 geared-best afford below ~2 min (the sim's "not seconds" guard), so it
+ * was tempered to ×3 (S16 ≈ 2 min, geared floor re-pinned 5→2 min). 2.4e-5 → 7.2e-5.
+ * scripts/entropy-gate-sim.mjs mirrors this ×3 in its AUTO_GEAR_INCOME_SCALE constant and
+ * confirms ALL INVARIANTS PASS (the entropy gate is byte-identical; only the afford block moves).
  */
-export const AUTO_GEAR_INCOME_SCALE = 2.4e-5;
+export const AUTO_GEAR_INCOME_SCALE = 7.2e-5;
 /**
  * Auto WALLET contribution FLOOR per equipped rift item — makes early items visibly move
  * 오토 속도 (their item-anchored value is tiny at low stages). 2026-06-23 FIX (user "글루온
@@ -266,8 +275,12 @@ export const AUTO_WALLET_MIN_PER_ITEM: Record<EntityRarity, number> = {
  * does NOT need to sit above the auto scale to out-earn auto; both scales are picked so
  * |log10(autoMps/clickMps)| ≤ ~0.6 across S5/9/12/16. Off-gate (entropy rides the TAME
  * `gained`), so no entropy-gate re-pin — the sim's affordability block confirms it.
+ *
+ * OFF-GATE INCOME ×3 (2026-06-27): mirrors AUTO_GEAR_INCOME_SCALE — same ×3 on BOTH lanes
+ * keeps |log10(clk/aut)| identical (lane convergence undisturbed) while affording faster.
+ * 6.0e-6 → 1.8e-5. Off-gate (entropy gate untouched); sim mirrors it (CLICK_GEAR_INCOME_SCALE).
  */
-export const CLICK_GEAR_INCOME_SCALE = 6.0e-6;
+export const CLICK_GEAR_INCOME_SCALE = 1.8e-5;
 /**
  * LANE RECONVERGENCE (2026-06-24) — wallet rarity ranking, shared by BOTH the click and
  * auto wallet flat-adds (getWalletAnchorFlat). Replaces using the per-effect `value` as
@@ -411,20 +424,31 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // invariants pass (worst 1.00×, crit spread 2.77×, casual/hardcore 141.2×). The #3 auto-
   // wallet felt-leveling change is OFF-GATE (autoEntropyFlatAdd tame path), so it does NOT
   // enter this calibration. v16 ladder stays FROZEN in storage/migrate.ts.
-  1: 1.479e3,
-  2: 9.526e3,
-  3: 2.969e4,
-  4: 6.421e4,
-  5: 1.580e5,
-  6: 5.611e5,
-  7: 1.646e6,
-  8: 4.262e6,
-  9: 6.218e6,
-  10: 9.154e6,
-  11: 1.403e7,
-  12: 2.138e7,
-  13: 2.963e7,
-  14: 9.342e7,
+  // 분사 (Condensation Burst) RE-PIN (2026-06-27, scripts/entropy-gate-sim.mjs): 분사 is now an
+  // ACTIVE matter→entropy source bounded by CONDENSE_STAGE_CAP (0.30) × the stage span per stage.
+  // The reference profile fires it (off-gate income is ×3, so matter is never the bottleneck for
+  // the cheap CONDENSE_COST_FRAC price) until the cap, contributing up to ~30% of an early/mid
+  // stage's entropy. The sim's per-stage binary search therefore re-pins each gate so the
+  // reference player STILL hits realPlayTargetSec WITH 분사 active (the gates rose a touch where
+  // 분사 helps most — early/mid). These are the freshly-printed calibrated spans; ALL INVARIANTS
+  // PASS (분사 share ≤30%/stage, active-share 98%, idlePremium INF, geared-best floor re-pinned
+  // 5→2 min for the ×3 income). The OFF-GATE ×3 income raise does NOT enter this calibration
+  // (it rides the tame autoEntropyFlatAdd / wallet path); only 분사 moved the ladder. The v16
+  // ladder stays FROZEN in storage/migrate.ts.
+  1: 2.093e3,
+  2: 1.376e4,
+  3: 4.254e4,
+  4: 7.707e4,
+  5: 1.722e5,
+  6: 5.703e5,
+  7: 1.656e6,
+  8: 4.271e6,
+  9: 6.227e6,
+  10: 9.163e6,
+  11: 1.404e7,
+  12: 2.139e7,
+  13: 2.964e7,
+  14: 9.343e7,
   15: 2.602e8,
   16: 3.254e8,
 };
@@ -524,6 +548,20 @@ export const COLLISION_ENTROPY_SPAN_CAP: Record<'massive' | 'major' | 'minor', n
   major: 0.03,
   minor: 0.012,
 };
+
+// ── 물질 응축 / 분사 (Condensation Burst) — matter → entropy, span-capped ─────
+// User 2026-06-27: at S7+ the matter WALLET is OFF-GATE (the entropy gate reads the
+// tame click/auto channel), so a huge matter surplus does NOTHING for the gate. The
+// 분사 lets the player SPEND accumulated matter for a bounded entropy burst — but a
+// PER-STAGE cap (CONDENSE_STAGE_CAP × the stage's entropy span) means wealth can never
+// SKIP the gate: after the cap the button disables and the rest must come from click/auto.
+// Mirrors the comet entropy-span clamp pattern (handleAbsorbComet / fuseOnce).
+/** One 분사 costs ENTITY_COST_ANCHORS[playerStage] × this much matter (quanta). */
+export const CONDENSE_COST_FRAC = 0.1;
+/** Each 분사 adds this fraction of the stage's entropy SPAN (gate − floor) to entropy. */
+export const CONDENSE_SPAN_FRAC = 0.05;
+/** 분사 can contribute at most this fraction of the stage span PER STAGE (then disabled). */
+export const CONDENSE_STAGE_CAP = 0.30;
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 

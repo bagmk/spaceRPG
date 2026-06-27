@@ -559,6 +559,66 @@ button.hud-stage-title--clickable:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* 분사 (Condensation Burst): matter → a span-capped entropy burst. Sits directly under
+   the entropy gate bar while filling; violet (entropy color code) + amber matter cost. */
+.hud-condense-burst {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.hud-condense-burst-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 90px;
+  min-width: 70px;
+}
+.hud-condense-burst-label {
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+.hud-condense-burst-bar { height: 4px; border-radius: 2px; overflow: hidden; }
+.hud-condense-burst-fill {
+  background: #bb8cff;
+  box-shadow: 0 0 6px #bb8cff;
+  transition: width 0.15s ease-out;
+}
+.hud-condense-burst-btn {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 8px;
+  border: 1px solid rgba(187, 140, 255, 0.5);
+  border-radius: 6px;
+  background: rgba(187, 140, 255, 0.14);
+  color: var(--text, #fff);
+  font-size: 9px;
+  line-height: 1.1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.hud-condense-burst-btn:not(:disabled):hover {
+  background: rgba(187, 140, 255, 0.28);
+  border-color: rgba(187, 140, 255, 0.8);
+}
+.hud-condense-burst-btn:disabled { opacity: 0.4; cursor: default; }
+.hud-condense-burst-btn-name { font-weight: 700; letter-spacing: 0.02em; }
+.hud-condense-burst-cost { font-size: 8px; color: #ffb347; font-variant-numeric: tabular-nums; }
+.hud-condense-burst-cap {
+  font-size: 8px;
+  color: #ffb347;
+  opacity: 0.85;
+  flex-basis: 100%;
+  text-align: right;
+}
+
 /* Equip system (entity redesign Phase 2) */
 .entity-card__equipped-badge {
   position: absolute;

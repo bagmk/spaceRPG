@@ -17,6 +17,7 @@ import {
   getCritMultiplier,
   getEffectiveThreshold,
   getEntropyGateProgress,
+  getEntropyGateSpan,
   getEntropyOnCondense,
   getTimeGaugeForCosmicClock,
   getProgress,
@@ -33,7 +34,15 @@ import {
   getOfflineRewardCapSec,
   isCashShopUnlocked,
 } from '../game/shop/boosts';
-import { EQUIP_UNLOCK_STAGE_ID, FUSION_UNLOCK_STAGE_ID, SHOP_UNLOCK_STAGE_ID } from '../game/balance';
+import {
+  CONDENSE_COST_FRAC,
+  CONDENSE_SPAN_FRAC,
+  CONDENSE_STAGE_CAP,
+  ENTITY_COST_ANCHORS,
+  EQUIP_UNLOCK_STAGE_ID,
+  FUSION_UNLOCK_STAGE_ID,
+  SHOP_UNLOCK_STAGE_ID,
+} from '../game/balance';
 import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
@@ -250,6 +259,9 @@ export function GameScreen({
     !endingChooserDismissed;
   const canCondense = canCondenseNow(state);
   const condenseHint = t(language, 'hudEntropyGateHint');
+  // 분사 (Condensation Burst): spend matter → a span-capped entropy burst. The 30s cooldown is
+  // UI-side (timestamp); the reducer enforces cost / per-stage cap / gate guards.
+  const [condenseBurstAt, setCondenseBurstAt] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
@@ -258,6 +270,26 @@ export function GameScreen({
     transitionPhase === 'bursting' ||
     state.selectedEndingId !== null ||
     canChooseEnding;
+  // 분사 readiness/cap/cooldown — derived once per render. Visible only while still filling the
+  // gate (once canCondense, use the stage Condense instead).
+  const CONDENSE_COOLDOWN_MS = 30_000;
+  const condenseBurst = useMemo(() => {
+    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
+    const span = getEntropyGateSpan(state.stageIdx);
+    const stageBudget = span * CONDENSE_STAGE_CAP;
+    const capReached = state.condenseBurstThisStage >= stageBudget - 1e-6;
+    const cooldownLeftMs = Math.max(0, condenseBurstAt + CONDENSE_COOLDOWN_MS - wallNow);
+    return {
+      cost,
+      ready01: Math.min(1, state.quanta / Math.max(1, cost)),
+      capFrac: stageBudget > 0 ? Math.min(1, state.condenseBurstThisStage / stageBudget) : 1,
+      capReached,
+      cooldownLeftMs,
+      visible: !isViewingPastStage && !canCondense && !state.completedRun,
+      disabled:
+        state.quanta < cost || capReached || cooldownLeftMs > 0 || interactionLocked || canCondense,
+    };
+  }, [stage.id, state.stageIdx, state.quanta, state.condenseBurstThisStage, state.completedRun, condenseBurstAt, wallNow, isViewingPastStage, canCondense, interactionLocked]);
   useBoostNotifications(state.shopBoosts, language);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [comboDisplay, setComboDisplay] = useState<ComboDisplay | null>(null);
@@ -1000,6 +1032,36 @@ export function GameScreen({
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
                   </div>
                 </div>
+                {condenseBurst.visible ? (
+                  <div className="hud-condense-burst">
+                    <div className="hud-condense-burst-gauge" title={t(language, 'condenseTooltip')}>
+                      <span className="hud-condense-burst-label">{t(language, 'condenseGaugeLabel')}</span>
+                      <div className="hud-gauge hud-condense-burst-bar" aria-hidden="true">
+                        <div className="hud-gauge-fill hud-condense-burst-fill" style={{ width: `${Math.round(condenseBurst.ready01 * 100)}%` }} />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="hud-condense-burst-btn"
+                      disabled={condenseBurst.disabled}
+                      title={t(language, 'condenseTooltip')}
+                      aria-label={`${t(language, 'condenseBurstLabel')} — ⚛ ${formatGameNumberShort(condenseBurst.cost)}`}
+                      onClick={() => {
+                        dispatch({ type: 'CONDENSE_BURST' });
+                        soundManager?.playUITap();
+                        setCondenseBurstAt(Date.now());
+                      }}
+                    >
+                      <span className="hud-condense-burst-btn-name">{t(language, 'condenseBurstLabel')}</span>
+                      <span className="hud-condense-burst-cost">{`⚛ ${formatGameNumberShort(condenseBurst.cost)}`}</span>
+                    </button>
+                    {condenseBurst.capFrac >= 0.8 ? (
+                      <span className="hud-condense-burst-cap">
+                        {condenseBurst.capReached ? t(language, 'condenseCapReached') : t(language, 'condenseStageLimit')}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

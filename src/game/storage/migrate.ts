@@ -294,6 +294,7 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    condenseBurstThisStage: 0,
     stageQuestProgress: {},
     ...convertEntityModelV14(record),
   };
@@ -449,6 +450,9 @@ export function validateV5(
     fusionsThisStage: isFiniteNumber((parsed as any).fusionsThisStage) ? Math.max(0, (parsed as any).fusionsThisStage) : 0,
     cometsThisStage: isFiniteNumber((parsed as any).cometsThisStage) ? Math.max(0, (parsed as any).cometsThisStage) : 0,
     comboThisStage: isFiniteNumber((parsed as any).comboThisStage) ? Math.max(0, (parsed as any).comboThisStage) : 0,
+    // v31 분사 per-stage entropy contribution — preserved if present, else 0 (a pre-v31
+    // save simply starts this stage's 분사 cap fresh). Mirrors the v22 per-stage counters.
+    condenseBurstThisStage: isFiniteNumber((parsed as any).condenseBurstThisStage) ? Math.max(0, (parsed as any).condenseBurstThisStage) : 0,
     // v29 past-stage quest snapshots — WHITELIST: omit and it's silently dropped on
     // every load + cloud pull. Default {} for pre-v29 saves (no frozen progress yet).
     stageQuestProgress: sanitizeStageQuestProgress((parsed as any).stageQuestProgress),

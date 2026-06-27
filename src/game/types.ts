@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 30;
+  version: 31;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -321,6 +321,10 @@ export interface SaveState {
   cometsThisStage: number;
   /** Milestones (v22): peak combo reached in the current stage (reset on stage entry). */
   comboThisStage: number;
+  /** 분사 (v31): entropy KB already contributed via 물질 응축 분사 this stage (reset on stage
+   *  entry). Bounds total 분사 contribution to CONDENSE_STAGE_CAP × the stage span so a matter
+   *  surplus can never SKIP the gate. */
+  condenseBurstThisStage: number;
   /** Past-stage quest snapshots (v29): stageId → questId → final progress (clamped
    *  to the quest target), frozen on stage exit before the per-stage counters reset.
    *  Lets PAST-stage tabs show "{snap}/{target}", and lets a quest that hit its

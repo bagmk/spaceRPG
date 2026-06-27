@@ -23,6 +23,7 @@ import {
   handleTick,
   handleClick,
   handleAbsorbComet,
+  handleCondenseBurst,
   handleReportEncounter,
 } from './reducers/gameplay';
 import {
@@ -130,6 +131,9 @@ export type GameAction =
        *  the player can revisit to collect its codex (absent → current stage). */
       viewedStageId?: number;
     }
+  // 분사 (Condensation Burst): spend matter → a span-capped entropy burst. The 30s
+  // cooldown is UI-side; the reducer only enforces cost / per-stage cap / gate guards.
+  | { type: 'CONDENSE_BURST' }
   | { type: 'CLEAR_CLICK_EVENT'; id: number }
   | { type: 'CLEAR_COLLISION_EVENT'; id: number }
   | { type: 'CLEAR_ENCOUNTER_EVENT'; id: number }
@@ -249,6 +253,7 @@ export function toPersistentState(state: GameState): PersistentGameState {
     fusionsThisStage: state.fusionsThisStage,
     cometsThisStage: state.cometsThisStage,
     comboThisStage: state.comboThisStage,
+    condenseBurstThisStage: state.condenseBurstThisStage,
     stageQuestProgress: state.stageQuestProgress,
   };
 }
@@ -286,6 +291,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'DISMISS_OFFLINE_MODAL': return handleDismissOfflineModal(state);
     case 'REPORT_ENCOUNTER':      return handleReportEncounter(state, action);
     case 'ABSORB_COMET':          return handleAbsorbComet(state, action);
+    case 'CONDENSE_BURST':        return handleCondenseBurst(state);
     case 'CLEAR_CLICK_EVENT':     return handleClearClickEvent(state, action);
     case 'CLEAR_COLLISION_EVENT': return handleClearCollisionEvent(state, action);
     case 'CLEAR_ENCOUNTER_EVENT': return handleClearEncounterEvent(state, action);

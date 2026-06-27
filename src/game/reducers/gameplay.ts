@@ -1,7 +1,14 @@
 /** Handlers: TICK, CLICK, BUY_CLICK, BUY_AUTO, BUY_CRIT, ABSORB_COMET, REPORT_ENCOUNTER */
 
 import { TUNING } from '../constants';
-import { COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK } from '../balance';
+import {
+  COLLISION_ENTROPY_SPAN_CAP,
+  CONDENSE_COST_FRAC,
+  CONDENSE_SPAN_FRAC,
+  CONDENSE_STAGE_CAP,
+  ENTITY_COST_ANCHORS,
+  ENTROPY_W_CLICK,
+} from '../balance';
 import {
   safeAdd,
   getAutoRate,
@@ -14,6 +21,7 @@ import {
   getEntropyFromMatterGain,
   getEntropyGateFloor,
   getEntropyGateProgress,
+  getEntropyGateSpan,
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
@@ -397,6 +405,49 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
       droppedEntity?.id,
     ),
   }));
+}
+
+/**
+ * CONDENSE_BURST (분사 / 물질 응축): spend matter (quanta) for a span-capped entropy burst.
+ * The off-gate matter wallet does nothing for the entropy gate, so this converts a matter
+ * surplus into gate progress — but a PER-STAGE cap (CONDENSE_STAGE_CAP × the stage's entropy
+ * span, persisted in condenseBurstThisStage) bounds total 분사 contribution so wealth can never
+ * SKIP the gate; after the cap you must click/auto for the rest. The 30s cooldown is enforced
+ * UI-side; the reducer only enforces cost / per-stage budget / gate guards. Mirrors the comet
+ * entropy-span clamp pattern (handleAbsorbComet).
+ */
+export function handleCondenseBurst(state: GameState): GameState {
+  if (
+    state.pendingCondenseStageIdx !== null ||
+    state.completedRun ||
+    state.imploding ||
+    state.selectedEndingId !== null
+  ) {
+    return state;
+  }
+  const stage = getCurrentStage(state);
+  // No-op if already at/over the gate — 분사 funds progress TO the gate, never past it.
+  if (state.entropy >= stage.entropyThreshold) return state;
+  const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
+  if (state.quanta < cost) return state;
+  const span = getEntropyGateSpan(state.stageIdx);
+  // Remaining per-stage 분사 budget: the cap minus what 분사 has already contributed this stage.
+  const remainingBudget = span * CONDENSE_STAGE_CAP - state.condenseBurstThisStage;
+  if (remainingBudget <= 0) return state;
+  // Per-fire add, clamped to the remaining stage budget AND to the gate ceiling (mirrors the
+  // comet span clamp — a 분사 never overshoots the gate).
+  const perFireAdd = span * CONDENSE_SPAN_FRAC;
+  const headroom = Math.max(0, stage.entropyThreshold - state.entropy);
+  const add = Math.min(perFireAdd, remainingBudget, headroom);
+  if (add <= 0) return state;
+  const nextEntropy = safeAdd(state.entropy, add);
+  return withCurrentUniverseEndingProgress({
+    ...state,
+    quanta: Math.max(0, state.quanta - cost),
+    entropy: nextEntropy,
+    peakEntropy: Math.max(state.peakEntropy, nextEntropy),
+    condenseBurstThisStage: state.condenseBurstThisStage + add,
+  });
 }
 
 export function handleReportEncounter(state: GameState, action: ReportEncounterAction): GameState {

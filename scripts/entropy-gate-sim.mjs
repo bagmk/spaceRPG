@@ -58,6 +58,14 @@ const ENTITY_COST_ANCHORS = [0, 1725, 3800, 52000, 750000, 1.1e7, 1.6e8, 2.4e9, 
 // Re-anchored entropy weights: without the 2^level skill click base, raw click
 // income shrinks vs auto — keep active play dominant via the gate weights.
 const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.04, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
+// 분사 (Condensation Burst): matter → a span-capped entropy burst, lockstep with balance.ts.
+// Modeled as an ACTIVE entropy source bounded by CONDENSE_STAGE_CAP × the stage span per stage:
+// a matter-rich profile fires 분사 (cheap vs income) until the per-stage cap, contributing
+// ≤ CONDENSE_STAGE_CAP × span. Off-gate income is now ×3, so the reference profile is never
+// matter-starved for the small CONDENSE_COST_FRAC × anchor price → the cap is the only bound.
+const CONDENSE_COST_FRAC = 0.1;   // lockstep balance.ts
+const CONDENSE_SPAN_FRAC = 0.05;  // lockstep balance.ts (each fire adds this × span)
+const CONDENSE_STAGE_CAP = 0.30;  // lockstep balance.ts (max 분사 share of the stage span per stage)
 // Click output re-anchor (skill 2^N base removed).
 const CLICK_OUTPUT_MULTIPLIER = 15;
 // Crit (gear-only): chance from substats + combo; mult bounded.
@@ -333,7 +341,7 @@ const levelMult = (level) => 1 + Math.max(0, level - 1) * 0.85;
 const ENHANCE_MATTER_LEVEL_GROWTH = 1.3; // lockstep with balance.ts ("강화 팍팍")
 const ENHANCE_RARITY_GROWTH = { common: 1.0, rare: 1.03, epic: 1.06, legendary: 1.09, mythic: 1.12 }; // lockstep
 const CLICK_GEAR_MATTER_BOOST = 3; // lockstep with balance.ts (2 -> 3)
-const AUTO_GEAR_INCOME_SCALE = 2.4e-5; // LANE RECONVERGENCE — lockstep with balance.ts (0.16 → 2.4e-5, new wallet structure)
+const AUTO_GEAR_INCOME_SCALE = 7.2e-5; // OFF-GATE INCOME ×3 (2026-06-27) — lockstep balance.ts (2.4e-5 → 7.2e-5); off-gate wallet, gate untouched
 const geoLevelMult = (rarity, level) =>
   Math.pow(ENHANCE_MATTER_LEVEL_GROWTH * (ENHANCE_RARITY_GROWTH[rarity] ?? 1), Math.max(0, Math.floor(level) - 1));
 
@@ -478,10 +486,19 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
   let { quanta, entropy } = state;
   const floor = stageIdx === 0 ? 0 : thresholds[stageIdx - 1];
   let elapsed = 0, safety = 0, activeClock = 0, nextFusionAt = profile.fusionIntervalSec || Infinity;
-  const src = { click: 0, auto: 0, fusion: 0 };
+  const src = { click: 0, auto: 0, fusion: 0, condense: 0 };
   const combo = profile.combo ?? 0;
   const stageMaxSec = calibrateTo ?? 1000 * 3600;
   const stoneBudget = stoneBudgetFor(stage, profile); // P1: funds Lv5+ levels
+  // 분사 (Condensation Burst): an ACTIVE matter→entropy source, bounded by CONDENSE_STAGE_CAP ×
+  // the stage span PER STAGE. The reference (and any active) profile fires it whenever it can
+  // afford the cheap CONDENSE_COST_FRAC × anchor price, until the per-stage cap is hit.
+  const span = thresholds[stageIdx] - floor;
+  const condenseCost = ENTITY_COST_ANCHORS[stage.id] * CONDENSE_COST_FRAC;
+  const condensePerFire = span * CONDENSE_SPAN_FRAC;
+  const condenseStageBudget = span * CONDENSE_STAGE_CAP;
+  let condenseSpent = 0; // entropy KB already added via 분사 this stage
+  const condenseActive = (profile.activeFraction ?? 0) > 0; // idle does not 분사 (active-only)
   while (safety++ < 400000) {
     if (entropy >= thresholds[stageIdx]) break;
     if (elapsed >= stageMaxSec) break;
@@ -517,6 +534,23 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
       quanta -= costPaid;
       nextFusionAt += profile.fusionIntervalSec;
     }
+    // 분사 (Condensation Burst): fire while matter-rich AND under the per-stage cap. Each fire
+    // spends condenseCost matter and adds min(perFire, remaining budget, gate headroom) entropy.
+    // Bounded by CONDENSE_STAGE_CAP × span per stage → can NEVER skip the gate.
+    if (condenseActive && condenseStageBudget > 0) {
+      let guard = 0;
+      while (
+        guard++ < 64 &&
+        quanta >= condenseCost &&
+        condenseSpent < condenseStageBudget - 1e-9 &&
+        entropy < thresholds[stageIdx]
+      ) {
+        const add = Math.min(condensePerFire, condenseStageBudget - condenseSpent, thresholds[stageIdx] - entropy);
+        if (add <= 0) break;
+        entropy += add; src.condense += add; condenseSpent += add;
+        quanta -= condenseCost;
+      }
+    }
     // Enhance sink: levels are derived (paid implicitly); also drain a share of
     // income so the bank doesn't balloon (purchases/enhance spending).
     quanta = Math.max(0, quanta - (clickG + autoG) * dt * 0.3);
@@ -527,7 +561,7 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
 
 function runEntropy(profile, thresholds) {
   let state = { quanta: 0, entropy: 0 };
-  const perStage = [], srcTotal = { click: 0, auto: 0, fusion: 0 };
+  const perStage = [], srcTotal = { click: 0, auto: 0, fusion: 0, condense: 0 };
   const perStageSrc = [];
   for (let i = 0; i < STAGES.length; i++) {
     const r = simulateStageEntropy(i, state, profile, thresholds);
@@ -588,7 +622,7 @@ STAGES.forEach((s, i) => console.log(`  ${String(s.id).padStart(2)}: ${threshold
 // entropy/click = matter/click × W, so threshold = expected matter income over the target
 // time × W. The numbers below are the per-stage expectation; W is the matter→entropy rate.
 // ---------------------------------------------------------------------------
-const CLICK_GEAR_INCOME_SCALE = 6.0e-6; // LANE RECONVERGENCE — lockstep balance.ts (0.5 → 6.0e-6, new wallet structure)
+const CLICK_GEAR_INCOME_SCALE = 1.8e-5; // OFF-GATE INCOME ×3 (2026-06-27) — lockstep balance.ts (6.0e-6 → 1.8e-5); same ×3 on both lanes keeps |log10(clk/aut)| identical
 const W_MATTER_ENTROPY = 0.00002;      // proposed entropy-per-matter (tunable; sets threshold scale)
 const REF = PROFILES.reference;
 const refClicksPerSec = REF.cps * REF.activeFraction; // ≈1.5 clicks/s of actual progress
@@ -625,9 +659,9 @@ const results = {};
 for (const [name, p] of Object.entries(PROFILES)) {
   const r = runEntropy(p, thresholds);
   results[name] = r;
-  const tot = r.srcTotal.click + r.srcTotal.auto + r.srcTotal.fusion;
-  const share = tot > 0 ? ['click', 'auto', 'fusion'].map((k) => `${((r.srcTotal[k] / tot) * 100).toFixed(0)}%`).join('/') : '-';
-  console.log(`${name.padEnd(10)} | ${fmt(r.total).padStart(7)}${r.infeasibleAt ? ` (stuck@${r.infeasibleAt})` : ''} | click/auto/fusion ${share}`);
+  const tot = r.srcTotal.click + r.srcTotal.auto + r.srcTotal.fusion + r.srcTotal.condense;
+  const share = tot > 0 ? ['click', 'auto', 'fusion', 'condense'].map((k) => `${((r.srcTotal[k] / tot) * 100).toFixed(0)}%`).join('/') : '-';
+  console.log(`${name.padEnd(10)} | ${fmt(r.total).padStart(7)}${r.infeasibleAt ? ` (stuck@${r.infeasibleAt})` : ''} | click/auto/fusion/condense ${share}`);
 }
 
 // Crit spread: best-crit vs no-crit loadout (reference otherwise).
@@ -667,7 +701,13 @@ const AFFORD = {
   // climbs /s; a fully-maxed legendary Lv22 auto loadout therefore affords the late anchor a bit
   // faster than before. 5 min is still firmly "not seconds" (the guard's intent) and the geared
   // best path stays well above it at every checkpoint.
-  gearedFloorSec: 5 * 60,
+  // OFF-GATE INCOME ×3 (2026-06-27): the user explicitly wants faster affording, so income rose
+  // ×3 on BOTH wallet lanes. The binding S16 geared-best was only 6.1 min at ×1, so ×3 lands it
+  // at ≈2 min (S12 ≈5 min, S5/S9 well above). Re-pinned 5 → 2 min: still "not seconds" (the
+  // guard's intent — wealth never makes the anchor literally free) but matches the faster economy.
+  // A clean ×4 was rejected because it pushed S16 below ~1.5 min (clearly seconds-ish), so the
+  // raise was tempered to ×3. OFF-GATE — the entropy gate ladder is undisturbed.
+  gearedFloorSec: 2 * 60,
   // NEW lane-convergence cap: |log10(clickMps/autoMps)| ≤ this at every checkpoint, so the
   // click and auto income lanes stay the SAME order of magnitude (no 6-order divergence).
   laneLog10Max: 1.5,
@@ -725,10 +765,18 @@ ref.perStage.forEach((t, i) => { worst = Math.max(worst, t / STAGES[i].realPlayT
 assertish(worst <= 1.5, `reference within 1.5× of target at every stage (worst ${worst.toFixed(2)}×)`);
 let minActiveShare = 1;
 ref.perStageSrc.forEach((s) => {
-  const tot = s.click + s.auto + s.fusion;
-  if (tot > 0) minActiveShare = Math.min(minActiveShare, (s.click + s.fusion) / tot);
+  const tot = s.click + s.auto + s.fusion + s.condense;
+  // 분사 is an ACTIVE source (matter is actively spent), so it counts toward the active share.
+  if (tot > 0) minActiveShare = Math.min(minActiveShare, (s.click + s.fusion + s.condense) / tot);
 });
-assertish(minActiveShare >= 0.5, `active (click+fusion) entropy share ≥ 50% every stage (min ${(minActiveShare * 100).toFixed(0)}%)`);
+assertish(minActiveShare >= 0.5, `active (click+fusion+condense) entropy share ≥ 50% every stage (min ${(minActiveShare * 100).toFixed(0)}%)`);
+// 분사 contribution stays bounded: condenseShare ≤ ~0.35 every stage (cap 0.30 leaves margin).
+let maxCondenseShare = 0;
+ref.perStageSrc.forEach((s) => {
+  const tot = s.click + s.auto + s.fusion + s.condense;
+  if (tot > 0) maxCondenseShare = Math.max(maxCondenseShare, s.condense / tot);
+});
+assertish(maxCondenseShare <= 0.35, `분사 entropy share ≤ 35% every stage (cap 0.30 + margin) (max ${(maxCondenseShare * 100).toFixed(0)}%)`);
 // Idle viability + active-play premium: the game's own backlog wants idle
 // progression HELPED (offline entropy floor, 4-4), not hard-walled — walling
 // idle would require crushing wAuto until rift gear stops mattering at all.

@@ -121,9 +121,13 @@ describe('Phase 4-1: economy re-anchors', () => {
     // SAME item, different player stage → identical wallet anchor (no stage inflation).
     expect(atP5).toBeCloseTo(atP1, 5);
     // A higher-origin item pays MORE — the wallet anchor tracks the item's baseCost.
+    // The income SCALE cancels in this ratio, so it must equal the baseCost ratio exactly
+    // (up to FP). Assert RELATIVE closeness — the ratio is ~1e13, where toBeCloseTo's absolute
+    // 5-decimal tolerance is far tighter than the magnitude's FP rounding allows.
     const s13Auto = STAGE_ENTITIES.find((e) => e.stageId === 13 && e.effect.type === 'auto')!;
-    expect(getAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }) / atP1)
-      .toBeCloseTo(s13Auto.baseCost / s1Auto.baseCost, 5);
+    const anchorRatio = getAutoOutputAnchor(s13Auto, { stageId: 1, gateProgress01: 0 }) / atP1;
+    const costRatio = s13Auto.baseCost / s1Auto.baseCost;
+    expect(Math.abs(anchorRatio / costRatio - 1)).toBeLessThan(1e-9);
     // The TAME entropy anchor is player-stage-invariant (gate untouched).
     expect(getTameAutoOutputAnchor(s1Auto, { stageId: 5, gateProgress01: 0 }))
       .toBeCloseTo(getTameAutoOutputAnchor(s1Auto, { stageId: 1, gateProgress01: 0 }), 5);

@@ -345,6 +345,25 @@ describe('save migration', () => {
     expect(loadGame()!.enhanceProtectCharges).toBe(0);
   });
 
+  it('v31 seeds condenseBurstThisStage=0 for pre-v31 saves and preserves it for v31', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    // A pre-v31 save (no condenseBurstThisStage field) loads with the 분사 cap fresh at 0.
+    const { condenseBurstThisStage: _drop, ...preV31 } = base;
+    void _drop;
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...preV31, version: 30 }));
+    expect(loadGame()!.condenseBurstThisStage).toBe(0);
+    // A genuine v31 save keeps its in-progress 분사 contribution (mirrors the v22 counters).
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 31, condenseBurstThisStage: 1234 }));
+    expect(loadGame()!.condenseBurstThisStage).toBe(1234);
+    // A corrupt (negative) value clamps to 0.
+    localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 31, condenseBurstThisStage: -9 }));
+    expect(loadGame()!.condenseBurstThisStage).toBe(0);
+  });
+
   it('discards legacy cross-node IDs when loading a v6 save', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

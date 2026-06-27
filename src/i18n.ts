@@ -27,6 +27,15 @@ export const STRINGS = {
   hudCondenseFor: { en: 'Condense for', ko: '응축하여 획득' },
   hudCondenseAlready: { en: 'This stage has already been condensed.', ko: '이미 응축된 단계입니다.' },
   hudEntropyGateHint: { en: 'Grow entropy to advance — click, collect, condense.', ko: '엔트로피를 키워 진행하세요 — 클릭과 수집이 가속합니다.' },
+  // 분사 (Condensation Burst): spend matter → a span-capped entropy burst (≠ the stage Condense).
+  condenseGaugeLabel:  { en: 'Matter Condense', ko: '물질 응축' },
+  condenseBurstLabel:  { en: 'Condense',  ko: '분사' },
+  condenseCapReached:  { en: 'Stage limit reached', ko: '이번 시대 한도 도달' },
+  condenseStageLimit:  { en: 'Stage limit',  ko: '이번 시대 한도' },
+  condenseTooltip:     {
+    en: 'Spend Matter for an instant burst of Entropy. Limited per era — once the era cap is reached you must click and auto-collect for the rest.',
+    ko: '물질을 소모해 엔트로피를 즉시 분사합니다. 시대마다 한도가 있어, 한도에 도달하면 나머지는 클릭과 오토로 채워야 합니다.',
+  },
   // C-P0 a11y: screen-reader status announcements (discrete events, not per-frame).
   srStageEntered: { en: 'Stage {n}: {name}', ko: '{n}단계: {name}' },
   srReadyToCondense: { en: 'Ready to condense — activate the Condense button.', ko: '응축 준비 완료 — 응축 버튼을 누르세요.' },

@@ -131,6 +131,7 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     fusionsThisStage: 0,
     cometsThisStage: 0,
     comboThisStage: 0,
+    condenseBurstThisStage: 0,
     // v29: carry the frozen snapshot of the stage we just left.
     stageQuestProgress,
     // 🅠5: top up the active quest set with any quests newly eligible at this stage.

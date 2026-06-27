@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock, getEntropyGateFloor } from '../formulas';
+import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock, getEntropyGateFloor, getEntropyGateSpan } from '../formulas';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntityCost } from '../entities/types';
 import { getComboCapBonus } from '../reducers/helpers';
@@ -9,7 +9,7 @@ import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 import { getCondensationCoreCost } from '../prestige';
-import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP } from '../balance';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -108,6 +108,74 @@ describe('gameReducer', () => {
     const span = Math.max(1, STAGES[0].entropyThreshold - getEntropyGateFloor(0));
     expect(next.lastFusionEvent!.batchCount).toBeGreaterThan(0);
     expect(next.lastFusionEvent!.entropyBurst).toBeLessThanOrEqual(span * FUSION_BATCH_BURST_SPAN_CAP + 1e-6);
+  });
+
+  it('분사 (CONDENSE_BURST): spends matter, adds a span-capped entropy burst, tracks the per-stage budget', () => {
+    const stageIdx = 5; // stage 6
+    const stage = STAGES[stageIdx];
+    const span = getEntropyGateSpan(stageIdx);
+    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
+    const perFire = span * CONDENSE_SPAN_FRAC;
+    const state = {
+      ...createInitialGameState(0),
+      stageIdx,
+      entropy: getEntropyGateFloor(stageIdx) + 1, // well below the gate
+      quanta: cost * 100, // matter-rich
+      condenseBurstThisStage: 0,
+    };
+    const next = gameReducer(state, { type: 'CONDENSE_BURST' });
+    // Matter spent + entropy added by exactly one per-fire span fraction (far below the cap).
+    expect(next.quanta).toBeCloseTo(cost * 100 - cost, 2);
+    expect(next.entropy - state.entropy).toBeCloseTo(perFire, 2);
+    expect(next.condenseBurstThisStage).toBeCloseTo(perFire, 2);
+    expect(next.peakEntropy).toBeGreaterThanOrEqual(next.entropy);
+  });
+
+  it('분사 (CONDENSE_BURST): is bounded by CONDENSE_STAGE_CAP × span per stage (no gate-skip)', () => {
+    const stageIdx = 5;
+    const stage = STAGES[stageIdx];
+    const span = getEntropyGateSpan(stageIdx);
+    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
+    const stageBudget = span * CONDENSE_STAGE_CAP;
+    // Already at the cap → the per-stage budget is exhausted, button is a no-op.
+    const atCap = {
+      ...createInitialGameState(0),
+      stageIdx,
+      entropy: getEntropyGateFloor(stageIdx) + 1,
+      quanta: cost * 100,
+      condenseBurstThisStage: stageBudget,
+    };
+    expect(gameReducer(atCap, { type: 'CONDENSE_BURST' })).toBe(atCap); // no-op (returns same state)
+    // One step below the cap → the actual add is clamped to the REMAINING budget (< per-fire).
+    const perFire = span * CONDENSE_SPAN_FRAC;
+    const nearCap = { ...atCap, condenseBurstThisStage: stageBudget - perFire * 0.25 };
+    const fired = gameReducer(nearCap, { type: 'CONDENSE_BURST' });
+    expect(fired.condenseBurstThisStage).toBeCloseTo(stageBudget, 2); // capped exactly at the budget
+    expect(fired.entropy - nearCap.entropy).toBeCloseTo(perFire * 0.25, 2); // only the remainder
+  });
+
+  it('분사 (CONDENSE_BURST): no-op guards — insufficient matter, or already at/over the gate', () => {
+    const stageIdx = 5;
+    const stage = STAGES[stageIdx];
+    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
+    // Too poor to afford one 분사 → no-op.
+    const poor = {
+      ...createInitialGameState(0),
+      stageIdx,
+      entropy: getEntropyGateFloor(stageIdx) + 1,
+      quanta: cost - 1,
+      condenseBurstThisStage: 0,
+    };
+    expect(gameReducer(poor, { type: 'CONDENSE_BURST' })).toBe(poor);
+    // Already at/over the gate → 분사 funds progress TO the gate, never past it → no-op.
+    const atGate = {
+      ...createInitialGameState(0),
+      stageIdx,
+      entropy: stage.entropyThreshold,
+      quanta: cost * 100,
+      condenseBurstThisStage: 0,
+    };
+    expect(gameReducer(atGate, { type: 'CONDENSE_BURST' })).toBe(atGate);
   });
 
   it('Overhaul-3: advancing a stage parks entropy at the new gate floor (no condense overshoot carry)', () => {

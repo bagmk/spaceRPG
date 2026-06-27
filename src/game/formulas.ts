@@ -485,6 +485,14 @@ export function getEntropyGateProgress(entropy: number, stageIdx: number): numbe
   return clamp((entropy - floor) / span, 0, 1);
 }
 
+/** The stage's entropy gate SPAN in KB = gate threshold − the floor the player entered
+ *  with. The same accessor the comet/fusion span clamps use (handleAbsorbComet, fuseOnce);
+ *  drives the 분사 (Condensation Burst) per-fire add + per-stage cap. Floored at 1 KB. */
+export function getEntropyGateSpan(stageIdx: number): number {
+  const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
+  return Math.max(1, stage.entropyThreshold - getEntropyGateFloor(stageIdx));
+}
+
 /**
  * Entropy rate: fraction of matter that converts to entropy (in KB).
  * Entropy scales linearly with matter so it naturally follows the same
