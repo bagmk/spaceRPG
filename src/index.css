@@ -1759,16 +1759,19 @@ button.hud-stage-title--clickable:hover {
 .entity-inv__filter--on { background: rgba(255, 255, 255, 0.13); color: #fff; }
 
 .owned-card { position: relative; }
-/* Type chip on the level line — at-a-glance 공격(click, amber) vs 자동(rift, teal). */
+/* Type chip pinned to the card's TOP-RIGHT corner — at-a-glance 공격(click, amber) vs
+   자동(rift, teal). Top-left holds the trait badge; the equip grid has no fav star. */
 .owned-card__type {
-  display: inline-block;
-  font-size: 0.62rem;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  padding: 0 4px;
+  padding: 1px 5px;
   border-radius: 5px;
-  vertical-align: middle;
-  margin-right: 3px;
+  z-index: 2;
+  pointer-events: none;
 }
 .owned-card__type--click { color: #ffcf8f; background: rgba(255, 167, 77, 0.18); }
 .owned-card__type--rift  { color: #8fe3ef; background: rgba(77, 208, 225, 0.18); }
