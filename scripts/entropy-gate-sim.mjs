@@ -237,8 +237,9 @@ function bestClickRarity(stageId) {
   const r = bestRarity(stageId);
   return r === 'legendary' ? 'epic' : r;
 }
-// Slot pacing (#39, stage-gated): click slot2@S5 / slot3@S9; rift slot2@S7 / slot3@S12.
-const clickSlots = (s) => 1 + (s >= 5 ? 1 : 0) + (s >= 9 ? 1 : 0);
+// Slot pacing (stage-gated): click slot2@S4 (user, was S5) / slot3@S9; rift slot2@S7 / slot3@S12.
+// Lockstep with balance.ts EQUIP_SLOT_UNLOCKS — re-pin ENTROPY_THRESHOLDS after changing.
+const clickSlots = (s) => 1 + (s >= 4 ? 1 : 0) + (s >= 9 ? 1 : 0);
 const riftSlots = (s) => 1 + (s >= 7 ? 1 : 0) + (s >= 12 ? 1 : 0);
 
 /**

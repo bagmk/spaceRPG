@@ -75,9 +75,6 @@ export function DropDiscoveryToast({ entityId, stageId, rarity, language, onDism
         <EntityGlyph entity={entity} color={color} />
       </span>
       <span className="drop-discovery-toast__name">{entityName(entity, language)}</span>
-      <span className="drop-discovery-toast__badge" style={{ color }}>
-        {t(language, 'dropDiscoveredNewBadge')}
-      </span>
     </button>
   );
 }

@@ -2119,10 +2119,14 @@ button.hud-stage-title--clickable:hover {
   transform: translateX(-50%);
   z-index: 210;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* NEW badge removed (user) → 2 cols: glyph + name. overflow:hidden clips the EntityGlyph so it
+     can't spill past the rounded box (the box-shadow glow draws outside, unaffected). */
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 4px 12px;
   padding: 12px 18px;
+  overflow: hidden;
+  max-width: min(340px, calc(100vw - 24px));
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--rarity-color, #6db86d) 60%, transparent);
   background: linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(12, 14, 22, 0.96));

@@ -214,7 +214,8 @@ describe('set bonuses + slot unlocks (Phase 3)', () => {
 
   it('derives slot unlocks from stage progress (stage-gated, #39 pacing)', () => {
     expect(getDerivedUnlockedSlotCount(1, {})).toBe(1);
-    expect(getDerivedUnlockedSlotCount(4, {})).toBe(1); // slot 2 not until stage 5
+    expect(getDerivedUnlockedSlotCount(3, {})).toBe(1); // slot 2 not until stage 4
+    expect(getDerivedUnlockedSlotCount(4, {})).toBe(2); // slot 2 unlocks at stage 4 (user, was S5)
     expect(getDerivedUnlockedSlotCount(5, {})).toBe(2);
     expect(getDerivedUnlockedSlotCount(9, {})).toBe(3);
     // Almanac size no longer unlocks slots — slot pacing is stage-gated now.

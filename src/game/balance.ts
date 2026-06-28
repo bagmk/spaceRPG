@@ -438,16 +438,19 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   1: 2.093e3,
   2: 1.376e4,
   3: 4.254e4,
-  4: 7.707e4,
-  5: 1.722e5,
-  6: 5.703e5,
-  7: 1.656e6,
-  8: 4.271e6,
-  9: 6.227e6,
-  10: 9.163e6,
-  11: 1.404e7,
-  12: 2.139e7,
-  13: 2.964e7,
+  // Re-pinned 2026-06-28 after EQUIP click-slot 2 moved S5→S4 (sim clickSlots mirrored): the
+  // reference gains a 2nd click slot one stage earlier, so S4-S13 gates rose slightly to hold the
+  // per-stage targets (so it does NOT make S4 faster); S14-16 unchanged. ALL INVARIANTS PASS.
+  4: 8.138e4,
+  5: 1.766e5,
+  6: 5.798e5,
+  7: 1.665e6,
+  8: 4.280e6,
+  9: 6.237e6,
+  10: 9.173e6,
+  11: 1.405e7,
+  12: 2.140e7,
+  13: 2.965e7,
   14: 9.343e7,
   15: 2.602e8,
   16: 3.254e8,
@@ -1266,7 +1269,7 @@ export const MILESTONE_MAX_SCALE = 6;
 // not handed out by mid-stage-3 (the old minAlmanacCount:30 gate). (Reworked by
 // the hexagon model in a later phase; kept stage-gated until then.)
 export const EQUIP_SLOT_UNLOCKS: { slot: number; minStageId?: number; minAlmanacCount?: number }[] = [
-  { slot: 2, minStageId: 5 },
+  { slot: 2, minStageId: 4 }, // user: 2nd click slot one stage earlier (was S5). Sim clickSlots mirrored + thresholds re-pinned.
   { slot: 3, minStageId: 9 },
 ];
 
