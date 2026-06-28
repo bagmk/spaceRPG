@@ -292,6 +292,12 @@ interface ParticleFieldProps {
   clickSlots: string[];
   /** Auto Power (autoFlatMult) — scales rift particle intensity/size. */
   riftPower: number;
+  /** 물질 응축 charge 0..1 — matter income fills it; drives the CORE charge halo. */
+  condenseCharge01: number;
+  /** Core is fully charged & legal to fire — tapping the core fires the burst (not gather). */
+  condenseReady: boolean;
+  /** Fire the condense burst (dispatch + visual + reset charge). Called on a charged core tap. */
+  onCoreBurst?: () => void;
   onGatherClick: (x: number, y: number, forceCrit: boolean) => void;
   /** Tapping the bottom-left spatial rift opens the rift gear page. */
   onRiftClick?: () => void;
@@ -301,6 +307,8 @@ interface ParticleFieldProps {
 export interface ParticleFieldHandle {
   /** Advance physics + render one frame. Driven by GameScreen's master rAF loop. */
   tick: (now: number, dt: number) => void;
+  /** "Shoot a chunk" burst at the central core — the condense-fire visual. */
+  fireCondenseBurst: () => void;
 }
 
 function stepClusterPhysics(
@@ -874,6 +882,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   riftSlots,
   clickSlots,
   riftPower,
+  condenseCharge01,
+  condenseReady,
+  onCoreBurst,
   onGatherClick,
   onRiftClick,
   onAbsorbComet,
@@ -881,6 +892,12 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<CanvasWorld | null>(null);
   const sizeRef = useRef({ width: 0, height: 0 });
+  // Latest condense charge/readiness kept in refs so the pointer/keyboard handlers and the
+  // draw loop read fresh values without re-binding (mirrors the tickRef latest-closure pattern).
+  const condenseChargeRef = useRef(condenseCharge01);
+  condenseChargeRef.current = condenseCharge01;
+  const condenseReadyRef = useRef(condenseReady);
+  condenseReadyRef.current = condenseReady;
   const riftRef = useRef<RiftState>({ nextSpawnAt: 0, spawnIdx: 0, motes: [] });
   const equippedRef = useRef<StageEntity[]>([]);
   useEffect(() => {
@@ -1510,6 +1527,8 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
       showThresholdRing: quanta >= effectiveThreshold && !interactionLocked,
       now,
       idlePulse: totalClicks === 0,
+      charge01: condenseChargeRef.current,
+      charged: condenseReadyRef.current,
     });
     drawCluster({
       ctx,
@@ -1593,7 +1612,23 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   // the imperative handle always invokes the newest one (no stale closures).
   const tickRef = useRef(tickFrame);
   tickRef.current = tickFrame;
-  useImperativeHandle(ref, () => ({ tick: (now, dt) => tickRef.current(now, dt) }), []);
+  // "Shoot a chunk" condense-fire burst at the CENTRAL core. Dims come from sizeRef (CanvasWorld
+  // has no width/height); a latest-closure ref keeps `stage` fresh so the burst sprite matches the
+  // CURRENT stage (an inlined []-dep handle would freeze stage at mount → always stage-1 sprites).
+  const fireCondenseBurstImpl = () => {
+    const w = worldRef.current;
+    if (!w) return;
+    const cx = sizeRef.current.width / 2;
+    const cy = sizeRef.current.height / 2;
+    w.bursts.push(...createBurstSet(cx, cy, 14, '#bb8cff', 6, stage.id));
+    w.shockwaves.push(createShockwave('#bb8cff'));
+  };
+  const fireBurstRef = useRef(fireCondenseBurstImpl);
+  fireBurstRef.current = fireCondenseBurstImpl;
+  useImperativeHandle(ref, () => ({
+    tick: (now, dt) => tickRef.current(now, dt),
+    fireCondenseBurst: () => fireBurstRef.current(),
+  }), []);
 
   return (
     <div
@@ -1642,6 +1677,11 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           if (hitRogue) {
             // 🅠2: clicking a comet absorbs it (no normal gather-click fires).
             absorbComet(hitRogue);
+          } else if (condenseReadyRef.current && onCoreBurst) {
+            // 물질 응축: a tap while the core is FULLY charged fires the condense burst
+            // INSTEAD of gathering (deliberate — no accidental matter loss; the player taps
+            // the glowing core when ready). Latest readiness via ref (no handler re-bind).
+            onCoreBurst();
           } else {
             onGatherClick(x, y, false);
           }
@@ -1719,7 +1759,12 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         if (interactionLocked) return;
         if (event.key === ' ' || event.key === 'Enter') {
           event.preventDefault();
-          onGatherClick(sizeRef.current.width / 2, sizeRef.current.height / 2, false);
+          // Mirror the pointer path: a charged core fires the condense burst instead of gathering.
+          if (condenseReadyRef.current && onCoreBurst) {
+            onCoreBurst();
+          } else {
+            onGatherClick(sizeRef.current.width / 2, sizeRef.current.height / 2, false);
+          }
         }
       }}
       role="button"

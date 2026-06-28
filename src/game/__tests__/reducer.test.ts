@@ -110,22 +110,21 @@ describe('gameReducer', () => {
     expect(next.lastFusionEvent!.entropyBurst).toBeLessThanOrEqual(span * FUSION_BATCH_BURST_SPAN_CAP + 1e-6);
   });
 
-  it('분사 (CONDENSE_BURST): spends matter, adds a span-capped entropy burst, tracks the per-stage budget', () => {
+  it('분사 (CONDENSE_BURST): adds a span-capped entropy burst, tracks the per-stage budget (charge-funded, no wallet spend)', () => {
     const stageIdx = 5; // stage 6
-    const stage = STAGES[stageIdx];
     const span = getEntropyGateSpan(stageIdx);
-    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
     const perFire = span * CONDENSE_SPAN_FRAC;
     const state = {
       ...createInitialGameState(0),
       stageIdx,
       entropy: getEntropyGateFloor(stageIdx) + 1, // well below the gate
-      quanta: cost * 100, // matter-rich
+      quanta: 1000,
       condenseBurstThisStage: 0,
     };
     const next = gameReducer(state, { type: 'CONDENSE_BURST' });
-    // Matter spent + entropy added by exactly one per-fire span fraction (far below the cap).
-    expect(next.quanta).toBeCloseTo(cost * 100 - cost, 2);
+    // Redesign: condense is funded by the transient CORE charge (UI-side), NOT the wallet, so
+    // quanta is untouched; entropy is added by exactly one per-fire span fraction (below the cap).
+    expect(next.quanta).toBe(state.quanta);
     expect(next.entropy - state.entropy).toBeCloseTo(perFire, 2);
     expect(next.condenseBurstThisStage).toBeCloseTo(perFire, 2);
     expect(next.peakEntropy).toBeGreaterThanOrEqual(next.entropy);
@@ -154,25 +153,15 @@ describe('gameReducer', () => {
     expect(fired.entropy - nearCap.entropy).toBeCloseTo(perFire * 0.25, 2); // only the remainder
   });
 
-  it('분사 (CONDENSE_BURST): no-op guards — insufficient matter, or already at/over the gate', () => {
+  it('분사 (CONDENSE_BURST): no-op guard — already at/over the gate (charge-funded, no matter guard)', () => {
     const stageIdx = 5;
     const stage = STAGES[stageIdx];
-    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
-    // Too poor to afford one 분사 → no-op.
-    const poor = {
-      ...createInitialGameState(0),
-      stageIdx,
-      entropy: getEntropyGateFloor(stageIdx) + 1,
-      quanta: cost - 1,
-      condenseBurstThisStage: 0,
-    };
-    expect(gameReducer(poor, { type: 'CONDENSE_BURST' })).toBe(poor);
     // Already at/over the gate → 분사 funds progress TO the gate, never past it → no-op.
     const atGate = {
       ...createInitialGameState(0),
       stageIdx,
       entropy: stage.entropyThreshold,
-      quanta: cost * 100,
+      quanta: 0,
       condenseBurstThisStage: 0,
     };
     expect(gameReducer(atGate, { type: 'CONDENSE_BURST' })).toBe(atGate);

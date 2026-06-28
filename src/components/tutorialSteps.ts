@@ -35,6 +35,8 @@ export interface TutorialStepCtx {
   canShowShop: boolean;
   hasActiveBoost: boolean;
   canCondense: boolean;
+  /** Stage-1 condense CORE is fully charged (matter income filled it) → tappable to fire. */
+  condenseChargedReady: boolean;
   hasSeenCashShopTutorial: boolean;
   flags: Record<string, boolean>;
 }
@@ -91,6 +93,16 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     suppressedByAllDismissed: false,
     eligible: (c) => c.stageId === 1 && flag(c, 'matter-time-intro'),
     seen: (c) => flag(c, 'auto-income-intro'),
+  },
+  {
+    // 물질 응축 onboarding: fires once when the central CORE first reaches full charge on
+    // stage 1 — tells the player the crack leaks matter that charges the core, then to tap
+    // the glowing core to condense (raising entropy toward the gate). One-shot via flag.
+    id: 'condense-core', flagId: 'condense-core', anchor: 'field',
+    messageKey: 'condenseCoreTutorial', autoCloseMs: 9000,
+    suppressedByAllDismissed: false,
+    eligible: (c) => c.stageId === 1 && c.condenseChargedReady,
+    seen: (c) => flag(c, 'condense-core'),
   },
   {
     id: 'quest-milestone-intro', flagId: 'quest-milestone-intro', anchor: 'quest',

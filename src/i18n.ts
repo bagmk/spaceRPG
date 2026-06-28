@@ -36,6 +36,12 @@ export const STRINGS = {
     en: 'Spend Matter for an instant burst of Entropy. Limited per era — once the era cap is reached you must click and auto-collect for the rest.',
     ko: '물질을 소모해 엔트로피를 즉시 분사합니다. 시대마다 한도가 있어, 한도에 도달하면 나머지는 클릭과 오토로 채워야 합니다.',
   },
+  // 물질 응축 redesign: one-shot stage-1 hint shown when the central CORE first reaches full
+  // charge — the crack leaks matter that charges the core; tap the glowing core to condense.
+  condenseCoreTutorial: {
+    en: 'The crack leaks Matter every second, charging the core. When it glows full, tap the core to condense — Entropy surges toward the gate.',
+    ko: '균열에서 매초 물질이 새어 나와 핵을 충전합니다. 핵이 가득 차 빛나면 탭해서 응축하세요 — 엔트로피가 관문 쪽으로 솟구칩니다.',
+  },
   // C-P0 a11y: screen-reader status announcements (discrete events, not per-frame).
   srStageEntered: { en: 'Stage {n}: {name}', ko: '{n}단계: {name}' },
   srReadyToCondense: { en: 'Ready to condense — activate the Condense button.', ko: '응축 준비 완료 — 응축 버튼을 누르세요.' },

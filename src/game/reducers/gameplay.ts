@@ -3,10 +3,8 @@
 import { TUNING } from '../constants';
 import {
   COLLISION_ENTROPY_SPAN_CAP,
-  CONDENSE_COST_FRAC,
   CONDENSE_SPAN_FRAC,
   CONDENSE_STAGE_CAP,
-  ENTITY_COST_ANCHORS,
   ENTROPY_W_CLICK,
 } from '../balance';
 import {
@@ -428,8 +426,6 @@ export function handleCondenseBurst(state: GameState): GameState {
   const stage = getCurrentStage(state);
   // No-op if already at/over the gate — 분사 funds progress TO the gate, never past it.
   if (state.entropy >= stage.entropyThreshold) return state;
-  const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
-  if (state.quanta < cost) return state;
   const span = getEntropyGateSpan(state.stageIdx);
   // Remaining per-stage 분사 budget: the cap minus what 분사 has already contributed this stage.
   const remainingBudget = span * CONDENSE_STAGE_CAP - state.condenseBurstThisStage;
@@ -443,7 +439,6 @@ export function handleCondenseBurst(state: GameState): GameState {
   const nextEntropy = safeAdd(state.entropy, add);
   return withCurrentUniverseEndingProgress({
     ...state,
-    quanta: Math.max(0, state.quanta - cost),
     entropy: nextEntropy,
     peakEntropy: Math.max(state.peakEntropy, nextEntropy),
     condenseBurstThisStage: state.condenseBurstThisStage + add,

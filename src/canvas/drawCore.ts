@@ -11,6 +11,10 @@ interface DrawCoreArgs {
   showThresholdRing: boolean;
   now: number;
   idlePulse: boolean;
+  /** 물질 응축 charge 0..1 — matter income fills it; draws a purple charge halo on the core. */
+  charge01: number;
+  /** Fully charged & legal to fire — the halo animates/pulses to invite the tap. */
+  charged: boolean;
 }
 
 export function drawCore({
@@ -22,6 +26,8 @@ export function drawCore({
   showThresholdRing,
   now,
   idlePulse,
+  charge01,
+  charged,
 }: DrawCoreArgs): void {
   const cx = width / 2;
   const cy = height / 2;
@@ -72,6 +78,30 @@ export function drawCore({
     ctx.beginPath();
     ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // 물질 응축 charge halo: a purple ring grows + brightens with charge01; at full charge it
+  // pulses to invite the tap that fires the condense burst.
+  if (charge01 > 0.001) {
+    const r = coreRadius * (1.18 + charge01 * 0.25);
+    ctx.save();
+    ctx.strokeStyle = '#bb8cff';
+    ctx.globalAlpha = 0.25 + charge01 * 0.5;
+    ctx.lineWidth = 1.5 + charge01 * 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    if (charged) {
+      const p = Math.sin(now * 0.006) * 0.5 + 0.5;
+      ctx.globalAlpha = 0.4 + p * 0.5;
+      ctx.lineWidth = 2.5 + p * 2;
+      ctx.shadowColor = '#bb8cff';
+      ctx.shadowBlur = 14 + p * 16;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 6 + p * 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 }

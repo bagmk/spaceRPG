@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CSSProperties, Dispatch } from 'react';
 import { TUNING } from '../game/constants';
@@ -44,7 +44,7 @@ import {
   ENHANCE_UNLOCK_STAGE_ID,
   SHOP_UNLOCK_STAGE_ID,
 } from '../game/balance';
-import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
+import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
@@ -260,9 +260,12 @@ export function GameScreen({
     !endingChooserDismissed;
   const canCondense = canCondenseNow(state);
   const condenseHint = t(language, 'hudEntropyGateHint');
-  // 분사 (Condensation Burst): spend matter → a span-capped entropy burst. The 30s cooldown is
-  // UI-side (timestamp); the reducer enforces cost / per-stage cap / gate guards.
-  const [condenseBurstAt, setCondenseBurstAt] = useState(0);
+  // 물질 응축 (condense): matter income charges the central CORE; tapping the FULL-charge core
+  // fires a span-capped entropy burst (no gauge, no button). Charge is TRANSIENT React state
+  // (fills from positive state.quanta deltas, resets on fire + on stage change); the per-stage
+  // entropy cap still persists in state.condenseBurstThisStage, so NO save-schema bump.
+  const [condenseCharge, setCondenseCharge] = useState(0); // transient matter accumulated toward next fire
+  const prevQuantaRef = useRef(state.quanta);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
@@ -271,26 +274,37 @@ export function GameScreen({
     transitionPhase === 'bursting' ||
     state.selectedEndingId !== null ||
     canChooseEnding;
-  // 분사 readiness/cap/cooldown — derived once per render. Visible only while still filling the
-  // gate (once canCondense, use the stage Condense instead).
-  const CONDENSE_COOLDOWN_MS = 30_000;
+  // Condense readiness/charge/cap — derived once per render. The CORE glows as matter income
+  // fills `condenseCharge` toward one chunk's worth (`cost`); at full charge the core is tappable
+  // (chargedReady) to fire the burst. The old 30s cooldown is replaced by the charge-refill time.
   const condenseBurst = useMemo(() => {
     const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
     const span = getEntropyGateSpan(state.stageIdx);
     const stageBudget = span * CONDENSE_STAGE_CAP;
     const capReached = state.condenseBurstThisStage >= stageBudget - 1e-6;
-    const cooldownLeftMs = Math.max(0, condenseBurstAt + CONDENSE_COOLDOWN_MS - wallNow);
+    const charge01 = Math.min(1, condenseCharge / Math.max(1, cost));
     return {
       cost,
-      ready01: Math.min(1, state.quanta / Math.max(1, cost)),
+      charge01,
       capFrac: stageBudget > 0 ? Math.min(1, state.condenseBurstThisStage / stageBudget) : 1,
       capReached,
-      cooldownLeftMs,
       visible: !isViewingPastStage && !canCondense && !state.completedRun,
-      disabled:
-        state.quanta < cost || capReached || cooldownLeftMs > 0 || interactionLocked || canCondense,
+      chargedReady: charge01 >= 1 && !capReached && !interactionLocked && !canCondense,
     };
-  }, [stage.id, state.stageIdx, state.quanta, state.condenseBurstThisStage, state.completedRun, condenseBurstAt, wallNow, isViewingPastStage, canCondense, interactionLocked]);
+  }, [stage.id, state.stageIdx, condenseCharge, state.condenseBurstThisStage, state.completedRun, isViewingPastStage, canCondense, interactionLocked]);
+  // Charge fill: every positive state.quanta delta (covers BOTH click AND auto income, since
+  // both raise state.quanta) accumulates toward the next condense fire.
+  useEffect(() => {
+    const delta = state.quanta - prevQuantaRef.current;
+    prevQuantaRef.current = state.quanta;
+    if (delta > 0) setCondenseCharge((c) => c + delta);
+  }, [state.quanta]);
+  // Reset the transient charge on stage entry (condenseBurstThisStage cap also resets in-state).
+  useEffect(() => {
+    setCondenseCharge(0);
+    prevQuantaRef.current = state.quanta;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.stageIdx]);
   useBoostNotifications(state.shopBoosts, language);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [comboDisplay, setComboDisplay] = useState<ComboDisplay | null>(null);
@@ -301,6 +315,15 @@ export function GameScreen({
   useAudioUnlockOnPointer(soundManager);
   const logicAccumulator = useRef(0);
   const particleFieldRef = useRef<ParticleFieldHandle>(null);
+  // Fire the condense burst: dispatch the (sim-neutral) entropy add, reset the transient charge,
+  // and trigger the "shoot a chunk" core burst visual.
+  const handleCondenseBurst = useCallback(() => {
+    dispatch({ type: 'CONDENSE_BURST' });
+    soundManager?.playUITap();
+    setCondenseCharge(0);
+    prevQuantaRef.current = state.quanta;
+    particleFieldRef.current?.fireCondenseBurst?.();
+  }, [dispatch, soundManager, state.quanta]);
   const fieldRef = useRef<HTMLElement | null>(null);
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);
@@ -378,6 +401,7 @@ export function GameScreen({
       canShowShop,
       hasActiveBoost,
       canCondense,
+      condenseChargedReady: condenseBurst.chargedReady,
       hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
       flags: state.tutorialFlags,
     };
@@ -402,6 +426,7 @@ export function GameScreen({
     };
   }, [
     canCondense,
+    condenseBurst.chargedReady,
     canShowShop,
     equipUnlocked,
     enhanceUnlocked,
@@ -444,6 +469,9 @@ export function GameScreen({
       canShowShop,
       hasActiveBoost,
       canCondense,
+      // Not used by the in-panel SPARKLE selector (only by the floating bubble step);
+      // supplied to satisfy the shared ctx type.
+      condenseChargedReady: false,
       hasSeenCashShopTutorial: state.hasSeenCashShopTutorial,
       flags: state.tutorialFlags,
     });
@@ -646,31 +674,10 @@ export function GameScreen({
     };
   }, [dispatch, language, soundManager, state.lastCollisionEvent]);
 
-  // 🅠3: passive auto-income floating text — "+N/s · <entity>" rising from the
-  // rift (bottom-left). Emitted ~1/sec by handleTick; transient (no CLEAR needed,
-  // the throttle in the reducer controls re-emission).
-  useEffect(() => {
-    if (!state.lastAutoIncomeEvent) {
-      return undefined;
-    }
-    const event = state.lastAutoIncomeEvent;
-    const entity = findEntityById(event.entityId);
-    const name = entity ? entityName(entity, language) : '';
-    const text = `+${formatFloatingGain(event.gained)}/s${name ? ` · ${name}` : ''}`;
-    const height = fieldRef.current?.clientHeight ?? 600;
-    // Anchor the float just above the bottom-left crack (rx≈46, ry≈height-84)
-    // so auto income reads as flowing from the rift, not floating far above it.
-    const x = 46 + (Math.random() - 0.5) * 18;
-    const y = (height - 84) + 40 - Math.random() * 10;
-    setFloatingEntries((current) => [
-      ...current.slice(-TUNING.MAX_FLOATING_NUMBERS + 1),
-      { id: event.id, x, y, text, variant: 'auto' },
-    ]);
-    const timeoutId = window.setTimeout(() => {
-      setFloatingEntries((current) => current.filter((entry) => entry.id !== event.id));
-    }, TUNING.FLOAT_AUTO_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [language, state.lastAutoIncomeEvent]);
+  // (removed) The transient teal "+N/s" auto-income FLOAT was a duplicate of the canonical
+  // crack-income readout (.crack-income-readout, bottom-left, flush with the 축척 ruler row).
+  // Auto income still raises state.quanta (and charges the condense core); only the redundant
+  // floating text was dropped so "+N/s" shows exactly once.
 
   // Persona #10: chime once when a NEW entity is discovered (the gear-chase
   // payoff beat). Reuses the triumphant quest-claim sting; the toast itself
@@ -877,6 +884,9 @@ export function GameScreen({
           riftSlots={state.riftSlots}
           clickSlots={state.equippedSlots}
           riftPower={modifiers.autoFlatMult}
+          condenseCharge01={condenseBurst.charge01}
+          condenseReady={condenseBurst.chargedReady}
+          onCoreBurst={handleCondenseBurst}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -1063,9 +1073,8 @@ export function GameScreen({
               <span className="hud-entropy-readout">
                 <span className="qsym hud-quanta-glyph" aria-label={t(language, 'hudQuanta')}>⚛</span>
                 <strong className="hud-quanta-value">{formatGameNumberShort(state.quanta)}</strong>
-                {displayedAutoRate > 0 && !isViewingPastStage ? (
-                  <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
-                ) : null}
+                {/* Dedupe: the "+N/s" auto-income now shows once, flush-bottom-left as
+                    .crack-income-readout (aligned with the 축척 ruler row). */}
                 <span className="hud-stones-readout">{`◆ ${formatGameNumberShort(state.enhanceStones)}`}</span>
               </span>
             </div>
@@ -1091,36 +1100,9 @@ export function GameScreen({
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
                   </div>
                 </div>
-                {condenseBurst.visible ? (
-                  <div className="hud-condense-burst">
-                    <div className="hud-condense-burst-gauge" title={t(language, 'condenseTooltip')}>
-                      <span className="hud-condense-burst-label">{t(language, 'condenseGaugeLabel')}</span>
-                      <div className="hud-gauge hud-condense-burst-bar" aria-hidden="true">
-                        <div className="hud-gauge-fill hud-condense-burst-fill" style={{ width: `${Math.round(condenseBurst.ready01 * 100)}%` }} />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="hud-condense-burst-btn"
-                      disabled={condenseBurst.disabled}
-                      title={t(language, 'condenseTooltip')}
-                      aria-label={`${t(language, 'condenseBurstLabel')} — ⚛ ${formatGameNumberShort(condenseBurst.cost)}`}
-                      onClick={() => {
-                        dispatch({ type: 'CONDENSE_BURST' });
-                        soundManager?.playUITap();
-                        setCondenseBurstAt(Date.now());
-                      }}
-                    >
-                      <span className="hud-condense-burst-btn-name">{t(language, 'condenseBurstLabel')}</span>
-                      <span className="hud-condense-burst-cost">{`⚛ ${formatGameNumberShort(condenseBurst.cost)}`}</span>
-                    </button>
-                    {condenseBurst.capFrac >= 0.8 ? (
-                      <span className="hud-condense-burst-cap">
-                        {condenseBurst.capReached ? t(language, 'condenseCapReached') : t(language, 'condenseStageLimit')}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
+                {/* 물질 응축 redesign: the gauge + 분사 button are gone. Matter income now charges
+                    the central CORE (see ParticleField condenseCharge01); tapping the full-charge
+                    core fires the burst. The HUD progress stack holds only the entropy meter. */}
               </div>
             ) : null}
           </div>
@@ -1275,6 +1257,11 @@ export function GameScreen({
           document.body,
         )}
         <ScaleIndicator stageId={displayStage.id} language={language} />
+        {/* Canonical single "+N/s" crack-income readout — position:fixed flush-bottom-LEFT,
+            sharing the 축척 ruler's bottom anchor so they sit on the same row. */}
+        {displayedAutoRate > 0 && !isViewingPastStage ? (
+          <div className="crack-income-readout" aria-hidden="true">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</div>
+        ) : null}
         {/* #42-fix: the progress-based lore toast is gone — era-records now unfold
             via the claimable quest alarm below (one alarm, claimable-synced) and
             in the almanac on claim. */}

@@ -857,6 +857,10 @@ button.hud-stage-title--clickable:hover {
   color: rgba(226, 233, 248, 0.92);
   font-weight: 600;
   text-align: center;
+  /* Global wrap guard (was unconstrained → KO unlock labels could spill out of the slot). */
+  max-width: 100%;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* ── #44 HEXAGON equip layout ──────────────────────────────────────────────
@@ -1002,7 +1006,24 @@ button.hud-stage-title--clickable:hover {
 @media (max-width: 560px) {
   .hex-board { max-width: 100%; }
   .hex-bonus { max-width: 100%; font-size: 10px; }
-  .entity-fs__body .hex-slot { min-height: 80px; }
+  /* (1) shrink slots so they stop colliding on a ~190-260px board */
+  .entity-fs__body .hex-slot { width: clamp(56px, 30%, 78px); min-height: 72px; }
+  /* (2) make the board a bit BIGGER before slots can collide */
+  .equip-loadout .hex-board { width: clamp(220px, 64vw, 300px); }
+  /* (3) stack the stat aside ABOVE the hex so the hex gets full width */
+  .equip-loadout { flex-direction: column; gap: 8px; max-width: 100%; }
+  .equip-statstack { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 6px; }
+  .equip-statstack__row { flex: 1 1 calc(50% - 3px); padding: 5px 7px; }
+  .equip-statstack__icon { font-size: 13px; }
+  .equip-statstack__label { font-size: 9px; }
+  .equip-statstack__value { font-size: 12px; }
+  /* (4) constrain the unlock-hint + name text so they wrap INSIDE the slot, no spill */
+  .equip-slot-card__hint { font-size: 9px; max-width: 100%; line-height: 1.15; word-break: keep-all; overflow-wrap: anywhere; }
+  .equip-slot-card__lock { font-size: 12px; }
+  .equip-slot-card__name { font-size: 10px; }
+  .equip-slot-card__glyph { width: 38px; height: 38px; }
+  .entity-fs__body .equip-slot-card { min-height: 78px; padding: 8px 5px 8px; gap: 3px; }
+  .hex-slot__wild-tag { font-size: 7px; top: 3px; left: 5px; }
 }
 
 .equip-picker {
@@ -2021,6 +2042,14 @@ button.hud-stage-title--clickable:hover {
 .quest-claim-rollup__stones { font-family: var(--mono); font-size: 13px; font-weight: 700; color: #9fd0ff; }
 @keyframes quest-claim-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes enhance-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+/* Mobile: shrink the intrinsic size only (position + animation unchanged). */
+@media (max-width: 560px) {
+  .quest-claim-rollup__card { padding: 14px 20px; gap: 5px; border-radius: 14px; max-width: calc(100vw - 48px); }
+  .quest-claim-rollup__tag { font-size: 10px; }
+  .quest-claim-rollup__title { font-size: 13px; }
+  .quest-claim-rollup__matter { font-size: 20px; }
+  .quest-claim-rollup__stones { font-size: 12px; }
+}
 
 /* ════ Persona #10: floating "발견!" NEW-discovery reveal toast ════
    Top-center so it never collides with the bottom quest-milestone alarm. Reuses
@@ -2105,6 +2134,21 @@ button.hud-stage-title--clickable:hover {
     animation: none;
     transform: translateX(-50%);
   }
+}
+/* Mobile: shrink the intrinsic size + cap the width so the 1fr name column can't balloon. */
+@media (max-width: 560px) {
+  .drop-discovery-toast {
+    padding: 8px 12px;
+    gap: 3px 9px;
+    max-width: calc(100vw - 24px);
+    border-radius: 12px;
+  }
+  .drop-discovery-toast--rare { padding: 10px 14px; }
+  .drop-discovery-toast__glyph { width: 30px; height: 30px; }
+  .drop-discovery-toast--rare .drop-discovery-toast__glyph { width: 36px; height: 36px; }
+  .drop-discovery-toast__tag { font-size: 10px; letter-spacing: 0.12em; }
+  .drop-discovery-toast__name { font-size: 12px; }
+  .drop-discovery-toast__badge { font-size: 9px; padding: 1px 6px; }
 }
 
 /* ════ Persona L: codex collection-peak celebration ════
@@ -2291,7 +2335,11 @@ button.hud-stage-title--clickable:hover {
 }
 
 @media (max-width: 640px) {
-  .entity-fs__topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  /* Safe-area top padding so the header clears the status bar / notch; tighter gap +
+     smaller wallet so 장착+물질+강화석+?+✕ fit one row (less wrap pressure). */
+  .entity-fs__topbar { flex-wrap: wrap; gap: 6px; padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .entity-fs__wallet span { font-size: 8px; }
+  .entity-fs__wallet strong { font-size: 12px; }
   .entity-fs__tab { padding: 8px 14px; font-size: 13px; }
   .entity-fs__body { padding: 14px 12px 32px; }
   .gacha-altar__slots { gap: 10px; }
@@ -9150,9 +9198,12 @@ button.stat-header-item {
   place-items: center;
   padding: 18px;
   pointer-events: auto;
+  /* See-through backdrop so the live .equip-statstack values behind stay legible and update
+     as you tap 강화. No blur — it would smear the very stat numbers the user wants to read;
+     the opaque card (0.98/0.99 gradient) still reads fine over the lighter wash. */
   background:
-    linear-gradient(90deg, rgba(5, 7, 13, 0.35), rgba(5, 7, 13, 0.76)),
-    rgba(5, 7, 13, 0.48);
+    linear-gradient(90deg, rgba(5, 7, 13, 0.12), rgba(5, 7, 13, 0.34)),
+    rgba(5, 7, 13, 0.18);
 }
 
 .entity-detail-card {
@@ -9370,9 +9421,20 @@ button.stat-header-item {
   }
 
   .entity-detail-card {
-    width: min(360px, calc(100vw - 28px));
-    max-height: min(520px, calc(100dvh - 32px));
+    /* Shrink + nudge down (with place-items:center) so the top stat rows behind the
+       see-through backdrop stay visible and update live as you tap 강화. */
+    width: min(300px, calc(100vw - 72px));
+    max-height: min(440px, calc(100dvh - 120px));
+    margin-top: auto;
+    transform: translateY(24px);
+    padding: 16px 16px 14px;
   }
+  .entity-detail-card__visual { height: 88px; }
+  .entity-detail-card__visual .entity-glyph,
+  .entity-detail-card--legendary .entity-detail-card__visual .entity-glyph { width: 72px; height: 72px; }
+  .entity-detail-card__name { font-size: 18px; }
+  .entity-detail-card__formula { font-size: 12px; }
+  .entity-detail-card__stats { margin-top: 12px; padding: 10px; gap: 6px; }
 }
 
 @media (max-width: 760px) {
@@ -13699,6 +13761,21 @@ button.stat-header-item {
   line-height: 1 !important;
 }
 
+/* Canonical "+N/s" crack income — fixed flush-bottom-LEFT, sharing the 축척 ruler's
+   exact bottom anchor so the two sit on the same row (orange left, ruler right). */
+.field > .crack-income-readout {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 26;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff9f40;
+  text-shadow: 0 0 7px rgba(255, 159, 64, 0.6);
+  pointer-events: none;
+}
+
 @media (max-width: 560px) {
   .field > .scale-indicator,
   .field > .scale-indicator.scale-indicator {
@@ -13717,6 +13794,13 @@ button.stat-header-item {
 
   .field > .scale-indicator .scale-value {
     font-size: 9px !important;
+  }
+
+  /* Match the ruler's lifted mobile bottom so both stay on the same flush-bottom row. */
+  .field > .crack-income-readout {
+    left: max(9px, env(safe-area-inset-left));
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 20px));
+    font-size: 9px;
   }
 }
 
@@ -15054,7 +15138,7 @@ button.stat-header-item {
    per-action accent via the inline --rail-accent custom property.
    ════════════════════════════════════════════════════════════════════ */
 .side-rail {
-  gap: 12px;
+  gap: 10px;
 }
 .side-rail__shop-slot {
   display: flex;
@@ -15068,16 +15152,16 @@ button.stat-header-item {
      @media(max-width:760px) sets flex:1 1 0 (for the old horizontal bar),
      which would collapse them to ~2px in a column container. */
   flex: 0 0 auto;
-  width: 60px;
-  height: 56px;
+  width: 52px;
+  height: 50px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   padding: 0 4px;
-  border-radius: 17px;
+  border-radius: 15px;
   font-size: 1rem;
   cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--rail-accent) 34%, rgba(255, 255, 255, 0.1));
@@ -15100,7 +15184,7 @@ button.stat-header-item {
 .side-rail .entity-lab-button .hud-action-icon,
 .side-rail .shop-button .hud-action-icon,
 .side-rail .bottom-settings-button .hud-action-icon {
-  font-size: 21px;
+  font-size: 19px;
   line-height: 1;
   color: color-mix(in srgb, var(--rail-accent) 78%, #ffffff);
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--rail-accent) 55%, transparent));
@@ -15113,7 +15197,7 @@ button.stat-header-item {
   font-family: var(--mono);
   font-size: 8px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
   text-align: center;
@@ -15272,24 +15356,44 @@ button.stat-header-item {
 /* Mobile rail — shrink the 60x56 desktop buttons to a compact touch target.
    Scoped under .side-rail + appended last so it wins; keep flex:0 0 auto. */
 @media (max-width: 560px) {
-  .side-rail { gap: 9px; }
+  .side-rail { gap: 8px; }
   .side-rail .entity-lab-button,
   .side-rail .shop-button,
   .side-rail .bottom-settings-button {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
+    /* 44px = the documented --tap-min touch floor; smallest defensible size. */
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     gap: 0;
   }
   .side-rail .entity-lab-button .hud-action-icon,
   .side-rail .shop-button .hud-action-icon,
   .side-rail .bottom-settings-button .hud-action-icon {
-    font-size: 19px;
+    font-size: 17px;
   }
   .side-rail .entity-lab-button .hud-action-label,
   .side-rail .shop-button .hud-action-label,
   .side-rail .bottom-settings-button .hud-action-label {
     display: none;
+  }
+  /* S{n} lock badge: shrink so it doesn't overhang the smaller 44px tile (keep the
+     shop re-assert in sync — 5722 only fixes font-size, not the corner geometry). */
+  .side-rail .entity-lab-button__lockstage,
+  .side-rail .shop-button .entity-lab-button__lockstage {
+    min-width: 13px;
+    height: 12px;
+    font-size: 7px;
+    line-height: 11px;
+    bottom: -2px;
+    right: -2px;
+  }
+  /* Notify dot: smaller so it doesn't dominate the 44px tile. */
+  .side-rail .entity-lab-button__dot,
+  .side-rail .hud-notification-dot {
+    width: 11px;
+    height: 11px;
+    top: -3px;
+    right: -3px;
   }
 }
 
