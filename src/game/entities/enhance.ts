@@ -27,7 +27,7 @@ import {
   ENHANCE_DESTROY_ON_FAIL,
   ENHANCE_BREAK_STONE_MIN,
   ENHANCE_BREAK_STONE_MAX,
-  SPECIAL_ENHANCE_FAIL_MULT,
+  SPECIAL_ENHANCE_SUCCESS_BOOST,
 } from '../balance';
 import { type StageEntity, type EntityRarity } from './types';
 
@@ -76,12 +76,12 @@ export function getEnhanceFailChance(level: number): number {
 }
 
 /**
- * 특수강화 fail chance: the same risk curve scaled DOWN by SPECIAL_ENHANCE_FAIL_MULT
- * — the special copy-paid path (flat 3 cards) trades a fixed card cost for a higher
- * success rate. Mirrored in scripts/entropy-gate-sim.mjs.
+ * 특수강화 fail chance: the base risk curve with the success chance RAISED by
+ * SPECIAL_ENHANCE_SUCCESS_BOOST (i.e. fail lowered by the boost, floored at 0) — the
+ * premium path (강화석 + 3 cards) buys better odds. Mirrored in scripts/entropy-gate-sim.mjs.
  */
 export function getSpecialEnhanceFailChance(level: number): number {
-  return getEnhanceFailChance(level) * SPECIAL_ENHANCE_FAIL_MULT;
+  return Math.max(0, getEnhanceFailChance(level) - SPECIAL_ENHANCE_SUCCESS_BOOST);
 }
 
 /**
@@ -111,15 +111,17 @@ export function rollBreakStones(rarity: EntityRarity, roll: number = Math.random
 //    are the core the reducer/save-v27/UI switch will build on; they have no live
 //    callers yet (the money/risk path above is still the live mechanic).
 
-/** Copies needed to go from `level` → `level+1`: 3, 5, 7, 9, … */
+/** Copies needed to go from `level` → `level+1` — a FLAT ENH_DUP_BASE (3) per level
+ *  now that ENH_DUP_STEP is 0 (user 2026-06-28 "항상 3개로 고정"). */
 export function needCopiesForLevel(level: number): number {
   return ENH_DUP_BASE + ENH_DUP_STEP * (Math.max(1, Math.floor(level)) - 1);
 }
 
-/** Total copies to reach `level` from Lv1 (closed form: L² − 1). */
+/** Total copies to reach `level` from Lv1 — with a flat need of ENH_DUP_BASE per level
+ *  (ENH_DUP_STEP 0), this is ENH_DUP_BASE·(L−1). */
 export function cumCopiesToLevel(level: number): number {
   const L = Math.max(1, Math.floor(level));
-  return L * L - 1;
+  return ENH_DUP_BASE * (L - 1) + ENH_DUP_STEP * ((L - 1) * (L - 2)) / 2;
 }
 
 /**

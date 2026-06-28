@@ -2222,7 +2222,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         // 특수강화 / 보호 live readout. specialActive = the copy path is ACTUALLY taken
         // (toggle ON + ≥3 spares); it gates BOTH the % and the button so the UI and the
         // reducer agree (no dead clicks when 특수강화 is OFF and stones can't afford it).
-        const specialActive = risky && useSpecial && spares >= SPECIAL_ENHANCE_CARD_COST;
+        const specialActive = risky && useSpecial && spares >= SPECIAL_ENHANCE_CARD_COST && enhanceStones >= stoneCost;
         const canMergeEff = risky ? specialActive : canMerge;
         const canStoneEff = !atCap && !canMergeEff && enhanceStones >= stoneCost;
         const failChance = atCap ? 0 : !risky ? 0 : specialActive ? getSpecialEnhanceFailChance(lvl) : getEnhanceFailChance(lvl);
@@ -2298,7 +2298,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       aria-checked={useSpecial}
                       aria-label={t(language, 'specialEnhanceToggleAria')}
                       // Only meaningful in the risk phase with ≥3 spare cards (and not mid-enhance).
-                      disabled={!risky || spares < SPECIAL_ENHANCE_CARD_COST || enhancing !== null}
+                      disabled={!risky || spares < SPECIAL_ENHANCE_CARD_COST || enhanceStones < stoneCost || enhancing !== null}
                       onClick={(e) => { e.stopPropagation(); setUseSpecial((v) => !v); onUITap?.(); }}
                     >
                       {`✨ ${SPECIAL_ENHANCE_CARD_COST}`}
@@ -2335,7 +2335,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                         <span className="enhance-btn__lv">{`Lv.${lvl} → ${lvl + 1}`}</span>
                         {/* Cost line reflects the ACTIVE path: 특수강화 → 🎴 cards; otherwise
                             the ◆ 강화석 escape (blank only on a free guaranteed-band merge). */}
-                        <span className="enhance-btn__cost">{specialActive ? `🎴 ${SPECIAL_ENHANCE_CARD_COST}` : (canMergeEff && !risky ? '' : `◆ ${stoneCost}`)}</span>
+                        <span className="enhance-btn__cost">{specialActive ? `🎴 ${SPECIAL_ENHANCE_CARD_COST} ◆ ${stoneCost}` : (canMergeEff && !risky ? '' : `◆ ${stoneCost}`)}</span>
                       </>
                     )}
               </button>

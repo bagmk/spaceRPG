@@ -812,16 +812,19 @@ export const ENHANCE_REFUND_RATE = 0.6;
  *  + the entropy-gate re-pin land in the coupled P7b implementation phase.)
  */
 export const ENH_DUP_BASE = 3;
-export const ENH_DUP_STEP = 2;
+// 2026-06-28 (user "항상 3개로 고정"): STEP 2→0 → need(L) is a FLAT 3 copies per level (was
+// 3,5,7,9…). cumCopiesToLevel becomes 3·(L−1). Simpler "collect 3 → enhance" loop. The sim
+// derivedLevel is stone-budget-based (doesn't model the copy curve), so this is sim-neutral.
+export const ENH_DUP_STEP = 0;
 
 /**
- * 특수강화 (special enhance) — the risky copy-paid enhance path. Instead of the
- * escalating need(prevLevel) copies, a special enhance always costs a FLAT
- * SPECIAL_ENHANCE_CARD_COST copies but carries a REDUCED fail chance
- * (base fail × SPECIAL_ENHANCE_FAIL_MULT). Mirrored in scripts/entropy-gate-sim.mjs.
+ * 특수강화 (special enhance) — a PREMIUM risk-phase path (user 2026-06-28): it costs the
+ * 강화석 (stone) AND a FLAT SPECIAL_ENHANCE_CARD_COST copies (both, not a stone substitute),
+ * and it RAISES the success chance by SPECIAL_ENHANCE_SUCCESS_BOOST (not "halve the fail").
+ * Mirrored in scripts/entropy-gate-sim.mjs.
  */
 export const SPECIAL_ENHANCE_CARD_COST = 3;
-export const SPECIAL_ENHANCE_FAIL_MULT = 0.5;
+export const SPECIAL_ENHANCE_SUCCESS_BOOST = 0.22;
 
 // #8 (user): the copy-token BUY is removed ("카드 사는건 안 됨"). Leveling is COPIES
 // (free merge) when you have spares, else the 강화석 escape valve (getEnhanceStoneCost,

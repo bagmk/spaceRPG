@@ -49,6 +49,7 @@ describe('ENHANCE_ENTITY — the targeted copy levels up in place (P6)', () => {
         { entityId: clickEntity.id, instanceId: 's2', count: 1, level: 1 },
         { entityId: clickEntity.id, instanceId: 's3', count: 1, level: 1 },
       ],
+      enhanceStones: 9999, // 특수강화 now spends 강화석 + cards (both)
     };
     const next = gameReducer(state, { type: 'ENHANCE_ENTITY', instanceId: 'eq', failRoll: 0.99 });
     const eq = next.inventory.find((e) => e.instanceId === 'eq');

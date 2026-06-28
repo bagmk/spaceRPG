@@ -239,6 +239,9 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
       { entityId: entity.id, instanceId: 'a', count: 1, level: 2 },
       ...Array.from({ length: 5 }, (_, k) => ({ entityId: entity.id, instanceId: `f${k}`, count: 1, level: 1 })),
     ],
+    // 2026-06-28: 특수강화 now spends 강화석 + cards (both). Seed EXACTLY one step's stone cost
+    // so post-spend is 0 — keeps the consolation-stone assertions (stonesEarned === final) exact.
+    enhanceStones: getEnhanceStoneCost(entity, 2),
     ...extra,
   });
 
@@ -257,7 +260,7 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
   });
 
   it('Lv2→3 (risk phase): a failed UNPROTECTED attempt DESTROYS the copy + mints 강화석', () => {
-    const before = riskyState({ enhanceStones: 0 });
+    const before = riskyState();
     // failRoll 0 < failChance → fail; destroyRoll 0 < ENHANCE_DESTROY_ON_FAIL (0.65) →
     // the DESTROY branch (not the neutral 유지); useProtect off → destroy.
     const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, destroyRoll: 0, breakRoll: 0.5, useProtect: false });
@@ -275,7 +278,7 @@ describe('enhancement RISK phase (fail / destroy / protection)', () => {
     // failRoll 0 < failChance → fail; destroyRoll 0.99 ≥ ENHANCE_DESTROY_ON_FAIL (0.65) →
     // the neutral 유지 branch: the anchor SURVIVES at prevLevel, the copy cost (FLAT 3
     // cards) is consumed, NO 강화석 refunded, no level gained.
-    const before = riskyState({ enhanceStones: 0 });
+    const before = riskyState();
     const next = gameReducer(before, { type: 'ENHANCE_ENTITY', instanceId: 'a', failRoll: 0, destroyRoll: 0.99, breakRoll: 0.5, useProtect: false });
     const anchor = next.inventory.find((e) => e.instanceId === 'a');
     expect(anchor).toBeDefined();        // survives

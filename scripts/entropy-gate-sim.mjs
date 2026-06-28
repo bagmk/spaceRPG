@@ -110,10 +110,10 @@ const ENHANCE_FAIL_MAX = 0.55;
 // balance.ts ENHANCE_DESTROY_ON_FAIL. A 유지 fail loses nothing, so the player only needs
 // protection for the DESTROY fraction; the protection-cost term below is scaled by this.
 const ENHANCE_DESTROY_ON_FAIL = 0.65;
-// 특수강화 (special enhance) copy-path fail reduction — lockstep with balance.ts
-// SPECIAL_ENHANCE_FAIL_MULT. The risk-phase climb here is the copy-paid special path
-// (flat 3 cards), so it pays the reduced fail odds.
-const SPECIAL_ENHANCE_FAIL_MULT = 0.5;
+// 특수강화 (special enhance) success BOOST — lockstep with balance.ts
+// SPECIAL_ENHANCE_SUCCESS_BOOST. The risk-phase climb here is the premium path (강화석 + 3
+// cards), so it pays the boosted odds (fail lowered by the boost, floored at 0).
+const SPECIAL_ENHANCE_SUCCESS_BOOST = 0.22;
 // PROTECTION-IMPACT SOFTENING (2026-06-24, user playtest "스테이지 7부터 너무 쉽게 차"): the
 // aba4fcf re-pin modeled protection as a MANDATORY full-price tax on EVERY risk-phase
 // attempt (protectChargeCost × expected fails, full ENHANCE_PROTECT_MATTER_FRAC × anchor),
@@ -306,7 +306,7 @@ function derivedLevel(stageId, rarity, stoneBudget = 0, matterBudget = undefined
   let stoneTotal = 0;
   while (level < LEVEL_CAPS[rarity]) {
     const resultLevel = level + 1; // this step lands here (≥ THRESHOLD)
-    const fail = enhanceFailChance(resultLevel) * SPECIAL_ENHANCE_FAIL_MULT;
+    const fail = Math.max(0, enhanceFailChance(resultLevel) - SPECIAL_ENHANCE_SUCCESS_BOOST);
     const expectedAttempts = 1 / Math.max(1e-6, 1 - fail);
     const expectedFails = expectedAttempts - 1;
     const over = level - ENHANCE_STONE_THRESHOLD;

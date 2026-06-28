@@ -610,18 +610,18 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   if (risky) {
     // Single risky level: pay with copies if you have need(prevLevel), else the 강화석
     // escape, else no-op. Resolve the fail roll, then apply protect/break/up.
-    // 특수강화: the copy path is a FLAT 3 cards with a reduced fail chance; the 강화석
-    // escape keeps the normal (un-reduced) odds.
+    // 특수강화 (user 2026-06-28): the PREMIUM path spends the 강화석 AND a flat 3 cards
+    // (both), buying a boosted success chance. The plain path spends only the 강화석 at
+    // the normal odds. Either way the 강화석 is required.
     const needCopies = SPECIAL_ENHANCE_CARD_COST;
     const stoneCost = getEnhanceStoneCost(entity, prevLevel);
-    // useSpecial OFF (default ON) forces the 강화석 path even when copies are spare.
+    if (state.enhanceStones < stoneCost) return state; // both paths require the 강화석
+    // 특수강화 ON (default) + ≥3 spare cards → premium path (stone + cards). Else plain stone.
     const payWithCopies = (action.useSpecial ?? true) && spares >= needCopies;
-    if (!payWithCopies && state.enhanceStones < stoneCost) return state;
+    stoneSpend = stoneCost;
     if (payWithCopies) {
       consumedInstances = fodder.slice(0, needCopies);
       consumedIds = new Set(consumedInstances.map((e) => e.instanceId));
-    } else {
-      stoneSpend = stoneCost;
     }
     resultLevel = prevLevel + 1;
 
