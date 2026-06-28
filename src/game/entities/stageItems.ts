@@ -789,7 +789,7 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Up Quark':               { name: '업 쿼크',          description: '모든 양성자에 두 개씩 들어가지만, 양성자 무게의 1%만이 쿼크 자신의 질량 — 나머지 99%는 순수한 결합 에너지다.' },
   'Down Quark':             { name: '다운 쿼크',        description: '업 쿼크보다 아주 조금 무거운데, 그 작은 차이가 중성자를 양성자보다 무겁게 만들어 붕괴하게 한다.' },
   'Electron':               { name: '전자',             description: '양성자 하나의 무게를 채우려면 1,836개가 필요할 만큼 가볍지만, 똑같은 전하를 반대 부호로 지닌 안정한 경입자.' },
-  'Electron Neutrino':      { name: '전자 중성미자',    description: '매초 수조 개가 당신 몸을 통과하고, 거의 전부가 지구마저 그냥 관통해 버리는 유령 같은 입자.' },
+  'Electron Neutrino':      { name: '전자 중성미자',    description: '전자보다 100만 배 넘게 가벼운, 알려진 가장 가벼운 물질 입자 — 매초 약 100조 개가 당신 몸을 소리 없이 통과한다.' },
   'Gluon':                  { name: '글루온',           description: '강력을 나르면서 자신이 반응하는 색전하까지 지녀 — 서로를 잡아당기는 탓에 쿼크는 결코 떼어 놓을 수 없다.' },
   'Strange Quark':          { name: '스트레인지 쿼크',  description: '이 쿼크를 품은 입자들이 \'기묘하게\' 오래 살아남아 — 새로운 보존 법칙을 밝혀낸 2세대 쿼크.' },
   'W Boson':                { name: 'W 보손',           description: '양성자의 약 80배에 달하는 약력의 무거운 전령 — 그 큰 질량 탓에 방사성 붕괴가 그토록 느리다.' },
@@ -803,9 +803,9 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Plasma Vortex':          { name: '플라스마 소용돌이',description: '쿼크-글루온 플라스마는 지금껏 측정된 가장 격렬히 휘도는 유체 — 가장 강한 태풍의 소용돌이마저 압도한다.' },
   'Charm Quark':            { name: '참 쿼크',          description: '1974년 그 발견이 너무 혁명적이라 \'11월 혁명\'으로 불리는 무거운 2세대 쿼크.' },
   'Kaon':                   { name: '케이온',           description: '1964년, 케이온을 연구하다 우주가 물질·반물질 거울을 처음 깨뜨리는 장면(CP 위반)이 발견됐다.' },
-  'Bottom Quark':           { name: '바텀 쿼크',        description: '헬륨 원자 하나만큼 무거운데도 여전히 크기 없는 점으로 여겨지는 무거운 쿼크.' },
+  'Bottom Quark':           { name: '바텀 쿼크',        description: '수명이 1조분의 1초 남짓이지만, 그 짧은 사이에 검출기 안에서 0.1밀리미터쯤 흘러가 남기는 작은 흔적으로 정체가 들통난다.' },
   'Color Flux Tube':        { name: '색 자속 끈',       description: '쿼크를 떼려 하면 글루온 힘이 팽팽한 \'끈\'으로 뭉치고 — 세게 당기면 차라리 새 쿼크쌍을 만들어 낼 뿐 결코 풀려나지 않는다.' },
-  'Top Quark':              { name: '탑 쿼크',          description: '모든 쿼크 중 가장 무겁고 — 강입자로 묶이기도 전에 붕괴해 우리가 \'벌거벗은\' 채로 보는 유일한 쿼크다.' },
+  'Top Quark':              { name: '탑 쿼크',          description: '금 원자 하나만큼 무거운데도 크기 없는 점이며, 강한 힘이 붙들기도 전에 사라져 우리가 \'벌거벗은\' 채로 보는 유일한 쿼크다.' },
   'QCD Phase Boundary':     { name: 'QCD 상경계',       description: '약 2조 도의 우주적 \'어는점\' — 쿼크 수프가 오늘날 만물을 이루는 양성자와 중성자로 응결한 경계.' },
   'Confinement Onset':      { name: '갇힘 개시',        description: '자연의 가장 기묘한 규칙 — 쿼크는 멀리 떼어 놓을수록 힘이 더 세져서, 결코 홀로 떼어 낼 수 없다.' },
 
@@ -820,22 +820,22 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Helium-4':               { name: '헬륨-4',           description: '우주 보통 물질의 약 25%(질량)가 빅뱅 첫 20분에 빚어진 헬륨-4 — 138억 년이 지나도 거의 그대로다.' },
   'Primordial Fireball':    { name: '원시 화구',        description: '한때 별 중심보다 뜨겁고 빽빽한 화구였으나, 단 몇 분 만에 팽창이 화로를 영영 꺼 버렸다.' },
   'Lithium-7':              { name: '리튬-7',           description: '빅뱅이 예측한 리튬-7 양이 실제 관측치의 약 3배 — \'우주 리튬 문제\'로 불리는 미해결 수수께끼.' },
-  'Muon Neutrino':          { name: '뮤온 중성미자',    description: '식어가는 경입자 플라스마에서 질량 아래로 분리되는 뮤온형 중성미자.' },
+  'Muon Neutrino':          { name: '뮤온 중성미자',    description: '날아가는 도중 다른 종류로 변신하는 입자 — 이 \'진동\' 현상을 밝혀낸 연구는 2015년 노벨 물리학상을 받았다.' },
   'Neutron-Proton Ratio':   { name: '중성자/양성자 비', description: '중성자가 양성자보다 살짝 무거워 식는 우주가 양성자를 선호한 결과 굳어진 1:7 — 헬륨을 25%로 고정한다.' },
   'BBN Completion':         { name: '빅뱅 핵합성 완료', description: '첫 원소의 조리법은 약 3분 만에 잠기고, 20분 무렵엔 이미 너무 식어 — 수소 75%·헬륨 25%로 영영 고정됐다.' },
   'Fusion Window':          { name: '융합의 창',        description: '핵을 융합할 만큼 뜨겁고 빽빽한 시간은 단 3~20분 — 팽창이 모든 반응을 꺼뜨리기 전, 시계와의 경주.' },
 
   // Stage 5
-  'Hydrogen':               { name: '수소',             description: '1번 원소 — 양성자가 전자를 붙잡아 최초의 중성 원자가 탄생한다.' },
+  'Hydrogen':               { name: '수소',             description: '우주 모든 원자의 약 90%가 수소다 — 가장 가볍고 가장 흔한 원소이며, 별을 빛나게 하는 연료이기도 하다.' },
   'Free Electron':          { name: '자유 전자',        description: '광자에게는 악몽 같은 존재 — 빛을 끊임없이 산란시켜 초기 우주를 들여다볼 수 없는 안개로 만든 마지막 떠돌이 전하.' },
-  'Helium':                 { name: '헬륨',             description: '2번 원소 — 헬륨 핵이 전자 두 개를 모두 끌어들여 중성이 된다.' },
+  'Helium':                 { name: '헬륨',             description: '우주 헬륨의 대부분은 빅뱅 직후 단 몇 분 만에 만들어졌다 — 그 뒤 별들이 보탠 양은 아주 미미하다.' },
   'CMB Photon':             { name: 'CMB 광자',         description: '138억 년을 날아온, 어떤 장비로도 검출할 수 있는 가장 오래된 빛.' },
   'Hydrogen Cloud':         { name: '수소 구름',        description: '재결합이 안개를 걷자 우주 전체가 별빛 하나 없는 차갑고 어두운 중성 수소 구름이 됐다.' },
   'Photon Decoupling':      { name: '광자 분리',        description: '빛이 물질을 처음으로 \'놓아주고\' 자유로이 날아간 바로 그 순간 — 오늘 우리가 보는 우주배경복사다.' },
   'Baryon Acoustic Oscillation': { name: '바리온 음향 진동', description: '원시 플라스마를 울리던 음파가 재결합에서 얼어붙어 — 지금도 은하 분포에 약 5억 광년 \'자\'로 새겨져 있다.' },
   'Plasma to Gas':          { name: '플라스마→기체',    description: '약 38만 년, 우주가 빛나는 플라스마에서 투명한 중성 기체로 전환된 찰나 — 불이 켜졌다가 다시 깜깜해졌다.' },
   'Dark Matter Halo':       { name: '암흑물질 헤일로',  description: '보통 물질이 떨어져 은하를 빚을 중력의 \'골짜기\'를, 보이지 않는 암흑물질이 이미 파 놓았다.' },
-  'Massive Dark Halo':      { name: '거대 암흑 헤일로', description: '은하 퍼텐셜을 빚는 거대한 암흑 골격.' },
+  'Massive Dark Halo':      { name: '거대 암흑 헤일로', description: '은하에서 별빛으로 보이는 건 전체 질량의 5%뿐 — 나머지를 떠받치는 암흑 헤일로는 별과 가스를 모두 합친 것보다 스무 배쯤 무겁다.' },
   'Density Perturbation':   { name: '밀도 요동',        description: '첫 찰나의 양자 떨림이 우주 크기로 부풀어 — 존재하는 모든 은하·별·행성의 씨앗이 됐다.' },
   'Last Scattering Surface':{ name: '최후 산란면',      description: '관측 가능한 우주의 끝에 선 빛나는 벽 — 광자가 전자에 마지막으로 부딪힌, 적색편이 약 1100의 자리.' },
   'CMB Anisotropy':         { name: 'CMB 비등방성',     description: 'CMB 온도는 어느 방향이든 10만 분의 1까지 같고, 그 미세한 얼룩이 곧 은하단의 배아다.' },
@@ -866,9 +866,9 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Oxygen':                 { name: '산소',             description: '당신이 들이쉬는 모든 산소 원자는 죽어가는 별의 핵에서 단조돼 우주로 뿌려진 것 — 당신의 폐는 별먼지로 돈다.' },
   'Stellar Wind':           { name: '항성풍',           description: '거대 별은 단 수천 년 만에 태양 하나만큼의 질량을 날려 보낼 만큼 거센 바람으로 물질을 흩뿌린다.' },
   'HII Region':             { name: 'HII 영역',         description: '어린 뜨거운 별이 제 둘레에 이온화 수소의 빛나는 거품을 깎아 내 — \'별이 태어났다\'고 알리는 표지.' },
-  'Carbon':                 { name: '탄소',             description: '6번 원소 — 삼중알파 반응이 탄소를 단조하며 화학의 새벽을 연다.' },
+  'Carbon':                 { name: '탄소',             description: '탄소는 헬륨 핵 세 개가 거의 동시에 부딪쳐야 생긴다 — 찰나에 사라지는 베릴륨을 징검다리 삼아 만들어진 기적이다.' },
   'Pop III Cluster':        { name: '종족 III 성단',    description: '우주 최초의 별인 종족 III — 금속이 전혀 없는 순수 수소·헬륨으로, 일부는 태양의 수백 배에 달했다.' },
-  'Iron':                   { name: '철',               description: '26번 원소 — 항성 핵이 헬륨 너머 가장 안정한 핵인 철까지 원소를 단조한다.' },
+  'Iron':                   { name: '철',               description: '철은 핵융합의 종착역이다 — 더 무거운 원소를 만들면 오히려 에너지를 잡아먹어서, 거대한 별은 여기서 멈추고 붕괴한다.' },
   'Stellar Feedback':       { name: '항성 피드백',      description: '최초의 별들은 복사·바람·폭발로 새 별을 만들려는 가스 자체를 데우고 흩뜨리며 — 주변 우주를 다시 배선했다.' },
   'Supernova Precursor':    { name: '초신성 전조',      description: '거대 별 핵이 마침내 철을 쌓으면 에너지 수도꼭지가 잠기고 — 1초도 안 돼 중력이 이겨 붕괴가 시작된다.' },
   'Pop III Supernova':      { name: '종족 III 초신성',  description: '우주 최초의 별들이 폭발하며 우주에 첫 금속을 뿌렸다 — 헬륨보다 무거운 모든 원소가 이들로 거슬러 올라간다.' },
@@ -898,7 +898,7 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Galaxy Merger':          { name: '은하 충돌',        description: '은하가 충돌해도 별들은 두 벌 떼처럼 서로를 그냥 통과한다 — 그러나 중력이 둘 모두를 새로운 모습으로 빚는다.' },
   'Galaxy Cluster':         { name: '은하단',           description: '수천 개 은하를 거느린, 중력으로 묶인 가장 거대한 천체 — 그런데 질량의 80% 넘는 부분이 보이지 않는 암흑물질이다.' },
   'Supermassive BH':        { name: '초대질량 블랙홀', description: '거의 모든 큰 은하 중심엔 태양 수백만~수십억 배의 블랙홀이 숨어 있다 — 우리은하 중심엔 태양 400만 개짜리가 있다.' },
-  'Relic Supermassive BH':  { name: '잔존 초대질량 블랙홀', description: '모든 별보다 오래 살아남는 은하 핵의 블랙홀.' },
+  'Relic Supermassive BH':  { name: '잔존 초대질량 블랙홀', description: '마지막 별이 꺼진 뒤에도 은하 핵의 블랙홀은 약 10의 100제곱 년을 더 버틴 끝에야 천천히 증발한다 — 우주의 마지막 이정표다.' },
   'Active Galactic Nucleus':{ name: '활동성 은하핵',    description: '은하 중심 블랙홀이 가스를 게걸스레 삼키면 수십억 광년 너머에서도 보이는 등대처럼 타오른다 — 은하 규모의 등대.' },
   'Gravitational Lens':     { name: '중력 렌즈',        description: '은하단의 중력이 시공간을 얼마나 강하게 휘는지, 배경 은하를 호와 고리로 일그러뜨린다 — 아인슈타인이 예언한 천연 망원경.' },
   'Filamentary Structure':  { name: '필라멘트 구조',    description: '은하는 무작위로 흩어지지 않고, 수억 광년에 걸친 가스와 암흑물질의 빛나는 필라멘트를 따라 줄지어 늘어선다.' },
@@ -920,14 +920,14 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Magnetic Field':         { name: '자기장',           description: '지구의 들끓는 액체 철 핵이 만든 자기 방패가 치명적 태양풍을 튕겨 낸다 — 이게 없었다면 대기가 화성처럼 벗겨졌을 것이다.' },
   'Goldilocks Zone':        { name: '골디락스 영역',    description: '너무 뜨겁지도 차갑지도 않아 물이 액체로 머무는 좁은 궤도 띠 — 지구는 그 안에 편안히 앉아 있고, 금성과 화성은 아슬하게 빗나간다.' },
   'Sun':                    { name: '태양',             description: '태양은 태양계 전체 질량의 99.86%를 쥐고 있다 — 모든 행성·위성·소행성을 합쳐도 반올림 오차에 불과하다.' },
-  'Protoplanetary Disk':    { name: '원시행성 원반',    description: '먼지와 가스가 빙글빙글 돌며 세상을 빚어내는 거대한 요람.' },
+  'Protoplanetary Disk':    { name: '원시행성 원반',    description: '갓 태어난 별 둘레의 가스·먼지 원반은 단 몇백만 년 만에 행성을 빚는다 — 게다가 가스가 먼저 빠져나가, 행성은 시간과 경주하며 만들어진다.' },
   'Habitable World':        { name: '생명 가능 행성',   description: '아는 형태의 생명을 품으려면 액체 물·보호 대기·안정한 별이 두루 필요할 것 — 흔치 않을 조합.' },
 
   // Stage 11 — Earth formation → Life → Civilization
   'Molten Crust':           { name: '용암 지각',        description: '냉각되는 마그마가 최초의 암석 표면을 만든다.' },
-  'Earth Formation':        { name: '지구 형성',        description: '지구는 수많은 충돌하는 돌덩어리에서 단 수천만 년 만에 빠르고 격렬하게 조립됐다 — 약 45억 년 전 일이다.' },
-  'First Ocean':            { name: '최초의 바다',      description: '지구의 첫 바다는 40억 년도 더 전에 생겼고 — 물은 얼음 머금은 소행성이 나르고 녹은 행성 내부가 뿜어낸 것으로 보인다.' },
-  'Atmosphere':             { name: '대기',             description: '지구의 원래 공기엔 산소가 거의 없었다 — 우리가 기대는 숨 쉴 수 있는 대기는 미생물이 수십억 년에 걸쳐 만들어 냈다.' },
+  'Earth Formation':        { name: '지구 형성',        description: '지구는 충돌하는 돌덩어리들에서 수천만 년 만에 거칠게 조립됐고 — 마지막 거대 충돌의 파편이 모여 달이 됐다, 약 45억 년 전 일이다.' },
+  'First Ocean':            { name: '최초의 바다',      description: '지구의 첫 바다는 40억 년도 더 전에 생겼는데 — 그 물은 얼음을 품은 소행성이 실어 오고, 녹아 끓던 행성 내부가 수증기로 뿜어낸 것으로 보인다.' },
+  'Atmosphere':             { name: '대기',             description: '지구의 원래 공기엔 산소가 거의 없었다 — 우리가 숨 쉬는 대기는 미생물이 수십억 년에 걸쳐 내뿜은, 역사상 가장 거대한 오염의 산물이다.' },
   'Moon Formation':         { name: '달 형성',          description: '달은 테이아라는 화성 크기의 천체가 어린 지구에 충돌해, 궤도로 튀어나간 잔해가 뭉쳐 태어났다.' },
   'Prokaryote':             { name: '원핵생물',         description: '지구 역사 절반 동안 모든 생명은 핵 없는 단세포 미생물이었고 — 지금도 모든 동식물보다 압도적으로 수가 많다.' },
   'Photosynthesis':         { name: '광합성',           description: '광합성의 발명은 역사상 가장 중대한 오염 사건 — 그 폐기물 산소가 옛 세상을 독살하고 우리 세상을 지었다.' },
@@ -979,7 +979,7 @@ const ENTITY_KO_TRANSLATIONS: Record<string, { name: string; description: string
   'Diamond Star':           { name: '다이아몬드 별',    description: '결정화한 백색왜성은 사실상 행성만 한 다이아몬드 — 지구 근처에서 발견된 하나(BPM 37093)는 비틀스 노래를 따 \'루시\'로 불린다.' },
   'GW Echo':                { name: '중력파 메아리',    description: '일부 양자중력 이론은 블랙홀 지평선 근처에서 튕기는 희미한 중력파 \'메아리\'를 예측한다 — 아인슈타인 너머 물리학의 단서.' },
   'Higgs Boson':            { name: '힉스 보손',        description: '대칭 깨짐을 통해 입자에 질량을 부여하는 힉스 장의 스칼라 들뜸.' },
-  'Relic Neutrino Background':{ name: '잔존 중성미자 배경',description: '거의 정지 상태로 식어버린 빅뱅 중성미자.' },
+  'Relic Neutrino Background':{ name: '잔존 중성미자 배경',description: '빅뱅 후 단 1초 만에 풀려난 가장 오래된 화석 입자 — 우주배경복사보다 38만 년이나 앞서 떨어져 나와 지금은 영하 271도까지 식었다.' },
   'Z Boson':                { name: 'Z 보손',           description: '약한 상호작용을 매개하는 전기적으로 중성인 게이지 보손 — W의 짝.' },
   'Positronium Atom':       { name: '포지트로늄',       description: '포지트로늄은 전자가 제 반물질 쌍둥이를 도는 덧없는 \'원자\' — 잠시 돌다 10억 분의 1초 단위로 감마선이 되어 쌍소멸한다.' },
   'Dark Matter Annihilation':{ name: '암흑물질 소멸',   description: '암흑물질이 제 반입자라면 둘이 충돌해 보통 입자로 소멸할 수 있다 — 물리학자들이 은하 중심에서 찾는 그 빛.' },
@@ -1134,7 +1134,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Down Quark',          'd',   'A hair heavier than the up quark — and that tiny gap is why the neutron outweighs the proton, and decays.',             'common', 'click', 15.0),
     item('Electron',            'e⁻',  'So light it takes 1,836 of them to match one proton, yet it carries the exact same charge, opposite in sign.',        'common', 'crit',  0.3, true),
     withAliases(
-      item('Electron Neutrino',   'νₑ',  'Electron-flavor neutrino, nearly massless, slipping through matter untouched.', 'common', 'auto_mult',  2.0),
+      item('Electron Neutrino',   'νₑ',  'The lightest matter particle known — over a million times lighter than an electron, yet about 100 trillion stream through your body every second.', 'common', 'auto_mult',  2.0),
       ['s2_04_neutrino'],
     ),
     item('Gluon',               'g',   'It carries the strong force and the very charge it responds to — so gluons pull on each other, trapping quarks forever.',      'rare',   'auto',  2.0),
@@ -1152,10 +1152,10 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Plasma Vortex',      '⟳',   'Quark-gluon plasma is the most violently swirling fluid ever measured, dwarfing the mightiest ocean storms.',        'rare',   'auto',  3.0),
     item('Charm Quark',        'c',    'Its 1974 discovery was so revolutionary it\'s called the "November Revolution" of physics.',            'rare',   'click', 22.0),
     item('Kaon',               'K',    'Studying it in 1964 caught the universe breaking the matter/antimatter mirror — the first hint of CP violation.',    'rare',   'crit',  0.6, true),
-    item('Bottom Quark',       'b',    'As heavy as a whole helium atom, yet still a sizeless fundamental point.',           'rare',   'auto_mult',  2.0),
+    item('Bottom Quark',       'b',    'It lives barely a trillionth of a second, yet that\'s long enough to drift a visible fraction of a millimeter — the telltale gap that lets detectors catch it.',           'rare',   'auto_mult',  2.0),
     item('Color Flux Tube',    '≡',    'Pull two quarks apart and the force snaps into a taut string — yank hard and it just births a new quark pair.',     'epic',   'auto',  4.0),
     withAliases(
-      item('Top Quark',          't',    'Heaviest quark of all — so short-lived it decays before it can ever hadronize.', 'epic',   'click', 35.0),
+      item('Top Quark',          't',    'As heavy as a whole gold atom yet a pointlike speck, it dies in a billionth of a trillionth of a second — too fast to ever be bound, so we glimpse it naked.', 'epic',   'click', 35.0),
       ['s3_10_top_quark_decay'],
     ),
     item('QCD Phase Boundary', '─',    'The cosmic "freezing point" near 2 trillion degrees where the quark soup condensed into protons and neutrons.',  'epic',   'crit',  1.2, true),
@@ -1178,7 +1178,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Primordial Fireball',  '☀',   'Once denser and hotter than a star\'s core, the whole cosmos — yet expansion shut the oven off after just a few minutes.',        'epic', 'click', 35.0),
     item('Lithium-7',            '⁷Li', 'The Big Bang predicts about three times more lithium-7 than old stars actually show — the unsolved "cosmological lithium problem."',       'epic', 'auto', 8.0),
     withAliases(
-      item('Muon Neutrino',        'νμ',  'Muon-flavor neutrino, decoupling as the lepton plasma cools below its mass.', 'epic',   'crit',  1.5, true),
+      item('Muon Neutrino',        'νμ',  'Created in the Sun\'s core fusion, muon neutrinos famously shape-shift in midair — quietly morphing into other flavors before they ever reach Earth.', 'epic',   'crit',  1.5, true),
       ['s4_11_neutrino_freeze_out'],
     ),
     item('Neutron-Proton Ratio', 'n/p', 'Neutrons being slightly heavier, the cooling cosmos favored protons 7 to 1 — and that ratio fixes helium at ~25%.',    'epic',   'auto_mult',  4.0),
@@ -1197,12 +1197,12 @@ export const STAGE_ENTITIES: StageEntity[] = [
   // ── Stage 5: Recombination (4C + 4R + 4E + 2L) ─────────────────────────────
   ...stage(5, [
     withAliases(
-      item('Hydrogen',                  'H',    'Element 1 — a proton captures an electron and the first neutral atom is born.', 'common', 'auto',  1.5),
+      item('Hydrogen',                  'H',    'Hydrogen is the lightest and most abundant element — about 90% of every atom in the cosmos — and the fuel that makes the stars shine.', 'common', 'auto',  1.5),
       ['s5_01_hydrogen_atom'],
     ),
     item('Free Electron',             'e⁻',   'A photon\'s worst nightmare — it scattered light so relentlessly the early universe was an opaque fog you couldn\'t see through.',        'common', 'click', 15.0),
     withAliases(
-      item('Helium',                    'He',   'Element 2 — a helium nucleus pulls in both its electrons to go neutral.', 'common', 'auto_mult', 2.0),
+      item('Helium',                    'He',   'Nearly all the universe\'s helium was forged in the first few minutes after the Big Bang — stars have added barely a sliver to that primordial stockpile since.', 'common', 'auto_mult', 2.0),
       ['s5_03_helium_atom'],
     ),
     item('CMB Photon',                'γ_r',  'It has traveled 13.8 billion years to reach us — the oldest thing any instrument can ever detect.',          'common', 'crit', 0.4, true),
@@ -1262,12 +1262,12 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Stellar Wind',        '~~→',  'Massive stars shed matter in winds so fierce they can blow away a Sun\'s worth of mass in mere thousands of years.','rare',  'click', 22.0),
     item('HII Region',          'HII',  'A young hot star carves a glowing bubble of ionized hydrogen around itself — a beacon announcing a star is born.',    'rare',   'crit',  0.8, true),
     withAliases(
-      item('Carbon',              'C',    'Element 6 — triple-alpha fusion forges carbon, the dawn of chemistry.', 'rare',   'auto_mult',  3.0),
+      item('Carbon',              'C',    'Carbon forms only through a near-impossible triple collision of helium nuclei, routed through a beryllium speck that survives for a ten-quadrillionth of a second.', 'rare',   'auto_mult',  3.0),
       ['s7_08_carbon_first'],
     ),
     item('Pop III Cluster',     '✦✦✦',  'The first stars ever — pure hydrogen and helium with zero metals, some hundreds of times heavier than the Sun.','epic',   'auto',  6.0),
     withAliases(
-      item('Iron',                'Fe',   'Element 26 — stellar cores forge elements up to iron, the most stable nucleus.', 'epic',   'click', 35.0),
+      item('Iron',                'Fe',   'Iron is where fusion dies: its nucleus is so tightly bound that forging anything heavier consumes energy instead of releasing it, so massive stars stall and collapse.', 'epic',   'click', 35.0),
       ['s7_10_first_heavy_elements'],
     ),
     item('Stellar Feedback',    '⟲',   'The first stars rewired the cosmos — their radiation, winds, and blasts heated and scattered the very gas trying to form new stars.',  'epic', 'auto_mult', 4.0),
@@ -1317,7 +1317,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Spiral Arm',            '⤵',  'A galaxy\'s arms aren\'t fixed star chains but density waves — cosmic traffic jams that stars drift through, lighting up as gas piles in.',     'common', 'crit',  0.5, true),
     item('Star Formation Cloud',  '★+', 'Stars are born inside cold molecular clouds so dense they block starlight — yet colder than -260°C inside.',  'common', 'auto_mult',  2.0),
     withAliases(
-      item('Massive Dark Halo',     '○',  'Every galaxy sits in an invisible cocoon of dark matter outweighing all its stars roughly ten to one — the real scaffolding holding it together.',   'rare', 'auto_mult', 3.0),
+      item('Massive Dark Halo',     '○',  'A galaxy\'s stars are just the glint on the surface — the dark matter halo cradling them can outweigh everything visible by twenty to one, reaching far beyond the bright disk you see.',   'rare', 'auto_mult', 3.0),
       ['s9_05_dark_matter_halo'],
     ),
     item('Galaxy Merger',         '⊗',  'When galaxies collide their stars almost never hit, passing through like two swarms of bees — yet gravity reshapes both into something new.','rare', 'auto', 4.0),
@@ -1359,7 +1359,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Liquid Water',     'H₂O·', 'Earth sits in a rare sweet spot where water stays liquid — too close to the Sun and it boils, too far and it freezes solid.',       'epic', 'auto_mult', 5.0),
     item('Magnetic Field',   '⇌',    'Earth\'s churning liquid-iron core powers a magnetic shield that deflects deadly solar wind — without it our air could be stripped like Mars\'s was.',        'epic', 'click', 35.0),
     item('Goldilocks Zone',  '🌡',   'The narrow orbital band that\'s not too hot or cold for liquid water — Earth sits comfortably inside it, Venus and Mars just miss.',           'epic', 'crit', 2.0, true),
-    item('Protoplanetary Disk','◎',   'The spinning cradle of dust and gas that sculpts every world to come.','legendary','multiplier',50.0),
+    item('Protoplanetary Disk','◎',   'A newborn star spins a flat disk of gas and dust that builds planets in just a few million years — and the gas drains away faster than the dust, so worlds race the clock to form.','legendary','multiplier',50.0),
     item('Habitable World',  '⊕',    'For life as we know it, a world likely needs liquid water, a protective atmosphere, and a stable star — a combination that may be rare.',         'legendary','auto',12.0),
     // P3 pyramid padding (append-only) — themed commons + 1 rare → 10C:5R.
     item('Solar Nebula',     '◌gas', 'Our entire solar system condensed from a single collapsing cloud — which is why everything orbits the Sun the same way, in one plane.','common', 'auto', 2.0),
@@ -1382,7 +1382,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
   ...stage(11, [
     // Common 1 — Earth Formation (auto). Gateway to the moon.
     withAliases(
-      item('Earth Formation',  '🌍',    'Rock and gas clump together, gradually sculpting a young planet.', 'common', 'auto',  2.0),
+      item('Earth Formation',  '🌍',    'Earth grew from countless colliding rocks in just tens of millions of years — and one final giant impact splashed off the debris that became the Moon, roughly 4.5 billion years ago.', 'common', 'auto',  2.0),
       ['s11_01_molten_crust'],
     ),
     // Common 2 — Moon Formation (click).
@@ -1392,12 +1392,12 @@ export const STAGE_ENTITIES: StageEntity[] = [
     ),
     // Common 3 — First Ocean (crit isFlat).
     withAliases(
-      item('First Ocean',      'H₂O',   'Steam condenses into vast oceans covering the young Earth.', 'common', 'auto_mult', 2.0),
+      item('First Ocean',      'H₂O',   'Earth\'s first oceans appeared over four billion years ago — and much of that water may have ridden in frozen aboard asteroids, then been belched out as steam by a molten interior.', 'common', 'auto_mult', 2.0),
       ['s11_02_first_ocean'],
     ),
     // Common 4 — Atmosphere (time).
     withAliases(
-      item('Atmosphere',       'atm',   'Volcanic gases form a protective blanket around the planet.', 'common', 'click', 15.0),
+      item('Atmosphere',       'atm',   'Earth\'s original air had almost no oxygen — the breathable sky we depend on was slowly exhaled by microbes over billions of years, the planet\'s greatest act of pollution.', 'common', 'click', 15.0),
       ['s11_03_atmosphere'],
     ),
     // Rare: Geology and life emerge
@@ -1494,7 +1494,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
     item('Iron Star',            'Fe★','Given perhaps 10^1500 years, quantum tunneling would slowly fuse and fission all matter into iron — turning cold stellar corpses into iron stars.', 'epic',   'auto',  8.0),
     item('Binary BH Merger',     '⚫⚫','When two black holes merge, the collision can briefly radiate more power, as pure gravitational waves, than all the stars in the observable universe.', 'epic',   'click', 35.0),
     withAliases(
-      item('Relic Supermassive BH','⚫³','Long after the last stars die, the giant black holes at galactic centers remain — relics that will outlive nearly everything else.',   'epic',   'crit',  3.0, true),
+      item('Relic Supermassive BH','⚫³','After the last star burns out, a galaxy\'s central black hole lingers for a googol years before slowly evaporating — the universe\'s final landmark.',   'epic',   'crit',  3.0, true),
       ['s13_11_supermassive_bh'],
     ),
     item('Stellar Mass BH',      '⚫', 'Forms when a massive star\'s core collapses past the neutron-star stage, packing several Suns into a region only kilometers across.',     'epic',   'auto_mult',  5.0),
@@ -1522,7 +1522,7 @@ export const STAGE_ENTITIES: StageEntity[] = [
       item('Higgs Boson',               'H',   'Scalar excitation of the Higgs field that gives particles their mass through symmetry breaking.', 'rare', 'click', 22.0),
       ['s14_07_quantum_tunneling'],
     ),
-    item('Relic Neutrino Background', 'νBG', 'The universe\'s oldest light — these relic neutrinos broke free just one second after the Big Bang, far earlier than the microwave background\'s 380,000 years.',              'rare', 'crit', 1.5, true),
+    item('Relic Neutrino Background', 'νBG', 'Relic neutrinos broke free just one second after the Big Bang — vastly older than the microwave background\'s 380,000 years — and now drift at a frigid 1.95 kelvin.',              'rare', 'crit', 1.5, true),
     withAliases(
       item('Z Boson',                   'Z⁰',  'Neutral weak gauge boson — the chargeless partner of the W that mediates the weak force.', 'epic', 'click', 35.0),
       ['s14_09_gut_monopole_decay'],
@@ -1600,16 +1600,16 @@ export const STAGE_ENTITIES: StageEntity[] = [
   // the canvas — mythics surface only via fusion, the equip screen, and the
   // codex (Mythic set). Append-only: never reorder these (codex refs positions).
   ...stage(17, [
-    { ...item('Singularity Core',  '●',    'The infinitely dense heart where spacetime itself folds shut.',           'mythic', 'click',     20.0),
-      nameKo: '특이점 핵',    descriptionKo: '시공간이 스스로 닫혀 무한히 응축되는 핵심.' },
-    { ...item('Zero-Point Field',  '⟨0|0⟩','The vacuum’s irreducible energy, humming beneath all of reality.',  'mythic', 'auto',      12.0),
-      nameKo: '영점장',       descriptionKo: '모든 실재 아래에서 진동하는, 진공의 줄일 수 없는 에너지.' },
-    { ...item('Quantum Foam',      '∿',    'Spacetime frothing at the Planck scale, where certainty dissolves.',      'mythic', 'crit',       1.5, true),
-      nameKo: '양자 거품',    descriptionKo: '플랑크 척도에서 들끓는 시공간, 확실성이 녹아내리는 곳.' },
-    { ...item('Multiverse Seed',   '✶',    'A bud of inflation ready to bloom into a universe of its own.',           'mythic', 'auto_mult',  6.0),
-      nameKo: '다중우주의 씨앗', descriptionKo: '스스로 하나의 우주로 피어날, 인플레이션의 씨눈.' },
-    { ...item('Cosmic String',     '|',    'A one-dimensional flaw in spacetime, taut with primordial energy.',       'mythic', 'click',     18.0),
-      nameKo: '우주 끈',      descriptionKo: '원시 에너지로 팽팽히 당겨진, 시공간의 1차원 결함.' },
+    { ...item('Singularity Core',  '●',    'At a black hole\'s heart, our equations predict a point of infinite density — a place where the very physics that built it simply runs out of words.',           'mythic', 'click',     20.0),
+      nameKo: '특이점 핵',    descriptionKo: '블랙홀 한가운데에는 밀도가 무한대로 치솟는 한 점이 예측된다 — 그곳에선 모든 물리 법칙이 말문을 닫는다.' },
+    { ...item('Zero-Point Field',  '⟨0|0⟩','Even perfectly empty space is never truly still: a residual jitter of energy persists even at absolute zero, and it forever forbids true nothingness.',  'mythic', 'auto',      12.0),
+      nameKo: '영점장',       descriptionKo: '완벽한 진공조차 절대영도에서 미세하게 떨린다 — 이 영점 에너지 때문에 우주엔 진짜 \'아무것도 없음\'이 존재할 수 없다.' },
+    { ...item('Quantum Foam',      '∿',    'Zoom into spacetime far enough — down to the unimaginably tiny Planck scale — and its smoothness gives way to a roiling quantum foam where distance and time lose all meaning.',      'mythic', 'crit',       1.5, true),
+      nameKo: '양자 거품',    descriptionKo: '시공간을 약 10의 -35제곱 미터까지 들여다보면 매끈함은 사라지고, 거리와 시간이 의미를 잃는 거품이 들끓는다.' },
+    { ...item('Multiverse Seed',   '✶',    'In eternal inflation, quantum jitters can pinch off a fresh bubble of space that balloons into its own universe — bud after bud, without end.',           'mythic', 'auto_mult',  6.0),
+      nameKo: '다중우주의 씨앗', descriptionKo: '영원한 인플레이션에선 양자 요동이 새로운 공간의 거품을 떼어내 또 하나의 우주로 부풀린다 — 끝없이 새 우주가 움튼다.' },
+    { ...item('Cosmic String',     '|',    'A cosmic string is a thread-thin crack left from the young universe, so dense that a single centimeter of it would outweigh an entire mountain.',       'mythic', 'click',     18.0),
+      nameKo: '우주 끈',      descriptionKo: '우주끈은 초기 우주가 남긴 실보다 가는 균열로, 단 1센티미터에 산 하나보다 무거운 질량이 응축돼 있다.' },
   ]),
 ];
 
