@@ -265,6 +265,14 @@ export function GameScreen({
   // entropy cap still persists in state.condenseBurstThisStage, so NO save-schema bump.
   const [condenseCharge, setCondenseCharge] = useState(0); // transient matter accumulated toward next fire
   const prevQuantaRef = useRef(state.quanta);
+  // 분사 fire RATE-LIMIT (fix: "stage 5 ends in a few clicks"). The charge alone (filled from
+  // matter income, and readable as "full" from matter earned-then-spent) lets a high-income or
+  // post-spike player tap-fire 분사 every frame and dump the whole per-stage cap in seconds. The
+  // 30% cap bounds the AMOUNT but nothing bounded the RATE once the redesign dropped the cooldown.
+  // Gate readiness behind a cooldown so 분사 is paced regardless of charge-refill speed. Reset on
+  // stage entry. (Sim-conservative: the game now uses ≤ the 분사 help the sim assumes.)
+  const condenseCooldownRef = useRef(0);
+  const CONDENSE_COOLDOWN_MS = 12000;
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
@@ -288,7 +296,7 @@ export function GameScreen({
       capFrac: stageBudget > 0 ? Math.min(1, state.condenseBurstThisStage / stageBudget) : 1,
       capReached,
       visible: !isViewingPastStage && !canCondense && !state.completedRun,
-      chargedReady: charge01 >= 1 && !capReached && !interactionLocked && !canCondense,
+      chargedReady: charge01 >= 1 && !capReached && !interactionLocked && !canCondense && Date.now() >= condenseCooldownRef.current,
     };
   }, [stage.id, state.stageIdx, condenseCharge, state.condenseBurstThisStage, state.completedRun, isViewingPastStage, canCondense, interactionLocked]);
   // Charge fill: every positive state.quanta delta (covers BOTH click AND auto income, since
@@ -301,6 +309,7 @@ export function GameScreen({
   // Reset the transient charge on stage entry (condenseBurstThisStage cap also resets in-state).
   useEffect(() => {
     setCondenseCharge(0);
+    condenseCooldownRef.current = 0;
     prevQuantaRef.current = state.quanta;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stageIdx]);
@@ -320,6 +329,7 @@ export function GameScreen({
     dispatch({ type: 'CONDENSE_BURST' });
     soundManager?.playUITap();
     setCondenseCharge(0);
+    condenseCooldownRef.current = Date.now() + CONDENSE_COOLDOWN_MS;
     prevQuantaRef.current = state.quanta;
     particleFieldRef.current?.fireCondenseBurst?.();
   }, [dispatch, soundManager, state.quanta]);
