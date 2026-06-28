@@ -9392,6 +9392,43 @@ button.stat-header-item {
    Lv·count footer then sits on its own grid line below. */
 .entity-detail-card__spec-chips { width: 100%; }
 
+/* 2026-06-28 (user): level sits on its own line right UNDER the name (separate from
+   the stats), and the stats render as a clean LEFT-ALIGNED LIST (not rounded pills). */
+.entity-detail-card__lvl-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.entity-detail-card__stat-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 6px 11px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 6px 2px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-row__icon { width: 16px; flex: none; text-align: center; font-size: 13px; color: #9fb0cc; }
+.stat-row__value { min-width: 60px; color: #cfe0ff; font-weight: 900; font-family: var(--mono); }
+.stat-row__label { color: #aeb9d0; font-weight: 600; }
+.stat-row--primary { font-size: 13px; padding-bottom: 8px; }
+.stat-row--primary .stat-row__icon { font-size: 16px; color: var(--rarity-color, #9fb0cc); }
+.stat-row--primary .stat-row__value { color: var(--rarity-color, #cfe0ff); }
+
 /* ── Readability (#38): trait badge + spec chips ── */
 .trait-badge {
   display: inline-flex;

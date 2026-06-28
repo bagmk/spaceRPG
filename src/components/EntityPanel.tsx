@@ -2189,34 +2189,45 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
               <div className="entity-detail-card__visual"><EntityGlyph entity={ent} color={rc} /></div>
               <div className="entity-detail-card__formula" style={{ color: rc }}>{ent.formula}</div>
               <h3 className="entity-detail-card__name">{entityName(ent, language)}</h3>
-              <div className="entity-detail-card__stats">
-                {/* All specs in ONE block: primary chip + every secondary chip
-                    together (user: secondaries were tacked on separately below). */}
-                <div className="entity-detail-card__spec-chips spec-chip-row">
-                  {(() => {
-                    const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
-                    const tr = EFFECT_TRAIT[ent.effect.type];
-                    return <SpecChip icon={tr.icon} value={p.value} label={p.label} accent={TRAIT_ICON_TONE} primary />;
-                  })()}
-                  {getSecondaryStats(ent).map((sub) => {
-                    const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried), entry?.quality);
-                    return <SpecChip key={sub.type} icon={s.icon} value={s.value} label={s.label} accent="#aab6cc" />;
-                  })}
-                </div>
-                {/* quiet footer: level (+ quality) under the chip cluster. */}
+              {/* Level sits right under the NAME, separate from the stats (user:
+                  "레벨은 이름 바로 밑"). Quality tail rides alongside it. */}
+              <div className="entity-detail-card__lvl-line">
                 <span className="entity-detail-card__lvl" style={levelTextStyle(lvl)}>{`Lv.${lvl}`}</span>
-                {/* #50: a tail (gold) specimen shows its quality percentile. */}
                 {isTailQuality(entry?.quality) ? (
                   <span className="entity-detail-card__quality">{`✦ ${t(language, 'qualityTail')} ${Math.round((entry?.quality ?? 0) * 100)}%`}</span>
                 ) : null}
               </div>
-              {/* Risk phase: live 🎯 성공 / 💥 파괴 readout, then the two ☑ toggles
-                  (✨ 특수강화 — 3 cards, halved fail · 🛡 보호 — absorb a fail). The (?) help
-                  explains all four symbols. */}
-              {risky && enhanceUnlocked ? (
+              {/* Stats as a clean LEFT-ALIGNED LIST (user: 동그라미 말고 리스트) —
+                  icon · value · label per row; primary first, then the secondaries. */}
+              <ul className="entity-detail-card__stat-list">
+                {(() => {
+                  const p = effectValueLabel(ent, language, power, entry?.count ?? 1, lvl, entry?.carried ?? false, true, entry?.quality);
+                  const tr = EFFECT_TRAIT[ent.effect.type];
+                  return (
+                    <li className="stat-row stat-row--primary">
+                      <span className="stat-row__icon">{tr.icon}</span>
+                      <span className="stat-row__value">{p.value}</span>
+                      <span className="stat-row__label">{p.label}</span>
+                    </li>
+                  );
+                })()}
+                {getSecondaryStats(ent).map((sub) => {
+                  const s = substatValueLabel(sub, language, lvl, getGearPowerMult(power, ent.stageId, entry?.carried), entry?.quality);
+                  return (
+                    <li key={sub.type} className="stat-row">
+                      <span className="stat-row__icon">{s.icon}</span>
+                      <span className="stat-row__value">{s.value}</span>
+                      <span className="stat-row__label">{s.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {/* Live 🎯 성공 / 💥 파괴 readout + the two SELECT-BY-COLOR toggles (✨ 특수강화 —
+                  3 cards, halved fail · 🛡 보호 — absorb a fail). 2026-06-28 (user): always shown
+                  while enhance is unlocked (Lv1-2 reads 🎯100%·💥0% and the toggles dim since
+                  there's no risk yet); the ☑ checkbox is gone — the lit COLOR means selected. */}
+              {enhanceUnlocked && !atCap ? (
                 <div className="enhance-risk">
-                  {/* H(3): emoji-only readout — 🎯 성공 / 💥 파괴. The 🔄 유지 mechanic is
-                      still computed (keepPct) but no longer shown (kept the math, dropped the chip). */}
                   <div className="enhance-risk__readout" aria-live="polite">
                     <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${successPct}%`}</span>
                     <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${destroyPct}%`}</span>
@@ -2228,12 +2239,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       role="switch"
                       aria-checked={useSpecial}
                       aria-label={t(language, 'specialEnhanceToggleAria')}
-                      // H(2): no point toggling 특수강화 without the cards (or mid-enhance).
-                      disabled={spares < SPECIAL_ENHANCE_CARD_COST || enhancing !== null}
+                      // Only meaningful in the risk phase with ≥3 spare cards (and not mid-enhance).
+                      disabled={!risky || spares < SPECIAL_ENHANCE_CARD_COST || enhancing !== null}
                       onClick={(e) => { e.stopPropagation(); setUseSpecial((v) => !v); onUITap?.(); }}
                     >
-                      {/* H(1): label TEXT dropped — just the checkbox + ✨. */}
-                      {`${useSpecial ? '☑' : '☐'} ✨`}
+                      {`✨ ${SPECIAL_ENHANCE_CARD_COST}`}
                     </button>
                     <button
                       type="button"
@@ -2241,11 +2251,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       role="switch"
                       aria-checked={useProtect}
                       aria-label={t(language, 'enhanceUseProtect')}
-                      // H(2): no charges → nothing to protect (or mid-enhance).
-                      disabled={enhanceProtectCharges === 0 || enhancing !== null}
+                      // Only meaningful in the risk phase with a charge held (and not mid-enhance).
+                      disabled={!risky || enhanceProtectCharges === 0 || enhancing !== null}
                       onClick={(e) => { e.stopPropagation(); setUseProtect((v) => !v); onUITap?.(); }}
                     >
-                      {`${useProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
+                      {`🛡 ${enhanceProtectCharges}`}
                     </button>
                   </div>
                 </div>
