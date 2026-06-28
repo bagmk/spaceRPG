@@ -78,12 +78,19 @@ const ERA13_WARM_RAMP: readonly string[] = [
 const ERA14_COLD_RAMP: readonly string[] = [
   '#0a1626', '#1c3450', '#2f5680', '#4f86b8', '#8fb8e0', '#d6e8ff',
 ];
-// Cooling pulse (S13): slow warm breathing of the glow. Rate in rad/ms.
-const ERA13_COOLING_PULSE_RATE = 0.00045;
-const ERA13_COOLING_PULSE_DEPTH = 0.32;   // glow-alpha swing fraction (ebb amount)
-// Decay flicker (S14): per-entity slow wink. Rate in rad/ms; depth = how far it dims.
-const ERA14_DECAY_FLICKER_RATE = 0.0011;
-const ERA14_DECAY_FLICKER_DEPTH = 0.5;    // up to 50% dimming at the wink trough
+// Cooling pulse (S13 "Stelliferous End" — last starlight dying): a SLOW warm
+// breathing of the glow, plus a faint warm ember halo (added below). Deepened
+// vs the original so the embers visibly pulse-dim like heat leaking away.
+const ERA13_COOLING_PULSE_RATE = 0.00038;  // rad/ms — slow, calm breathing
+const ERA13_COOLING_PULSE_DEPTH = 0.5;     // glow-alpha swing fraction (ebb amount)
+const ERA13_EMBER_BASE = 0.09;             // warm-ember halo alpha (legendary scaled up)
+// Decay flicker (S14 "Degenerate Era" — matter evaporating): a brief, seed-staggered
+// fade-OUT-and-back per entity. Unlike S13's gentle glow dim, S14 dissolves the WHOLE
+// entity (glyph + glow) toward dark, so each remnant winks out and quietly returns —
+// like proton decay nibbling matter away over a dimmer, darker field.
+const ERA14_DECAY_FLICKER_RATE = 0.00085;  // rad/ms — slower than S13's pulse (colder, stiller)
+const ERA14_DECAY_FLICKER_DEPTH = 0.85;    // up to 85% dissolve at the wink trough (near-vanish)
+const ERA14_FIELD_DIM = 0.7;               // whole-field glow multiplier (darker than S13)
 
 /** Relative luminance (0..1) of a #rrggbb hex (perceptual weights). */
 function hexLuminance(hex: string): number {
@@ -2316,20 +2323,37 @@ let galaxyPeakRun = -1;
 // Damping note (per adversarial verify): with k=0.018 / d=0.90 the integrator is
 // LIGHTLY UNDERDAMPED — it rings subtly into a moving target; the ring is absorbed
 // by the hard radial clamp so it never overshoots the live disk or flies off.
-const GALAXY_SPRING_K = 0.018;                  // soft pull toward the arm target (per frame)
+// Tuning note (#3a "looser pull"): the spring was softened (0.018→0.010) and the
+// wander roughly doubled (0.020→0.038) so the cluster breathes far more freely
+// around its arm targets instead of snapping onto the strokes. The hard radial
+// clamp (GALAXY_DISK_MARGIN, applied below) still guarantees nothing flies off
+// the live disk, so the looser pull stays bounded.
+const GALAXY_SPRING_K = 0.010;                  // soft pull toward the arm target (per frame) — looser than before
 const GALAXY_DAMP = 0.90;                       // velocity retained per frame (anti-jitter)
-const GALAXY_WANDER_ACC = 0.020 * CANVAS_SCALE; // organic breathing acceleration
+const GALAXY_WANDER_ACC = 0.038 * CANVAS_SCALE; // organic breathing acceleration — raised so the disk roams more
 const GALAXY_WANDER_FREQ = 0.00045;             // rad/ms primary wander frequency
 const GALAXY_WANDER_FREQ2 = 0.00097;            // rad/ms second incommensurate component
 const GALAXY_ORBIT_SPEED = 0.040 * CANVAS_SCALE; // tangential carousel speed at mid-disk
 const GALAXY_ORBIT_SOFTEN = 0.35;               // radius soften (r→0 doesn't blow up orbit speed)
 const GALAXY_ORBIT_GAIN = 0.06;                 // how hard tangential vel is steered toward target
-const GALAXY_PATTERN_OMEGA = 0.000010;          // rad/ms spiral-arm pattern sweep (~10.5 min/rev)
+// #3c "visible rotation": the pattern sweep was ~10.5 min/rev (barely perceptible)
+// — bumped ~4× to ~2.6 min/rev so the spiral pattern visibly (but calmly) turns.
+const GALAXY_PATTERN_OMEGA = 0.000040;          // rad/ms spiral-arm pattern sweep (~2.6 min/rev) — visibly rotating
 const GALAXY_SHEAR = 0.15;                       // inner-faster differential winding (0 disables)
 const GALAXY_SEED_SPEED = 0.06 * CANVAS_SCALE;  // initial tangential speed on first sight
 const GALAXY_MAX_SPEED = 0.9 * CANVAS_SCALE;    // hard speed cap (anti-fling)
 const GALAXY_DISK_MARGIN = 1.02;                // hard radial clamp = outer * this (just past tip)
 const GALAXY_DRIFT_STALE_MS = 2000;             // drop a copy's drift state 2s after last seen
+// #3b "mouse-scatter": a live-cursor repulsion field. When the pointer is inside
+// the disk, copies within GALAXY_MOUSE_RADIUS get pushed away with magnitude ∝
+// 1/distance (clamped to GALAXY_MOUSE_MAX_ACC) so dragging the cursor through the
+// disk parts the stars; when the pointer leaves, the spring pulls them back. The
+// pointer arrives in CANVAS coords and is converted to LOCAL space (un-squash y by
+// the 0.55 output flatten) so the radius reads round on screen.
+const GALAXY_MOUSE_RADIUS = 120 * CANVAS_SCALE; // local-space repulsion reach around the cursor
+const GALAXY_MOUSE_ACC = 6.0 * CANVAS_SCALE;    // 1/distance repulsion gain (scaled by GALAXY_MOUSE_RADIUS)
+const GALAXY_MOUSE_MAX_ACC = 0.55 * CANVAS_SCALE; // per-frame repulsion accel cap (anti-fling)
+const GALAXY_Y_SQUASH = 0.55;                   // vertical flatten on OUTPUT (mirrors drawGalaxyDisk)
 
 // Per-copy persisted position+velocity in LOCAL un-flattened galaxy space (origin
 // at cx,cy, before the 0.55 y-squash). Keyed `${stageId}:${id}:${copyIndex}` so two
@@ -2348,6 +2372,10 @@ function drawSpiralGalaxyEntities(
   pointerPressure?: PointerPressureVisualField | null,
   runId?: number,
   cluster?: MoteCluster | null,
+  // #3b live cursor (CANVAS coords) + hovering flag. When hovering inside the disk,
+  // copies near the cursor are repelled; null/false → no scatter (spring rules).
+  galaxyPointer?: { x: number; y: number } | null,
+  galaxyHovering?: boolean,
 ): void {
   // Hard ceiling (the stage-11 branch returns before the generic slice, so apply it here too).
   if (items.length > HARD_CEILING) items.length = HARD_CEILING;
@@ -2380,6 +2408,19 @@ function drawSpiralGalaxyEntities(
   // Hard radial clamp lives just past the disk tip; recomputed from the LIVE `outer`
   // each frame, so it tracks a growing AND shrinking disk (1a94e7e preserved).
   const rMax = outer * GALAXY_DISK_MARGIN;
+
+  // #3b mouse-scatter: convert the live cursor (canvas coords) into LOCAL un-flattened
+  // space ONCE per frame (un-squash y by GALAXY_Y_SQUASH so the repulsion radius reads
+  // round on screen). Only active while hovering AND the cursor is inside the disk —
+  // outside the disk there is nothing to part, and the spring keeps full control.
+  let mouseActive = false;
+  let mlx = 0;
+  let mly = 0;
+  if (galaxyHovering && galaxyPointer) {
+    mlx = galaxyPointer.x - cx;
+    mly = (galaxyPointer.y - cy) / GALAXY_Y_SQUASH;
+    if (Math.hypot(mlx, mly) <= rMax + GALAXY_MOUSE_RADIUS) mouseActive = true;
+  }
 
   ctx.save();
   for (let i = 0; i < sorted.length; i += 1) {
@@ -2445,9 +2486,29 @@ function drawSpiralGalaxyEntities(
     const axOrbit = tnx * (vorb - vtanNow) * GALAXY_ORBIT_GAIN;
     const ayOrbit = tny * (vorb - vtanNow) * GALAXY_ORBIT_GAIN;
 
+    // 3.5) MOUSE-SCATTER — repel from the live cursor (local space). Magnitude ∝
+    //      1/distance (clamped to GALAXY_MOUSE_MAX_ACC so it can't fling), falling to
+    //      zero at GALAXY_MOUSE_RADIUS. Pushing the cursor through the disk parts the
+    //      copies; with no hover this is skipped and the spring pulls them back.
+    let axMouse = 0;
+    let ayMouse = 0;
+    if (mouseActive) {
+      const mdx = st.lx - mlx;
+      const mdy = st.ly - mly;
+      const md = Math.hypot(mdx, mdy);
+      if (md < GALAXY_MOUSE_RADIUS) {
+        const mnx = md > 1e-3 ? mdx / md : 1;
+        const mny = md > 1e-3 ? mdy / md : 0;
+        // 1/distance gain (in radius units), softened near 0 and capped.
+        const mag = Math.min(GALAXY_MOUSE_MAX_ACC, GALAXY_MOUSE_ACC / (md / GALAXY_MOUSE_RADIUS + 0.18));
+        axMouse = mnx * mag;
+        ayMouse = mny * mag;
+      }
+    }
+
     // 4) INTEGRATE (fixed step per frame — matches the generic n-body house style).
-    st.vx = (st.vx + axWander + axSpring + axOrbit) * GALAXY_DAMP;
-    st.vy = (st.vy + ayWander + aySpring + ayOrbit) * GALAXY_DAMP;
+    st.vx = (st.vx + axWander + axSpring + axOrbit + axMouse) * GALAXY_DAMP;
+    st.vy = (st.vy + ayWander + aySpring + ayOrbit + ayMouse) * GALAXY_DAMP;
     const sp = Math.hypot(st.vx, st.vy);
     if (sp > GALAXY_MAX_SPEED) {
       const s = GALAXY_MAX_SPEED / sp;
@@ -2474,9 +2535,9 @@ function drawSpiralGalaxyEntities(
       }
     }
 
-    // --- output: apply the SAME 0.55 vertical flatten as before (physics is round). ---
+    // --- output: apply the SAME vertical flatten as before (physics is round). ---
     let x = cx + st.lx;
-    let y = cy + st.ly * 0.55;
+    let y = cy + st.ly * GALAXY_Y_SQUASH;
     const pushed = applyPointerVisualDisplacement(x, y, pointerPressure, 12);
     x = pushed.x;
     y = pushed.y;
@@ -4293,6 +4354,10 @@ export function drawEntities(
   cluster?: MoteCluster | null,
   almanacCollected?: Record<number, string[]>,
   runId?: number,
+  // #3b Stage-9 galaxy mouse-scatter: live cursor (CANVAS coords) + hovering flag.
+  // Only consumed by drawSpiralGalaxyEntities; ignored by every other stage layer.
+  galaxyPointer?: { x: number; y: number } | null,
+  galaxyHovering?: boolean,
 ): void {
   if (purchasedEntities.length === 0) return;
 
@@ -4394,7 +4459,7 @@ export function drawEntities(
   // Stage 9: arrange entities onto the galaxy's spiral arms (builds outward, static).
   // Returns before the generic HARD_CEILING slice, so the cap is applied inside the fn.
   if (stageId === 9) {
-    drawSpiralGalaxyEntities(ctx, cx, cy, items, now, pointerPressure, runId, cluster);
+    drawSpiralGalaxyEntities(ctx, cx, cy, items, now, pointerPressure, runId, cluster, galaxyPointer, galaxyHovering);
     return;
   }
 
@@ -4654,8 +4719,11 @@ export function drawEntities(
     let innerGlowAlpha = compactGlow ? (isLegend ? 0.18 : 0.11) : (isLegend ? 0.28 : 0.16);
 
     // ── Era mood overlay (stages 13 & 14 only) ──────────────────────────────
-    // Cheap per-frame, no allocation. S13 = slow warm cooling pulse (heat
-    // ebbing); S14 = slow per-entity cold decay flicker (matter winking out).
+    // Cheap per-frame, no allocation. S13 = slow warm cooling pulse (heat ebbing,
+    // entity STAYS visible, just dims/brightens); S14 = a deeper per-entity decay
+    // dissolve that fades the WHOLE entity (glow + glyph) toward dark then back,
+    // over a globally dimmer field — matter quietly evaporating.
+    let era14Dissolve = 1;  // 1 = fully present, →0 = evaporated (applied to glyph too)
     if (stageId === 13) {
       // Whole-field warm breathing: glow swells then ebbs, offset per entity.
       const cool = 0.5 + 0.5 * Math.sin(now * ERA13_COOLING_PULSE_RATE + item.seed * 0.0003);
@@ -4663,12 +4731,13 @@ export function drawEntities(
       outerGlowAlpha *= mult;
       innerGlowAlpha *= mult;
     } else if (stageId === 14) {
-      // Per-entity wink: most of the cycle it sits near full, then dips toward
-      // dark — a remnant briefly fading as proton decay nibbles at it.
+      // Per-entity wink: most of the cycle it sits near full, then dips hard toward
+      // dark — a remnant briefly evaporating as proton decay nibbles at it. The same
+      // factor drives the glyph alpha below, so the whole entity dissolves and returns.
       const phase = Math.sin(now * ERA14_DECAY_FLICKER_RATE + item.seed * 0.0007);
-      const wink = 1 - ERA14_DECAY_FLICKER_DEPTH * Math.pow(Math.max(0, -phase), 1.6);
-      outerGlowAlpha *= wink;
-      innerGlowAlpha *= wink;
+      era14Dissolve = 1 - ERA14_DECAY_FLICKER_DEPTH * Math.pow(Math.max(0, -phase), 1.6);
+      outerGlowAlpha *= era14Dissolve * ERA14_FIELD_DIM;
+      innerGlowAlpha *= era14Dissolve * ERA14_FIELD_DIM;
     }
 
     drawLocalEntityEffect(ctx, position, now);
@@ -4681,13 +4750,18 @@ export function drawEntities(
     ctx.arc(x, y, innerGlowRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // S13 warm ember halo: a faint extra warm-white glow that breathes with the
-    // cooling pulse — last heat radiating before the lights go out.
+    // S13 warm ember halo: a faint extra warm-amber glow that breathes with the
+    // cooling pulse — the last heat radiating before the lights go out. Larger and
+    // warmer than before so the "dying ember" mood reads clearly vs S14's cold dark.
     if (stageId === 13) {
       const ember = 0.5 + 0.5 * Math.sin(now * ERA13_COOLING_PULSE_RATE + item.seed * 0.0003);
-      ctx.fillStyle = hexToRgba('#ffb15a', (isLegend ? 0.07 : 0.04) * ember);
+      const emberGrad = ctx.createRadialGradient(x, y, 0, x, y, outerGlowRadius * 1.5);
+      emberGrad.addColorStop(0, hexToRgba('#ffcaa0', (isLegend ? ERA13_EMBER_BASE : ERA13_EMBER_BASE * 0.6) * ember));
+      emberGrad.addColorStop(0.5, hexToRgba('#ff8a3d', (isLegend ? ERA13_EMBER_BASE * 0.7 : ERA13_EMBER_BASE * 0.4) * ember));
+      emberGrad.addColorStop(1, hexToRgba('#ff8a3d', 0));
+      ctx.fillStyle = emberGrad;
       ctx.beginPath();
-      ctx.arc(x, y, outerGlowRadius * 1.18, 0, Math.PI * 2);
+      ctx.arc(x, y, outerGlowRadius * 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -4699,7 +4773,16 @@ export function drawEntities(
       ctx.stroke();
     }
 
-    drawEntityGlyph(ctx, item, x, y, size, now);
+    // S14: dissolve the GLYPH along with its glow — the entire remnant evaporates
+    // toward invisibility at the wink trough then quietly reforms (matter decaying).
+    if (stageId === 14 && era14Dissolve < 1) {
+      const prevAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = prevAlpha * era14Dissolve;
+      drawEntityGlyph(ctx, item, x, y, size, now);
+      ctx.globalAlpha = prevAlpha;
+    } else {
+      drawEntityGlyph(ctx, item, x, y, size, now);
+    }
   }
 
   ctx.restore();

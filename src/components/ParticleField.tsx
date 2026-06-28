@@ -917,6 +917,12 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
   const transitionExplosionAt = useRef<number | null>(null);
   const dragPointerId = useRef<number | null>(null);
   const pointerPressureRef = useRef<PointerPressureSource | null>(null);
+  // #3b Stage-9 galaxy mouse-scatter: the LIVE pointer position in CANVAS coords
+  // (clientX/Y - rect.left/top — the same basis the draw loop uses, where cx=width/2)
+  // plus a "hovering" flag. The galaxy entity sim repels copies near this point while
+  // hovering; clearing the flag on leave/cancel lets the spring pull them back.
+  const galaxyPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const galaxyHoveringRef = useRef(false);
 
   const updatePointerPressure = (
     x: number,
@@ -1022,6 +1028,8 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     if (!interactionLocked) return;
     dragPointerId.current = null;
     releasePointerPressure();
+    // #3b galaxy scatter: a locked field shouldn't keep repelling its disk.
+    galaxyHoveringRef.current = false;
   }, [interactionLocked]);
 
   useEffect(() => {
@@ -1546,7 +1554,10 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
     if (stage.clusterMode !== 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
-    drawEntities(ctx, cx, cy, actualStageId, inventory, now, pointerPressure, world.cluster, almanacCollected, runId);
+    drawEntities(
+      ctx, cx, cy, actualStageId, inventory, now, pointerPressure, world.cluster, almanacCollected, runId,
+      galaxyPointerRef.current, galaxyHoveringRef.current,
+    );
     if (stage.clusterMode === 'lifeSurface') {
       drawParticles({ ctx, stage, particles: world.particles, flyers: world.flyers, bursts: world.bursts });
     }
@@ -1654,6 +1665,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         const pressureStrength = event.pointerType === 'touch' ? 1.0 : 1.05;
         updatePointerPressure(x, y, event.pointerType, pressureStrength);
         applyPointerPressureImpulse(worldRef.current, stage, x, y, event.pointerType, pressureStrength);
+        // #3b galaxy scatter: a press/drag also parts the disk (touch + mouse).
+        galaxyPointerRef.current = { x, y };
+        galaxyHoveringRef.current = true;
 
         // Stage 11: clicking the Moon nudges its orbit slightly and pulses its glow.
         if (stage.id === 11 && worldRef.current) {
@@ -1697,6 +1711,9 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
           updatePointerPressure(x, y, event.pointerType, 0.72);
+          // #3b galaxy scatter: track the live cursor so the disk parts under it.
+          galaxyPointerRef.current = { x, y };
+          galaxyHoveringRef.current = true;
           // Moon hover wiggle
           if (worldRef.current && stage.id === 11) {
             const mcx = sizeRef.current.width / 2;
@@ -1722,23 +1739,38 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
         const strength = (event.buttons & 4) !== 0 ? 0.95 : 0.78;
         const { x, y } = applySteerNudge(rect, event.clientX, event.clientY, strength);
         updatePointerPressure(x, y, event.pointerType, strength);
+        // #3b galaxy scatter: a drag (mouse or touch) also tracks + parts the disk.
+        galaxyPointerRef.current = { x, y };
+        galaxyHoveringRef.current = true;
       }}
       onPointerEnter={(event) => {
         if (interactionLocked || event.pointerType !== 'mouse') {
           return;
         }
         const rect = event.currentTarget.getBoundingClientRect();
-        updatePointerPressure(event.clientX - rect.left, event.clientY - rect.top, event.pointerType, 0.72);
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        updatePointerPressure(x, y, event.pointerType, 0.72);
+        // #3b galaxy scatter: begin tracking the cursor on enter.
+        galaxyPointerRef.current = { x, y };
+        galaxyHoveringRef.current = true;
       }}
       onPointerLeave={(event) => {
         if (event.pointerType === 'mouse') {
           releasePointerPressure();
         }
+        // #3b galaxy scatter: cursor gone → stop repelling, let the spring regather.
+        galaxyHoveringRef.current = false;
       }}
       onPointerUp={(event) => {
         if (dragPointerId.current === event.pointerId) {
           dragPointerId.current = null;
           releasePointerPressure();
+        }
+        // #3b galaxy scatter: touch/pen have no hover after release → stop repelling
+        // so the disk regathers; a mouse still hovers, so keep tracking it.
+        if (event.pointerType !== 'mouse') {
+          galaxyHoveringRef.current = false;
         }
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1749,6 +1781,8 @@ const ParticleFieldInner = forwardRef<ParticleFieldHandle, ParticleFieldProps>(f
           dragPointerId.current = null;
           releasePointerPressure();
         }
+        // #3b galaxy scatter: cancelled pointer → stop repelling, let the spring regather.
+        galaxyHoveringRef.current = false;
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId);
         }
