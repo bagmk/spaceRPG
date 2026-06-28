@@ -33,16 +33,67 @@ export function drawCore({
   const cy = height / 2;
   const glowRadius = Math.max(width, height) * TUNING.FIELD_GLOW_RADIUS_FRAC;
 
+  // Per-era core character. The shared "field glow + concentric rings" core made
+  // every late era (S13 remnant / S14 degenerate / S15 black hole / S16 heat
+  // death) read as the SAME dark-core-with-rings; and made S1 inflation look as
+  // calm as the cold end. We gate the generic treatment OFF for these stages and
+  // give each its own core mood. (Everything else is unchanged.)
+  const mode = stage.clusterMode;
+  const isHotEarly = mode === 'inflation';                  // S1 — violent, expanding
+  const isWarmRemnant = mode === 'remnant';                 // S13 — last embers cooling
+  const isColdDegenerate = mode === 'degenerate';           // S14 — near-dark, sparse points
+  const isBlackHole = mode === 'blackHole';                 // S15 — the cluster IS the black hole
+  const isHeatDeath = mode === 'heatDeath';                 // S16 — maximum entropy, near-empty
+
   if (Number.isFinite(glowRadius) && glowRadius > 0) {
+    // S1 burns brighter and churns; S16 is the dimmest possible wash; S14/S15 are
+    // darker than mid-game. Everything else keeps the original field glow exactly.
+    let glow0 = 0.1 + progress * 0.06;
+    let glow1 = 0.03;
+    if (isHotEarly) {
+      // Hot, dense, pulsing — the early universe full of energy.
+      const churn = 0.5 + Math.sin(now * 0.004) * 0.5;
+      glow0 = 0.26 + progress * 0.16 + churn * 0.1;
+      glow1 = 0.08 + churn * 0.04;
+    } else if (isHeatDeath) {
+      glow0 = 0.04 + progress * 0.015;   // almost nothing — a flat, cold haze
+      glow1 = 0.012;
+    } else if (isColdDegenerate) {
+      glow0 = 0.06 + progress * 0.025;
+      glow1 = 0.02;
+    } else if (isBlackHole) {
+      glow0 = 0.07 + progress * 0.03;
+      glow1 = 0.022;
+    }
     const fieldGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
-    fieldGlow.addColorStop(0, hexToRgba(stage.accent, 0.1 + progress * 0.06));
-    fieldGlow.addColorStop(0.5, hexToRgba(stage.accent, 0.03));
+    fieldGlow.addColorStop(0, hexToRgba(isHotEarly ? stage.coreColor : stage.accent, glow0));
+    fieldGlow.addColorStop(0.5, hexToRgba(stage.accent, glow1));
     fieldGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = fieldGlow;
     ctx.fillRect(0, 0, width, height);
   }
 
-  if (progress > 0.3) {
+  // S1 hot expanding shock: a bright, fast-pulsing inner core flash that grows
+  // with progress — reads as churning early-universe energy (never the calm
+  // rings of the cold late eras).
+  if (isHotEarly) {
+    const flash = 0.6 + Math.sin(now * 0.006) * 0.4;
+    const hotR = (TUNING.CORE_BASE_RADIUS + progress * TUNING.CORE_PROGRESS_RADIUS) * (1.6 + flash * 0.5);
+    const hot = ctx.createRadialGradient(cx, cy, 0, cx, cy, hotR);
+    hot.addColorStop(0, hexToRgba('#fffaf0', 0.5 + flash * 0.3));
+    hot.addColorStop(0.4, hexToRgba(stage.coreColor, 0.32 + flash * 0.18));
+    hot.addColorStop(1, hexToRgba(stage.accent, 0));
+    ctx.fillStyle = hot;
+    ctx.beginPath();
+    ctx.arc(cx, cy, hotR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Generic concentric rings — the element that made the late eras look alike.
+  // Keep them for every NORMAL stage; skip them for S1 (churns instead) and for
+  // each late era (each has its own bespoke cluster scene).
+  const skipGenericRings = isHotEarly || isWarmRemnant || isColdDegenerate || isBlackHole || isHeatDeath;
+  if (progress > 0.3 && !skipGenericRings) {
     ctx.strokeStyle = hexToRgba(stage.accent, 0.06 * progress);
     ctx.lineWidth = 1;
     for (let ring = 1; ring <= 3; ring += 1) {

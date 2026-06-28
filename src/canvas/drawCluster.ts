@@ -242,7 +242,26 @@ function drawInflation(args: DrawClusterArgs): void {
   const { ctx, cluster, stage, cx, cy, now, progress, pointerPressure } = args;
   const t = now / 1000;
   // Bright initial flash and many outward shards
-  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * (1 + progress * 0.28), stage.accent, 0.18 + progress * 0.06);
+  drawClusterEnvelope(ctx, cx, cy, cluster.physicalRadius * (1 + progress * 0.28), stage.accent, 0.22 + progress * 0.08);
+
+  // Expanding shock rings — fast outward shells that read as the universe
+  // violently inflating. Three staggered rings each sweep out and fade, so the
+  // scene is unmistakably HOT and EXPANDING (never the calm cold late eras).
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const shellMax = cluster.physicalRadius * (1.15 + progress * 0.4);
+  for (let s = 0; s < 3; s += 1) {
+    const ph = (t * 0.9 + s / 3) % 1;
+    const rr = shellMax * ph;
+    const a = (1 - ph) * (0.3 + progress * 0.18);
+    ctx.strokeStyle = hexToRgba(s % 2 === 0 ? '#ffe7c2' : stage.coreColor, a);
+    ctx.lineWidth = 1.4 + (1 - ph) * 2.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   // radial flash core
   ctx.save();
   ctx.translate(cx, cy);
@@ -1257,36 +1276,99 @@ function drawRedGiantBloom(args: DrawClusterArgs): void {
   drawMilestoneFlash(ctx, cx, cy, progress, '#ff7744');
 }
 
-function drawRemnantCloud({ ctx, cluster, stage, cx, cy, progress }: DrawClusterArgs): void {
-  const coldRadius = Math.max(72, cluster.physicalRadius);
-  const coldGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coldRadius + progress * 32);
-  coldGlow.addColorStop(0, hexToRgba(stage.coreColor, 0.22));
-  coldGlow.addColorStop(1, hexToRgba(stage.accent, 0));
-  ctx.fillStyle = coldGlow;
+// S13 "Stelliferous End" — the LAST starlight dying. A handful of warm dim
+// embers cooling white→amber→deep red, sparse and slow, each breathing fainter
+// as heat leaks away. NOT a black hole and NOT cold: warm cooling remnants over
+// a near-dark field. No accretion rings. Gated by clusterMode 'remnant'.
+function drawRemnantCloud({ ctx, cluster, stage, cx, cy, now }: DrawClusterArgs): void {
+  const t = now / 1000;
+  // Very faint warm wash — the residual glow of stars long since gone out.
+  const warmGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(90, cluster.physicalRadius) + 30);
+  warmGlow.addColorStop(0, hexToRgba('#4a2412', 0.16));
+  warmGlow.addColorStop(0.6, hexToRgba('#2a1208', 0.06));
+  warmGlow.addColorStop(1, hexToRgba(stage.accent, 0));
+  ctx.fillStyle = warmGlow;
   ctx.beginPath();
-  ctx.arc(cx, cy, coldRadius + 28, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Math.max(90, cluster.physicalRadius) + 30, 0, Math.PI * 2);
   ctx.fill();
 
-  cluster.motes.forEach((mote) => {
-    const alpha = 0.18 + Math.min(0.45, mote.mass * 0.05);
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 0.95, mote.color, alpha, mote.hue * Math.PI);
+  // Cooling embers: warm body + a slow breathing halo that ebbs like radiating
+  // heat. Hotter (more massive) embers stay amber; cooler ones sink to deep red.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  cluster.motes.forEach((mote, idx) => {
+    // Slow individual cooling-pulse — each ember breathes on its own phase.
+    const breathe = 0.45 + Math.sin(t * 0.5 + idx * 1.7) * 0.35;
+    // Cool ramp by mass: small embers → deep red, larger → amber. Never blue/white.
+    const heat = Math.min(1, mote.mass * 0.06);
+    const emberColor = heat > 0.66 ? '#ffb060' : heat > 0.33 ? '#e8702c' : '#a8341a';
+    const r = Math.max(1.2, mote.r * 0.9);
+    // Warm radiated halo (the leaking heat).
+    const halo = ctx.createRadialGradient(mote.x, mote.y, 0, mote.x, mote.y, r * 5.5);
+    halo.addColorStop(0, hexToRgba(emberColor, 0.18 * breathe));
+    halo.addColorStop(0.5, hexToRgba('#7a2a10', 0.06 * breathe));
+    halo.addColorStop(1, hexToRgba(emberColor, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, r * 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Dim ember core.
+    ctx.fillStyle = hexToRgba(emberColor, 0.5 + breathe * 0.3);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, r, 0, Math.PI * 2);
+    ctx.fill();
   });
+  ctx.restore();
 }
 
+// S14 "Degenerate Era" — NO stars at all. Cold, dark, sparse white-dwarf /
+// neutron-star points drift in a near-black field. Faint proton-decay flickers:
+// an occasional remnant briefly winks out (matter quietly evaporating) and a
+// tiny cold spark escapes. Distinct from S13's WARM embers (this is steel-blue,
+// near-black) and from S15's black holes. Gated by clusterMode 'degenerate'.
 function drawDegenerateField({ ctx, cluster, stage, cx, cy, now }: DrawClusterArgs): void {
-  const pulse = Math.sin(now / 240) * 0.5 + 0.5;
-  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, cluster.physicalRadius * 1.3);
-  gradient.addColorStop(0, hexToRgba(stage.coreColor, 0.18));
-  gradient.addColorStop(1, hexToRgba(stage.accent, 0));
-  ctx.fillStyle = gradient;
+  const t = now / 1000;
+  // Barely-there cold wash — far darker than the old bright radial gradient.
+  const cold = ctx.createRadialGradient(cx, cy, 0, cx, cy, cluster.physicalRadius * 1.3);
+  cold.addColorStop(0, hexToRgba('#1a1430', 0.1));
+  cold.addColorStop(1, hexToRgba(stage.accent, 0));
+  ctx.fillStyle = cold;
   ctx.beginPath();
   ctx.arc(cx, cy, cluster.physicalRadius * 1.35, 0, Math.PI * 2);
   ctx.fill();
 
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
   cluster.motes.forEach((mote, index) => {
-    const flash = index % 11 === 0 ? 0.4 + pulse * 0.4 : 0.18 + pulse * 0.08;
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 1.1, mote.color, flash, now / 1000 + index);
+    // Proton-decay wink: most of the time the point sits dim-steady, then a
+    // seed-staggered dip drives it toward dark (matter evaporating) before it
+    // quietly returns. Deeper + slower than a twinkle so the field feels still.
+    const phase = Math.sin(t * 0.9 + index * 2.3);
+    const decay = 1 - 0.8 * Math.pow(Math.max(0, -phase), 1.8); // 1=present → ~0.2 at trough
+    const r = Math.max(0.8, mote.r * 0.7);
+    // Cold compact-remnant point: steel-blue/white, very small, no warmth.
+    const tint = index % 3 === 0 ? '#dfe8ff' : index % 3 === 1 ? '#9fb4e0' : '#7088b8';
+    // Tight halo (these are dense, point-like degenerate stars — not fuzzy).
+    ctx.fillStyle = hexToRgba(tint, 0.1 * decay);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, r * 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hexToRgba(tint, (0.32 + 0.18 * Math.max(0, phase)) * decay);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Escaping decay spark: at the wink trough, a faint mote leaks outward.
+    if (phase < -0.7) {
+      const esc = (-phase - 0.7) / 0.3; // 0..1 at the deepest dip
+      const ea = t * 0.6 + index;
+      const ed = r * (4 + esc * 10);
+      ctx.fillStyle = hexToRgba('#cdd8ff', 0.22 * esc);
+      ctx.beginPath();
+      ctx.arc(mote.x + Math.cos(ea) * ed, mote.y + Math.sin(ea) * ed, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
   });
+  ctx.restore();
 }
 
 function drawBlackHoleScene(args: DrawClusterArgs): void {
@@ -1380,6 +1462,29 @@ function drawBlackHoleScene(args: DrawClusterArgs): void {
   ctx.beginPath();
   ctx.arc(cx, cy, outer * 1.06, 0, Math.PI * 2);
   ctx.stroke();
+
+  // Hawking-radiation shimmer — sparse pale quanta drifting outward from just
+  // outside the horizon, intensifying as the hole evaporates (progress→1). This
+  // is what marks S15 as the BLACK HOLE ERA: the universe is black holes now,
+  // slowly boiling away into faint radiation. Cheap, no per-frame allocations.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const hawkN = 14;
+  const hawkStrength = 0.35 + progress * 0.65;
+  for (let i = 0; i < hawkN; i += 1) {
+    const ang = (i / hawkN) * Math.PI * 2 + i * 1.7;
+    // Each quantum drifts out on its own phase cycle, fading as it goes.
+    const ph = (now * 0.00018 * (0.7 + (i % 5) * 0.12) + i * 0.37) % 1;
+    const rr = inner * 1.5 + ph * outer * 0.9;
+    const a = (1 - ph) * 0.22 * hawkStrength;
+    const px = cx + Math.cos(ang) * rr;
+    const py = cy + Math.sin(ang) * rr * Math.cos(tilt);
+    ctx.fillStyle = hexToRgba(ph < 0.12 ? '#ffffff' : '#cfd6ff', a);
+    ctx.beginPath();
+    ctx.arc(px, py, 0.6 + (1 - ph) * 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 
   if (progress > 0.99) {
     const flashProgress = (progress - 0.99) / 0.01;
@@ -1565,14 +1670,20 @@ function drawMarsLike(ctx: CanvasRenderingContext2D, x: number, y: number, r: nu
   ctx.fill();
 }
 
-function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now }: DrawClusterArgs): void {
-  ctx.strokeStyle = hexToRgba(stage.coreColor, 0.06);
-  ctx.lineWidth = 0.8;
-  for (let ring = 1; ring <= 4; ring += 1) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, cluster.physicalRadius * (ring / 4) + Math.sin(now / 900 + ring) * 3, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+// S16 "The End" — maximum entropy. Almost empty, uniform, near-static: a vast
+// dim near-uniform field with the faintest scattered cold motes, barely moving.
+// A sense of "nothing left". Distinctly NOT rings (the old 4-ring loop is gone —
+// that was the shared look) and NOT the dark-core-with-disk of the black-hole
+// era. Gated by clusterMode 'heatDeath'.
+function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now, width, height }: DrawClusterArgs): void {
+  // A single flat, almost-uniform cold haze filling the whole frame — no
+  // structure, no center to draw the eye. Just a faint even grey-blue nothing.
+  const haze = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.62);
+  haze.addColorStop(0, hexToRgba(stage.coreColor, 0.035));
+  haze.addColorStop(0.7, hexToRgba(stage.accent, 0.018));
+  haze.addColorStop(1, hexToRgba(stage.accent, 0));
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, width, height);
 
   // V9: memory echo silhouettes (72–88%) — poetic, not physical
   const echoT = rangeT(progress, 0.72, 0.88);
@@ -1615,16 +1726,23 @@ function drawHeatDeathCloud({ ctx, cluster, stage, cx, cy, progress, now }: Draw
     }
   }
 
+  // The very last motes: faint, cold, barely moving cinders — a slow, shallow
+  // shimmer (almost frozen) rather than the old bright flicker, so the scene
+  // reads as "nothing left, nothing happening" instead of an active field.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
   cluster.motes.forEach((mote) => {
-    const flicker = 0.35 + Math.max(0, Math.sin(now / 180 + mote.id)) * 0.5;
-    // Outer glow so the tiny fluctuation sprite is visible
-    const glowR = mote.r * 4;
-    ctx.fillStyle = hexToRgba(mote.color, flicker * 0.28);
+    const shimmer = 0.25 + Math.max(0, Math.sin(now / 2600 + mote.id)) * 0.18; // slow + shallow
+    ctx.fillStyle = hexToRgba('#aeb6cc', shimmer * 0.12);
     ctx.beginPath();
-    ctx.arc(mote.x, mote.y, glowR, 0, Math.PI * 2);
+    ctx.arc(mote.x, mote.y, mote.r * 2.2, 0, Math.PI * 2);
     ctx.fill();
-    drawStageSprite(ctx, stage.id, mote.x, mote.y, mote.r * 1.3, mote.color, flicker, mote.age / 800);
+    ctx.fillStyle = hexToRgba('#cdd3e2', shimmer * 0.5);
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, Math.max(0.6, mote.r * 0.6), 0, Math.PI * 2);
+    ctx.fill();
   });
+  ctx.restore();
 }
 
 function drawClusterEnvelope(

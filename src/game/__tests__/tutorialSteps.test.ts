@@ -152,19 +152,19 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(selectTutorialStep(noEquip)?.id).not.toBe('fusion-intro');
   });
 
-  it('fusion-intro PERSISTS until the first fusion (seen needs fuse-spark-done, not just the flag)', () => {
+  it('fusion-intro: X (its own flag) closes it for good (2026-06-28 user "x눌러도 안꺼짐")', () => {
     const flags = {
       'matter-time-intro': true, 'auto-income-intro': true,
       'entity-lab-intro': true, 'first-equip-done': true,
     };
     const base = ctx({ stageId: 2, equipUnlocked: true, flags });
-    // dismissing the bubble alone (flag set) does NOT retire it — it re-shows
-    expect(selectTutorialStep(ctx({ ...base, flags: { ...flags, 'fusion-intro': true } }))?.id).toBe('fusion-intro');
-    // only the actual fusion (fuse-spark-done) clears it
-    expect(selectTutorialStep(ctx({ ...base, flags: { ...flags, 'fusion-intro': true, 'fuse-spark-done': true } }))?.id).not.toBe('fusion-intro');
+    // eligible before dismiss
+    expect(selectTutorialStep(base)?.id).toBe('fusion-intro');
+    // dismissing the bubble (flag set) RETIRES it — no re-show (the in-panel sparkle still nudges)
+    expect(selectTutorialStep(ctx({ ...base, flags: { ...flags, 'fusion-intro': true } }))?.id).not.toBe('fusion-intro');
   });
 
-  it('S3 enhance-intro fires once enhance is unlocked AND gear is worn, persisting until the first enhance', () => {
+  it('S3 enhance-intro fires once enhance is unlocked AND gear is worn; X closes it for good', () => {
     const flags = {
       'matter-time-intro': true, 'auto-income-intro': true,
       'entity-lab-intro': true, 'first-equip-done': true, 'fuse-spark-done': true,
@@ -176,10 +176,8 @@ describe('C-P2 tutorial step selection (extracted, behavior-preserving)', () => 
     expect(selectTutorialStep(s3)?.id).toBe('enhance-intro');
     // S3 but NO gear worn → no enhance-intro yet
     expect(selectTutorialStep(ctx({ ...s3, hasEquippedGear: false }))?.id).not.toBe('enhance-intro');
-    // dismissing the bubble alone does NOT retire it
-    expect(selectTutorialStep(ctx({ ...s3, flags: { ...flags, 'enhance-intro': true } }))?.id).toBe('enhance-intro');
-    // the first enhance (enhance-spark-done) clears it
-    expect(selectTutorialStep(ctx({ ...s3, flags: { ...flags, 'enhance-intro': true, 'enhance-spark-done': true } }))?.id).not.toBe('enhance-intro');
+    // dismissing the bubble (its own flag) RETIRES it for good
+    expect(selectTutorialStep(ctx({ ...s3, flags: { ...flags, 'enhance-intro': true } }))?.id).not.toBe('enhance-intro');
   });
 });
 

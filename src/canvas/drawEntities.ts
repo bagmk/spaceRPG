@@ -2328,9 +2328,16 @@ let galaxyPeakRun = -1;
 // around its arm targets instead of snapping onto the strokes. The hard radial
 // clamp (GALAXY_DISK_MARGIN, applied below) still guarantees nothing flies off
 // the live disk, so the looser pull stays bounded.
-const GALAXY_SPRING_K = 0.010;                  // soft pull toward the arm target (per frame) — looser than before
+// Tuning note (#3a-2 "wander out further"): the spring was softened again
+// (0.010→0.006) and the wander raised (0.038→0.060) so collected copies pull
+// out of the potential well much more freely and the disk visibly breathes
+// WIDER. The hard clamp margin was widened in step (1.02→1.34 below) so they can
+// range well past the arm tips — but it is still anchored to the LIVE disk
+// radius, so nothing ever flies off-screen; the rotation + mouse-scatter are
+// untouched.
+const GALAXY_SPRING_K = 0.006;                  // soft pull toward the arm target (per frame) — looser, wells off the well
 const GALAXY_DAMP = 0.90;                       // velocity retained per frame (anti-jitter)
-const GALAXY_WANDER_ACC = 0.038 * CANVAS_SCALE; // organic breathing acceleration — raised so the disk roams more
+const GALAXY_WANDER_ACC = 0.060 * CANVAS_SCALE; // organic breathing acceleration — raised so the disk roams much further out
 const GALAXY_WANDER_FREQ = 0.00045;             // rad/ms primary wander frequency
 const GALAXY_WANDER_FREQ2 = 0.00097;            // rad/ms second incommensurate component
 const GALAXY_ORBIT_SPEED = 0.040 * CANVAS_SCALE; // tangential carousel speed at mid-disk
@@ -2342,7 +2349,7 @@ const GALAXY_PATTERN_OMEGA = 0.000040;          // rad/ms spiral-arm pattern swe
 const GALAXY_SHEAR = 0.15;                       // inner-faster differential winding (0 disables)
 const GALAXY_SEED_SPEED = 0.06 * CANVAS_SCALE;  // initial tangential speed on first sight
 const GALAXY_MAX_SPEED = 0.9 * CANVAS_SCALE;    // hard speed cap (anti-fling)
-const GALAXY_DISK_MARGIN = 1.02;                // hard radial clamp = outer * this (just past tip)
+const GALAXY_DISK_MARGIN = 1.34;                // hard radial clamp = outer * this — widened so the disk breathes well past the arm tips (still bounded to the LIVE disk, never off-screen)
 const GALAXY_DRIFT_STALE_MS = 2000;             // drop a copy's drift state 2s after last seen
 // #3b "mouse-scatter": a live-cursor repulsion field. When the pointer is inside
 // the disk, copies within GALAXY_MOUSE_RADIUS get pushed away with magnitude ∝

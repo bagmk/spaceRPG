@@ -133,24 +133,25 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     // first-equip-done is set by handleEquipEntity on the first successful equip.
     // The bubble's CTA OPENS the forge; once inside, the in-panel SPARLE on 인플라톤
     // 폭주 (selectTutorialHighlight) takes over (the bubble is suppressed over the panel).
-    // It is marked seen by the first FUSION (fuse-spark-done), not just by tapping
-    // the bubble — so it keeps reappearing as a reminder until the player actually fuses.
+    // 2026-06-28 (user "x눌러도 안꺼질때가 있어"): the X now CLOSES it for good (seen = its own
+    // flag). The in-panel SPARKLE (selectTutorialHighlight) still nudges toward fusing, so the
+    // guidance persists without the bubble nagging back after a dismiss.
     id: 'fusion-intro', flagId: 'fusion-intro', anchor: 'fuse',
     messageKey: 'tutFusionIntro', ctaKey: 'tutFusionOpen', ctaAction: 'fuse',
     suppressedByAllDismissed: true,
     eligible: (c) => flag(c, 'first-equip-done') && !flag(c, 'fuse-spark-done'),
-    seen: (c) => flag(c, 'fusion-intro') && flag(c, 'fuse-spark-done'),
+    seen: (c) => flag(c, 'fusion-intro'),
   },
   {
     // S3 enhance (user: "장착 업그레이드(강화)도 반짝임으로 설명"). Once enhance unlocks
     // (S3) and the player wears gear, nudge them INTO the equip page; the in-panel
-    // SPARKLE then lands on a worn slot + the enhance button. Marked seen by the
-    // first enhance (enhance-spark-done) so it persists as a reminder until done.
+    // SPARKLE then lands on a worn slot + the enhance button. The X CLOSES it for good
+    // (2026-06-28, same fix as fusion-intro); the sparkle keeps guiding until enhanced.
     id: 'enhance-intro', flagId: 'enhance-intro', anchor: 'equip',
     messageKey: 'tutEnhanceIntro', ctaKey: 'tutEntityLabOpen', ctaAction: 'entityEquip',
     suppressedByAllDismissed: true,
     eligible: (c) => c.enhanceUnlocked && c.hasEquippedGear && !flag(c, 'enhance-spark-done'),
-    seen: (c) => flag(c, 'enhance-intro') && flag(c, 'enhance-spark-done'),
+    seen: (c) => flag(c, 'enhance-intro'),
   },
   {
     id: 'hasSeenCashShopTutorial', flagId: 'hasSeenCashShopTutorial', anchor: 'shop',
