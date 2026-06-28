@@ -556,15 +556,20 @@ export function handleEnhanceEntity(state: GameState, action: EnhanceAction): Ga
   const equippedIds = new Set(
     [...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[],
   );
-  // Resolve the anchor copy: by instanceId, else (entityId fallback) the equipped
-  // copy of that entity, else its highest-level copy.
+  // Resolve the anchor copy: by instanceId, else (legacy/entityId slot fallback) the
+  // FIRST owned copy of that entity.
   let anchor = state.inventory.find((e) => e.instanceId === action.instanceId);
   let entity = anchor ? findEntityById(anchor.entityId) : undefined;
   if (!anchor) {
     const ent = findEntityById(action.instanceId);
     if (ent) {
       const copies = state.inventory.filter((e) => entityMatchesId(ent, e.entityId));
-      anchor = copies.find((e) => equippedIds.has(e.instanceId ?? '')) ?? [...copies].sort((a, b) => b.level - a.level)[0];
+      // FROZEN-CHIP FIX (2026-06-28): a legacy/entityId slot is resolved by entryOfSlot
+      // (the detail card) AND getEquippedInstances (the live modifiers) as the FIRST owned
+      // copy. The enhance anchor MUST match them — picking a different copy (the old
+      // "highest-level" choice) leveled a copy the card never shows, so the displayed level
+      // rose via the event while the shown % stayed put ("Lv.3인데 수치가 안 바뀜").
+      anchor = copies.find((e) => e.count > 0) ?? copies[0];
       entity = ent;
     }
   }
