@@ -549,6 +549,15 @@ button.hud-stage-title--clickable:hover {
   background: #bb8cff;
   box-shadow: 0 0 8px #bb8cff;
 }
+/* P6: one-line caption teaching the matter↔gate decouple. */
+.hud-gate-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #8a86c4;
+  letter-spacing: 0.01em;
+}
 
 /* Gate readout: plain inline text — never the 3-column hud-readout grid
    (its reserved exponent/unit columns clipped the pair). */
