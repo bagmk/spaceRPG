@@ -674,7 +674,7 @@ export function GameScreen({
   }, [dispatch, language, soundManager, state.lastCollisionEvent]);
 
   // (removed) The transient teal "+N/s" auto-income FLOAT was a duplicate of the canonical
-  // crack-income readout (.crack-income-readout, bottom-left, flush with the 축척 ruler row).
+  // top-HUD readout (.hud-auto-rate, next to the matter ⚛ value).
   // Auto income still raises state.quanta (and charges the condense core); only the redundant
   // floating text was dropped so "+N/s" shows exactly once.
 
@@ -1065,8 +1065,10 @@ export function GameScreen({
               <span className="hud-entropy-readout">
                 <span className="qsym hud-quanta-glyph" aria-label={t(language, 'hudQuanta')}>⚛</span>
                 <strong className="hud-quanta-value">{formatGameNumberShort(state.quanta)}</strong>
-                {/* Dedupe: the "+N/s" auto-income now shows once, flush-bottom-left as
-                    .crack-income-readout (aligned with the 축척 ruler row). */}
+                {/* User: "+N/s" auto-income sits right next to the matter (⚛) value, like before. */}
+                {displayedAutoRate > 0 ? (
+                  <span className="hud-auto-rate">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</span>
+                ) : null}
                 <span className="hud-stones-readout">{`◆ ${formatGameNumberShort(state.enhanceStones)}`}</span>
               </span>
             </div>
@@ -1249,11 +1251,8 @@ export function GameScreen({
           document.body,
         )}
         <ScaleIndicator stageId={displayStage.id} language={language} />
-        {/* Canonical single "+N/s" crack-income readout — position:fixed flush-bottom-LEFT,
-            sharing the 축척 ruler's bottom anchor so they sit on the same row. */}
-        {displayedAutoRate > 0 && !isViewingPastStage ? (
-          <div className="crack-income-readout" aria-hidden="true">{`+${formatAutoRateValue(displayedAutoRate)}/s`}</div>
-        ) : null}
+        {/* User: the "+N/s" auto-income now lives in the top HUD next to the matter (⚛)
+            value (see .hud-auto-rate) — the bottom-left text label was removed. */}
         {/* #42-fix: the progress-based lore toast is gone — era-records now unfold
             via the claimable quest alarm below (one alarm, claimable-synced) and
             in the almanac on claim. */}
