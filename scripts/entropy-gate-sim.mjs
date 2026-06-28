@@ -57,7 +57,7 @@ const ANCHOR1 = 1725;
 const ENTITY_COST_ANCHORS = [0, 1725, 3800, 52000, 750000, 1.1e7, 1.6e8, 2.4e9, 3.7e10, 6e11, 1e13, 1.8e14, 3.5e15, 6.5e16, 1.3e18, 2.7e19, 5.6e20];
 // Re-anchored entropy weights: without the 2^level skill click base, raw click
 // income shrinks vs auto — keep active play dominant via the gate weights.
-const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.04, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
+const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.10, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
 // 분사 (Condensation Burst): the MAIN active gate driver, lockstep with balance.ts. It is
 // CHARGED BY CLICKS (every CONDENSE_CLICKS_REQUIRED active taps → one fire), each fire adding
 // CONDENSE_SPAN_FRAC × span, bounded by CONDENSE_STAGE_CAP × span per stage (~85%). The CLICK
@@ -67,7 +67,7 @@ const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.04, fusionValueSec: 30, fusionCostFr
 const CONDENSE_CLICKS_REQUIRED = 60; // lockstep balance.ts (taps to charge one fire)
 const CONDENSE_COST_FRAC = 0.1;   // lockstep balance.ts (wallet fraction spent per fire — flavour, off-gate)
 const CONDENSE_SPAN_FRAC = 0.05;  // lockstep balance.ts (each fire adds this × span)
-const CONDENSE_STAGE_CAP = 0.85;  // lockstep balance.ts (max 분사 share of the stage span per stage)
+const CONDENSE_STAGE_CAP = 0.6;   // lockstep balance.ts (max 분사 share of the stage span per stage)
 // Click output re-anchor (skill 2^N base removed).
 const CLICK_OUTPUT_MULTIPLIER = 15;
 // Crit (gear-only): chance from substats + combo; mult bounded.
@@ -781,7 +781,7 @@ ref.perStageSrc.forEach((s) => {
   const tot = s.click + s.auto + s.fusion + s.condense;
   if (tot > 0) maxCondenseShare = Math.max(maxCondenseShare, s.condense / tot);
 });
-assertish(maxCondenseShare <= 0.90, `분사 entropy share ≤ 90% every stage (cap 0.85 + margin) (max ${(maxCondenseShare * 100).toFixed(0)}%)`);
+assertish(maxCondenseShare <= 0.66, `분사 entropy share ≤ 66% every stage (cap 0.60 + margin) (max ${(maxCondenseShare * 100).toFixed(0)}%)`);
 // Idle viability + active-play premium: the game's own backlog wants idle
 // progression HELPED (offline entropy floor, 4-4), not hard-walled — walling
 // idle would require crushing wAuto until rift gear stops mattering at all.

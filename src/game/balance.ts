@@ -434,22 +434,27 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // be trivialised. ALL INVARIANTS PASS (분사 share ≤85%, idle reaches 14, idlePremium INF, worst
   // 1.00×). NOTE: this lifts the ladder, so a mid-stage save's gate % shifts down once on load —
   // the strong 분사 climbs it back. The v16 ladder stays FROZEN in storage/migrate.ts.
-  1: 1.479e3,
+  // GATE-MIX RE-PIN (2026-06-28, persona review #1/#2): CONDENSE_STAGE_CAP 0.85→0.6 +
+  // ENTROPY_W_AUTO 0.04→0.10. With 분사 capped lower and auto weighted higher, the reference's
+  // channel mix is now click 34% / auto (idle 25%) / fusion 6% / 분사 60% (was 13/0/2/85) — gear
+  // drives the gate and idle/auto progresses. The per-stage search re-pinned each gate DOWN
+  // (~0.4× mid/late) to hold realPlayTargetSec. ALL INVARIANTS PASS. v16 ladder FROZEN in migrate.ts.
+  1: 1.480e3,
   2: 1.041e4,
-  3: 4.143e4,
+  3: 4.145e4,
   4: 1.062e5,
-  5: 3.744e5,
-  6: 3.028e6,
-  7: 1.023e7,
-  8: 2.766e7,
-  9: 4.161e7,
-  10: 6.118e7,
-  11: 9.370e7,
-  12: 1.427e8,
-  13: 1.976e8,
-  14: 6.739e8,
-  15: 1.786e9,
-  16: 2.221e9,
+  5: 3.421e5,
+  6: 1.342e6,
+  7: 4.081e6,
+  8: 1.064e7,
+  9: 1.600e7,
+  10: 2.349e7,
+  11: 3.588e7,
+  12: 5.469e7,
+  13: 7.604e7,
+  14: 2.556e8,
+  15: 6.740e8,
+  16: 8.392e8,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -529,7 +534,10 @@ export const ENTROPY_W_CLICK = 0.6;
  * the progression gate ~15× slower than clicking. Sim invariants: active
  * share ≥ 50% every stage; idle ≥ 4× slower than reference but never walled.
  */
-export const ENTROPY_W_AUTO = 0.04;
+// 2026-06-28 (persona review #2 "auto is a 0%-of-gate dead lane"): 0.04 → 0.10 so the
+// tame auto channel actually pushes the gate — rift/auto gear now matters for progression
+// (still well below click so it can't dominate; sim invariants hold).
+export const ENTROPY_W_AUTO = 0.10;
 /** One fusion burst is worth this many seconds of current entropy income (Phase 3). */
 export const ENTROPY_FUSION_VALUE_SEC = 30;
 /** Each fusion consumes this fraction of the quanta bank (Phase 3 sink). */
@@ -566,8 +574,11 @@ export const CONDENSE_CLICKS_REQUIRED = 60;
 export const CONDENSE_COST_FRAC = 0.1;
 /** Each 분사 adds this fraction of the stage's entropy SPAN (gate − floor) to entropy. */
 export const CONDENSE_SPAN_FRAC = 0.05;
-/** 분사 can contribute at most this fraction of the stage span PER STAGE (then click/auto). */
-export const CONDENSE_STAGE_CAP = 0.85;
+/** 분사 can contribute at most this fraction of the stage span PER STAGE (then click/auto).
+ *  2026-06-28 (persona review #1 "gate is 85% 분사 → gear barely moves it"): 0.85 → 0.6, so
+ *  ~40% of every gate now rides the gear-driven click/auto channels (not the click-charged
+ *  burst), letting the gear economy actually drive progression. Sim re-pinned. */
+export const CONDENSE_STAGE_CAP = 0.6;
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 
