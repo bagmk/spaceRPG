@@ -516,6 +516,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // (?) rules overlay — the equip/fusion systems are intricate, so a single help
   // button per page spells out the rules on demand (user request).
   const [helpOpen, setHelpOpen] = useState(false);
+  const [bonusOpen, setBonusOpen] = useState(false); // P4: codex "총 보너스" panel
   const [equipCat, setEquipCat] = useState<EquipCategory>(equipCategory);
   // 🅠6 (req ⑫): 전체/클릭/오토 filter — 'all' shows both slot groups (6 slots) at once.
   const [rarityFilter, setRarityFilter] = useState<'all' | EntityRarity>('all');
@@ -987,6 +988,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
               <span>{t(language, 'hudStones')}</span>
               <strong>◆{formatEntityCost(enhanceStones)}</strong>
             </div>
+          ) : null}
+          {tab === 'lab' ? (
+            <button
+              type="button"
+              className="entity-fs__bonus"
+              aria-label={t(language, 'bonusTitle')}
+              title={t(language, 'bonusTitle')}
+              onClick={() => { setBonusOpen(true); onUITap?.(); }}
+            >
+              ✦
+            </button>
           ) : null}
           {true ? (
             <button
@@ -2037,6 +2049,41 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
       })() : null}
       {/* (?) rules overlay — explains the equip / fusion systems on demand (user
           request: these screens are intricate, so one help button spells out the rules). */}
+      {bonusOpen ? (
+        <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setBonusOpen(false); }}>
+          <article className="entity-help-card cc-scroll" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="entity-help-card__close" aria-label={t(language, 'panelClose')} onClick={() => setBonusOpen(false)}>×</button>
+            <h3 className="entity-help-card__title">{t(language, 'bonusTitle')}</h3>
+            {(() => {
+              const rows: { key: string; icon: string; label: string; value: string }[] = [
+                { key: 'click', icon: EFFECT_TRAIT.click.icon, label: t(language, 'effectClickPower'), value: `${formatAutoRateValue(stats.clickPower)}${t(language, 'hudPerClick')}` },
+                { key: 'auto', icon: EFFECT_TRAIT.auto.icon, label: t(language, 'hudAuto'), value: `${formatAutoRateValue(stats.autoRate)}${t(language, 'effectAutoRatePerSec')}` },
+              ];
+              if (stats.entropyGainMult > 1) rows.push({ key: 'entropy', icon: SUBSTAT_TRAIT.entropyGain, label: t(language, 'substatEntropyGain'), value: `+${Math.round((stats.entropyGainMult - 1) * 100)}%` });
+              if (stats.fusionBurstMult > 1) rows.push({ key: 'fusion', icon: SUBSTAT_TRAIT.fusionBurst, label: t(language, 'substatFusionBurst'), value: `+${Math.round((stats.fusionBurstMult - 1) * 100)}%` });
+              if (stats.autoFlatMult > 1) rows.push({ key: 'autoP', icon: EFFECT_TRAIT.auto.icon, label: t(language, 'effectAutoPower'), value: `+${Math.round((stats.autoFlatMult - 1) * 100)}%` });
+              if (stats.critChance > 0) {
+                rows.push({ key: 'critC', icon: EFFECT_TRAIT.crit.icon, label: t(language, 'effectCritChance'), value: `${Math.round(stats.critChance * 100)}%` });
+                rows.push({ key: 'critM', icon: SUBSTAT_TRAIT.critMult, label: t(language, 'effectCritMult'), value: `×${stats.critMult.toFixed(1)}` });
+              }
+              if (stats.comboCapAdd > 0) rows.push({ key: 'combo', icon: SUBSTAT_TRAIT.comboCap, label: t(language, 'substatComboCap'), value: `×${stats.comboCapMult.toFixed(1)}` });
+              if (stats.dropChanceMult > 1) rows.push({ key: 'drop', icon: SUBSTAT_TRAIT.dropRate, label: t(language, 'substatDropRate'), value: `+${Math.round((stats.dropChanceMult - 1) * 100)}%` });
+              if (stats.offlineGainMult > 1) rows.push({ key: 'offline', icon: SUBSTAT_TRAIT.offlineEff, label: t(language, 'statOffline'), value: `${Math.round(stats.offlineEff * 100)}%` });
+              return (
+                <ul className="bonus-list">
+                  {rows.map((r) => (
+                    <li className="bonus-row" key={r.key}>
+                      <span className="bonus-row__icon" style={{ color: TRAIT_ICON_TONE }} aria-hidden="true">{r.icon}</span>
+                      <span className="bonus-row__label">{r.label}</span>
+                      <strong className="bonus-row__value">{r.value}</strong>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
+          </article>
+        </div>
+      ) : null}
       {helpOpen ? (
         <div className="entity-help-layer" role="dialog" aria-modal="true" onClick={(e) => { e.stopPropagation(); setHelpOpen(false); }}>
           <article className="entity-help-card cc-scroll" onClick={(e) => e.stopPropagation()}>

@@ -74,6 +74,8 @@ export const STRINGS = {
   enhanceLabel:   { en: 'Enhance', ko: '강화' },
   enhanceMax:     { en: 'MAX', ko: 'MAX' },
   panelHelp:      { en: 'Rules', ko: '규칙' },
+  bonusTitle:     { en: 'Total bonuses', ko: '총 보너스' },
+  bonusEmpty:     { en: 'No active bonuses yet — equip and collect gear.', ko: '아직 활성 보너스가 없습니다 — 장비를 장착하고 모아보세요.' },
   helpEquipRule1: { en: 'Slot gear into the 7-cell hexagon to raise power — 3 click · 3 rift (auto) · 1 wild center.',
                     ko: '헥사곤 7칸에 장비를 끼워 위력을 올립니다 — 클릭 3칸 · 균열(오토) 3칸 · 중앙 와일드 1칸.' },
   helpEquipRule2: { en: 'Complete a line of 3 for a multiplier — and the MORE lines you complete at once, the bigger the board bonus.',
