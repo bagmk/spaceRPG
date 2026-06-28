@@ -424,36 +424,32 @@ export const ENTROPY_THRESHOLDS: Record<number, number> = {
   // invariants pass (worst 1.00×, crit spread 2.77×, casual/hardcore 141.2×). The #3 auto-
   // wallet felt-leveling change is OFF-GATE (autoEntropyFlatAdd tame path), so it does NOT
   // enter this calibration. v16 ladder stays FROZEN in storage/migrate.ts.
-  // 분사 (Condensation Burst) RE-PIN (2026-06-27, scripts/entropy-gate-sim.mjs): 분사 is now an
-  // ACTIVE matter→entropy source bounded by CONDENSE_STAGE_CAP (0.30) × the stage span per stage.
-  // The reference profile fires it (off-gate income is ×3, so matter is never the bottleneck for
-  // the cheap CONDENSE_COST_FRAC price) until the cap, contributing up to ~30% of an early/mid
-  // stage's entropy. The sim's per-stage binary search therefore re-pins each gate so the
-  // reference player STILL hits realPlayTargetSec WITH 분사 active (the gates rose a touch where
-  // 분사 helps most — early/mid). These are the freshly-printed calibrated spans; ALL INVARIANTS
-  // PASS (분사 share ≤30%/stage, active-share 98%, idlePremium INF, geared-best floor re-pinned
-  // 5→2 min for the ×3 income). The OFF-GATE ×3 income raise does NOT enter this calibration
-  // (it rides the tame autoEntropyFlatAdd / wallet path); only 분사 moved the ladder. The v16
-  // ladder stays FROZEN in storage/migrate.ts.
-  1: 2.093e3,
-  2: 1.376e4,
-  3: 4.254e4,
-  // Re-pinned 2026-06-28 after EQUIP click-slot 2 moved S5→S4 (sim clickSlots mirrored): the
-  // reference gains a 2nd click slot one stage earlier, so S4-S13 gates rose slightly to hold the
-  // per-stage targets (so it does NOT make S4 faster); S14-16 unchanged. ALL INVARIANTS PASS.
-  4: 8.138e4,
-  5: 1.766e5,
-  6: 5.798e5,
-  7: 1.665e6,
-  8: 4.280e6,
-  9: 6.237e6,
-  10: 9.173e6,
-  11: 1.405e7,
-  12: 2.140e7,
-  13: 2.965e7,
-  14: 9.343e7,
-  15: 2.602e8,
-  16: 3.254e8,
+  // 분사 MAIN-DRIVER RE-PIN (2026-06-28, scripts/entropy-gate-sim.mjs): 분사 (Condensation Burst)
+  // is now the PRIMARY active gate driver — CHARGED BY CLICKS (CONDENSE_CLICKS_REQUIRED taps per
+  // fire) and capped at CONDENSE_STAGE_CAP (0.85) × the stage span per stage. The reference fires
+  // it on the SAME click schedule the game does (the click rate, NOT a matter price, is the
+  // limiter), so the per-stage binary search re-pins each gate to hold realPlayTargetSec WITH 분사
+  // as the engine. Gates rose ~5× mid/late (where 분사 does the bulk); the last ~15% of every span
+  // still rides the per-stage-calibrated click/auto channels, so late stages stay paced and can't
+  // be trivialised. ALL INVARIANTS PASS (분사 share ≤85%, idle reaches 14, idlePremium INF, worst
+  // 1.00×). NOTE: this lifts the ladder, so a mid-stage save's gate % shifts down once on load —
+  // the strong 분사 climbs it back. The v16 ladder stays FROZEN in storage/migrate.ts.
+  1: 1.479e3,
+  2: 1.041e4,
+  3: 4.143e4,
+  4: 1.062e5,
+  5: 3.744e5,
+  6: 3.028e6,
+  7: 1.023e7,
+  8: 2.766e7,
+  9: 4.161e7,
+  10: 6.118e7,
+  11: 9.370e7,
+  12: 1.427e8,
+  13: 1.976e8,
+  14: 6.739e8,
+  15: 1.786e9,
+  16: 2.221e9,
 };
 
 // ── Threshold-relative meta constants (Phase 4-2) ───────────────────────────
@@ -552,19 +548,26 @@ export const COLLISION_ENTROPY_SPAN_CAP: Record<'massive' | 'major' | 'minor', n
   minor: 0.012,
 };
 
-// ── 물질 응축 / 분사 (Condensation Burst) — matter → entropy, span-capped ─────
-// User 2026-06-27: at S7+ the matter WALLET is OFF-GATE (the entropy gate reads the
-// tame click/auto channel), so a huge matter surplus does NOTHING for the gate. The
-// 분사 lets the player SPEND accumulated matter for a bounded entropy burst — but a
-// PER-STAGE cap (CONDENSE_STAGE_CAP × the stage's entropy span) means wealth can never
-// SKIP the gate: after the cap the button disables and the rest must come from click/auto.
-// Mirrors the comet entropy-span clamp pattern (handleAbsorbComet / fuseOnce).
-/** One 분사 costs ENTITY_COST_ANCHORS[playerStage] × this much matter (quanta). */
+// ── 물질 응축 / 분사 (Condensation Burst) — the MAIN active gate driver ────────
+// User 2026-06-28: the matter WALLET is OFF-GATE (the entropy gate reads the tame
+// click/auto channel), so a huge matter surplus did NOTHING for the gate and clicking
+// "only filled 25". The 분사 is now the player's PRIMARY way to push the gate: it is
+// CHARGED BY CLICKS (every CONDENSE_CLICKS_REQUIRED taps the crack-core is ready), and
+// firing condenses a slice of the matter wallet into a chunk of the gate. The per-stage
+// cap is raised to ~85% so wealth+clicking can blast most of the gate; the last ~15%
+// still rides the per-stage-calibrated click/auto channels, so late stages can never be
+// trivialised (their 15% remainder is stage-scaled). The CLICK requirement — not a
+// matter cost — is the rate limit: the wallet is too rich for a matter price to gate
+// anything, so calibration (sim) keys off the click rate, identical in sim and game.
+/** Taps required to charge ONE 분사 (the crack-core glows, then a tap fires it). */
+export const CONDENSE_CLICKS_REQUIRED = 60;
+/** Each fire condenses this fraction of the CURRENT matter wallet (quanta) — flavour +
+ *  the satisfying "pour my hoard into the gate" spend; does NOT gate the rate (clicks do). */
 export const CONDENSE_COST_FRAC = 0.1;
 /** Each 분사 adds this fraction of the stage's entropy SPAN (gate − floor) to entropy. */
 export const CONDENSE_SPAN_FRAC = 0.05;
-/** 분사 can contribute at most this fraction of the stage span PER STAGE (then disabled). */
-export const CONDENSE_STAGE_CAP = 0.30;
+/** 분사 can contribute at most this fraction of the stage span PER STAGE (then click/auto). */
+export const CONDENSE_STAGE_CAP = 0.85;
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 

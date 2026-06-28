@@ -58,14 +58,16 @@ const ENTITY_COST_ANCHORS = [0, 1725, 3800, 52000, 750000, 1.1e7, 1.6e8, 2.4e9, 
 // Re-anchored entropy weights: without the 2^level skill click base, raw click
 // income shrinks vs auto — keep active play dominant via the gate weights.
 const ENTROPY_CFG = { wClick: 0.6, wAuto: 0.04, fusionValueSec: 30, fusionCostFrac: 0.10, burstRefCostFrac: 0.10 };
-// 분사 (Condensation Burst): matter → a span-capped entropy burst, lockstep with balance.ts.
-// Modeled as an ACTIVE entropy source bounded by CONDENSE_STAGE_CAP × the stage span per stage:
-// a matter-rich profile fires 분사 (cheap vs income) until the per-stage cap, contributing
-// ≤ CONDENSE_STAGE_CAP × span. Off-gate income is now ×3, so the reference profile is never
-// matter-starved for the small CONDENSE_COST_FRAC × anchor price → the cap is the only bound.
-const CONDENSE_COST_FRAC = 0.1;   // lockstep balance.ts
+// 분사 (Condensation Burst): the MAIN active gate driver, lockstep with balance.ts. It is
+// CHARGED BY CLICKS (every CONDENSE_CLICKS_REQUIRED active taps → one fire), each fire adding
+// CONDENSE_SPAN_FRAC × span, bounded by CONDENSE_STAGE_CAP × span per stage (~85%). The CLICK
+// rate — NOT a matter cost — is the rate limit (the wallet is off-gate and too rich to gate
+// anything), so the sim fires 분사 on the same click schedule the game does. The last ~15% of
+// each span still rides the per-stage-calibrated click/auto channels → late stages stay paced.
+const CONDENSE_CLICKS_REQUIRED = 60; // lockstep balance.ts (taps to charge one fire)
+const CONDENSE_COST_FRAC = 0.1;   // lockstep balance.ts (wallet fraction spent per fire — flavour, off-gate)
 const CONDENSE_SPAN_FRAC = 0.05;  // lockstep balance.ts (each fire adds this × span)
-const CONDENSE_STAGE_CAP = 0.30;  // lockstep balance.ts (max 분사 share of the stage span per stage)
+const CONDENSE_STAGE_CAP = 0.85;  // lockstep balance.ts (max 분사 share of the stage span per stage)
 // Click output re-anchor (skill 2^N base removed).
 const CLICK_OUTPUT_MULTIPLIER = 15;
 // Crit (gear-only): chance from substats + combo; mult bounded.
@@ -491,14 +493,14 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
   const combo = profile.combo ?? 0;
   const stageMaxSec = calibrateTo ?? 1000 * 3600;
   const stoneBudget = stoneBudgetFor(stage, profile); // P1: funds Lv5+ levels
-  // 분사 (Condensation Burst): an ACTIVE matter→entropy source, bounded by CONDENSE_STAGE_CAP ×
-  // the stage span PER STAGE. The reference (and any active) profile fires it whenever it can
-  // afford the cheap CONDENSE_COST_FRAC × anchor price, until the per-stage cap is hit.
+  // 분사 (Condensation Burst): the MAIN active gate driver, CHARGED BY CLICKS — one fire per
+  // CONDENSE_CLICKS_REQUIRED active taps (the click rate is the limiter, not a matter price),
+  // each adding CONDENSE_SPAN_FRAC × span, bounded by CONDENSE_STAGE_CAP × span per stage.
   const span = thresholds[stageIdx] - floor;
-  const condenseCost = ENTITY_COST_ANCHORS[stage.id] * CONDENSE_COST_FRAC;
   const condensePerFire = span * CONDENSE_SPAN_FRAC;
   const condenseStageBudget = span * CONDENSE_STAGE_CAP;
-  let condenseSpent = 0; // entropy KB already added via 분사 this stage
+  let condenseSpent = 0;      // entropy KB already added via 분사 this stage
+  let condenseClicks = 0;     // active taps accumulated toward the next fire
   const condenseActive = (profile.activeFraction ?? 0) > 0; // idle does not 분사 (active-only)
   while (safety++ < 400000) {
     if (entropy >= thresholds[stageIdx]) break;
@@ -535,21 +537,23 @@ function simulateStageEntropy(stageIdx, state, profile, thresholds, calibrateTo)
       quanta -= costPaid;
       nextFusionAt += profile.fusionIntervalSec;
     }
-    // 분사 (Condensation Burst): fire while matter-rich AND under the per-stage cap. Each fire
-    // spends condenseCost matter and adds min(perFire, remaining budget, gate headroom) entropy.
-    // Bounded by CONDENSE_STAGE_CAP × span per stage → can NEVER skip the gate.
+    // 분사 (Condensation Burst): CHARGED BY CLICKS — accumulate active taps and fire once per
+    // CONDENSE_CLICKS_REQUIRED, each adding perFire (capped by the per-stage budget + gate
+    // headroom). The click rate is the limiter (not a matter price), bounded by the per-stage
+    // cap → can NEVER skip the gate. The wallet spend (game-side) is off-gate flavour, not modelled.
     if (condenseActive && condenseStageBudget > 0) {
+      condenseClicks += profile.cps * profile.activeFraction * dt;
       let guard = 0;
       while (
         guard++ < 64 &&
-        quanta >= condenseCost &&
+        condenseClicks >= CONDENSE_CLICKS_REQUIRED &&
         condenseSpent < condenseStageBudget - 1e-9 &&
         entropy < thresholds[stageIdx]
       ) {
         const add = Math.min(condensePerFire, condenseStageBudget - condenseSpent, thresholds[stageIdx] - entropy);
         if (add <= 0) break;
         entropy += add; src.condense += add; condenseSpent += add;
-        quanta -= condenseCost;
+        condenseClicks -= CONDENSE_CLICKS_REQUIRED;
       }
     }
     // Enhance sink: levels are derived (paid implicitly); also drain a share of
@@ -771,13 +775,13 @@ ref.perStageSrc.forEach((s) => {
   if (tot > 0) minActiveShare = Math.min(minActiveShare, (s.click + s.fusion + s.condense) / tot);
 });
 assertish(minActiveShare >= 0.5, `active (click+fusion+condense) entropy share ≥ 50% every stage (min ${(minActiveShare * 100).toFixed(0)}%)`);
-// 분사 contribution stays bounded: condenseShare ≤ ~0.35 every stage (cap 0.30 leaves margin).
+// 분사 is the main driver now but still bounded: condenseShare ≤ ~0.90 every stage (cap 0.85 + margin).
 let maxCondenseShare = 0;
 ref.perStageSrc.forEach((s) => {
   const tot = s.click + s.auto + s.fusion + s.condense;
   if (tot > 0) maxCondenseShare = Math.max(maxCondenseShare, s.condense / tot);
 });
-assertish(maxCondenseShare <= 0.35, `분사 entropy share ≤ 35% every stage (cap 0.30 + margin) (max ${(maxCondenseShare * 100).toFixed(0)}%)`);
+assertish(maxCondenseShare <= 0.90, `분사 entropy share ≤ 90% every stage (cap 0.85 + margin) (max ${(maxCondenseShare * 100).toFixed(0)}%)`);
 // Idle viability + active-play premium: the game's own backlog wants idle
 // progression HELPED (offline entropy floor, 4-4), not hard-walled — walling
 // idle would require crushing wAuto until rift gear stops mattering at all.

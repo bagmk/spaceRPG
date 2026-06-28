@@ -35,10 +35,9 @@ import {
   isCashShopUnlocked,
 } from '../game/shop/boosts';
 import {
-  CONDENSE_COST_FRAC,
+  CONDENSE_CLICKS_REQUIRED,
   CONDENSE_SPAN_FRAC,
   CONDENSE_STAGE_CAP,
-  ENTITY_COST_ANCHORS,
   EQUIP_UNLOCK_STAGE_ID,
   FUSION_UNLOCK_STAGE_ID,
   ENHANCE_UNLOCK_STAGE_ID,
@@ -263,16 +262,16 @@ export function GameScreen({
   // fires a span-capped entropy burst (no gauge, no button). Charge is TRANSIENT React state
   // (fills from positive state.quanta deltas, resets on fire + on stage change); the per-stage
   // entropy cap still persists in state.condenseBurstThisStage, so NO save-schema bump.
-  const [condenseCharge, setCondenseCharge] = useState(0); // transient matter accumulated toward next fire
-  const prevQuantaRef = useRef(state.quanta);
-  // 분사 fire RATE-LIMIT (fix: "stage 5 ends in a few clicks"). The charge alone (filled from
-  // matter income, and readable as "full" from matter earned-then-spent) lets a high-income or
-  // post-spike player tap-fire 분사 every frame and dump the whole per-stage cap in seconds. The
-  // 30% cap bounds the AMOUNT but nothing bounded the RATE once the redesign dropped the cooldown.
-  // Gate readiness behind a cooldown so 분사 is paced regardless of charge-refill speed. Reset on
-  // stage entry. (Sim-conservative: the game now uses ≤ the 분사 help the sim assumes.)
+  // 분사 is CHARGED BY CLICKS now (user 2026-06-28: "일정 클릭수 도달하면 쏴지게"): every tap fills
+  // `condenseCharge` toward CONDENSE_CLICKS_REQUIRED; at full the crack-core glows and a tap fires
+  // a chunk of the gate. Transient React state (resets on stage change); the per-stage cap still
+  // persists in state.condenseBurstThisStage → NO save-schema bump.
+  const [condenseCharge, setCondenseCharge] = useState(0); // transient TAPS accumulated toward next fire
+  const prevClicksRef = useRef(state.totalClicks);
+  // A short cooldown keeps even a very fast tapper from firing faster than this (the click count
+  // is the main limit; the cooldown is the "조금 더 느리게"). Reset on stage entry.
   const condenseCooldownRef = useRef(0);
-  const CONDENSE_COOLDOWN_MS = 12000;
+  const CONDENSE_COOLDOWN_MS = 9000;
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [revealStartedAt, setRevealStartedAt] = useState<number | null>(null);
   const interactionLocked =
@@ -281,36 +280,34 @@ export function GameScreen({
     transitionPhase === 'bursting' ||
     state.selectedEndingId !== null ||
     canChooseEnding;
-  // Condense readiness/charge/cap — derived once per render. The CORE glows as matter income
-  // fills `condenseCharge` toward one chunk's worth (`cost`); at full charge the core is tappable
-  // (chargedReady) to fire the burst. The old 30s cooldown is replaced by the charge-refill time.
+  // Condense readiness/charge/cap — derived once per render. The CORE glows as taps fill
+  // `condenseCharge` toward CONDENSE_CLICKS_REQUIRED; at full the core is tappable (chargedReady)
+  // to fire a chunk of the gate, until the per-stage cap (CONDENSE_STAGE_CAP × span) is reached.
   const condenseBurst = useMemo(() => {
-    const cost = Math.ceil(ENTITY_COST_ANCHORS[stage.id as keyof typeof ENTITY_COST_ANCHORS] * CONDENSE_COST_FRAC);
     const span = getEntropyGateSpan(state.stageIdx);
     const stageBudget = span * CONDENSE_STAGE_CAP;
     const capReached = state.condenseBurstThisStage >= stageBudget - 1e-6;
-    const charge01 = Math.min(1, condenseCharge / Math.max(1, cost));
+    const charge01 = Math.min(1, condenseCharge / CONDENSE_CLICKS_REQUIRED);
     return {
-      cost,
       charge01,
       capFrac: stageBudget > 0 ? Math.min(1, state.condenseBurstThisStage / stageBudget) : 1,
       capReached,
       visible: !isViewingPastStage && !canCondense && !state.completedRun,
       chargedReady: charge01 >= 1 && !capReached && !interactionLocked && !canCondense && Date.now() >= condenseCooldownRef.current,
     };
-  }, [stage.id, state.stageIdx, condenseCharge, state.condenseBurstThisStage, state.completedRun, isViewingPastStage, canCondense, interactionLocked]);
-  // Charge fill: every positive state.quanta delta (covers BOTH click AND auto income, since
-  // both raise state.quanta) accumulates toward the next condense fire.
+  }, [state.stageIdx, condenseCharge, state.condenseBurstThisStage, state.completedRun, isViewingPastStage, canCondense, interactionLocked]);
+  // Charge fill: every TAP (state.totalClicks delta) accumulates toward the next 분사 fire. Banks a
+  // little past full (up to 3 fires) so clicking during the cooldown is never wasted.
   useEffect(() => {
-    const delta = state.quanta - prevQuantaRef.current;
-    prevQuantaRef.current = state.quanta;
-    if (delta > 0) setCondenseCharge((c) => c + delta);
-  }, [state.quanta]);
+    const delta = state.totalClicks - prevClicksRef.current;
+    prevClicksRef.current = state.totalClicks;
+    if (delta > 0) setCondenseCharge((c) => Math.min(CONDENSE_CLICKS_REQUIRED * 3, c + delta));
+  }, [state.totalClicks]);
   // Reset the transient charge on stage entry (condenseBurstThisStage cap also resets in-state).
   useEffect(() => {
     setCondenseCharge(0);
     condenseCooldownRef.current = 0;
-    prevQuantaRef.current = state.quanta;
+    prevClicksRef.current = state.totalClicks;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stageIdx]);
   useBoostNotifications(state.shopBoosts, language);
@@ -328,11 +325,11 @@ export function GameScreen({
   const handleCondenseBurst = useCallback(() => {
     dispatch({ type: 'CONDENSE_BURST' });
     soundManager?.playUITap();
-    setCondenseCharge(0);
+    // Spend one fire's worth of taps, keeping any banked excess for the next fire.
+    setCondenseCharge((c) => Math.max(0, c - CONDENSE_CLICKS_REQUIRED));
     condenseCooldownRef.current = Date.now() + CONDENSE_COOLDOWN_MS;
-    prevQuantaRef.current = state.quanta;
     particleFieldRef.current?.fireCondenseBurst?.();
-  }, [dispatch, soundManager, state.quanta]);
+  }, [dispatch, soundManager]);
   const fieldRef = useRef<HTMLElement | null>(null);
   const civPlayed = useRef(false);
   const lastToastStageIdRef = useRef(stage.id);

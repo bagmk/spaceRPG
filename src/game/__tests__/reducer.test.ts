@@ -110,7 +110,7 @@ describe('gameReducer', () => {
     expect(next.lastFusionEvent!.entropyBurst).toBeLessThanOrEqual(span * FUSION_BATCH_BURST_SPAN_CAP + 1e-6);
   });
 
-  it('분사 (CONDENSE_BURST): adds a span-capped entropy burst, tracks the per-stage budget (charge-funded, no wallet spend)', () => {
+  it('분사 (CONDENSE_BURST): adds a span-capped entropy burst, spends a wallet fraction, tracks the per-stage budget', () => {
     const stageIdx = 5; // stage 6
     const span = getEntropyGateSpan(stageIdx);
     const perFire = span * CONDENSE_SPAN_FRAC;
@@ -122,9 +122,9 @@ describe('gameReducer', () => {
       condenseBurstThisStage: 0,
     };
     const next = gameReducer(state, { type: 'CONDENSE_BURST' });
-    // Redesign: condense is funded by the transient CORE charge (UI-side), NOT the wallet, so
-    // quanta is untouched; entropy is added by exactly one per-fire span fraction (below the cap).
-    expect(next.quanta).toBe(state.quanta);
+    // 2026-06-28: 분사 is CLICK-charged (UI-side) and condenses a slice of the wallet into the gate.
+    // Entropy gets exactly one per-fire span fraction (below the cap); quanta drops by COST_FRAC.
+    expect(next.quanta).toBeCloseTo(state.quanta * (1 - CONDENSE_COST_FRAC), 2);
     expect(next.entropy - state.entropy).toBeCloseTo(perFire, 2);
     expect(next.condenseBurstThisStage).toBeCloseTo(perFire, 2);
     expect(next.peakEntropy).toBeGreaterThanOrEqual(next.entropy);

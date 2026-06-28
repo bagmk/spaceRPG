@@ -3,6 +3,7 @@
 import { TUNING } from '../constants';
 import {
   COLLISION_ENTROPY_SPAN_CAP,
+  CONDENSE_COST_FRAC,
   CONDENSE_SPAN_FRAC,
   CONDENSE_STAGE_CAP,
   ENTROPY_W_CLICK,
@@ -406,13 +407,14 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
 }
 
 /**
- * CONDENSE_BURST (분사 / 물질 응축): spend matter (quanta) for a span-capped entropy burst.
- * The off-gate matter wallet does nothing for the entropy gate, so this converts a matter
- * surplus into gate progress — but a PER-STAGE cap (CONDENSE_STAGE_CAP × the stage's entropy
- * span, persisted in condenseBurstThisStage) bounds total 분사 contribution so wealth can never
- * SKIP the gate; after the cap you must click/auto for the rest. The 30s cooldown is enforced
- * UI-side; the reducer only enforces cost / per-stage budget / gate guards. Mirrors the comet
- * entropy-span clamp pattern (handleAbsorbComet).
+ * CONDENSE_BURST (분사 / 물질 응축): the MAIN active gate driver. Charged by CLICKS (UI-side,
+ * CONDENSE_CLICKS_REQUIRED taps), each fire condenses a slice of the matter wallet
+ * (CONDENSE_COST_FRAC × quanta) into a chunk of the gate (CONDENSE_SPAN_FRAC × span). A
+ * PER-STAGE cap (CONDENSE_STAGE_CAP × span, persisted in condenseBurstThisStage) bounds total
+ * 분사 to ~85% so wealth can never SKIP the gate; the last ~15% rides the per-stage-calibrated
+ * click/auto channels (so late stages stay stage-paced — see balance.ts). The CLICK charge is
+ * the rate limit, not the matter spend (the wallet is too rich to gate anything). Mirrors the
+ * comet entropy-span clamp pattern (handleAbsorbComet).
  */
 export function handleCondenseBurst(state: GameState): GameState {
   if (
@@ -437,8 +439,12 @@ export function handleCondenseBurst(state: GameState): GameState {
   const add = Math.min(perFireAdd, remainingBudget, headroom);
   if (add <= 0) return state;
   const nextEntropy = safeAdd(state.entropy, add);
+  // Condense a slice of the wallet into the gate — flavour + a visible spend; the CLICK charge
+  // (UI) is what paces 분사, so this never blocks a fire (it just drains some of the hoard).
+  const nextQuanta = Math.max(0, state.quanta - state.quanta * CONDENSE_COST_FRAC);
   return withCurrentUniverseEndingProgress({
     ...state,
+    quanta: nextQuanta,
     entropy: nextEntropy,
     peakEntropy: Math.max(state.peakEntropy, nextEntropy),
     condenseBurstThisStage: state.condenseBurstThisStage + add,
