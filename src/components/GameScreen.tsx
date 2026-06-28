@@ -199,7 +199,6 @@ export function GameScreen({
   const questToastTimerRef = useRef<number | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
   const resourceAnchorRef = useRef<HTMLDivElement | null>(null);
-  const infoAnchorRef = useRef<HTMLButtonElement | null>(null);
   const boostAnchorRef = useRef<HTMLDivElement | null>(null);
   const fieldCenterAnchorRef = useRef<HTMLSpanElement | null>(null);
   const wallNow = Date.now();
@@ -1051,16 +1050,9 @@ export function GameScreen({
         <div className="hud-info" ref={resourceAnchorRef}>
           <div className="hud-info-click-zone">
             <div className="hud-topline">
-              <button
-                type="button"
-                ref={infoAnchorRef}
-                className="hud-stage-chip"
-                onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
-                title={t(language, 'hudViewInfo')}
-                aria-label={t(language, 'hudViewInfo')}
-              >
-                {displayStageNumber}
-              </button>
+              {/* User: the stage NUMBER no longer opens quests either — non-interactive
+                  display. Quests open ONLY via the rail quest button. */}
+              <div className="hud-stage-chip" aria-hidden="true">{displayStageNumber}</div>
               <div className="hud-stage-summary">
                 <div className="hud-stage-title-line">
                   {/* User: the stage NAME no longer opens quests — quests open only via the
@@ -1177,7 +1169,7 @@ export function GameScreen({
             type="button"
             className={`entity-lab-button ${questPanelHasNudge ? 'entity-lab-button--notify' : ''}`}
             style={{ '--rail-accent': '#ffcf6b' } as React.CSSProperties}
-            onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); }}
+            onClick={() => { setQuestOpen(true); soundManager?.playUIOpen(); dispatch({ type: 'MARK_TUTORIAL_FLAG', flagId: 'info-hint-seen' }); }}
             aria-label={t(language, 'questTitle')}
           >
             <span className="hud-action-icon" aria-hidden="true">📋</span>

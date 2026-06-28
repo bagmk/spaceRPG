@@ -357,8 +357,8 @@ export const STRINGS = {
                           ko: '활성 버프가 여기 표시되며 실시간으로 줄어듭니다. 중첩 구매로 시간을 연장할 수 있습니다.' },
   tutCondense:          { en: 'The entropy gate is full. Press Condense to advance.',
                           ko: '엔트로피 게이트가 가득 찼습니다. 응축을 눌러 진행하세요.' },
-  tutStageLog:          { en: 'Stage events are recorded here. Click to explore milestones.',
-                          ko: '단계별 사건이 여기 기록됩니다. 눌러서 마일스톤을 살펴보세요.' },
+  tutStageLog:          { en: 'Open the quest button to see this era’s goals and records.',
+                          ko: '퀘스트 버튼을 눌러 이 시대의 목표와 기록을 확인하세요.' },
   tutStageLogOpen:      { en: 'Open', ko: '열기' },
 
   settingsLangSwitchToKo: { en: 'Switch to Korean', ko: '한국어로 전환' },

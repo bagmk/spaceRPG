@@ -174,7 +174,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     seen: (c) => flag(c, 'condense-ready'),
   },
   {
-    id: 'info-hint-seen', flagId: 'info-hint-seen', anchor: 'resource',
+    id: 'info-hint-seen', flagId: 'info-hint-seen', anchor: 'quest',
     messageKey: 'tutStageLog', ctaKey: 'tutStageLogOpen', ctaAction: 'almanac',
     suppressedByAllDismissed: true,
     eligible: (c) => flag(c, 'milestone-seen') && !c.questOpen,
