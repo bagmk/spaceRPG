@@ -311,6 +311,19 @@ export function GameScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stageIdx]);
   useBoostNotifications(state.shopBoosts, language);
+  // P8 (persona review #5 — inconsistent Esc): Escape closes whichever full-screen overlay
+  // is open (settings → shop → quest), matching the entity panel's own Esc handler.
+  useEffect(() => {
+    if (!shopOpen && !questOpen && !settingsOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (settingsOpen) setSettingsOpen(false);
+      else if (shopOpen) { setShopOpen(false); soundManager?.playUIClose(); }
+      else if (questOpen) setQuestOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shopOpen, questOpen, settingsOpen, soundManager]);
   const [floatingEntries, setFloatingEntries] = useState<FloatingEntry[]>([]);
   const [comboDisplay, setComboDisplay] = useState<ComboDisplay | null>(null);
   const comboTimersRef = useRef<number[]>([]);
