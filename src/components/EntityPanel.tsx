@@ -315,7 +315,7 @@ function CollectionBar({ entity, level, copies }: { entity: StageEntity; level: 
   return (
     <span className={`collection-bar ${ready ? 'collection-bar--ready' : ''}`} aria-label={`${spares}/${need}`}>
       <span className="collection-bar__fill" style={{ width: `${Math.min(1, spares / need) * 100}%` }} />
-      <span className="collection-bar__label">{`🧬 ${spares}/${need}`}</span>
+      <span className="collection-bar__label">{`${spares}/${need}`}</span>
     </span>
   );
 }
@@ -2229,7 +2229,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
               {enhanceUnlocked && !atCap ? (
                 <div className="enhance-risk">
                   <div className="enhance-risk__readout" aria-live="polite">
-                    <span className="enhance-risk__pct enhance-risk__pct--ok">{`🎯 ${successPct}%`}</span>
+                    <span className={`enhance-risk__pct enhance-risk__pct--ok ${specialActive ? 'enhance-risk__pct--boosted' : ''}`}>{`🎯 ${successPct}%`}</span>
                     <span className="enhance-risk__pct enhance-risk__pct--bad">{`💥 ${destroyPct}%`}</span>
                   </div>
                   <div className="enhance-risk__toggles">

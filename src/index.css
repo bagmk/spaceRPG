@@ -14777,6 +14777,17 @@ button.stat-header-item {
 .enhance-risk__pct--ok { color: #7fe08a; }
 .enhance-risk__pct--keep { color: #c9a24a; }
 .enhance-risk__pct--bad { color: #e2554a; }
+/* 특수강화 ON → the success % sparkles to signal the boosted odds (user 2026-06-28). */
+.enhance-risk__pct--boosted {
+  color: #9dffac;
+  text-shadow: 0 0 6px rgba(127, 224, 138, 0.85), 0 0 12px rgba(127, 224, 138, 0.5);
+  animation: pct-sparkle 1s ease-in-out infinite;
+}
+@keyframes pct-sparkle {
+  0%, 100% { text-shadow: 0 0 5px rgba(127, 224, 138, 0.6); }
+  50% { text-shadow: 0 0 9px rgba(157, 255, 172, 0.95), 0 0 16px rgba(127, 224, 138, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) { .enhance-risk__pct--boosted { animation: none; } }
 .enhance-risk__toggles {
   display: flex;
   flex-wrap: wrap;
