@@ -1,6 +1,7 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { startUpdateWatch } from './updateCheck';
 
 function syncAppViewportHeight(): void {
   const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
@@ -15,6 +16,9 @@ window.visualViewport?.addEventListener('resize', syncAppViewportHeight);
 window.visualViewport?.addEventListener('scroll', syncAppViewportHeight);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
+
+// Auto-pull the latest build (GitHub Pages can't set no-cache headers). See updateCheck.ts.
+startUpdateWatch();
 
 // Register Service Worker for PWA + push notifications
 if ('serviceWorker' in navigator) {
