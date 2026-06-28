@@ -1689,7 +1689,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   once (the redundant in-altar "일괄 융합 ×N" + the "N회 가능" counts were
                   removed; the (?) help explains it). */}
               {(() => {
-                const allTrios = allTriosCount();
+                // P5 (user): show HOW MANY items the batch fuses + its total matter cost.
+                const allIds = drawAllTrios();
+                const allTrios = Math.floor(allIds.length / FUSION_INPUT_COUNT);
+                const items = allTrios * FUSION_INPUT_COUNT;
+                let totalCost = 0;
+                for (let i = 0; i + FUSION_INPUT_COUNT <= allIds.length; i += FUSION_INPUT_COUNT) {
+                  const r = findEntityById(allIds[i])?.rarity ?? 'common';
+                  totalCost += getFusionQuantaCost(r, currentStageId);
+                }
                 return (
                   <button
                     type="button"
@@ -1698,8 +1706,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     onClick={triggerFuseAll}
                   >
                     <span className="gacha-fuse-all-btn__label">
-                      {allTrios > 0 ? t(language, 'fuseAll') : t(language, 'fuseAllNone')}
+                      {allTrios > 0 ? t(language, 'fuseAllN').replace('{n}', String(items)) : t(language, 'fuseAllNone')}
                     </span>
+                    {allTrios > 0 ? (
+                      <span className="gacha-fuse-all-btn__cost">{`⚛ ${formatEntityCost(totalCost)}`}</span>
+                    ) : null}
                   </button>
                 );
               })()}

@@ -203,6 +203,7 @@ export const STRINGS = {
   fuseRetry:        { en: 'Retry', ko: '재시도' },
   fuseClose:        { en: 'Close', ko: '닫기' },
   fuseAll:          { en: 'Mass Fusion', ko: '대규모 융합' },
+  fuseAllN:         { en: 'Mass Fusion · {n} items', ko: '대규모 융합 · {n}개' },
   fuseAllNone:      { en: 'Mass Fusion — need 3 of a kind', ko: '대규모 융합 — 같은 등급 3개 필요' },
   fuseSkip:         { en: 'Skip', ko: '건너뛰기' },
   // The ★ itself conveys lock — no separate "favorite" label (user). Aria-only.
