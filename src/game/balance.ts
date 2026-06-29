@@ -131,7 +131,8 @@ export const ENTITY_RARITY_EFFECT_SCALE: Record<EntityRarity, number> = {
   rare:      1.0,
   epic:      1.8,
   legendary: 3.0,
-  mythic:    5.0,
+  // user: a mythic must be DECISIVELY > legendary on every effect — ≥2× legendary's 3.0.
+  mythic:    6.5,
 };
 
 // RARITY STEEPENING (PO 2026-06-23 "커먼→레어 10배↑→에픽 10배↑…, 모든 스탯이 바뀌어야"):
@@ -1098,7 +1099,9 @@ export const SECONDARY_RARITY_COUNT: Record<EntityRarity, number> = {
   rare: 1,
   epic: 2,
   legendary: 3,
-  mythic: 3,
+  // user: a mythic carries a bonus on EVERY effect — 9 ≥ any category pool, so the roll
+  // (min(count, pool.length)) hands a mythic ALL of its category's substats, not just 3.
+  mythic: 9,
 };
 
 /** Secondary magnitudes scale with rarity on top of the per-stat base.
@@ -1116,7 +1119,8 @@ export const SECONDARY_RARITY_SCALE: Record<EntityRarity, number> = {
   rare: 1.3,
   epic: 2.8,
   legendary: 6.0,
-  mythic: 12.6,
+  // user: each mythic substat ≥ 2× legendary's 6.0.
+  mythic: 13.5,
 };
 
 // ── Feature unlock gating (Overhaul-2 🅠7 — staged onboarding) ───────────────

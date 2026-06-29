@@ -457,7 +457,9 @@ describe('secondary stats (A안)', () => {
   it('is deterministic and counts follow rarity', () => {
     for (const entity of STAGE_ENTITIES) {
       const stats = getSecondaryStats(entity);
-      expect(stats.length).toBe(SECONDARY_RARITY_COUNT[entity.rarity]);
+      // mythic count (9) exceeds its category pool → the roll caps at the pool size (all stats).
+      const poolLen = SECONDARY_STAT_POOLS[getEquipCategory(entity)].length;
+      expect(stats.length).toBe(Math.min(SECONDARY_RARITY_COUNT[entity.rarity], poolLen));
       // Deterministic: a second call returns the same stats in the same order.
       expect(getSecondaryStats(entity)).toEqual(stats);
       // No duplicate stat types on one entity.
