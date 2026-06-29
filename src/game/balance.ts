@@ -1272,7 +1272,11 @@ export const HEX_BONUS_CAP = 5;
  *  once, the bigger an extra multiplier on top of the (capped) lane sum — so a near-full hexagon
  *  is a spectacular off-gate payoff, not just a flat per-line bonus. Indexed by completed-line
  *  count (0..9 lines). Off-gate (feeds clickMatterMult/autoMatterMult) → entropy gate untouched. */
-export const HEX_BOARD_TIERS: number[] = [1, 1, 1.5, 2.2, 3.2, 4.5, 6.5, 9, 12, 16];
+// 2026-06-29: lines now complete on FILL (not same-family), so they are FAR easier to get — the
+// old [..12,16] would hand a normal full board a ~96× off-gate multiplier. Tamed to a generous-
+// but-bounded curve (full board ≈ 3× on top of the capped lane sum); same-family/rarity kickers
+// still reward curated boards within the lane cap.
+export const HEX_BOARD_TIERS: number[] = [1, 1, 1.2, 1.45, 1.7, 1.95, 2.2, 2.45, 2.7, 3.0];
 /** Stage at which the 7th (center/wild) slot unlocks. */
 // Wild center slot — moved 9→6 (user: the 3rd click slot ALSO unlocks at stage 9, so two
 // hex slots opened at once; staggering the wild to stage 6 makes the progression less flat).

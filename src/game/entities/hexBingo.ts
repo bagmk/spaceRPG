@@ -44,21 +44,27 @@ export function computeHexBingo(hexSlots: (string | null | undefined)[]): HexBin
 
   HEX_BINGO_LINES.forEach((line, idx) => {
     const [a, b, c] = line.slots;
-    const fa = familyOf(hexSlots[a]);
-    const fb = familyOf(hexSlots[b]);
-    const fc = familyOf(hexSlots[c]);
 
-    const complete = line.kind === 'center'
-      // center: wild (b) is a joker — filled but family-agnostic; endpoints match.
-      ? Boolean(hexSlots[b]) && fa !== null && fa === fc
-      : fa !== null && fa === fb && fb === fc;
-    if (!complete) return;
+    // user 2026-06-29 ("세개 맞았잖아 — 효과가 안뜸"): a line now COMPLETES as soon as all three
+    // slots are FILLED (no same-family requirement — that was non-obvious and the prompt never
+    // mentioned it). Same-FAMILY and same-RARITY become bonus KICKERS, not gates. The bonus is
+    // off-gate (clickMatterMult / flat-auto), so this never touches the entropy-gate sim.
+    const filled = Boolean(hexSlots[a]) && Boolean(hexSlots[b]) && Boolean(hexSlots[c]);
+    if (!filled) return;
     completedLines.push(idx);
 
     const pure = line.kind === 'pureClick' || line.kind === 'pureRift';
     let amount = (pure ? HEX_PURE_LINE_MULT : 1) * HEX_LINE_BONUS;
 
-    // Creative kicker: the completed line's items also share a rarity ("color match").
+    // FAMILY kicker — a same-equip-family line (center: the two endpoints; wild is a joker) pays
+    // double, so curating a set is still the premium play.
+    const fa = familyOf(hexSlots[a]);
+    const sameFamily = fa !== null && (line.kind === 'center'
+      ? fa === familyOf(hexSlots[c])
+      : fa === familyOf(hexSlots[b]) && fa === familyOf(hexSlots[c]));
+    if (sameFamily) amount += HEX_LINE_BONUS;
+
+    // RARITY kicker: the line's items share a rarity ("color match" — the user's "3 legendary").
     const ra = rarityOf(hexSlots[a]);
     const harmonySlots = line.kind === 'center' ? [a, c] : [a, b, c];
     const sameRarity = ra !== null && harmonySlots.every((s) => rarityOf(hexSlots[s]) === ra);

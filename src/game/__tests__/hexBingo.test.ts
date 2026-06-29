@@ -42,6 +42,25 @@ describe('#44 hexagon bingo bonus', () => {
     expect(r.completedLines).toContain(PURE_CLICK_LINE);
   });
 
+  it('relaxed rule (user): any 3 FILLED in a line complete it — no same-family needed', () => {
+    // 3 DIFFERENT-family click items in slots 0,1,2 now complete the pure-click line.
+    const clicks = STAGE_ENTITIES.filter((e) => getEquipCategory(e) === 'click');
+    const seenFam = new Set<string>();
+    const trio: string[] = [];
+    for (const e of clicks) {
+      const fam = getEquipSetKey(e) ?? e.id;
+      if (seenFam.has(fam)) continue;
+      seenFam.add(fam); trio.push(e.id);
+      if (trio.length === 3) break;
+    }
+    expect(trio.length).toBe(3);
+    const board = [...EMPTY7];
+    board[0] = trio[0]; board[1] = trio[1]; board[2] = trio[2];
+    const r = computeHexBingo(board);
+    expect(r.completedLines).toContain(PURE_CLICK_LINE);
+    expect(r.clickMult).toBeGreaterThan(1);
+  });
+
   it('a partial line (only 2 of 3 filled) completes nothing', () => {
     const trio = threeSameFamily('click')!;
     const board = [...EMPTY7];
