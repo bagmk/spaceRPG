@@ -11,6 +11,7 @@ import {
   ECHO_PEAK_EXP,
   ASCENSION_TIER_BASE_PEAK,
   ASCENSION_TIER_LOG_STEP,
+  CONDENSE_COMPLETE_FRAC,
   ENTROPY_W_CLICK,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -507,9 +508,18 @@ export function getEntropyGateSpan(stageIdx: number): number {
  */
 const ENTROPY_CONDENSE_RATE = 0.1;
 
-export function getEntropyOnCondense(quanta: number, _threshold: number): number {
+/**
+ * Stage-complete condense entropy award. The wallet-based amount (10% of quanta) is BOUNDED
+ * to CONDENSE_COMPLETE_FRAC of the stage's entropy SPAN — the off-gate matter wallet runs away
+ * far past the entropy ladder, so the raw 10% blew up to 10×-700× the span ("+24.75 GB" at
+ * stage 5 + a premature Big Rip latch). The award is re-parked on advance, so this only keeps
+ * the DISPLAYED number sane and stops the ending-flag from latching early.
+ */
+export function getEntropyOnCondense(quanta: number, stageIdx: number): number {
   if (!Number.isFinite(quanta) || quanta <= 0) return 0;
-  return Math.floor(quanta * ENTROPY_CONDENSE_RATE);
+  const walletBased = Math.floor(quanta * ENTROPY_CONDENSE_RATE);
+  const cap = Math.floor(getEntropyGateSpan(stageIdx) * CONDENSE_COMPLETE_FRAC);
+  return Math.min(walletBased, cap);
 }
 
 /**

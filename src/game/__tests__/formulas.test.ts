@@ -17,6 +17,8 @@ import {
   getCondensedMassReward,
   getCritChance,
   getEchoReward,
+  getEntropyOnCondense,
+  getEntropyGateSpan,
   getTimeMultiplier,
   getUnupgradedTimeGaugeSeconds,
   safeAdd,
@@ -25,7 +27,7 @@ import {
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB, BIG_RIP_ENTROPY_THRESHOLD_KB, getEndingOptions } from '../multiverse';
 import { createInitialGameState } from '../reducer';
 import { defaultModifiers, getActiveModifiers } from '../skills/effects';
-import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS, COMBO_CAP_BASE, COMBO_CAP_CEIL, AUTO_RATE_BASE } from '../balance';
+import { CLICK_OUTPUT_MULTIPLIER, TIME_MAXED_STAGE_SECONDS, COMBO_CAP_BASE, COMBO_CAP_CEIL, AUTO_RATE_BASE, CONDENSE_COMPLETE_FRAC } from '../balance';
 import {
   getMaxLegacyTimeEntityMultiplierBeforeStage,
   getMaxTimeEntityMultiplierThroughStage,
@@ -332,5 +334,21 @@ describe('combo cap growth (P5/R10)', () => {
     expect(getComboMult(100000, 3)).toBeCloseTo(COMBO_CAP_BASE + 3);
     // Low combo never exceeds its own floor(combo/10)*0.4 contribution.
     expect(getComboMult(20, 5)).toBeCloseTo(1 + 0.8);
+  });
+});
+
+describe('condense award is span-bounded (stage-5 "+24.75 GB" fix)', () => {
+  it('caps the wallet-based award to CONDENSE_COMPLETE_FRAC of the stage span', () => {
+    // A runaway matter wallet (10% would be ~1e8) must NOT blow past the entropy ladder.
+    for (const stageIdx of [0, 4, 8, 15]) {
+      const cap = Math.floor(getEntropyGateSpan(stageIdx) * CONDENSE_COMPLETE_FRAC);
+      expect(getEntropyOnCondense(1e12, stageIdx)).toBe(cap);          // huge wallet → capped
+      expect(getEntropyOnCondense(1e12, stageIdx)).toBeLessThanOrEqual(getEntropyGateSpan(stageIdx));
+    }
+  });
+  it('keeps the small wallet-based amount when it is below the cap (early game)', () => {
+    // 10% of a tiny wallet is below the stage-1 cap → unchanged.
+    expect(getEntropyOnCondense(100, 0)).toBe(10);
+    expect(getEntropyOnCondense(0, 0)).toBe(0);
   });
 });

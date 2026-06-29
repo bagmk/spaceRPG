@@ -1066,7 +1066,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   for (const sub of cs.subsets) for (const m of getSubsetMembers(sub, STAGE_ENTITIES)) ids.add(m.id);
                   const members = STAGE_ENTITIES.filter((e) => ids.has(e.id));
                   const done = members.filter(isCollected).length;
-                  const full = isSetComplete(cs, collectedSet, STAGE_ENTITIES);
+                  // Use the inventory∪almanac union (same source as the `done` count via
+                  // isCollected) so a 6/6 set never shows "not complete" — keeps the panel
+                  // self-consistent even if the almanac backfill hasn't run yet.
+                  const full = isSetComplete(cs, collectedAllIds, STAGE_ENTITIES);
                   const near = !full && members.length - done > 0 && members.length - done <= 2;
                   const hasNew = members.some((m) => codexNew.has(m.id));
                   return (
@@ -1103,7 +1106,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     {cs.subsets.map((sub) => {
                       const members = getSubsetMembers(sub, STAGE_ENTITIES)
                         .sort((a, b) => (a.stageId - b.stageId) || ((RARITY_RANK.get(a.rarity) ?? 0) - (RARITY_RANK.get(b.rarity) ?? 0)));
-                      const subDone = isSubsetComplete(sub, collectedSet, STAGE_ENTITIES);
+                      const subDone = isSubsetComplete(sub, collectedAllIds, STAGE_ENTITIES);
                       // v28: reward is gated on CLAIMing the completion (click-to-activate).
                       const subClaimed = claimedSet.has(sub.id);
                       const subClaimable = subDone && !subClaimed;

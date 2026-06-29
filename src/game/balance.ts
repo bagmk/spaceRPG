@@ -604,6 +604,12 @@ export const CONDENSE_SPAN_FRAC = 0.05;
  *  ~40% of every gate now rides the gear-driven click/auto channels (not the click-charged
  *  burst), letting the gear economy actually drive progression. Sim re-pinned. */
 export const CONDENSE_STAGE_CAP = 0.6;
+/** Stage-COMPLETE condense award (START_CONDENSE) — bounded to this fraction of the entropy
+ *  SPAN. The legacy award was 10% of the matter WALLET (getEntropyOnCondense), which the
+ *  off-gate wallet runaway blew up to 10×-700× the span ("+24.75 GB" at stage 5 + a premature
+ *  Big Rip latch). The award is cosmetic (re-parked to the next floor on advance), so a small
+ *  span-relative chunk keeps the displayed number sane without touching pacing or endings. */
+export const CONDENSE_COMPLETE_FRAC = 0.2;
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 

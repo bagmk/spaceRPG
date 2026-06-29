@@ -248,7 +248,7 @@ export function GameScreen({
   const clickEmissionCount =
     modifiers.clickEmissionCount * (state.currentUniverseSeed.anomaly === 'echoing' ? 2 : 1);
   const maxComboMult = getComboCapMult(getComboCapBonus(state) + modifiers.comboCapAdd);
-  const entropyPreview = getEntropyOnCondense(state.quanta, effectiveThreshold);
+  const entropyPreview = getEntropyOnCondense(state.quanta, state.stageIdx);
   const endingOptions = getEndingOptions(state, wallNow, language);
   const [endingChooserDismissed, setEndingChooserDismissed] = useState(false);
   const canChooseEnding =

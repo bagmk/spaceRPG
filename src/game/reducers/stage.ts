@@ -56,7 +56,8 @@ export function handleStartCondense(state: GameState, action: StartCondenseActio
   if (!canCondense(state)) return state;
 
   const entropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
-  const earned = getEntropyOnCondense(state.quanta, effectiveThreshold) * entropyEchoMult;
+  // Span-bounded condense award (was 10% of the runaway matter wallet → "+24.75 GB").
+  const earned = getEntropyOnCondense(state.quanta, state.stageIdx) * entropyEchoMult;
   const progressAtCondense = getProgress(state.quanta, effectiveThreshold);
   const condenseEntry = { stageId: stage.id, progressAtCondense };
   return withCurrentUniverseEndingProgress({
