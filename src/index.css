@@ -967,11 +967,10 @@ button.hud-stage-title--clickable:hover {
 .hex-slot {
   position: absolute;
   transform: translate(-50%, -50%);
-  /* The closest hex nodes sit ~30% of the board apart horizontally (HEX_NODE_XY), so a card
-     wider than 0.30·board overlaps its diagonal neighbour. On a phone-width column the board is
-     ~200px → cards must stay ≲60px. Keep them COMPACT at every width (the old 70-100px desktop
-     size overlapped whenever the board was < ~310px, i.e. most of the time). */
-  width: clamp(38px, 18%, 50px);
+  /* The closest hex nodes sit ~34.7% of the board apart (HEX_NODE_XY min center-to-center), so a
+     slot wider than ~0.30·board would touch its neighbour. 26% keeps a comfortable margin at every
+     width while being big enough to read the formula + a short name. */
+  width: clamp(44px, 26%, 56px);
   min-height: 0;
   z-index: 1;
 }
@@ -982,9 +981,29 @@ button.hud-stage-title--clickable:hover {
    slot-card, no space) — a descendant `.hex-slot .equip-slot-card` matches nothing. (0,3,0 beats
    the 0,2,0 rule below.) Bound the card to its content at ALL widths. */
 .entity-fs__body .hex-slot.equip-slot-card { min-height: 0; aspect-ratio: 1; padding: 3px 2px; gap: 1px; overflow: hidden; }
-.entity-fs__body .hex-slot .equip-slot-card__glyph { width: 24px; height: 24px; }
-/* slots are small now — the glyph + corner badges say what's equipped; the name is noise. */
-.entity-fs__body .hex-slot .equip-slot-card__name { display: none; }
+/* The FORMULA is the slot's headline identifier (γ↗/π/n…), rarity-coloured + centered. */
+.entity-fs__body .hex-slot .equip-slot-card__formula {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* a short name under the formula confirms which item it is (1 line, ellipsis). */
+.entity-fs__body .hex-slot .equip-slot-card__name {
+  display: block;
+  font-size: 8px;
+  line-height: 1.05;
+  opacity: 0.82;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* empty/locked/center hints must fit the SQUARE — compact + wrap, never overflow. */
 .entity-fs__body .hex-slot .equip-slot-card__hint { font-size: 8.5px; line-height: 1.05; max-width: 100%; text-align: center; word-break: keep-all; overflow-wrap: anywhere; }
 .entity-fs__body .hex-slot .equip-slot-card__plus { font-size: 17px; line-height: 1; }

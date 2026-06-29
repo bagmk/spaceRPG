@@ -1377,9 +1377,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                   ✕
                 </span>
                 <TraitBadge entity={slotEntity} className="trait-badge--card" />
-                <div className="equip-slot-card__glyph">
-                  <EntityGlyph entity={slotEntity} color={RARITY_COLORS[slotEntity.rarity]} />
-                </div>
+                {/* user "네모 안에 아무것도 안보여": show the FORMULA (γ↗/π/n…) — the identifier the
+                    rest of the panel uses — as the slot's headline, not the abstract sprite blob.
+                    The rarity tint + glow already make it look "filled". */}
+                <div className="equip-slot-card__formula" style={{ color: RARITY_COLORS[slotEntity.rarity] }}>{slotEntity.formula}</div>
                 <div className="equip-slot-card__name">{entityName(slotEntity, language)}</div>
               </>
             );
