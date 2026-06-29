@@ -11,6 +11,9 @@ import {
   CONDENSATION_CORE_BOOST_PER_LEVEL,
   CONDENSATION_CORE_COST_BASE,
   CONDENSATION_CORE_COST_GROWTH,
+  RESONANCE_CORE_RATE,
+  RESONANCE_CORE_COST_BASE,
+  RESONANCE_CORE_COST_GROWTH,
 } from './balance';
 import { formatEntropyAmount } from './formulas';
 
@@ -74,6 +77,24 @@ export function getCondensationCoreMultiplier(level: number): number {
 export function getCondensationCoreCost(currentLevel: number): number {
   return Math.ceil(
     CONDENSATION_CORE_COST_BASE * Math.pow(CONDENSATION_CORE_COST_GROWTH, Math.max(0, currentLevel)),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Resonance Core (P7 — endless, 특이점 잔향-bought, off-gate, TRUE geometric)
+// ---------------------------------------------------------------------------
+
+/** The off-gate wallet multiplier from `level` Resonance Core levels — GEOMETRIC
+ *  (×1.03/level), unlike the Condensation Core's linear +0.02. Split between click/auto
+ *  by echoFocus in getActiveModifiers (geometric-mean-preserving). */
+export function getResonanceCoreMultiplier(level: number): number {
+  return Math.pow(1 + RESONANCE_CORE_RATE, Math.max(0, level));
+}
+
+/** 특이점 잔향 cost to buy the NEXT Resonance Core level (geometric, endless). */
+export function getResonanceCoreCost(currentLevel: number): number {
+  return Math.ceil(
+    RESONANCE_CORE_COST_BASE * Math.pow(RESONANCE_CORE_COST_GROWTH, Math.max(0, currentLevel)),
   );
 }
 

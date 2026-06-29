@@ -2,10 +2,10 @@
 
 import { SINGULARITY_UNLOCK_LOOKUP } from '../constants';
 import { STAGES } from '../stages';
-import { getEntropyGateFloor } from '../formulas';
+import { getEntropyGateFloor, getSingularityEcho } from '../formulas';
 import { getStageStartCosmicTime } from '../timeFlow';
 import { createInitialGameState, createDefaultEndingProgressFlags } from '../defaults';
-import { PRESTIGE_MAX_LEVEL, getPrestigeCost, getCondensationCoreCost } from '../prestige';
+import { PRESTIGE_MAX_LEVEL, getPrestigeCost, getCondensationCoreCost, getResonanceCoreCost } from '../prestige';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import { resetMechanicState, hasUnlock } from './helpers';
@@ -21,6 +21,7 @@ type AdminSetProgressAction = Extract<GameAction, { type: 'ADMIN_SET_PROGRESS' }
 type AdminRestartRunAction = Extract<GameAction, { type: 'ADMIN_RESTART_RUN' }>;
 type BuySingularityAction = Extract<GameAction, { type: 'BUY_SINGULARITY_UNLOCK' }>;
 type BuyPrestigeUpgradeAction = Extract<GameAction, { type: 'BUY_PRESTIGE_UPGRADE' }>;
+type SetEchoFocusAction = Extract<GameAction, { type: 'SET_ECHO_FOCUS' }>;
 
 export function handleAdminNextStage(state: GameState, action: AdminNextStageAction): GameState {
   if (state.stageIdx >= STAGES.length - 1) {
@@ -198,6 +199,23 @@ export function handleBuyPrestigeUpgrade(
     };
   }
 
+  // P7 Resonance Core: the INFINITE compounding sink — uncapped, bought with 특이점 잔향
+  // (Singularity Echo, DERIVED from peakEntropy). Spendable = getSingularityEcho(peakEntropy)
+  // − echoSpent; buying increments echoSpent (the only persisted spend ledger).
+  if (action.upgradeId === 'resonance_core') {
+    const echoCost = getResonanceCoreCost(currentLevel);
+    const spendable = getSingularityEcho(state.peakEntropy) - state.echoSpent;
+    if (spendable < echoCost) return state;
+    return {
+      ...state,
+      echoSpent: state.echoSpent + echoCost,
+      prestigeUpgrades: {
+        ...state.prestigeUpgrades,
+        resonance_core: currentLevel + 1,
+      },
+    };
+  }
+
   if (currentLevel >= PRESTIGE_MAX_LEVEL) return state;
   const cost = getPrestigeCost(currentLevel);
   if (cost === null || state.entropy < cost) return state;
@@ -209,6 +227,17 @@ export function handleBuyPrestigeUpgrade(
       [action.upgradeId]: currentLevel + 1,
     },
   };
+}
+
+/** P7: set the Resonance Core click↔auto focus (0..100). Pure re-spec — the split is
+ *  geometric-mean-preserving (see getActiveModifiers), so total off-gate power is unchanged. */
+export function handleSetEchoFocus(
+  state: GameState,
+  action: SetEchoFocusAction,
+): GameState {
+  const focus = Math.max(0, Math.min(100, Math.round(action.focus)));
+  if (focus === (state.prestigeUpgrades.echoFocus ?? 50)) return state;
+  return { ...state, prestigeUpgrades: { ...state.prestigeUpgrades, echoFocus: focus } };
 }
 
 const ADMIN_UNLIMITED_MAX = 10;

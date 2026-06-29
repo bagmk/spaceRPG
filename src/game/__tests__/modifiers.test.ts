@@ -47,6 +47,32 @@ describe('gear-only modifiers (Phase 4-2 — no skill tree)', () => {
     expect(lv10.comboCapAdd).toBe(base.comboCapAdd);
   });
 
+  it('P7 Resonance Core: off-gate only, geometric, focus-split preserves total power', () => {
+    const reso = Math.pow(1.03, 10); // RESONANCE_CORE_RATE=0.03, Lv10
+    const base = getActiveModifiers(CTX, [], createDefaultPrestigeUpgrades());
+
+    // Balanced focus (50) → both wallet mults × reso^1; gate levers untouched.
+    const bal = getActiveModifiers(CTX, [], { ...createDefaultPrestigeUpgrades(), resonance_core: 10, echoFocus: 50 });
+    expect(bal.clickMatterMult).toBeCloseTo(base.clickMatterMult * reso, 6);
+    expect(bal.autoMatterMult).toBeCloseTo(base.autoMatterMult * reso, 6);
+    expect(bal.clickPowerMult).toBe(base.clickPowerMult);
+    expect(bal.autoRateMult).toBe(base.autoRateMult);
+    expect(bal.critMultMult).toBe(base.critMultMult);
+
+    // All-click focus (100) → click × reso^2, auto × reso^0; all-auto (0) → mirror.
+    const allClick = getActiveModifiers(CTX, [], { ...createDefaultPrestigeUpgrades(), resonance_core: 10, echoFocus: 100 });
+    expect(allClick.clickMatterMult).toBeCloseTo(base.clickMatterMult * reso * reso, 6);
+    expect(allClick.autoMatterMult).toBeCloseTo(base.autoMatterMult, 6);
+    const allAuto = getActiveModifiers(CTX, [], { ...createDefaultPrestigeUpgrades(), resonance_core: 10, echoFocus: 0 });
+    expect(allAuto.autoMatterMult).toBeCloseTo(base.autoMatterMult * reso * reso, 6);
+    expect(allAuto.clickMatterMult).toBeCloseTo(base.clickMatterMult, 6);
+
+    // GEOMETRIC-MEAN-PRESERVING: sqrt(click·auto) wallet power is identical at every focus.
+    const gm = (m: { clickMatterMult: number; autoMatterMult: number }) => Math.sqrt(m.clickMatterMult * m.autoMatterMult);
+    expect(gm(allClick)).toBeCloseTo(gm(bal), 6);
+    expect(gm(allAuto)).toBeCloseTo(gm(bal), 6);
+  });
+
   it('codex completion rewards still apply', () => {
     const stage1Ids = getEntitiesForStage(1).map((e) => e.id);
     const base = getActiveModifiers(CTX, [], undefined, {});

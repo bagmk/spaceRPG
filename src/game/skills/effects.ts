@@ -1,6 +1,6 @@
 import type { EntityInstance } from '../entities/types';
 import type { PrestigeUpgradeLevels } from '../prestige';
-import { getPrestigeMultiplier, getCondensationCoreMultiplier } from '../prestige';
+import { getPrestigeMultiplier, getCondensationCoreMultiplier, getResonanceCoreMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses, applyLaneMatch } from '../entities/effects';
 import { computeHexBingo } from '../entities/hexBingo';
 import { CRIT_MULT_GEAR_CAP } from '../balance';
@@ -197,6 +197,17 @@ export function getActiveModifiers(
     const condCore = getCondensationCoreMultiplier(prestigeUpgrades.condensation_core ?? 0);
     mods.clickMatterMult *= condCore;
     mods.autoMatterMult *= condCore;
+
+    // P7 Resonance Core (endless, 특이점 잔향-bought, off-gate, geometric). The echoFocus
+    // slider (0..100) re-weights the SAME multiplier between click/auto via geometric-mean-
+    // preserving exponents: at focus 50 both = reso^1, and sqrt(clickReso·autoReso) = reso at
+    // EVERY split — re-spec changes feel, never total off-gate power (so it needs no re-sim).
+    const reso = getResonanceCoreMultiplier(prestigeUpgrades.resonance_core ?? 0);
+    if (reso > 1) {
+      const cw = (prestigeUpgrades.echoFocus ?? 50) / 100; // click weight 0..1
+      mods.clickMatterMult *= Math.pow(reso, 2 * cw);
+      mods.autoMatterMult *= Math.pow(reso, 2 * (1 - cw));
+    }
   }
 
   // CRIT GEAR CAP re-applied AFTER prestige? No — prestige critMultMult (critical_core)

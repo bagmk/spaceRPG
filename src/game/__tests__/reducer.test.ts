@@ -8,7 +8,8 @@ import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
-import { getCondensationCoreCost } from '../prestige';
+import { getCondensationCoreCost, getResonanceCoreCost } from '../prestige';
+import { getSingularityEcho } from '../formulas';
 import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
@@ -570,6 +571,42 @@ describe('gameReducer', () => {
     const next = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'condensation_core' });
     expect(next.prestigeUpgrades.condensation_core).toBe(0);
     expect(next.condensedMass).toBe(0);
+  });
+
+  // P7 Resonance Core — infinite echo sink. Echo is DERIVED from peakEntropy; only
+  // echoSpent persists, and spendable = getSingularityEcho(peakEntropy) − echoSpent.
+  it('P7 Resonance Core: peakEntropy mints spendable echo; buying raises echoSpent + level, uncapped', () => {
+    let state = { ...createInitialGameState(0), peakEntropy: 1e9, echoSpent: 0 };
+    const total = getSingularityEcho(1e9);
+    expect(total).toBeGreaterThan(0); // floor(1e9^0.3) ≈ 501
+    expect(state.prestigeUpgrades.resonance_core).toBe(0);
+
+    const firstCost = getResonanceCoreCost(0);
+    const next = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'resonance_core' });
+    expect(next.prestigeUpgrades.resonance_core).toBe(1);
+    expect(next.echoSpent).toBe(firstCost);               // spend ledger advanced
+    expect(next.peakEntropy).toBe(1e9);                   // earn source untouched
+    // spendable shrank by exactly the cost
+    expect(getSingularityEcho(next.peakEntropy) - next.echoSpent).toBe(total - firstCost);
+    // uncapped: keep buying past Lv5 while echo lasts
+    state = next;
+    for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'resonance_core' });
+    expect(state.prestigeUpgrades.resonance_core).toBe(7);
+  });
+
+  it('P7 Resonance Core: rejects the buy when echo (peakEntropy-derived) is short', () => {
+    const state = { ...createInitialGameState(0), peakEntropy: 1, echoSpent: 0 }; // echo = floor(1^0.3)=1, cost 5
+    const next = gameReducer(state, { type: 'BUY_PRESTIGE_UPGRADE', upgradeId: 'resonance_core' });
+    expect(next.prestigeUpgrades.resonance_core).toBe(0);
+    expect(next.echoSpent).toBe(0);
+  });
+
+  it('P7 SET_ECHO_FOCUS: clamps to 0..100', () => {
+    const state = createInitialGameState(0);
+    expect(state.prestigeUpgrades.echoFocus).toBe(50);
+    expect(gameReducer(state, { type: 'SET_ECHO_FOCUS', focus: 80 }).prestigeUpgrades.echoFocus).toBe(80);
+    expect(gameReducer(state, { type: 'SET_ECHO_FOCUS', focus: 999 }).prestigeUpgrades.echoFocus).toBe(100);
+    expect(gameReducer(state, { type: 'SET_ECHO_FOCUS', focus: -5 }).prestigeUpgrades.echoFocus).toBe(0);
   });
 });
 

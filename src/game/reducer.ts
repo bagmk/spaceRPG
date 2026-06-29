@@ -44,6 +44,7 @@ import {
   handleAdminMaxEntities,
   handleBuySingularityUnlock,
   handleBuyPrestigeUpgrade,
+  handleSetEchoFocus,
 } from './reducers/admin';
 import {
   handleHydrate,
@@ -176,6 +177,7 @@ export type GameAction =
   | { type: 'CLEAR_CODEX_CLAIM_EVENT'; id: number }
   | { type: 'ADMIN_MAX_ENTITIES' }
   | { type: 'BUY_PRESTIGE_UPGRADE'; upgradeId: PrestigeUpgradeId }
+  | { type: 'SET_ECHO_FOCUS'; focus: number }
   | { type: 'BUY_ENHANCE_STONES'; count: number }
   | { type: 'BUY_ENHANCE_PROTECT'; count: number }
   | { type: 'CLAIM_ATTENDANCE'; now: number; rolls: Array<{ rarityRoll: number; stageRoll: number; pickRoll: number; q1: number; q2: number }> }
@@ -322,6 +324,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CLEAR_DROP_EVENT':      return handleClearDropEvent(state, action);
     case 'CLEAR_CODEX_CLAIM_EVENT': return handleClearCodexClaimEvent(state, action);
     case 'BUY_PRESTIGE_UPGRADE':  return handleBuyPrestigeUpgrade(state, action);
+    case 'SET_ECHO_FOCUS':        return handleSetEchoFocus(state, action);
     default: {
       const exhaustiveAction: never = action;
       return exhaustiveAction;

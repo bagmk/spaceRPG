@@ -492,6 +492,26 @@ export const CONDENSATION_CORE_BOOST_PER_LEVEL = 0.02; // +2% wallet income / le
 export const CONDENSATION_CORE_COST_BASE = 50;
 export const CONDENSATION_CORE_COST_GROWTH = 1.6;
 
+// ── P7: Singularity Echoes (특이점 잔향) — the INFINITE / COMPOUNDING prestige sink ──
+// The meta-currency is DERIVED from peakEntropy (the lifetime cross-prestige max, already
+// carried verbatim): getSingularityEcho(peakEntropy) = floor(peakEntropy^ECHO_PEAK_EXP).
+// 0.30 sits BELOW getCondensedMassReward's 0.40 so the infinite source grows SLOWER than the
+// one-shot condensedMass reward — compounding forever without overtaking the run economy.
+export const ECHO_PEAK_EXP = 0.3;
+// The Resonance Core (공명 코어): an endless echo-bought lever. TRUE GEOMETRIC compounding
+// (×1.03/level), deliberately NOT the linear +0.02 the Condensation Core uses — each prestige
+// genuinely strengthens the next. OFF-GATE: it only scales clickMatterMult/autoMatterMult (the
+// wallet), never the sim-calibrated entropy gate, so no re-sim is needed.
+export const RESONANCE_CORE_RATE = 0.03; // ×(1+rate)^level wallet income
+// Geometric echo cost. GROWTH (1.35) > RATE (0.03) so "free levels per run" self-stabilizes
+// around the peak-entropy growth rate — no single-run runaway. BASE 5 = first level cheap.
+export const RESONANCE_CORE_COST_BASE = 5;
+export const RESONANCE_CORE_COST_GROWTH = 1.35;
+// 0..100 click↔auto focus for the Resonance Core multiplier. 50 = balanced. The split uses
+// geometric-mean-preserving exponents (reso^(2·cw) / reso^(2·(1-cw))) so sqrt(click·auto)=reso
+// at every split — it re-weights feel, never total off-gate power (re-spec, re-sim-free).
+export const ECHO_FOCUS_DEFAULT = 50;
+
 // ── Codex meta bonus (Phase 4-3) ────────────────────────────────────────────
 // (Panel #7 A: prestige item-carry was removed — prestige resets the inventory;
 //  only bonuses carry. PRESTIGE_CARRY_COUNT_CAP + computeCarriedInventory deleted.)

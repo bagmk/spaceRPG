@@ -8,6 +8,7 @@ import {
   COMBO_CAP_CEIL,
   ENTROPY_W_AUTO,
   CODEX_MASS_BONUS,
+  ECHO_PEAK_EXP,
   ENTROPY_W_CLICK,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -560,6 +561,18 @@ export function getCodexMassBonusFactor(almanacCollected: Record<number, string[
 
 export function getEchoReward(uniqueEndingsCompleted: number): number {
   return Math.pow(2, uniqueEndingsCompleted);
+}
+
+/**
+ * P7 — total 특이점 잔향 (Singularity Echo) EARNED over this life, derived purely from
+ * peakEntropy (the lifetime cross-prestige max, never reset). floor(peakEntropy^0.30).
+ * Monotonic (peakEntropy only ever rises). Spendable = getSingularityEcho(peakEntropy) −
+ * echoSpent. Only the spend is persisted, so the derived total can never be silently
+ * dropped on load. Sub-linear (0.30 < the 0.40 condensedMass exponent) so the infinite
+ * compounding source grows slower than the one-shot reward.
+ */
+export function getSingularityEcho(peakEntropy: number): number {
+  return Math.floor(Math.pow(Math.max(1, peakEntropy), ECHO_PEAK_EXP));
 }
 
 export function getLifeStep(progress01: number): number {
