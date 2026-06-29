@@ -1114,10 +1114,6 @@ export function GameScreen({
                   >
                     <div className="hud-gauge-fill hud-entropy-gate-fill" style={{ width: `${Math.min(100, entropyGateProgress01 * 100)}%` }} />
                   </div>
-                  {/* P6: teach the decouple — the gate advances via active play (clicks + 분사),
-                      NOT the matter wallet, so a huge matter number that doesn't move the bar
-                      reads as intended, not a bug (persona review #4). */}
-                  <span className="hud-gate-hint">{t(language, 'gateHint')}</span>
                 </div>
                 {/* 물질 응축 redesign: the gauge + 분사 button are gone. Matter income now charges
                     the central CORE (see ParticleField condenseCharge01); tapping the full-charge
