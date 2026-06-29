@@ -1079,10 +1079,12 @@ button.hud-stage-title--clickable:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 6px;
+  justify-content: center; /* center content in the square */
+  aspect-ratio: 1;         /* user: square cards, not rectangles */
+  gap: 3px;
+  padding: 6px 5px;
   border: 1px solid color-mix(in srgb, var(--rarity-color) 55%, transparent);
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--rarity-color) 7%, transparent);
   color: inherit;
   font: inherit;
@@ -16314,8 +16316,9 @@ button.stat-header-item {
 
 /* Roomier dense grids so tiles + the larger labels aren't cramped on phones. */
 .almanac-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
-.owned-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
+/* user: equip + fusion fuel items want AT LEAST 3 columns of SQUARE cards (the 108px auto-fill
+   collapsed to 2 wide rectangles). Force a 3-column grid at every width. */
+.owned-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) {
   .almanac-grid { grid-template-columns: repeat(3, 1fr); }
-  .owned-grid { grid-template-columns: repeat(3, 1fr); }
 }
