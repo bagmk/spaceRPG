@@ -987,6 +987,7 @@ export function GameScreen({
             quanta={state.quanta}
             enhanceStones={state.enhanceStones}
             enhanceProtectCharges={state.enhanceProtectCharges}
+            fusionsSinceMythic={state.fusionsSinceMythic}
             lastEnhanceEvent={state.lastEnhanceEvent}
             stats={{
               // Show the explosive per-click matter (decoupled from entropy): the

@@ -10,6 +10,7 @@ import {
   EQUIP_SLOT_UNLOCKS,
   FUSION_INPUT_COUNT,
   FUSION_BATCH_MAX_TRIOS,
+  FUSION_MYTHIC_PITY_N,
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
   ENTITY_LEVEL_EFFECT_BONUS,
@@ -462,6 +463,8 @@ interface Props {
   enhanceStones?: number;
   /** 강화 보호 charges (인과 닻, v30) — spent to absorb a failed risk-phase enhance. */
   enhanceProtectCharges?: number;
+  /** P7 mythic pity counter — eligible legendary fuses since the last mythic (drives the 잔향 게이지). */
+  fusionsSinceMythic?: number;
   lastEnhanceEvent?: EnhanceEvent | null;
   stats: PanelStats;
   language: Lang;
@@ -509,7 +512,7 @@ function levelTextStyle(level: number): CSSProperties {
   return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint, tutorialEquipSparkId = null, tutorialFuseSparkId = null, tutorialEnhanceSpark = false }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, fusionsSinceMythic = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint, tutorialEquipSparkId = null, tutorialFuseSparkId = null, tutorialEnhanceSpark = false }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -1697,6 +1700,19 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
           return (
             <div className="fuse-page cc-scroll">
               {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
+              {/* P7 잔향 게이지 — mythic pity progress, shown only where mythic is reachable
+                  (maxIdx === 4 ⇒ stage 12+). At FUSION_MYTHIC_PITY_N a single fuse is guaranteed mythic. */}
+              {maxIdx === 4 ? (
+                <div className={`fuse-pity ${fusionsSinceMythic >= FUSION_MYTHIC_PITY_N ? 'fuse-pity--ready' : ''}`}>
+                  <div className="fuse-pity__row">
+                    <span className="fuse-pity__label">{t(language, 'mythicPityLabel')}</span>
+                    <span className="fuse-pity__count">{Math.min(fusionsSinceMythic, FUSION_MYTHIC_PITY_N)} / {FUSION_MYTHIC_PITY_N}</span>
+                  </div>
+                  <div className="fuse-pity__bar">
+                    <div className="fuse-pity__fill" style={{ width: `${Math.min(100, (fusionsSinceMythic / FUSION_MYTHIC_PITY_N) * 100)}%` }} />
+                  </div>
+                </div>
+              ) : null}
               {/* 전체 융합 — one batch button: fuses every available same-rarity trio at
                   once (the redundant in-altar "일괄 융합 ×N" + the "N회 가능" counts were
                   removed; the (?) help explains it). */}

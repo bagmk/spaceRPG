@@ -465,6 +465,7 @@ export const STRINGS = {
   echoEarnedNow:        { en: 'Singularity Echo',          ko: '특이점 잔향' },
   ascTierUp:            { en: 'New Multiverse Tier',       ko: '새 멀티버스 등급' },
   ascCurrentTier:       { en: 'Current Multiverse',        ko: '현재 멀티버스' },
+  mythicPityLabel:      { en: 'Mythic guarantee',          ko: '신화 천장' },
   finalNewEndingReward: { en: 'New ending reward',         ko: '새 엔딩 보상' },
   finalEchoes:          { en: 'echoes',                    ko: '에코' },
   finalCodexProgress:   { en: 'Codex',                     ko: '도감' },

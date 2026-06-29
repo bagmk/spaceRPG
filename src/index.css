@@ -1552,6 +1552,7 @@ button.hud-stage-title--clickable:hover {
 .entity-fs__body .equip-page > .hex-bonus,
 .entity-fs__body .equip-page > .equip-actions,
 .entity-fs__body .fuse-page > .fuse-loop-hint,
+.entity-fs__body .fuse-page > .fuse-pity,
 .entity-fs__body .fuse-page > .gacha-fuse-all-btn,
 .entity-fs__body .fuse-page > .gacha-altar {
   flex: 0 0 auto;
@@ -1836,6 +1837,22 @@ button.hud-stage-title--clickable:hover {
   box-shadow: 0 0 6px #4a8fff;
 }
 .fuse-loop-hint { font-size: 10.5px; color: rgba(255, 255, 255, 0.45); text-align: center; }
+
+/* P7 잔향 게이지 — mythic pity progress (stage 12+) */
+.fuse-pity {
+  margin: 4px 0 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(190, 140, 255, 0.07);
+  border: 1px solid rgba(190, 140, 255, 0.2);
+}
+.fuse-pity__row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.fuse-pity__label { font-size: 11px; color: rgba(236, 232, 217, 0.6); letter-spacing: 0.02em; }
+.fuse-pity__count { font-size: 11px; color: #c9a0ff; font-variant-numeric: tabular-nums; }
+.fuse-pity__bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.fuse-pity__fill { height: 100%; background: linear-gradient(90deg, #8a5cff, #c9a0ff); transition: width 0.3s ease; }
+.fuse-pity--ready .fuse-pity__fill { background: linear-gradient(90deg, #ffd24a, #ff8ea0); box-shadow: 0 0 8px rgba(255, 210, 74, 0.6); }
+.fuse-pity--ready .fuse-pity__count { color: #ffd24a; font-weight: 700; }
 
 /* ════ Equip curation: hero number + slim slots + pick deltas ════ */
 .equip-purpose { font-size: 10.5px; color: rgba(255, 255, 255, 0.4); }
