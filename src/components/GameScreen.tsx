@@ -267,6 +267,10 @@ export function GameScreen({
   // a chunk of the gate. Transient React state (resets on stage change); the per-stage cap still
   // persists in state.condenseBurstThisStage → NO save-schema bump.
   const [condenseCharge, setCondenseCharge] = useState(0); // transient TAPS accumulated toward next fire
+  // 분사 redesign (user): when the core fills, a collectible 응축 spark appears at a RANDOM spot
+  // in the play area; tapping it grants the entropy (not an auto-팡 on the core).
+  const [burstSparkle, setBurstSparkle] = useState<{ x: number; y: number; n: number } | null>(null);
+  const sparkleSeqRef = useRef(0);
   const prevClicksRef = useRef(state.totalClicks);
   // A short cooldown keeps even a very fast tapper from firing faster than this (the click count
   // is the main limit; the cooldown is the "조금 더 느리게"). Reset on stage entry.
@@ -296,6 +300,19 @@ export function GameScreen({
       chargedReady: charge01 >= 1 && !capReached && !interactionLocked && !canCondense && Date.now() >= condenseCooldownRef.current,
     };
   }, [state.stageIdx, condenseCharge, state.condenseBurstThisStage, state.completedRun, isViewingPastStage, canCondense, interactionLocked]);
+  // 분사 sparkle spawn/clear: when the core is fully charged AND the play area is visible (no
+  // panel/overlay over it), drop a collectible spark at a random spot; remove it when not ready.
+  const sparkleEligible =
+    condenseBurst.chargedReady && condenseBurst.visible &&
+    !entityPanelOpen && !shopOpen && !questOpen && !settingsOpen && !interactionLocked;
+  useEffect(() => {
+    if (sparkleEligible && !burstSparkle) {
+      // keep it inside the play area: 14–86% horizontal, 32–72% vertical (clear of HUD + buttons).
+      setBurstSparkle({ x: 14 + Math.random() * 72, y: 32 + Math.random() * 40, n: ++sparkleSeqRef.current });
+    } else if (!sparkleEligible && burstSparkle) {
+      setBurstSparkle(null);
+    }
+  }, [sparkleEligible, burstSparkle]);
   // Charge fill: every TAP (state.totalClicks delta) accumulates toward the next 분사 fire. Banks a
   // little past full (up to 3 fires) so clicking during the cooldown is never wasted.
   useEffect(() => {
@@ -905,7 +922,6 @@ export function GameScreen({
           riftPower={modifiers.autoFlatMult}
           condenseCharge01={condenseBurst.charge01}
           condenseReady={condenseBurst.chargedReady}
-          onCoreBurst={handleCondenseBurst}
           onGatherClick={(x, y, forceCrit) => {
             const seq = clickSeqRef.current % 12;
             clickSeqRef.current += 1;
@@ -1292,6 +1308,21 @@ export function GameScreen({
             delayMs={entry.delayMs}
           />
         ))}
+        {/* 분사 redesign: the collectible 응축 spark — matter that condensed into entropy.
+            Tapping it fires the burst (replaces the old tap-the-core 팡). */}
+        {burstSparkle ? (
+          <button
+            key={burstSparkle.n}
+            type="button"
+            className="condense-spark"
+            style={{ left: `${burstSparkle.x}%`, top: `${burstSparkle.y}%` }}
+            onClick={() => { handleCondenseBurst(); setBurstSparkle(null); }}
+            aria-label={t(language, 'condenseSparkLabel')}
+          >
+            <span className="condense-spark__glyph">✦</span>
+            <span className="condense-spark__label">{t(language, 'condenseSparkCollect')}</span>
+          </button>
+        ) : null}
         {comboDisplay ? (
           <ComboMeter
             combo={comboDisplay.combo}

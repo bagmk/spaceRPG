@@ -39,9 +39,11 @@ export const STRINGS = {
   // 물질 응축 redesign: one-shot stage-1 hint shown when the central CORE first reaches full
   // charge — the crack leaks matter that charges the core; tap the glowing core to condense.
   condenseCoreTutorial: {
-    en: 'The crack leaks Matter every second, charging the core. When it glows full, tap the core to condense — Entropy surges toward the gate.',
-    ko: '균열에서 매초 물질이 새어 나와 핵을 충전합니다. 핵이 가득 차 빛나면 탭해서 응축하세요 — 엔트로피가 관문 쪽으로 솟구칩니다.',
+    en: 'Clicking gathers Matter and charges the core. When it fills, the Matter condenses into a ✦ spark somewhere on screen — tap the spark to collect it as Entropy toward the gate.',
+    ko: '클릭하면 물질을 모아 핵을 충전합니다. 핵이 가득 차면 물질이 ✦ 반짝임으로 응축돼 화면 어딘가에 나타나요 — 그 반짝임을 탭하면 엔트로피로 받아 관문을 채웁니다.',
   },
+  condenseSparkLabel:   { en: 'Collect condensed Entropy', ko: '응축된 엔트로피 받기' },
+  condenseSparkCollect: { en: 'Condensed! Tap', ko: '응축 완료! 탭' },
   // C-P0 a11y: screen-reader status announcements (discrete events, not per-frame).
   srStageEntered: { en: 'Stage {n}: {name}', ko: '{n}단계: {name}' },
   srReadyToCondense: { en: 'Ready to condense — activate the Condense button.', ko: '응축 준비 완료 — 응축 버튼을 누르세요.' },
