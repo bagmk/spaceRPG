@@ -611,6 +611,14 @@ export const CONDENSE_STAGE_CAP = 0.6;
  *  Big Rip latch). The award is cosmetic (re-parked to the next floor on advance), so a small
  *  span-relative chunk keeps the displayed number sane without touching pacing or endings. */
 export const CONDENSE_COMPLETE_FRAC = 0.2;
+/** Per-event GATE income cap (user "스테이지5에서 한 클릭에 다음 스테이지로 — 버그같다"): a single
+ *  click OR auto tick can add at most this fraction of the CURRENT stage's entropy SPAN. Normal,
+ *  stage-appropriate gear adds far less per event, so this NEVER binds for the sim's reference
+ *  profile (gate calibration untouched) — it only stops an OVER-geared save (end-game click power
+ *  at an early stage) from overfilling the whole gate in one tap, which read as an instant-advance
+ *  bug. With 0.25 even a wildly over-geared player needs ≥4 taps per stage, and the gate-progress
+ *  quest (25%) no longer completes on the same tap the gate fills. */
+export const GATE_INCOME_SPAN_CAP = 0.25;
 
 // ── Entity drops (entity redesign Phase 1 — collect loop) ───────────────────
 

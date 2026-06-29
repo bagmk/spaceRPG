@@ -6,6 +6,7 @@ import {
   CONDENSE_COST_FRAC,
   CONDENSE_SPAN_FRAC,
   CONDENSE_STAGE_CAP,
+  GATE_INCOME_SPAN_CAP,
   ENTROPY_W_CLICK,
 } from '../balance';
 import {
@@ -147,8 +148,13 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // Entropy rides the TAME auto delta (gainedEntropy), NOT the cranked wallet `gained`.
   const tameAutoNextQuanta = safeAdd(state.quanta, gainedEntropy + tickQuantaDelta);
   const entropyFromMatter = canAccrue
-    ? getEntropyFromMatterGain(state.quanta, tameAutoNextQuanta, effectiveThreshold, 'auto') *
-      entropyEchoMult * modifiers.entropyGainMult
+    ? Math.min(
+        getEntropyFromMatterGain(state.quanta, tameAutoNextQuanta, effectiveThreshold, 'auto') *
+          entropyEchoMult * modifiers.entropyGainMult,
+        // Same per-tick GATE cap as the click path — an over-geared auto rate can't overfill the
+        // gate in one tick. Normal gear is far under it, so the sim's reference profile is untouched.
+        getEntropyGateSpan(state.stageIdx) * GATE_INCOME_SPAN_CAP,
+      )
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
   // 🅠3: throttled (~1/sec) passive auto-income floating text. Now also fires
@@ -238,7 +244,10 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const clickEntropyEchoMult = getPrestigeMultiplier(state.prestigeUpgrades?.entropy_echo ?? 0);
   // Entropy rides the TAME `gained` (no clickMatterMult) — gate pacing unchanged.
   const clickEntropy = (gained + boostedMechanicQuanta) * ENTROPY_W_CLICK;
-  const entropyGained = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
+  const rawClickEntropy = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
+  // Per-tap GATE cap: an OVER-geared save can't overfill the whole gate in one tap (instant-advance
+  // bug). Normal gear is far under this, so the sim's reference profile never hits it.
+  const entropyGained = Math.min(rawClickEntropy, getEntropyGateSpan(state.stageIdx) * GATE_INCOME_SPAN_CAP);
   // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
   // Stage-revisit: when viewing a PAST stage, draw the drop from THAT stage's pool so the
   // player can revisit earlier eras to fill their codex (absent/current → current stage).

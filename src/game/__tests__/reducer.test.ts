@@ -10,7 +10,7 @@ import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 import { getCondensationCoreCost, getResonanceCoreCost } from '../prestige';
 import { getSingularityEcho } from '../formulas';
-import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP } from '../balance';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP, GATE_INCOME_SPAN_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -352,6 +352,17 @@ describe('gameReducer', () => {
     expect(unequippedClick.lastClickEvent?.gained).toBe(baseline.lastClickEvent?.gained);
     // CHECKPOINT: equipping changes click output.
     expect(boosted.lastClickEvent?.gained).toBeGreaterThan(baseline.lastClickEvent?.gained ?? 0);
+  });
+
+  it('GATE income cap: one over-geared click cannot overfill the gate (instant-advance fix)', () => {
+    const state = { ...createInitialGameState(0), stageIdx: 4 }; // stage 5
+    // A click carrying an absurd entropyDelta (stand-in for end-game gear at an early stage).
+    const next = gameReducer(state, { type: 'CLICK', now: 1000, randomValue: 1, x: 0, y: 0, entropyDelta: 1e30 });
+    const span = getEntropyGateSpan(4);
+    const gained = next.entropy - state.entropy;
+    // Capped to a fraction of the stage span — NOT the full 1e30 → can't 1-tap the gate.
+    expect(gained).toBeLessThanOrEqual(span * GATE_INCOME_SPAN_CAP + 1);
+    expect(gained).toBeGreaterThan(span * GATE_INCOME_SPAN_CAP * 0.9); // the huge delta saturates it
   });
 
   it('applies equipped crit entities to critical hit chance before the crit track unlocks', () => {
