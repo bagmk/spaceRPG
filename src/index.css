@@ -956,11 +956,13 @@ button.hud-stage-title--clickable:hover {
   min-height: 86px;
   z-index: 1;
 }
-/* P3 regression fix (was mobile-only): the flat-slot rule below
-   (.entity-fs__body .equip-slot-card { min-height: 98px }, specificity 0,2,0) forced every
-   absolutely-positioned HEX card ≥98px tall, so vertically-adjacent hex nodes overlapped at
-   ANY width > 560px. Bound the hex card to its content at ALL widths (0,3,0 beats 0,2,0). */
-.entity-fs__body .hex-slot .equip-slot-card { min-height: 0; padding: 5px 4px; gap: 3px; }
+/* P3 regression fix: the flat-slot rule below (.entity-fs__body .equip-slot-card { min-height:
+   98px }, 0,2,0) forced every absolutely-positioned HEX card ≥98px tall, so the hex nodes
+   overlapped (their text stacking into garbage). The hex card has `hex-slot` AND
+   `equip-slot-card` on the SAME element, so this MUST be a COMPOUND selector (.hex-slot.equip-
+   slot-card, no space) — a descendant `.hex-slot .equip-slot-card` matches nothing. (0,3,0 beats
+   the 0,2,0 rule below.) Bound the card to its content at ALL widths. */
+.entity-fs__body .hex-slot.equip-slot-card { min-height: 0; padding: 5px 4px; gap: 3px; }
 .entity-fs__body .hex-slot .equip-slot-card__glyph { width: 32px; height: 32px; }
 .entity-fs__body .hex-slot .equip-slot-card__name { font-size: 10px; line-height: 1.1; }
 /* The center wild sits visually inside the ring — a slightly warmer frame. */
@@ -1036,9 +1038,9 @@ button.hud-stage-title--clickable:hover {
   /* Slot width well under the ~34% node spacing. */
   .entity-fs__body .hex-slot { width: clamp(46px, 25%, 68px); min-height: 0; }
   /* BOUND the slot-card height so its content can't grow into the vertical neighbour
-     (the real overlap cause). Scoped under .entity-fs__body .hex-slot so it wins over
-     the desktop .equip-slot-card min-height rules later in the cascade. */
-  .entity-fs__body .hex-slot .equip-slot-card { min-height: 0; padding: 4px 3px; gap: 2px; }
+     (the real overlap cause). COMPOUND selector — hex-slot + equip-slot-card are the SAME
+     element, so a descendant `.hex-slot .equip-slot-card` (space) matched nothing. */
+  .entity-fs__body .hex-slot.equip-slot-card { min-height: 0; padding: 4px 3px; gap: 2px; }
   .entity-fs__body .hex-slot .equip-slot-card__glyph { width: 30px; height: 30px; }
   .entity-fs__body .hex-slot .equip-slot-card__name { font-size: 9px; line-height: 1.05; }
   .entity-fs__body .hex-slot .equip-slot-card__hint { font-size: 8px; max-width: 100%; line-height: 1.05; word-break: keep-all; overflow-wrap: anywhere; }
@@ -7316,47 +7318,55 @@ button.stat-header-item {
   animation: click-hint-pulse 1.8s ease-in-out infinite;
 }
 
-/* 분사 redesign: the collectible 응축 spark (matter condensed into entropy). Appears at a
-   random spot when the core fills; tap to collect. ≥44px tap target, draws the eye. */
+/* 분사: the collectible 응축 spark — a PURPLE CIRCLE (no text). Default = a subtle small mark;
+   .condense-spark--first = the prominent circle+sparkle shown only the first time. */
 .condense-spark {
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 14;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 56px;
-  min-height: 56px;
-  padding: 6px 10px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: none;
-  border-radius: 14px;
-  background: radial-gradient(60% 60% at 50% 40%, rgba(255, 224, 140, 0.22), rgba(187, 140, 255, 0.12) 70%, transparent);
-  color: #ffe8b0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(187, 140, 255, 0.42), rgba(140, 92, 255, 0.16) 68%, transparent);
+  box-shadow: 0 0 10px rgba(187, 140, 255, 0.5);
+  color: #e6d8ff;
   cursor: pointer;
-  animation: condense-spark-pop 0.3s ease-out, condense-spark-pulse 1.3s ease-in-out 0.3s infinite;
+  animation: condense-spark-pop 0.25s ease-out, condense-spark-pulse 1.7s ease-in-out 0.25s infinite;
   -webkit-tap-highlight-color: transparent;
 }
 .condense-spark__glyph {
-  font-size: 30px;
+  font-size: 20px;
   line-height: 1;
-  filter: drop-shadow(0 0 8px rgba(255, 214, 130, 0.9));
+  filter: drop-shadow(0 0 4px rgba(187, 140, 255, 0.85));
 }
-.condense-spark__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  color: #fff4d8;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+/* First-ever spark: big, bright, ringed — the "응축 완료!" moment. */
+.condense-spark--first {
+  width: 74px;
+  height: 74px;
+  background: radial-gradient(circle at 50% 45%, rgba(205, 165, 255, 0.6), rgba(140, 92, 255, 0.24) 62%, transparent);
+  box-shadow: 0 0 24px rgba(187, 140, 255, 0.85), inset 0 0 10px rgba(255, 255, 255, 0.35);
+  animation: condense-spark-pop 0.3s ease-out, condense-spark-first-pulse 1.2s ease-in-out 0.3s infinite;
+}
+.condense-spark--first .condense-spark__glyph {
+  font-size: 36px;
+  filter: drop-shadow(0 0 12px rgba(214, 184, 255, 0.95));
 }
 @keyframes condense-spark-pop {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 @keyframes condense-spark-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.85; }
+  50%      { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+@keyframes condense-spark-first-pulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
-  50%      { transform: translate(-50%, -50%) scale(1.12); filter: brightness(1.35); }
+  50%      { transform: translate(-50%, -50%) scale(1.14); filter: brightness(1.4); }
 }
 
 @keyframes click-hint-pulse {

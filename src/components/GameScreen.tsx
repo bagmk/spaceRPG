@@ -1308,19 +1308,18 @@ export function GameScreen({
             delayMs={entry.delayMs}
           />
         ))}
-        {/* 분사 redesign: the collectible 응축 spark — matter that condensed into entropy.
-            Tapping it fires the burst (replaces the old tap-the-core 팡). */}
+        {/* 분사: the collectible 응축 spark — a purple circle. Prominent the FIRST time (before
+            the condense tutorial is seen), a subtle purple mark every time after. */}
         {burstSparkle ? (
           <button
             key={burstSparkle.n}
             type="button"
-            className="condense-spark"
+            className={`condense-spark ${state.tutorialFlags['condense-core'] ? '' : 'condense-spark--first'}`}
             style={{ left: `${burstSparkle.x}%`, top: `${burstSparkle.y}%` }}
             onClick={() => { handleCondenseBurst(); setBurstSparkle(null); }}
             aria-label={t(language, 'condenseSparkLabel')}
           >
             <span className="condense-spark__glyph">✦</span>
-            <span className="condense-spark__label">{t(language, 'condenseSparkCollect')}</span>
           </button>
         ) : null}
         {comboDisplay ? (

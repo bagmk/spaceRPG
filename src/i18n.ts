@@ -43,7 +43,6 @@ export const STRINGS = {
     ko: '클릭하면 물질을 모아 핵을 충전합니다. 핵이 가득 차면 물질이 ✦ 반짝임으로 응축돼 화면 어딘가에 나타나요 — 그 반짝임을 탭하면 엔트로피로 받아 관문을 채웁니다.',
   },
   condenseSparkLabel:   { en: 'Collect condensed Entropy', ko: '응축된 엔트로피 받기' },
-  condenseSparkCollect: { en: 'Condensed! Tap', ko: '응축 완료! 탭' },
   // C-P0 a11y: screen-reader status announcements (discrete events, not per-frame).
   srStageEntered: { en: 'Stage {n}: {name}', ko: '{n}단계: {name}' },
   srReadyToCondense: { en: 'Ready to condense — activate the Condense button.', ko: '응축 준비 완료 — 응축 버튼을 누르세요.' },
