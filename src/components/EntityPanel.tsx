@@ -1772,13 +1772,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     );
                   })}
                 </div>
-                <div className="gacha-altar__caption">
-                  {fuseInputs.length === 0
-                    ? t(language, 'fuseAltarEmpty')
-                    : ready
-                      ? t(language, 'fuseAltarReady')
-                      : t(language, 'fuseHint')}
-                </div>
+                {/* user: drop the "용광로에 엔티티 3개를 넣으세요" line when empty (the ＋ slots already
+                    say it) — saves a row so the fuel list shows higher. Caption only when filling. */}
+                {fuseInputs.length > 0 ? (
+                  <div className="gacha-altar__caption">
+                    {ready ? t(language, 'fuseAltarReady') : t(language, 'fuseHint')}
+                  </div>
+                ) : null}
                 {sameEntityTray || sameSubsetTray ? (
                   <div className="gacha-bonus">
                     {sameEntityTray ? <span className="gacha-bonus__chip">★ {t(language, 'fuseBonusSameEntity')}</span> : null}
