@@ -92,6 +92,9 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     // v29 past-stage quest snapshots — PERSISTED, carried verbatim (default {}
     // only guards a hand-built payload that predates the field).
     stageQuestProgress: payload.stageQuestProgress ?? {},
+    // v32 (P7) — PERSISTED; ?? 0 guards a hand-built/pre-v32 payload.
+    echoSpent: payload.echoSpent ?? 0,
+    fusionsSinceMythic: payload.fusionsSinceMythic ?? 0,
   };
 }
 

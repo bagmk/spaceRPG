@@ -231,6 +231,11 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     shopBoosts: state.shopBoosts,
     totalShopSpentUSD: state.totalShopSpentUSD,
     prestigeUpgrades: state.prestigeUpgrades,
+    // P7: 특이점 잔향 SPEND and the mythic pity counter are cross-prestige metas — the
+    // resetState spread zeros them, so carry EXPLICITLY (echoSpent wipe would silently
+    // refund every Resonance Core level; pity is a standard gacha global).
+    echoSpent: state.echoSpent,
+    fusionsSinceMythic: state.fusionsSinceMythic,
     // Daily shop is a real-calendar-day construct, not run-scoped — carry it so
     // prestige can't be used to re-roll/re-buy the day's offers.
     dailyShopDateKey: state.dailyShopDateKey,

@@ -197,6 +197,54 @@ describe('save migration', () => {
     expect(m?.inventory.find((e) => e.instanceId === m.wildSlot)?.entityId).toBe('s10_01');
   });
 
+  it('P7 v32: pre-v32 saves default echoSpent/fusionsSinceMythic to 0 + backfill resonance_core/echoFocus', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    // A pre-v32 save: prestigeUpgrades has the OLD 6 keys (no resonance_core/echoFocus),
+    // and the two new top-level ints are absent entirely.
+    const oldUpgrades = {
+      time_warp: 1, matter_forge: 2, critical_core: 0, auto_engine: 3,
+      entropy_echo: 1, condensation_core: 4,
+    };
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({ ...base, version: 31, prestigeUpgrades: oldUpgrades, echoSpent: undefined, fusionsSinceMythic: undefined }),
+    );
+    const m = loadGame();
+    expect(m?.echoSpent).toBe(0);
+    expect(m?.fusionsSinceMythic).toBe(0);
+    // the new sub-keys are backfilled UNDER the saved object (old levels preserved)
+    expect(m?.prestigeUpgrades.condensation_core).toBe(4); // old key survives
+    expect(m?.prestigeUpgrades.resonance_core).toBe(0);    // new sub-key defaulted
+    expect(m?.prestigeUpgrades.echoFocus).toBe(50);        // new sub-key defaulted to balanced
+  });
+
+  it('P7 v32: a v32 save round-trips echoSpent + fusionsSinceMythic + resonance_core', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 32,
+        echoSpent: 137,
+        fusionsSinceMythic: 22,
+        prestigeUpgrades: { ...base.prestigeUpgrades, resonance_core: 9, echoFocus: 70 },
+      }),
+    );
+    const m = loadGame();
+    expect(m?.echoSpent).toBe(137);
+    expect(m?.fusionsSinceMythic).toBe(22);
+    expect(m?.prestigeUpgrades.resonance_core).toBe(9);
+    expect(m?.prestigeUpgrades.echoFocus).toBe(70);
+  });
+
   it('v16 resets the offline window once and clamps corrupt inventory entries', () => {
     // @ts-expect-error test bootstrap
     global.window = {};

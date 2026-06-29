@@ -258,6 +258,8 @@ export function toPersistentState(state: GameState): PersistentGameState {
     comboThisStage: state.comboThisStage,
     condenseBurstThisStage: state.condenseBurstThisStage,
     stageQuestProgress: state.stageQuestProgress,
+    echoSpent: state.echoSpent,
+    fusionsSinceMythic: state.fusionsSinceMythic,
   };
 }
 

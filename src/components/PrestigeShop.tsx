@@ -22,6 +22,7 @@ const ICONS: Record<PrestigeUpgradeId, string> = {
   time_warp: '❖',
   entropy_echo: '∞',
   condensation_core: '◉',
+  resonance_core: '✧', // P7 — endless 공명 코어 (echo-bought), its own card like condensation_core
 };
 
 const ACCENT_COLORS: Record<PrestigeUpgradeId, string> = {
@@ -31,6 +32,7 @@ const ACCENT_COLORS: Record<PrestigeUpgradeId, string> = {
   time_warp: '#5fe0c8',
   entropy_echo: '#ff8ea0',
   condensation_core: '#7fd8ff',
+  resonance_core: '#ffd24a',
 };
 
 interface PrestigeShopProps {

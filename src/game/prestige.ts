@@ -28,7 +28,10 @@ export type PrestigeUpgradeId =
   | 'critical_core'
   | 'auto_engine'
   | 'entropy_echo'
-  | 'condensation_core';
+  | 'condensation_core'
+  // P7 (v32): the ENDLESS off-gate compounding lever, bought with 특이점 잔향 (Singularity
+  // Echo, derived from peakEntropy). Geometric (×1.03/level), wallet-only — see P1.
+  | 'resonance_core';
 
 export interface PrestigeUpgradeLevels {
   time_warp: number;
@@ -37,6 +40,11 @@ export interface PrestigeUpgradeLevels {
   auto_engine: number;
   entropy_echo: number;
   condensation_core: number;
+  /** P7 (v32): endless Resonance Core level (echo-bought, off-gate). Default 0. */
+  resonance_core: number;
+  /** P7 (v32): 0..100 click↔auto focus for the Resonance Core multiplier (50 = balanced,
+   *  geometric-mean-preserving so the split never changes total power). Default 50. */
+  echoFocus: number;
 }
 
 export function createDefaultPrestigeUpgrades(): PrestigeUpgradeLevels {
@@ -47,6 +55,8 @@ export function createDefaultPrestigeUpgrades(): PrestigeUpgradeLevels {
     auto_engine: 0,
     entropy_echo: 0,
     condensation_core: 0,
+    resonance_core: 0,
+    echoFocus: 50,
   };
 }
 

@@ -153,6 +153,8 @@ export function createInitialGameState(now: number): GameState {
     comboThisStage: 0,
     condenseBurstThisStage: 0,
     stageQuestProgress: {},
+    echoSpent: 0,
+    fusionsSinceMythic: 0,
     questProgress: {},
     lastEnhanceEvent: null,
     lastQuestClaimEvent: null,

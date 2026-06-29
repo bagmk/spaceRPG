@@ -226,7 +226,7 @@ export interface CanvasWorld {
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
 export interface SaveState {
-  version: 31;
+  version: 32;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -330,6 +330,16 @@ export interface SaveState {
    *  Lets PAST-stage tabs show "{snap}/{target}", and lets a quest that hit its
    *  target but was left unclaimed stay claimable later. */
   stageQuestProgress: Record<number, Record<string, number>>;
+  /** P7 (v32): cumulative 특이점 잔향 (Singularity Echo) SPENT on Resonance Core. The
+   *  earnable total is DERIVED from peakEntropy (getSingularityEcho), so spendable =
+   *  getSingularityEcho(peakEntropy) − echoSpent. Only the spend is persisted (the
+   *  earn side rides the already-carried peakEntropy → no overflow can drop on load).
+   *  Carries across prestige. */
+  echoSpent: number;
+  /** P7 (v32): global hard pity counter — eligible legendary→mythic fusion fails since
+   *  the last real mythic. At FUSION_MYTHIC_PITY_N a single fuse is FORCED to mythic.
+   *  Carries across prestige (gacha norm). */
+  fusionsSinceMythic: number;
 }
 
 export type PersistentGameState = Omit<SaveState, 'version'>;

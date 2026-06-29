@@ -277,7 +277,10 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     shopBoosts: normalizeShopBoosts(record.shopBoosts),
     hasOfflineStorageUpgrade: Boolean(record.hasOfflineStorageUpgrade),
     totalShopSpentUSD: 0,
-    prestigeUpgrades: (record as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    // v32: spread defaults UNDER the saved object so a legacy prestigeUpgrades that
+    // predates resonance_core/echoFocus still gets the new sub-keys (not just the
+    // whole-object-absent case).
+    prestigeUpgrades: { ...createDefaultPrestigeUpgrades(), ...((record as any).prestigeUpgrades ?? {}) },
     codexSeenIds: [],
     seenPanelHints: [],
     enhanceStones: 0,
@@ -296,6 +299,8 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     comboThisStage: 0,
     condenseBurstThisStage: 0,
     stageQuestProgress: {},
+    echoSpent: 0,
+    fusionsSinceMythic: 0,
     ...convertEntityModelV14(record),
   };
 }
@@ -419,7 +424,10 @@ export function validateV5(
     shopBoosts: normalizeShopBoosts(parsed.shopBoosts),
     hasOfflineStorageUpgrade: parsed.hasOfflineStorageUpgrade ?? false,
     totalShopSpentUSD: parsed.totalShopSpentUSD,
-    prestigeUpgrades: (parsed as any).prestigeUpgrades ?? createDefaultPrestigeUpgrades(),
+    // v32: spread the defaults UNDER the saved object so an old save that HAS
+    // prestigeUpgrades but predates resonance_core/echoFocus gets the new sub-keys
+    // (the bare `?? default` only fires when the whole object is absent).
+    prestigeUpgrades: { ...createDefaultPrestigeUpgrades(), ...((parsed as any).prestigeUpgrades ?? {}) },
     // v18 codex/hint fields — preserved if present; finalizeV17 seeds veteran
     // defaults for pre-v18 saves (where these are absent → []).
     codexSeenIds: isStringArray((parsed as any).codexSeenIds) ? (parsed as any).codexSeenIds : [],
@@ -456,6 +464,11 @@ export function validateV5(
     // v29 past-stage quest snapshots — WHITELIST: omit and it's silently dropped on
     // every load + cloud pull. Default {} for pre-v29 saves (no frozen progress yet).
     stageQuestProgress: sanitizeStageQuestProgress((parsed as any).stageQuestProgress),
+    // v32 (P7) — WHITELIST: omit and it's silently dropped on load + cloud pull.
+    // echoSpent = cumulative 특이점 잔향 spent (earnable rides peakEntropy); default 0.
+    echoSpent: isFiniteNumber((parsed as any).echoSpent) ? Math.max(0, (parsed as any).echoSpent) : 0,
+    // fusionsSinceMythic = the global mythic pity counter; default 0.
+    fusionsSinceMythic: isFiniteNumber((parsed as any).fusionsSinceMythic) ? Math.max(0, Math.floor((parsed as any).fusionsSinceMythic)) : 0,
     ...convertEntityModelV14(parsed),
   };
 }

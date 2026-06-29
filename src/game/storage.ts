@@ -64,8 +64,12 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
  *  default 0 for pre-v30 saves (the enhance risk phase / protection is new).
  *  v31: condenseBurstThisStage (물질 응축 분사 entropy contributed this stage) —
  *  additive number, default 0 for pre-v31 saves (the 분사 mechanic is new; the
- *  per-stage cap simply starts fresh). Mirrors the v22 per-stage counters. */
-export const SAVE_SCHEMA_VERSION = 31;
+ *  per-stage cap simply starts fresh). Mirrors the v22 per-stage counters.
+ *  v32 (P7): echoSpent + fusionsSinceMythic (top-level ints, default 0) + the
+ *  prestigeUpgrades sub-keys resonance_core (0) / echoFocus (50). Infinite
+ *  prestige (특이점 잔향, derived from peakEntropy) + the mythic fusion pity floor.
+ *  Earn side rides the carried peakEntropy (no migration); only the spend persists. */
+export const SAVE_SCHEMA_VERSION = 32;
 
 /** P6: per-entity ceiling when exploding a count-stack into flat copies, for
  *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
@@ -289,6 +293,8 @@ export function createSaveSnapshot(state: GameState): SaveState {
     comboThisStage: state.comboThisStage,
     condenseBurstThisStage: state.condenseBurstThisStage,
     stageQuestProgress: state.stageQuestProgress,
+    echoSpent: state.echoSpent,
+    fusionsSinceMythic: state.fusionsSinceMythic,
   };
 }
 
@@ -594,7 +600,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29 || v === 30 || v === 31) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29 || v === 30 || v === 31 || v === 32) {
       // v14..v26 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added
