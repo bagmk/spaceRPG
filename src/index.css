@@ -2135,6 +2135,27 @@ button.hud-stage-title--clickable:hover {
 .enhance-result-card__arrow { color: var(--flash-color, #bb8cff); font-weight: 800; }
 .enhance-result-card__after { color: #d8ffe6; font-weight: 800; }
 .enhance-result-card__lv { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #cfe2ff; }
+/* user "다 같이 올라야": the level-up lists EVERY stat's before→after — compact scrollable column. */
+.enhance-result-card__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  max-height: 188px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.enhance-result-card__stats::-webkit-scrollbar { display: none; }
+.enhance-result-card__stats .enhance-result-card__delta {
+  display: grid;
+  grid-template-columns: 15px 1fr auto auto auto;
+  align-items: center;
+  gap: 0 5px;
+  padding: 4px 9px;
+  font-size: 11px;
+  flex-wrap: nowrap;
+}
+.enhance-result-card__stats .enhance-result-card__stat { text-align: left; white-space: nowrap; }
 .enhance-result-card__payout { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #ffd98a; }
 .enhance-result-card__payout--stones { color: #9fd0ff; }
 @keyframes enhance-result-fade { 0% { opacity: 0; } 100% { opacity: 1; } }

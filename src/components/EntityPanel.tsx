@@ -2152,16 +2152,21 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         const ent = findEntityById(ev.entityId);
         const entry = ev.instanceId ? inventory.find((e) => e.instanceId === ev.instanceId) : undefined;
         const tr = ent ? EFFECT_TRAIT[ent.effect.type] : null;
-        // before → after for the primary stat on a successful level-up.
-        let beforeVal: string | null = null;
-        let afterVal: string | null = null;
-        let statLabel = '';
+        // user ("한 개만 오르네 — 다 같이 올라야"): a level-up scales EVERY stat by getLevelMult,
+        // so list the primary AND all substats with their before→after, not just one.
+        const enhanceRows: { icon: string; label: string; before: string; after: string }[] = [];
         if (ent && ev.outcome === 'up' && ev.prevLevel != null) {
           const cnt = entry?.count ?? 1;
           const carried = entry?.carried ?? false;
-          const before = effectValueLabel(ent, language, power, cnt, ev.prevLevel, carried, true, entry?.quality);
-          const after = effectValueLabel(ent, language, power, cnt, ev.level, carried, true, entry?.quality);
-          beforeVal = before.value; afterVal = after.value; statLabel = after.label;
+          const gp = getGearPowerMult(power, ent.stageId, carried);
+          const pB = effectValueLabel(ent, language, power, cnt, ev.prevLevel, carried, true, entry?.quality);
+          const pA = effectValueLabel(ent, language, power, cnt, ev.level, carried, true, entry?.quality);
+          enhanceRows.push({ icon: tr?.icon ?? '✦', label: pA.label, before: pB.value, after: pA.value });
+          for (const sub of getSecondaryStats(ent)) {
+            const b = substatValueLabel(sub, language, ev.prevLevel, gp, entry?.quality);
+            const a = substatValueLabel(sub, language, ev.level, gp, entry?.quality);
+            enhanceRows.push({ icon: a.icon, label: a.label, before: b.value, after: a.value });
+          }
         }
         return (
           <div className="enhance-result-layer" role="status" onClick={(e) => { e.stopPropagation(); onClearEnhanceEvent?.(ev.id); }}>
@@ -2176,13 +2181,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                 </div>
               ) : null}
               {ent ? <h3 className="enhance-result-card__name">{entityName(ent, language)}</h3> : null}
-              {ev.outcome === 'up' && beforeVal && afterVal ? (
-                <div className="enhance-result-card__delta">
-                  {tr ? <span className="enhance-result-card__delta-icon" style={{ color: TRAIT_ICON_TONE }}>{tr.icon}</span> : null}
-                  <span className="enhance-result-card__stat">{statLabel}</span>
-                  <span className="enhance-result-card__before">{beforeVal}</span>
-                  <span className="enhance-result-card__arrow">→</span>
-                  <span className="enhance-result-card__after">{afterVal}</span>
+              {ev.outcome === 'up' && enhanceRows.length > 0 ? (
+                <div className="enhance-result-card__stats">
+                  {enhanceRows.map((r, i) => (
+                    <div className="enhance-result-card__delta" key={i}>
+                      <span className="enhance-result-card__delta-icon" style={{ color: TRAIT_ICON_TONE }}>{r.icon}</span>
+                      <span className="enhance-result-card__stat">{r.label}</span>
+                      <span className="enhance-result-card__before">{r.before}</span>
+                      <span className="enhance-result-card__arrow">→</span>
+                      <span className="enhance-result-card__after">{r.after}</span>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {ev.outcome !== 'break' ? (
