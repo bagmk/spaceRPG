@@ -11,6 +11,7 @@ import {
   FUSION_UP1_CHANCE_BY_TIER,
   FUSION_UP2_CHANCE_BY_TIER,
   FUSION_FAIL_STONES_BY_TIER,
+  FUSION_MYTHIC_PITY_N,
   SET_BONUS,
 } from '../balance';
 import type { GameState } from '../types';
@@ -87,9 +88,9 @@ describe('fusion (Phase 3)', () => {
     expect(next.lastFusionEvent!.stonesEarned).toBe(0);
   });
 
-  it('a dry roll fails (no pity/guarantee — pure odds)', () => {
-    // Even after many dry fuses there is no forced upgrade; each fuse is
-    // independent and a 0.99 roll never lands in any up window.
+  it('common fuses are pure odds — the mythic pity is legendary-only', () => {
+    // The P7 pity floor only counts/forces LEGENDARY fuses (mythic is legendary-only);
+    // a stage-1 common fuse is unaffected — a 0.99 roll never lands in any up window.
     let current = fusionReadyState();
     for (let i = 0; i < 10; i++) {
       current = { ...current, quanta: 1000, inventory: [{ entityId: commons[0].id, count: 3, level: 1 }] };
@@ -114,6 +115,68 @@ describe('fusion (Phase 3)', () => {
     expect(rollFusionRarity('legendary', 0.99, 16).rarityUp).toBe(false);
     // Before legendary is droppable (gate 12) there is no mythic ceiling yet.
     expect(rollFusionRarity('legendary', 0.0, 11).rarity).toBe('legendary');
+  });
+
+  // ── P7 mythic pity floor ──────────────────────────────────────────────────
+  const legendary = STAGE_ENTITIES.find((e) => e.rarity === 'legendary')!;
+  const outRarity = (s: GameState) => STAGE_ENTITIES.find((e) => e.id === s.lastFusionEvent!.outputEntityId)?.rarity;
+  // stageIdx 11 → stage 12 → getMaxFusionRarityIdx === 4 (mythic reachable). 0.99 = dry (fail).
+  const lateLegendaryState = (extra: Partial<GameState> = {}): GameState => ({
+    ...createInitialGameState(0),
+    stageIdx: 11,
+    quanta: 1e15,
+    inventory: [{ entityId: legendary.id, count: 6, level: 1 }],
+    ...extra,
+  });
+  const fuseLegendary = (state: GameState, rarityRoll = 0.99): GameState =>
+    gameReducer(state, {
+      type: 'FUSE_ENTITIES',
+      inputEntityIds: [legendary.id, legendary.id, legendary.id],
+      rarityRoll,
+      pickRoll: 0.1,
+    });
+
+  it('P7: a dry legendary fuse AT the pity floor is forced to mythic + resets the counter', () => {
+    const next = fuseLegendary(lateLegendaryState({ fusionsSinceMythic: FUSION_MYTHIC_PITY_N }));
+    expect(next.lastFusionEvent!.rarityUp).toBe(true);
+    expect(outRarity(next)).toBe('mythic');
+    expect(next.fusionsSinceMythic).toBe(0); // reset on the real mythic
+  });
+
+  it('P7: an eligible legendary fail BELOW the floor just increments the counter', () => {
+    const next = fuseLegendary(lateLegendaryState({ fusionsSinceMythic: 5 }));
+    expect(next.lastFusionEvent!.rarityUp).toBe(false);
+    expect(outRarity(next)).not.toBe('mythic');
+    expect(next.fusionsSinceMythic).toBe(6);
+  });
+
+  it('P7: below stage 12 (mythic unreachable) the counter HOLDS — pity never leaks', () => {
+    // stageIdx 5 → stage 6 → getMaxFusionRarityIdx < 4, so legendary input is not eligible.
+    const next = fuseLegendary(lateLegendaryState({ stageIdx: 5, fusionsSinceMythic: 7 }));
+    expect(next.fusionsSinceMythic).toBe(7); // unchanged
+  });
+
+  it('P7: a BATCH never forces a mythic even at the floor, but still increments per eligible trio', () => {
+    const state = lateLegendaryState({ fusionsSinceMythic: FUSION_MYTHIC_PITY_N });
+    const trio = [legendary.id, legendary.id, legendary.id];
+    const next = gameReducer(state, {
+      type: 'FUSE_BATCH',
+      inputEntityIds: [...trio, ...trio],
+      rolls: [{ rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.5 }, { rarityRoll: 0.99, pickRoll: 0.1, stageRoll: 0.5 }],
+    });
+    expect(next.lastFusionEvent!.successCount).toBe(0);        // no forced mythic in a batch
+    expect(next.fusionsSinceMythic).toBe(FUSION_MYTHIC_PITY_N + 2); // both eligible trios counted
+  });
+
+  it('P7: a 보호석-forced mythic also resets the pity counter', () => {
+    const next = gameReducer(
+      lateLegendaryState({ fusionsSinceMythic: 5, enhanceProtectCharges: 1 }),
+      { type: 'FUSE_ENTITIES', inputEntityIds: [legendary.id, legendary.id, legendary.id], rarityRoll: 0.99, pickRoll: 0.1, useProtect: true },
+    );
+    expect(next.lastFusionEvent!.rarityUp).toBe(true);
+    expect(outRarity(next)).toBe('mythic');
+    expect(next.fusionsSinceMythic).toBe(0);
+    expect(next.enhanceProtectCharges).toBe(0); // one charge spent
   });
 
   it('Overhaul-3: fusion cost climbs geometrically by RARITY and is STAGE-INDEPENDENT', () => {

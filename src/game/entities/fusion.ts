@@ -3,11 +3,12 @@
  *
  * Feed FUSION_INPUT_COUNT copies of one rarity + a quanta cost into the forge;
  * out comes a weighted-random entity of the same stage with a chance to jump
- * one or two rarities. Rarity-up is pure odds — there is no pity/guarantee
- * (removed: it only added complexity). Every fusion fires an entropy burst,
- * wiring active play into the
- * progression gate. Duplicate outputs at max count become level-ups instead
- * of being wasted. Tunables live in balance.ts (FUSION_*).
+ * one or two rarities. The per-roll rarity-up here (rollFusionRarity) is PURE
+ * ODDS; the ONLY guarantee is the P7 mythic PITY FLOOR, applied in the reducer
+ * (fuseOnce, src/game/reducers/entities.ts) — after FUSION_MYTHIC_PITY_N eligible
+ * legendary fusions a single fuse is forced to mythic. Every fusion fires an
+ * entropy burst, wiring active play into the progression gate. Duplicate outputs
+ * at max count become level-ups instead of being wasted. Tunables: balance.ts (FUSION_*).
  */
 
 import {
@@ -135,8 +136,9 @@ export function getMaxFusionRarityIdx(stageId: number): number {
 
 /**
  * Resolve the output rarity from the input rarity, a 0..1 roll, and the PLAYER
- * stage's fusion rarity cap (gate + 1). Pure odds — no pity/guarantee. stageId
- * is required — a silent =16 default would skip the cap for any missed caller.
+ * stage's fusion rarity cap (gate + 1). PURE ODDS at this layer — the mythic pity
+ * FLOOR is applied separately in fuseOnce (the reducer), not here. stageId is
+ * required — a silent =16 default would skip the cap for any missed caller.
  */
 export function rollFusionRarity(
   inputRarity: EntityRarity,

@@ -682,6 +682,16 @@ export const FUSION_UP2_CHANCE_BY_TIER: Record<EntityRarity, number> = {
 };
 /** Combined up-chance ceiling (with bonuses) so fusion never becomes a sure thing. */
 export const FUSION_UP_CHANCE_CAP = 0.65;
+// ── P7: mythic fusion PITY FLOOR ────────────────────────────────────────────
+// legendary→mythic single-jumps at FUSION_UP1_CHANCE_BY_TIER.legendary=0.03 (~33 fuses
+// expected). FUSION_MYTHIC_PITY_N is a GLOBAL hard floor: after this many ELIGIBLE
+// legendary fusions with no mythic, the next SINGLE fuse is forced to mythic. 40 sits
+// just above the ~33 expectation, so it's a bad-luck FLOOR, not the common path. A flat
+// N (no soft ramp) is deliberate: the entropy-gate sim does NOT model the mythic tier, so
+// an aggressive/ramped pity could not be sim-validated — a conservative flat N is the
+// real safety margin. Only legendary inputs count toward / can trip the pity.
+export const FUSION_MYTHIC_PITY_N = 40;
+export const FUSION_PITY_INPUT_RARITY: EntityRarity = 'legendary';
 /**
  * Fusion matter cost as a FRACTION OF THE PLAYER-STAGE COST ANCHOR (Overhaul-2
  * 🅠1). Replaces the old 10%-of-bank model, which ballooned as the bank grew

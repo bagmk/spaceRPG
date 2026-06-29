@@ -32,6 +32,8 @@ import {
   FUSION_BURST_REF_COST_FRAC,
   FUSION_INPUT_COUNT,
   RARITY_STAGE_GATES,
+  FUSION_MYTHIC_PITY_N,
+  FUSION_PITY_INPUT_RARITY,
   FUSION_FAIL_STONES_BY_TIER,
   FUSION_SAME_ENTITY_UP_BONUS,
   FUSION_SAME_ENTITY_FAIL_STONE_BONUS,
@@ -240,6 +242,10 @@ function fuseOnce(
   // does). On a roll that would FAIL (no rarity-up), spend one enhanceProtectCharge to
   // force the output up one rarity tier instead. Default false keeps batch fuses unprotected.
   useProtect = false,
+  // P7 mythic pity: only a SINGLE fuse can TRIP the forced mythic (handleFuseEntities
+  // passes true; the batch passes false so a 30-trio batch can't dump a mythic flood).
+  // The counter still INCREMENTS on eligible batch trios — only the FORCE is single-only.
+  singleFusionOnly = false,
 ): { state: GameState; result: OneFusionResult } | null {
   const equippedIds = new Set([...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[]);
   const validation = validateFusionInputs(state.inventory, inputEntityIds, equippedIds);
@@ -331,6 +337,32 @@ function fuseOnce(
     }
   }
 
+  // P7 MYTHIC PITY FLOOR — a SINGLE failing legendary fuse at/over the pity count is forced
+  // to mythic. Mutually exclusive with 보호석 (!protectedUsed: a protected up wins ties and
+  // already resets pity below). Requires mythic to be reachable here (getMaxFusionRarityIdx
+  // === 4 ⇒ stage ≥ 12) and a legendary input. Reuses the same forced-pick commit guard
+  // (only commit if the mythic pool actually yields an item ranked above the input).
+  const pityEligible =
+    validation.rarity === FUSION_PITY_INPUT_RARITY && getMaxFusionRarityIdx(currentStageIdForFusion) === 4;
+  if (singleFusionOnly && !rarityUp && !protectedUsed && pityEligible && state.fusionsSinceMythic >= FUSION_MYTHIC_PITY_N) {
+    const forced = pickFusionOutput(output.stageId, 'mythic', rolls.pickRoll, {
+      category: validation.category,
+      familyKey: validation.familyKey,
+    }, output.stageId !== currentStageIdForFusion);
+    if (forced && (FUSION_RARITY_RANK[forced.rarity] ?? 0) > (FUSION_RARITY_RANK[validation.rarity] ?? 0)) {
+      output = forced;
+      rarityUp = true;
+    }
+  }
+  // PITY ACCOUNTING — keyed off the REAL output rarity (avoids the #42 rolled-vs-actual
+  // desync): reset on ANY real mythic (rolled, pitied, OR 보호석-forced), increment on an
+  // eligible legendary non-mythic, HOLD otherwise (non-legendary, or mythic unreachable
+  // below stage 12 — so the streak never leaks).
+  const nextFusionsSinceMythic =
+    (FUSION_RARITY_RANK[output.rarity] ?? 0) === 4 ? 0
+    : pityEligible ? state.fusionsSinceMythic + 1
+    : state.fusionsSinceMythic;
+
   // P6: never consume an equipped copy — pass the reserved instanceIds so the
   // forge picks only spare (un-equipped) copies.
   const fuseReserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
@@ -397,6 +429,7 @@ function fuseOnce(
     enhanceStones: Math.max(0, state.enhanceStones + stonesEarned + stoneRefund),
     // 보호석: one charge spent only when protection actually forced a fail up a tier.
     enhanceProtectCharges: protectedUsed ? Math.max(0, state.enhanceProtectCharges - 1) : state.enhanceProtectCharges,
+    fusionsSinceMythic: nextFusionsSinceMythic, // P7 mythic pity counter
     inventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
     tutorialFlags: nextTutorialFlags,
@@ -425,9 +458,10 @@ export function handleFuseEntities(state: GameState, action: FuseAction): GameSt
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
     return state;
   }
-  // 보호석 is SINGLE-fusion only — pass the toggle through. handleFuseBatch intentionally
-  // does NOT (a batch would silently drain a pile of charges on every failing trio).
-  const r = fuseOnce(state, action.inputEntityIds, action, action.useProtect ?? false);
+  // 보호석 + P7 mythic-pity FORCE are SINGLE-fusion only — pass useProtect + singleFusionOnly=true.
+  // handleFuseBatch passes neither (a batch must not drain charges per failing trio, nor dump a
+  // mythic flood); its trios still INCREMENT the pity counter inside fuseOnce.
+  const r = fuseOnce(state, action.inputEntityIds, action, action.useProtect ?? false, true);
   if (!r) return state;
   const eventId = nextEventId(r.state);
   const { result } = r;
