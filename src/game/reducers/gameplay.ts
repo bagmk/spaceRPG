@@ -6,7 +6,6 @@ import {
   CONDENSE_COST_FRAC,
   CONDENSE_SPAN_FRAC,
   CONDENSE_STAGE_CAP,
-  GATE_INCOME_SPAN_CAP,
   ENTROPY_W_CLICK,
 } from '../balance';
 import {
@@ -22,6 +21,7 @@ import {
   getEntropyGateFloor,
   getEntropyGateProgress,
   getEntropyGateSpan,
+  getGateIncomeSpanCap,
   getLifeStep,
   getProgress,
   getTimeGaugeForCosmicClock,
@@ -153,7 +153,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
           entropyEchoMult * modifiers.entropyGainMult,
         // Same per-tick GATE cap as the click path — an over-geared auto rate can't overfill the
         // gate in one tick. Normal gear is far under it, so the sim's reference profile is untouched.
-        getEntropyGateSpan(state.stageIdx) * GATE_INCOME_SPAN_CAP,
+        getEntropyGateSpan(state.stageIdx) * getGateIncomeSpanCap(state.stageIdx),
       )
     : 0;
   const nextEntropy = safeAdd(state.entropy, entropyFromMatter + tickEntropyDelta * entropyEchoMult);
@@ -247,7 +247,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
   const rawClickEntropy = (clickEntropy + getParticleEntropyBonus(stage.id, particleName, isCrit) + (action.entropyDelta ?? 0)) * clickEntropyEchoMult * modifiers.entropyGainMult;
   // Per-tap GATE cap: an OVER-geared save can't overfill the whole gate in one tap (instant-advance
   // bug). Normal gear is far under this, so the sim's reference profile never hits it.
-  const entropyGained = Math.min(rawClickEntropy, getEntropyGateSpan(state.stageIdx) * GATE_INCOME_SPAN_CAP);
+  const entropyGained = Math.min(rawClickEntropy, getEntropyGateSpan(state.stageIdx) * getGateIncomeSpanCap(state.stageIdx));
   // Entity drop roll — collect loop. Skipped when rolls are absent (tests).
   // Stage-revisit: when viewing a PAST stage, draw the drop from THAT stage's pool so the
   // player can revisit earlier eras to fill their codex (absent/current → current stage).

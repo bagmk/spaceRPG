@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock, getEntropyGateFloor, getEntropyGateSpan } from '../formulas';
+import { canCondense, getCosmicClockForGauge, getCritMultiplier, getTimeGaugeForCosmicClock, getEntropyGateFloor, getEntropyGateSpan, getGateIncomeSpanCap } from '../formulas';
 import { createInitialGameState, gameReducer } from '../reducer';
 import { getEntityCost } from '../entities/types';
 import { getComboCapBonus } from '../reducers/helpers';
@@ -10,7 +10,7 @@ import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
 import { getCondensationCoreCost, getResonanceCoreCost } from '../prestige';
 import { getSingularityEcho } from '../formulas';
-import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP, GATE_INCOME_SPAN_CAP } from '../balance';
+import { ENTROPY_THRESHOLDS, COLLISION_ENTROPY_SPAN_CAP, ENTROPY_W_CLICK, FUSION_BURST_SPAN_CAP, FUSION_BATCH_BURST_SPAN_CAP, ENTITY_COST_ANCHORS, CONDENSE_COST_FRAC, CONDENSE_SPAN_FRAC, CONDENSE_STAGE_CAP } from '../balance';
 import { COMBO_CAP_PER_STAGE, COMBO_CAP_SINGULARITY } from '../balance';
 
 describe('gameReducer', () => {
@@ -359,10 +359,11 @@ describe('gameReducer', () => {
     // A click carrying an absurd entropyDelta (stand-in for end-game gear at an early stage).
     const next = gameReducer(state, { type: 'CLICK', now: 1000, randomValue: 1, x: 0, y: 0, entropyDelta: 1e30 });
     const span = getEntropyGateSpan(4);
+    const cap = getGateIncomeSpanCap(4); // stage 5 is tighter than the base 0.25 (ramps from stage 4)
     const gained = next.entropy - state.entropy;
     // Capped to a fraction of the stage span — NOT the full 1e30 → can't 1-tap the gate.
-    expect(gained).toBeLessThanOrEqual(span * GATE_INCOME_SPAN_CAP + 1);
-    expect(gained).toBeGreaterThan(span * GATE_INCOME_SPAN_CAP * 0.9); // the huge delta saturates it
+    expect(gained).toBeLessThanOrEqual(span * cap + 1);
+    expect(gained).toBeGreaterThan(span * cap * 0.9); // the huge delta saturates it
   });
 
   it('applies equipped crit entities to critical hit chance before the crit track unlocks', () => {

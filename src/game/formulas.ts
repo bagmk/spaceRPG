@@ -12,6 +12,7 @@ import {
   ASCENSION_TIER_BASE_PEAK,
   ASCENSION_TIER_LOG_STEP,
   CONDENSE_COMPLETE_FRAC,
+  GATE_INCOME_SPAN_CAP,
   ENTROPY_W_CLICK,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -495,6 +496,21 @@ export function getEntropyGateProgress(entropy: number, stageIdx: number): numbe
 export function getEntropyGateSpan(stageIdx: number): number {
   const stage = STAGES[Math.min(stageIdx, STAGES.length - 1)];
   return Math.max(1, stage.entropyThreshold - getEntropyGateFloor(stageIdx));
+}
+
+/**
+ * Per-event GATE income cap as a FRACTION of the stage span (user: "스테이지 4부터 더 천천히 더
+ * 어렵게"). Stages 1-3 stay forgiving (~4 taps min); from stage 4 the cap tightens so each later
+ * stage demands progressively more taps, floored so it never gets punishing. This only ever binds
+ * for an OVER-geared save (end-game power at an early stage); normal stage-appropriate gear adds
+ * far less per event, so the entropy-gate sim's reference profile is untouched.
+ *
+ *   stage 1-3 → 0.25 (≈4 taps)   stage 4 → ~0.18 (≈6)   stage 6 → ~0.11 (≈9)
+ *   stage 8 → ~0.083 (≈12)       stage 10+ → 0.07 floor (≈14 taps)
+ */
+export function getGateIncomeSpanCap(stageIdx: number): number {
+  if (stageIdx <= 2) return GATE_INCOME_SPAN_CAP;
+  return Math.max(0.07, GATE_INCOME_SPAN_CAP / (1 + (stageIdx - 2) * 0.4));
 }
 
 /**

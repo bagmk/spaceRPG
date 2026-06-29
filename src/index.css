@@ -875,23 +875,27 @@ button.hud-stage-title--clickable:hover {
 /* user "너무 좁아 — 스택을 밑으로, 육각형 크게": STACKED layout. Hexagon goes FULL-WIDTH on top
    (order:-1), the stat block sits BELOW as a 2-column grid. The old 1:3 side-by-side starved the
    hexagon to ~200px → slots overlapped; full width (~360px) spreads the nodes with room to spare. */
+/* user redesign: hexagon FIXED on the left, stats as ONE compact column on the right. Side-by-
+   side keeps the header SHORT (~one band) so 2 item rows show; the hexagon gets a definite square
+   size so it never collapses/overlaps. */
 .equip-loadout {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
   gap: 8px;
   max-width: 380px;
   margin: 4px auto;
 }
 .equip-statstack {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1px 11px;
+  padding: 1px 9px;
 }
 .equip-statstack__row {
   display: grid;
@@ -899,12 +903,10 @@ button.hud-stage-title--clickable:hover {
   grid-template-areas: "icon label" "icon value";
   column-gap: 6px;
   align-items: center;
-  padding: 3px 2px;
+  padding: 2px 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-/* in a 2-col grid the LAST TWO rows are the bottom edge — drop their borders. */
-.equip-statstack__row:last-child,
-.equip-statstack__row:nth-last-child(2) { border-bottom: none; }
+.equip-statstack__row:last-child { border-bottom: none; }
 /* user: smaller stat text → roomier card (the 7-row loadout was a touch cramped). */
 .equip-statstack__icon { grid-area: icon; font-size: 13px; align-self: center; }
 .equip-statstack__label { grid-area: label; font-size: 9.5px; color: #8fa0b8; line-height: 1.15; white-space: nowrap; }
@@ -912,9 +914,18 @@ button.hud-stage-title--clickable:hover {
 /* The hexagon gets a DEFINITE clamped width (its slots are absolutely positioned, so
    flex-basis:auto would collapse it to ~0). Compact ~300px cap on desktop, shrinks on
    mobile — never stretches the whole panel. */
-/* user: shrink the board so 2 item ROWS show below — 244px still clears overlap (0.30·244 ≈ 73px
-   gaps vs ~56px slots) while freeing ~120px of vertical room. */
-.equip-loadout .hex-board { order: -1; width: 100%; max-width: 244px; min-width: 0; margin: 0 auto; }
+/* DEFINITE square on the LEFT — width AND height are the same clamp (NOT just aspect-ratio, which
+   collapsed to 0 height when the flex parent gave no definite size → all slots piled at the top).
+   ~48% of the row, capped 208px. Slots are ≤19% of it, well under the 30% node gap → never overlap. */
+.equip-loadout .hex-board {
+  flex: 0 0 auto;
+  width: clamp(168px, 48vw, 208px);
+  height: clamp(168px, 48vw, 208px);
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  aspect-ratio: auto;
+}
 /* (Overhaul-3 P3/P4: dead .hex-grid removed — replaced by .hex-board below.) */
 /* Connected hexagon (Overhaul-3): a square board with an SVG link layer (6 ring
    edges + 6 center spokes) behind 7 absolutely-placed slots on regular-hexagon
@@ -960,7 +971,7 @@ button.hud-stage-title--clickable:hover {
      wider than 0.30·board overlaps its diagonal neighbour. On a phone-width column the board is
      ~200px → cards must stay ≲60px. Keep them COMPACT at every width (the old 70-100px desktop
      size overlapped whenever the board was < ~310px, i.e. most of the time). */
-  width: clamp(48px, 23%, 72px);
+  width: clamp(38px, 18%, 50px);
   min-height: 0;
   z-index: 1;
 }
@@ -970,9 +981,10 @@ button.hud-stage-title--clickable:hover {
    `equip-slot-card` on the SAME element, so this MUST be a COMPOUND selector (.hex-slot.equip-
    slot-card, no space) — a descendant `.hex-slot .equip-slot-card` matches nothing. (0,3,0 beats
    the 0,2,0 rule below.) Bound the card to its content at ALL widths. */
-.entity-fs__body .hex-slot.equip-slot-card { min-height: 0; aspect-ratio: 1; padding: 4px 3px; gap: 2px; overflow: hidden; }
-.entity-fs__body .hex-slot .equip-slot-card__glyph { width: 28px; height: 28px; }
-.entity-fs__body .hex-slot .equip-slot-card__name { font-size: 9.5px; line-height: 1.05; }
+.entity-fs__body .hex-slot.equip-slot-card { min-height: 0; aspect-ratio: 1; padding: 3px 2px; gap: 1px; overflow: hidden; }
+.entity-fs__body .hex-slot .equip-slot-card__glyph { width: 24px; height: 24px; }
+/* slots are small now — the glyph + corner badges say what's equipped; the name is noise. */
+.entity-fs__body .hex-slot .equip-slot-card__name { display: none; }
 /* empty/locked/center hints must fit the SQUARE — compact + wrap, never overflow. */
 .entity-fs__body .hex-slot .equip-slot-card__hint { font-size: 8.5px; line-height: 1.05; max-width: 100%; text-align: center; word-break: keep-all; overflow-wrap: anywhere; }
 .entity-fs__body .hex-slot .equip-slot-card__plus { font-size: 17px; line-height: 1; }
@@ -1023,7 +1035,14 @@ button.hud-stage-title--clickable:hover {
   text-align: center;
   opacity: 0.7;
   max-width: 460px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 10px;
 }
+/* the merged set-bonus chip — tinted apart from the hex readout. */
+.hex-bonus__set { color: #8fe0c0; opacity: 0.95; }
 .hex-bonus--active {
   border-style: solid;
   border-color: rgba(255, 214, 130, 0.5);
@@ -1032,29 +1051,12 @@ button.hud-stage-title--clickable:hover {
   opacity: 1;
 }
 @media (max-width: 560px) {
-  /* (#1) Side-by-side on mobile: a NARROW left stat stack + the hexagon filling the
-     RIGHT column. Closest HEX_NODE_XY nodes sit ~34.7% of the board apart (e.g. the
-     35% vertical pair [80,32.5]/[80,67.5]), so both the slot WIDTH and the slot-card
-     HEIGHT must stay well under that fraction of the board to avoid collisions.
-     On a ~390px phone: stats 90px + gap → hex ≈ 266px; slot width 25%×266≈66px (cap
-     68) → horizontal node gap ≈92px ≥ neighbour half-widths; bounded card height ≈64px
-     < the ≈93px vertical node spacing → no overlap. */
-  .equip-loadout { align-items: flex-start; justify-content: center; gap: 8px; max-width: 100%; }
-  .equip-statstack { min-width: 78px; max-width: 116px; padding: 2px 6px; }
-  .equip-statstack__row { padding: 6px 2px; }
-  .equip-statstack__icon { font-size: 13px; }
-  .equip-statstack__label { font-size: 11px; }
-  .equip-statstack__value { font-size: 12px; }
-  /* Stacked layout: hexagon full-width on top, big node spacing. */
-  .equip-loadout .hex-board { order: -1; width: 100%; max-width: 244px; margin: 0 auto; }
-  /* Slot width well under the ~34% node spacing. */
-  .entity-fs__body .hex-slot { width: clamp(46px, 25%, 68px); min-height: 0; }
-  /* BOUND the slot-card height so its content can't grow into the vertical neighbour
-     (the real overlap cause). COMPOUND selector — hex-slot + equip-slot-card are the SAME
-     element, so a descendant `.hex-slot .equip-slot-card` (space) matched nothing. */
-  .entity-fs__body .hex-slot.equip-slot-card { min-height: 0; aspect-ratio: 1; padding: 4px 3px; gap: 2px; overflow: hidden; }
-  .entity-fs__body .hex-slot .equip-slot-card__glyph { width: 30px; height: 30px; }
-  .entity-fs__body .hex-slot .equip-slot-card__name { font-size: 9px; line-height: 1.05; }
+  /* The side-by-side base already uses vw-based clamps that fit phones (fixed-square hexagon
+     left + 1-col stats right) — only nudge the stat text + full-width loadout here. */
+  .equip-loadout { max-width: 100%; }
+  .equip-statstack { padding: 1px 7px; }
+  .equip-statstack__label { font-size: 9px; }
+  .equip-statstack__value { font-size: 11px; }
   .entity-fs__body .hex-slot .equip-slot-card__hint { font-size: 8px; max-width: 100%; line-height: 1.05; word-break: keep-all; overflow-wrap: anywhere; }
   .entity-fs__body .hex-slot .equip-slot-card__lock { font-size: 11px; }
   /* Keep the FILLED card (glyph + name + effect + ✕ remove) within the vertical budget. */
@@ -16348,6 +16350,11 @@ button.stat-header-item {
 /* user: equip + fusion fuel items want AT LEAST 3 columns of SQUARE cards (the 108px auto-fill
    collapsed to 2 wide rectangles). Force a 3-column grid at every width. */
 .owned-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* user: fusion fuel has little content → smaller 4-col cards (more fuel visible per screen). */
+.fuse-page .owned-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.fuse-page .owned-card { gap: 1px; padding: 4px 3px; }
+.fuse-page .owned-card__formula { font-size: 11px; }
+.fuse-page .owned-card__name { font-size: 8px; max-height: 20px; }
 @media (max-width: 560px) {
   .almanac-grid { grid-template-columns: repeat(3, 1fr); }
 }

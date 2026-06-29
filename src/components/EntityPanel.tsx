@@ -1570,32 +1570,27 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                 {renderHexCenter()}
               </div>
               </div>
-              <div className={`hex-bonus ${bingo.completedLines.length > 0 ? 'hex-bonus--active' : ''}`}>{bonusReadout}</div>
-
-              {/* Active set magnitude (compact) + batch enhance */}
-              <div className="equip-actions">
+              {/* user: merge the set-bonus into the hexagon-bonus line (one row, less clutter). */}
+              <div className={`hex-bonus ${bingo.completedLines.length > 0 ? 'hex-bonus--active' : ''}`}>
+                <span>{bonusReadout}</span>
                 {setInfo ? (() => {
-                  // setInfo.key is a codex subset id "setId/subId" — name the category.
                   const [sid, subid] = setInfo.key.split('/');
                   const sub = CODEX_SETS.find((s) => s.id === sid)?.subsets.find((x) => x.id === subid);
                   const name = sub ? `${codexSubsetLabel(sub, language)} ` : '';
                   return (
-                    <span className="equip-set-chip">
-                      {`⬡ ${name}${t(language, 'setBonusLabel')} ×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` · ${t(language, 'effectCritChance')} +${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}
-                    </span>
+                    <span className="hex-bonus__set">{`⬡ ${name}×${setInfo.bonus.clickAutoMult}${setInfo.bonus.critChanceAdd > 0 ? ` 치명타+${Math.round(setInfo.bonus.critChanceAdd * 100)}%` : ''}`}</span>
                   );
                 })() : null}
               </div>
 
               {/* Owned gear of this category — quiet at rest, deltas while picking */}
               <div className="entity-inv">
-                <div className="entity-inv__head">
-                  <span className="entity-inv__title">
-                    {pickingSlot !== null || pickingWild
-                      ? t(language, 'equipPickActive')
-                      : `${t(language, 'ownedItemsLabel')} (${pickerEntities.length})`}
-                  </span>
-                </div>
+                {/* user: drop the "보유 아이템 (N)" header row — only show the pick prompt while picking. */}
+                {pickingSlot !== null || pickingWild ? (
+                  <div className="entity-inv__head">
+                    <span className="entity-inv__title">{t(language, 'equipPickActive')}</span>
+                  </div>
+                ) : null}
                 {/* Rarity tabs shown directly (user: drop the popup square). */}
                 {rarityFilterBar}
                 {pickerEntities.length === 0 ? (
