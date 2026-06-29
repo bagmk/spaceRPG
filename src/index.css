@@ -1553,7 +1553,10 @@ button.hud-stage-title--clickable:hover {
   padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 48px) 48px;
 }
 .entity-fs__body::-webkit-scrollbar { display: none; }
-.entity-fs__body > * { max-width: 1080px; margin-inline: auto; }
+/* width:100% is REQUIRED — the body is a flex COLUMN and `margin-inline: auto` on a flex item kills
+   the default stretch, so without it every tab page shrink-wrapped to ~430px and floated in the
+   middle of a wide desktop screen (user: "왜 모바일을 데스크탑에 들고오냐"). */
+.entity-fs__body > * { width: 100%; max-width: 1080px; margin-inline: auto; }
 
 /* Tab content sits inside the body — drop the old panel's self-scroll/padding. */
 .entity-fs__body .equip-page,
@@ -1630,7 +1633,9 @@ button.hud-stage-title--clickable:hover {
 }
 
 /* ── Owned inventory section (equip + fuse) ── */
-.entity-inv { display: grid; gap: 9px; }
+/* flex column (NOT grid) — as a grid it stretched its rows to fill the panel height, blowing the
+   rarity-filter row up to ~96px so the filter chips rendered as giant vertical pills. */
+.entity-inv { display: flex; flex-direction: column; gap: 9px; }
 .entity-inv__head {
   display: flex;
   align-items: baseline;
@@ -16376,4 +16381,30 @@ button.stat-header-item {
 .fuse-page .owned-card__name { font-size: 8px; max-height: 20px; }
 @media (max-width: 560px) {
   .almanac-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── Desktop / wide screens (≥760px): NATURAL layouts instead of a narrow mobile column ─────────
+   User: "데스크탑에서는 자연스럽게 해줘야지. 왜 모바일에서 한걸 데스크탑으로 들고오냐". On a wide screen the
+   equip page became a 2-COLUMN board (hexagon loadout + stats LEFT, item inventory RIGHT) and the
+   fusion page widens its fuel grid. The flex-column body + `width:100%` fix (above) lets these fill. */
+@media (min-width: 760px) {
+  .entity-fs__body > .equip-page {
+    max-width: 900px;
+    display: grid;
+    grid-template-columns: minmax(340px, 380px) 1fr;
+    grid-template-areas: "loadout inv" "bonus inv";
+    grid-template-rows: auto auto;
+    align-items: start;
+    column-gap: 24px;
+    row-gap: 10px;
+  }
+  .equip-page > .equip-loadout { grid-area: loadout; }
+  .equip-page > .hex-bonus { grid-area: bonus; margin-top: 0; }
+  .equip-page > .entity-inv { grid-area: inv; align-self: start; }
+  /* inventory column is ~480px → a comfortable 4-up grid, several rows visible at once. */
+  .equip-page .owned-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); }
+
+  /* Fusion: a centered, wider single column so the fuel grid shows many items per row. */
+  .entity-fs__body > .fuse-page { max-width: 760px; }
+  .fuse-page .owned-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
 }
