@@ -9,6 +9,8 @@ import {
   ENTROPY_W_AUTO,
   CODEX_MASS_BONUS,
   ECHO_PEAK_EXP,
+  ASCENSION_TIER_BASE_PEAK,
+  ASCENSION_TIER_LOG_STEP,
   ENTROPY_W_CLICK,
   TIME_MAXED_STAGE_SECONDS,
   TIME_MIN_STAGE_SECONDS,
@@ -573,6 +575,30 @@ export function getEchoReward(uniqueEndingsCompleted: number): number {
  */
 export function getSingularityEcho(peakEntropy: number): number {
   return Math.floor(Math.pow(Math.max(1, peakEntropy), ECHO_PEAK_EXP));
+}
+
+/**
+ * P7 DISPLAY-ONLY ascension tier from peakEntropy — a named "multiverse tier" flex on the
+ * final screen. A PURE function of the carried peakEntropy; it NEVER feeds getActiveModifiers
+ * or any income. Tier 0 below ASCENSION_TIER_BASE_PEAK; +1 per ×10^ASCENSION_TIER_LOG_STEP.
+ */
+const ASCENSION_TIER_NAMES: { en: string; ko: string }[] = [
+  { en: 'Spark', ko: '불씨' },
+  { en: 'Ember', ko: '잔불' },
+  { en: 'Nebula', ko: '성운' },
+  { en: 'Stellar', ko: '항성' },
+  { en: 'Galactic', ko: '은하' },
+  { en: 'Quasar', ko: '퀘이사' },
+  { en: 'Singular', ko: '특이점' },
+  { en: 'Eternal', ko: '영원' },
+];
+export function getAscensionTier(peakEntropy: number): { index: number; name: { en: string; ko: string } } {
+  const ratio = Math.max(1, peakEntropy) / ASCENSION_TIER_BASE_PEAK;
+  const index = ratio < 1 ? 0 : Math.max(0, Math.floor(Math.log10(ratio) / ASCENSION_TIER_LOG_STEP) + 1);
+  if (index < ASCENSION_TIER_NAMES.length) return { index, name: ASCENSION_TIER_NAMES[index] };
+  const top = ASCENSION_TIER_NAMES[ASCENSION_TIER_NAMES.length - 1];
+  const over = index - ASCENSION_TIER_NAMES.length + 1;
+  return { index, name: { en: `${top.en} +${over}`, ko: `${top.ko} +${over}` } };
 }
 
 export function getLifeStep(progress01: number): number {

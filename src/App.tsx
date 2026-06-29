@@ -304,6 +304,7 @@ function AppInner() {
           language={language}
           soundManager={soundManagerRef.current}
           onBuyPrestigeUpgrade={(upgradeId) => dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId })}
+          onSetEchoFocus={(focus) => dispatch({ type: 'SET_ECHO_FOCUS', focus })}
           onBuySingularityUnlock={(unlockId) => dispatch({ type: 'BUY_SINGULARITY_UNLOCK', unlockId })}
           onOpenAtlas={() => setRoute('atlas')}
           onOpenLeaderboard={() => setShowLeaderboard(true)}

@@ -5605,6 +5605,52 @@ button.stat-header-item {
   gap: 10px;
 }
 
+/* P7 — Singularity Echo balance bar + Resonance Core focus slider */
+.prestige-shop__echo-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 16px 0 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 210, 74, 0.08);
+  border: 1px solid rgba(255, 210, 74, 0.25);
+}
+.prestige-shop__echo-balance { display: flex; align-items: baseline; gap: 8px; }
+.prestige-shop__echo-label { font-size: 11px; color: rgba(236, 232, 217, 0.55); letter-spacing: 0.02em; }
+.prestige-shop__echo-amount { font-size: 16px; font-weight: 700; color: #ffd24a; font-variant-numeric: tabular-nums; }
+.prestige-shop__echo-mult { font-size: 12px; color: rgba(255, 210, 74, 0.85); font-variant-numeric: tabular-nums; }
+
+.prestige-shop__focus {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.prestige-shop__focus-label { font-size: 11px; color: rgba(236, 232, 217, 0.55); letter-spacing: 0.02em; }
+.prestige-shop__focus-row { display: flex; align-items: center; gap: 10px; }
+.prestige-shop__focus-end { font-size: 11px; color: rgba(236, 232, 217, 0.7); min-width: 32px; text-align: center; }
+.prestige-shop__focus-slider { flex: 1; accent-color: #ffd24a; height: 24px; }
+.prestige-shop__focus-readout { font-size: 11px; color: rgba(255, 210, 74, 0.8); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* P7 — final-screen ascension tier badge (display only) */
+.final-tier-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(255, 210, 74, 0.1);
+  border: 1px solid rgba(255, 210, 74, 0.3);
+}
+.final-tier-label { font-size: 10px; color: rgba(236, 232, 217, 0.5); letter-spacing: 0.04em; text-transform: uppercase; }
+.final-tier-name { font-size: 13px; font-weight: 700; color: #ffd24a; letter-spacing: 0.02em; }
+
 /* ── Prestige Card ─────────────────────────────────────────────── */
 @keyframes prestige-card-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }

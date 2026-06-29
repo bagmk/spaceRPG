@@ -511,6 +511,11 @@ export const RESONANCE_CORE_COST_GROWTH = 1.35;
 // geometric-mean-preserving exponents (reso^(2·cw) / reso^(2·(1-cw))) so sqrt(click·auto)=reso
 // at every split — it re-weights feel, never total off-gate power (re-spec, re-sim-free).
 export const ECHO_FOCUS_DEFAULT = 50;
+// DISPLAY-ONLY ascension tier (a named "multiverse tier" flex on the final screen, derived
+// purely from peakEntropy — NEVER feeds income/getActiveModifiers). Tier 1 begins at
+// ASCENSION_TIER_BASE_PEAK; one named tier per ×10^ASCENSION_TIER_LOG_STEP of peak entropy.
+export const ASCENSION_TIER_BASE_PEAK = 1e6;
+export const ASCENSION_TIER_LOG_STEP = 1.0;
 
 // ── Codex meta bonus (Phase 4-3) ────────────────────────────────────────────
 // (Panel #7 A: prestige item-carry was removed — prestige resets the inventory;

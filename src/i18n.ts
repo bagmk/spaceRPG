@@ -453,6 +453,18 @@ export const STRINGS = {
   condCoreEndless:      { en: 'ENDLESS',                   ko: '무한' },
   condCoreLevel:        { en: 'Lv',                        ko: 'Lv' },
   condCoreIncome:       { en: 'matter income',            ko: '물질 수입' },
+  // P7 Singularity Echo (특이점 잔향) — infinite prestige sink
+  echoBalanceLabel:     { en: 'Singularity Echo',          ko: '특이점 잔향' },
+  echoIncomeAll:        { en: 'all matter income',         ko: '모든 물질 수입' },
+  resonanceCoreName:    { en: 'Resonance Core',            ko: '공명 코어' },
+  resonanceCoreDesc:    { en: 'Endless. Compounds all matter income each level (off the gate). Funded by Echo from peak entropy.', ko: '무한. 레벨마다 모든 물질 수입이 복리로 증가 (게이트와 무관). 최고 엔트로피에서 나오는 잔향으로 구매.' },
+  echoFocusLabel:       { en: 'Resonance focus',           ko: '공명 집중' },
+  echoFocusClick:       { en: 'Click',                     ko: '클릭' },
+  echoFocusAuto:        { en: 'Auto',                      ko: '자동' },
+  // P7 FinalScreen — Echo delta + ascension tier (display only)
+  echoEarnedNow:        { en: 'Singularity Echo',          ko: '특이점 잔향' },
+  ascTierUp:            { en: 'New Multiverse Tier',       ko: '새 멀티버스 등급' },
+  ascCurrentTier:       { en: 'Current Multiverse',        ko: '현재 멀티버스' },
   finalNewEndingReward: { en: 'New ending reward',         ko: '새 엔딩 보상' },
   finalEchoes:          { en: 'echoes',                    ko: '에코' },
   finalCodexProgress:   { en: 'Codex',                     ko: '도감' },

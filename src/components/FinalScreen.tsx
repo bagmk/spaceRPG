@@ -3,6 +3,7 @@ import {
   formatDuration,
   formatEntropyParts,
   formatWhole,
+  getAscensionTier,
 } from '../game/formulas';
 import type { GameState } from '../game/types';
 import type { PrestigeUpgradeId } from '../game/prestige';
@@ -83,12 +84,13 @@ interface FinalScreenProps {
   soundManager?: SoundManager | null;
   onPrestige: () => void;
   onBuyPrestigeUpgrade: (upgradeId: PrestigeUpgradeId) => void;
+  onSetEchoFocus: (focus: number) => void;
   onBuySingularityUnlock: (unlockId: SingularityUnlockId) => void;
   onOpenAtlas: () => void;
   onOpenLeaderboard: () => void;
 }
 
-export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onBuySingularityUnlock, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
+export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPrestigeUpgrade, onSetEchoFocus, onBuySingularityUnlock, onOpenAtlas, onOpenLeaderboard }: FinalScreenProps) {
   const [showPrestigeConfirm, setShowPrestigeConfirm] = useState(false);
   // Phase 4-3: the codex completion that boosted this run's condensed-mass reward.
   // (Item carry was removed — prestige resets the inventory; only bonuses carry.)
@@ -119,6 +121,11 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
         <div className="final-header">
           <div className="final-universe-tag">
             {t(language, 'finalUniverse')} <span className="final-universe-num">#{state.universeCount}</span>
+          </div>
+          {/* P7 DISPLAY-ONLY ascension tier — a pure fn of carried peakEntropy (never income). */}
+          <div className="final-tier-badge">
+            <span className="final-tier-label">{t(language, 'ascCurrentTier')}</span>
+            <span className="final-tier-name">{getAscensionTier(state.peakEntropy).name[language]}</span>
           </div>
         </div>
 
@@ -175,8 +182,11 @@ export function FinalScreen({ state, language, soundManager, onPrestige, onBuyPr
         <PrestigeShop
           entropy={state.entropy}
           condensedMass={state.condensedMass}
+          peakEntropy={state.peakEntropy}
+          echoSpent={state.echoSpent}
           prestigeUpgrades={state.prestigeUpgrades}
           onBuy={onBuyPrestigeUpgrade}
+          onSetFocus={onSetEchoFocus}
           language={language}
         />
 
