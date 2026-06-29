@@ -910,7 +910,7 @@ button.hud-stage-title--clickable:hover {
 /* The hexagon gets a DEFINITE clamped width (its slots are absolutely positioned, so
    flex-basis:auto would collapse it to ~0). Compact ~300px cap on desktop, shrinks on
    mobile — never stretches the whole panel. */
-.equip-loadout .hex-board { flex: 3 1 0; width: auto; max-width: 340px; min-width: 0; margin: 0; }
+.equip-loadout .hex-board { flex: 3 1 0; width: auto; max-width: 320px; min-width: 168px; margin: 0; }
 /* (Overhaul-3 P3/P4: dead .hex-grid removed — replaced by .hex-board below.) */
 /* Connected hexagon (Overhaul-3): a square board with an SVG link layer (6 ring
    edges + 6 center spokes) behind 7 absolutely-placed slots on regular-hexagon
@@ -952,8 +952,12 @@ button.hud-stage-title--clickable:hover {
 .hex-slot {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: clamp(70px, 27%, 100px);
-  min-height: 86px;
+  /* The closest hex nodes sit ~30% of the board apart horizontally (HEX_NODE_XY), so a card
+     wider than 0.30·board overlaps its diagonal neighbour. On a phone-width column the board is
+     ~200px → cards must stay ≲60px. Keep them COMPACT at every width (the old 70-100px desktop
+     size overlapped whenever the board was < ~310px, i.e. most of the time). */
+  width: clamp(48px, 23%, 72px);
+  min-height: 0;
   z-index: 1;
 }
 /* P3 regression fix: the flat-slot rule below (.entity-fs__body .equip-slot-card { min-height:
@@ -962,9 +966,9 @@ button.hud-stage-title--clickable:hover {
    `equip-slot-card` on the SAME element, so this MUST be a COMPOUND selector (.hex-slot.equip-
    slot-card, no space) — a descendant `.hex-slot .equip-slot-card` matches nothing. (0,3,0 beats
    the 0,2,0 rule below.) Bound the card to its content at ALL widths. */
-.entity-fs__body .hex-slot.equip-slot-card { min-height: 0; padding: 5px 4px; gap: 3px; }
-.entity-fs__body .hex-slot .equip-slot-card__glyph { width: 32px; height: 32px; }
-.entity-fs__body .hex-slot .equip-slot-card__name { font-size: 10px; line-height: 1.1; }
+.entity-fs__body .hex-slot.equip-slot-card { min-height: 0; padding: 4px 3px; gap: 2px; }
+.entity-fs__body .hex-slot .equip-slot-card__glyph { width: 28px; height: 28px; }
+.entity-fs__body .hex-slot .equip-slot-card__name { font-size: 9.5px; line-height: 1.05; }
 /* The center wild sits visually inside the ring — a slightly warmer frame. */
 .hex-slot--center {
   border-style: solid;
