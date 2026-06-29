@@ -1304,8 +1304,12 @@ export const MILESTONE_TRACKS: MilestoneTrackSpec[] = [
   { track: 'pulse',   metric: 'clicksThisStage',  baseTiers: [120, 450, 1200], rewardFrac: [0.15, 0.3, 0.6], scaled: true },
   { track: 'forge',   metric: 'fusionsThisStage', baseTiers: [3, 12],          rewardFrac: [0.3, 0.7], stoneTiers: [2, 6], minStageId: 2, scaled: true },
   { track: 'archive', metric: 'collectThisStage', baseTiers: [4, 9],           rewardFrac: [0.25, 0.55], stoneTiers: [0, 4], scaled: false },
-  // expanse thresholds are gate-fill PERCENTAGES (gateProgress01 ∈ [0,100]).
-  { track: 'expanse', metric: 'gateProgress01',   baseTiers: [40, 85],         rewardFrac: [0.35, 0.8], stoneTiers: [0, 5], scaled: false },
+  // expanse thresholds are gate-fill PERCENTAGES (gateProgress01 ∈ [0,100]). User (stage-5 bug
+  // report): the old 85% top tier fired at the CUSP of stage-end (gate ≈ full → condense
+  // available), so "quest completes → stage advances" felt like the quest ended the stage. Pull
+  // both tiers WELL below 100% so the gate-% milestone clearly completes mid-stage, decoupled
+  // from condensing. (Sim-neutral — milestones are matter/stone rewards, they never feed the gate.)
+  { track: 'expanse', metric: 'gateProgress01',   baseTiers: [25, 55],         rewardFrac: [0.35, 0.8], stoneTiers: [0, 5], scaled: false },
   { track: 'comet',   metric: 'cometsThisStage',  baseTiers: [15],             rewardFrac: [0.4], scaled: true },
   { track: 'combo',   metric: 'comboThisStage',   baseTiers: [120],            rewardFrac: [0.4], scaled: false },
 ];
