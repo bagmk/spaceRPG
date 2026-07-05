@@ -57,8 +57,9 @@ describe('fusion (Phase 3)', () => {
     const state = fusionReadyState();
     const next = fuse(state, 0.99); // same-rarity outcome
     const inputEntry = next.inventory.find((e) => e.entityId === commons[0].id);
-    // 3 copies consumed; output may have landed on the same entity (+1).
-    expect(inputEntry!.count).toBeLessThanOrEqual(1);
+    // 3 copies consumed; output may have landed on the same entity (+1) — or, OVERHAUL5,
+    // on a CREW id, in which case it lands as a CARD and the inventory entry is gone.
+    expect(inputEntry?.count ?? 0).toBeLessThanOrEqual(1);
     expect(next.quanta).toBeLessThan(state.quanta);
     expect(next.entropy).toBeGreaterThan(state.entropy);
     expect(next.lastFusionEvent).not.toBeNull();

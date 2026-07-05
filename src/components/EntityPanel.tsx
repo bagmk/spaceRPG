@@ -1,6 +1,16 @@
 import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { EntityInstance, FusionEvent, EnhanceEvent } from '../game/types';
+import type { EntityInstance, FusionEvent, EnhanceEvent, CrewMemberState, CrewPromoteEvent } from '../game/types';
+import { CREW_ROSTER, CREW_BY_ID, isCrewId, pickCrewLang } from '../game/crew/roster';
+import { getCrewTierView } from '../game/crew/tierView';
+import {
+  CREW_TIER_ORDER,
+  CREW_PROMOTE_CARD_COST,
+  CREW_PROMOTE_STONE_COST,
+  CREW_PROMOTE_SUCCESS,
+  CREW_CARD_ERA_WINDOW,
+  CREW_PROMOTE_MYTHIC_PITY,
+} from '../game/balance';
 import type { StageEntity, EntityRarity } from '../game/entities/types';
 import { STAGE_ENTITIES, entityMatchesId, findEntityById, getOwnedEntityCount, getPurchasedEntityCount, entityName, entityDescription, getMaxLegacyTimeEntityMultiplierBeforeStage } from '../game/entities/stageItems';
 import {
@@ -459,6 +469,14 @@ interface Props {
   /** First-visit panel hint ids already shown (codex/equip/fuse intro lines, v18). */
   seenPanelHints?: string[];
   quanta: number;
+  /** OVERHAUL5 (v33): joined crew — id → {tier, level}. The equip grid lists CREW. */
+  crew: Record<string, CrewMemberState>;
+  /** OVERHAUL5 (v33): codex cards — entityId → count (promotion + enhance fuel). */
+  cardInventory: Record<string, number>;
+  /** OVERHAUL5: promote a joined crew one tier (승급 제단). */
+  onPromoteCrew?: (crewId: string) => void;
+  /** OVERHAUL5 transient promotion reveal. */
+  lastCrewPromoteEvent?: CrewPromoteEvent | null;
   /** 강화석 balance — Lv5+ enhancement currency (v19). */
   enhanceStones?: number;
   /** 강화 보호 charges (인과 닻, v30) — spent to absorb a failed risk-phase enhance. */
@@ -512,7 +530,7 @@ function levelTextStyle(level: number): CSSProperties {
   return { color: '#ffd24a', fontWeight: 900 }; // Lv9+ — gold, max emphasis
 }
 
-export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, enhanceStones = 0, enhanceProtectCharges = 0, fusionsSinceMythic = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint, tutorialEquipSparkId = null, tutorialFuseSparkId = null, tutorialEnhanceSpark = false }: Props) {
+export function EntityPanel({ page, equipCategory, currentStageId, recentDiscoveries = {}, gateProgress01, inventory, equippedSlots, unlockedSlotCount, riftSlots, unlockedRiftSlotCount, wildSlot = '', lastFusionEvent, almanacCollected, claimedCodexSubsetIds = [], onClaimCodexSubset, codexSeenIds, seenPanelHints, quanta, crew, cardInventory, onPromoteCrew, lastCrewPromoteEvent = null, enhanceStones = 0, enhanceProtectCharges = 0, fusionsSinceMythic = 0, lastEnhanceEvent, stats, language, onEquip, onEquipWild, onUnequip, onEnhance, onFuse, onFuseBatch, onClearFusionEvent, onClearEnhanceEvent, favoriteEntityIds = [], onToggleFavorite, onClose, onStageSelect, onUITap, onMarkCodexSeen, onMarkPanelHint, tutorialEquipSparkId = null, tutorialFuseSparkId = null, tutorialEnhanceSpark = false }: Props) {
   // Full-screen tab + equip-category are now interactive state (seeded from the
   // entry point), so one overlay hosts all three pages and the click/rift toggle.
   const [tab] = useState<PanelPage>(page);
@@ -574,6 +592,9 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // #44: the hexagon CENTER (wild) slot has its own picker (any category) since
   // it isn't tied to the click/rift equipCat+slotIndex addressing of the outer 6.
   const [pickingWild, setPickingWild] = useState(false);
+  // OVERHAUL5: the promotion altar's selected crew id (fuse tab).
+  const [promoteTarget, setPromoteTarget] = useState<string | null>(null);
+  const RARITY_I18N = { common: 'rarityCommon', rare: 'rarityRare', epic: 'rarityEpic', legendary: 'rarityLegendary', mythic: 'rarityMythic' } as const;
   // 🅠7: enhancement unlocks at S3 (S1 = collect/codex, S2 = equip/fuse).
   const enhanceUnlocked = currentStageId >= ENHANCE_UNLOCK_STAGE_ID;
   const [pickingSlot, setPickingSlot] = useState<number | null>(null);
@@ -663,17 +684,31 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   const reservedOf = (entityId: string) =>
     inventory.filter((e) => e.entityId === entityId && e.count > 0 && e.instanceId && equippedIdSet.has(e.instanceId)).length;
   const copiesOf = (entityId: string) =>
-    inventory.reduce((s, e) => (e.entityId === entityId && e.count > 0 ? s + e.count : s), 0);
-  const freeCountOf = (entityId: string) => copiesOf(entityId) - reservedOf(entityId);
+    // OVERHAUL5: a crew's "spare copies" are its own-entity CARDS (enhance fodder).
+    isCrewId(entityId) && crew[entityId]
+      ? (cardInventory[entityId] ?? 0)
+      : inventory.reduce((s, e) => (e.entityId === entityId && e.count > 0 ? s + e.count : s), 0);
+  const freeCountOf = (entityId: string) =>
+    isCrewId(entityId) && crew[entityId] ? copiesOf(entityId) : copiesOf(entityId) - reservedOf(entityId);
   // Resolve a slot's stored instanceId → the specific equipped copy + its entity.
   const entryOfSlot = (slotId: string): EntityInstance | undefined => {
     if (!slotId) return undefined;
+    // OVERHAUL5: a slot holding a JOINED crew id resolves to a synthesized entry
+    // carrying the crew's level (mirrors getEquippedInstances).
+    if (isCrewId(slotId) && crew[slotId]) {
+      return { instanceId: slotId, entityId: slotId, count: 1, level: crew[slotId].level };
+    }
     const byInst = inventory.find((e) => e.instanceId === slotId);
     if (byInst) return byInst;
     const ent = findEntityById(slotId); // legacy/unmigrated slot held an entityId
     return ent ? inventory.find((e) => entityMatchesId(ent, e.entityId) && e.count > 0) : undefined;
   };
   const entityOfSlot = (slotId: string): StageEntity | undefined => {
+    // OVERHAUL5: crew render at their CURRENT tier (colors, effect, substat count).
+    if (isCrewId(slotId) && crew[slotId]) {
+      const ent = findEntityById(slotId);
+      return ent ? getCrewTierView(ent, crew[slotId].tier) : undefined;
+    }
     const entry = entryOfSlot(slotId);
     if (entry) return findEntityById(entry.entityId);
     return slotId ? findEntityById(slotId) : undefined;
@@ -804,34 +839,36 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
   // canonical entityId — one tile per item, the synthesized `entry.count` = the
   // number of copies, the representative = the highest-level copy (best quality).
   // Per-copy levels stay visible on equipped slots (resolved by instanceId).
+  // OVERHAUL5 (v33): the equip grid lists the JOINED CREW — each as a synthesized
+  // one-copy entry (level = crew level) over its TIER VIEW entity (rarity/effect at
+  // the current tier), so every downstream consumer (cards, detail, enhance popup)
+  // renders promotion correctly with zero further changes.
   const ownedEntities = useMemo(() => {
-    const byId = new Map<string, { entry: EntityInstance; entity: StageEntity; copies: number; bestQ: number | undefined }>();
-    for (const inst of inventory) {
-      if (inst.count <= 0) continue;
-      const entity = findEntityById(inst.entityId);
-      if (!entity) continue;
-      const g = byId.get(entity.id);
-      const q = inst.quality;
-      if (!g) {
-        byId.set(entity.id, { entry: inst, entity, copies: inst.count, bestQ: q });
-      } else {
-        g.copies += inst.count;
-        if ((inst.level ?? 1) > (g.entry.level ?? 1)) g.entry = inst; // show the best copy
-        if (q !== undefined && (g.bestQ === undefined || q > g.bestQ)) g.bestQ = q;
-      }
-    }
-    return [...byId.values()]
-      .map(({ entry, entity, copies, bestQ }) => ({
-        entry: { ...entry, count: copies, quality: bestQ } as EntityInstance,
-        entity,
-      }))
-      .sort((a, b) => {
-        const rr = (RARITY_RANK.get(b.entity.rarity) ?? 0) - (RARITY_RANK.get(a.entity.rarity) ?? 0);
-        if (rr !== 0) return rr;
-        if (a.entity.stageId !== b.entity.stageId) return a.entity.stageId - b.entity.stageId;
-        return a.entity.baseCost - b.entity.baseCost;
+    const joined: { entry: EntityInstance; entity: StageEntity }[] = [];
+    for (const def of CREW_ROSTER) {
+      const cs = crew[def.id];
+      if (!cs) continue;
+      const entity0 = findEntityById(def.id);
+      if (!entity0) continue;
+      joined.push({
+        entry: { instanceId: def.id, entityId: def.id, count: 1, level: cs.level },
+        entity: getCrewTierView(entity0, cs.tier),
       });
-  }, [inventory]);
+    }
+    return joined.sort((a, b) => {
+      const rr = (RARITY_RANK.get(b.entity.rarity) ?? 0) - (RARITY_RANK.get(a.entity.rarity) ?? 0);
+      if (rr !== 0) return rr;
+      const ja = CREW_BY_ID.get(a.entity.id)?.joinStage ?? 99;
+      const jb = CREW_BY_ID.get(b.entity.id)?.joinStage ?? 99;
+      return ja - jb;
+    });
+  }, [crew]);
+
+  // Crew not yet joined — rendered as silhouette tiles ("S{n} 합류") after the grid.
+  const lockedCrew = useMemo(
+    () => CREW_ROSTER.filter((def) => !crew[def.id]),
+    [crew],
+  );
 
   // Rarity-filter chip applied on top of the full list (shared by equip + fuse grids).
   const rarityFiltered = useMemo(
@@ -1328,7 +1365,10 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
             riftSlots[0] || null, riftSlots[1] || null, riftSlots[2] || null,
             wildSlot || null,
           ];
-          const bingo = computeHexBingo(hexIds);
+          // Review fix: pass the SAME tierOf the live income path uses (skills/effects.ts)
+          // — without it the displayed harmony bonus reads static rarities and diverges
+          // from the applied bonus the moment an equipped crew is promoted.
+          const bingo = computeHexBingo(hexIds, (id) => crew[id]?.tier);
           // Hex slot indices that sit on a completed line → drive the glow.
           const litSlots = new Set<number>();
           for (const li of bingo.completedLines) for (const s of HEX_BINGO_LINES[li].slots) litSlots.add(s);
@@ -1602,7 +1642,13 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       // P6: per-copy placement — equippable while a SPARE (un-equipped)
                       // copy exists, even if another copy of the same item is already
                       // worn. Dim only when every copy is already equipped.
-                      const noFree = freeCountOf(entity.id) <= 0;
+                      // OVERHAUL5: a JOINED crew is its own single copy — equippable
+                      // whenever it isn't already worn (its own-entity CARDS are enhance
+                      // fuel, never an equip requirement). Legacy items keep the
+                      // spare-copy rule.
+                      const noFree = isCrewId(entity.id) && crew[entity.id]
+                        ? equippedIdSet.has(entity.id)
+                        : freeCountOf(entity.id) <= 0;
                       const cat = getEquipCategory(entity); // 'click' = 공격 (top slots), 'rift' = 자동 (bottom)
                       let delta: number | null = null;
                       if (pickingSlot !== null && pickBase > 0 && !noFree) {
@@ -1657,6 +1703,21 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                         </button>
                       );
                     })}
+                    {/* OVERHAUL5: crew not yet joined — silhouettes with their join stage,
+                        so the 50-member roster is a visible collection goal from minute one. */}
+                    {pickingSlot === null && !pickingWild
+                      ? lockedCrew.map((def) => {
+                          const ent = findEntityById(def.id);
+                          if (!ent) return null;
+                          return (
+                            <div key={def.id} className="owned-card owned-card--locked-crew">
+                              <span className="owned-card__formula owned-card__formula--silhouette">{ent.formula}</span>
+                              <span className="owned-card__name">{entityName(ent, language)}</span>
+                              <span className="owned-card__count">{t(language, 'crewLockedJoin').replace('{n}', String(def.joinStage))}</span>
+                            </div>
+                          );
+                        })
+                      : null}
                   </div>
                 )}
               </div>
@@ -1665,228 +1726,102 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
         })() : null}
 
         {/* ── Fusion forge page — luck-based gacha ── */}
+        {/* ── 승급 제단 (OVERHAUL5): the fusion forge reborn as the crew PROMOTION altar.
+            Feed era-matched cards + 강화석 to push a crew one tier up — fail keeps the
+            crew (never destroyed), refunds half the stones. Mythic step shares the
+            global pity gauge with the old fusion counter. ── */}
         {tab === 'fuse' ? (() => {
-          const maxIdx = getMaxFusionRarityIdx(currentStageId);
-          const trayIdx = trayRarity ? RARITY_ORDER.indexOf(trayRarity) : 0;
-          const capped = trayRarity !== undefined && trayIdx >= maxIdx;
-          const up2Possible = trayIdx + 2 <= maxIdx;
-          // Odds are per-input-tier (P2), pure chance — no pity. Default to common when empty.
-          const oddsTier = trayRarity ?? 'common';
-          const up1Pct = Math.round(FUSION_UP1_CHANCE_BY_TIER[oddsTier] * 100);
-          const up2Pct = Math.round(FUSION_UP2_CHANCE_BY_TIER[oddsTier] * 100);
-          const ready = fuseInputs.length === FUSION_INPUT_COUNT;
-          // Overhaul-2 🅠1: fusion cost is a fixed per-era price (anchor-based),
-          // not a fraction of the bank — and must be afforded in full.
-          const cost = getFusionQuantaCost(oddsTier, currentStageId);
-          const affordable = quanta >= cost;
-          // P2b bonus indicators: 3-same-entity / 3-same-codex-category.
-          const sameEntityTray = ready && new Set(fuseInputs).size === 1;
-          const sameSubsetTray = ready && (() => {
-            const subs = fuseInputs.map((id) => { const e = findEntityById(id); return e ? getCodexSubsetIdForEntity(e) : null; });
-            return subs[0] != null && subs.every((s) => s === subs[0]);
-          })();
-
-          // Fusable-trio pressure + auto-fill: copies available per rarity.
-          const copiesByRarity = new Map<EntityRarity, number>();
-          for (const { entry, entity } of ownedEntities) {
-            copiesByRarity.set(entity.rarity, (copiesByRarity.get(entity.rarity) ?? 0) + entry.count);
-          }
-          const triosAt = (r: EntityRarity) => Math.floor((copiesByRarity.get(r) ?? 0) / FUSION_INPUT_COUNT);
-          const trios = trayRarity ? triosAt(trayRarity) : RARITY_ORDER.reduce((s, r) => s + triosAt(r), 0);
-          // 🅠4: trios available of the tray rarity — gates the batch (×N) button.
-          const batchTrios = trayRarity ? Math.min(FUSION_BATCH_MAX_TRIOS, triosAt(trayRarity)) : 0;
-
+          const selDef = promoteTarget ? CREW_BY_ID.get(promoteTarget) : undefined;
+          const selState = promoteTarget ? crew[promoteTarget] : undefined;
+          const selEntity0 = promoteTarget ? findEntityById(promoteTarget) : undefined;
+          const sel = selDef && selState && selEntity0
+            ? { def: selDef, cs: selState, entity: getCrewTierView(selEntity0, selState.tier) }
+            : null;
+          const nextTier = sel ? CREW_TIER_ORDER[CREW_TIER_ORDER.indexOf(sel.cs.tier) + 1] : undefined;
+          const window = sel ? CREW_CARD_ERA_WINDOW[sel.cs.tier] : 0;
+          const cardCost = sel ? CREW_PROMOTE_CARD_COST[sel.cs.tier] : 0;
+          const stoneCost = sel ? CREW_PROMOTE_STONE_COST[sel.cs.tier] : 0;
+          const successPct = sel ? Math.round((CREW_PROMOTE_SUCCESS[sel.cs.tier] ?? 0) * 100) : 0;
+          const cardsHave = sel
+            ? Object.entries(cardInventory).reduce((s, [id, n]) => {
+                const st = findEntityById(id)?.stageId ?? -999;
+                return Math.abs(st - sel.def.joinStage) <= window ? s + n : s;
+              }, 0)
+            : 0;
+          const isMythicStep = nextTier === 'mythic';
+          const affordable = Boolean(sel && nextTier && cardsHave >= cardCost && enhanceStones >= stoneCost);
+          const reveal = lastCrewPromoteEvent && promoteTarget && lastCrewPromoteEvent.crewId === promoteTarget
+            ? lastCrewPromoteEvent
+            : null;
+          const promoteRoster = ownedEntities;
           return (
             <div className="fuse-page cc-scroll">
-              {hintShow['fuse'] ? <div className="fuse-loop-hint">{t(language, 'fuseLoopHint')}</div> : null}
-              {/* P7 잔향 게이지 — mythic pity progress, shown only where mythic is reachable
-                  (maxIdx === 4 ⇒ stage 12+). At FUSION_MYTHIC_PITY_N a single fuse is guaranteed mythic. */}
-              {maxIdx === 4 ? (
-                <div className={`fuse-pity ${fusionsSinceMythic >= FUSION_MYTHIC_PITY_N ? 'fuse-pity--ready' : ''}`}>
-                  <div className="fuse-pity__row">
-                    <span className="fuse-pity__label">{t(language, 'mythicPityLabel')}</span>
-                    <span className="fuse-pity__count">{Math.min(fusionsSinceMythic, FUSION_MYTHIC_PITY_N)} / {FUSION_MYTHIC_PITY_N}</span>
-                  </div>
-                  <div className="fuse-pity__bar">
-                    <div className="fuse-pity__fill" style={{ width: `${Math.min(100, (fusionsSinceMythic / FUSION_MYTHIC_PITY_N) * 100)}%` }} />
-                  </div>
-                </div>
-              ) : null}
-              {/* 전체 융합 — one batch button: fuses every available same-rarity trio at
-                  once (the redundant in-altar "일괄 융합 ×N" + the "N회 가능" counts were
-                  removed; the (?) help explains it). */}
-              {(() => {
-                // P5 (user): show HOW MANY items the batch fuses + its total matter cost.
-                const allIds = drawAllTrios();
-                const allTrios = Math.floor(allIds.length / FUSION_INPUT_COUNT);
-                const items = allTrios * FUSION_INPUT_COUNT;
-                let totalCost = 0;
-                for (let i = 0; i + FUSION_INPUT_COUNT <= allIds.length; i += FUSION_INPUT_COUNT) {
-                  const r = findEntityById(allIds[i])?.rarity ?? 'common';
-                  totalCost += getFusionQuantaCost(r, currentStageId);
-                }
-                return (
-                  <button
-                    type="button"
-                    className="gacha-fuse-all-btn"
-                    disabled={fusing || allTrios < 1}
-                    onClick={triggerFuseAll}
-                  >
-                    <span className="gacha-fuse-all-btn__label">
-                      {allTrios > 0 ? t(language, 'fuseAllN').replace('{n}', String(items)) : t(language, 'fuseAllNone')}
-                    </span>
-                    {allTrios > 0 ? (
-                      <span className="gacha-fuse-all-btn__cost">{`⚛ ${formatEntityCost(totalCost)}`}</span>
-                    ) : null}
-                  </button>
-                );
-              })()}
-              {/* The altar — the whole bet (stake / cost / odds) on one lever */}
-              <div className={`gacha-altar ${ready ? 'gacha-altar--ready' : ''}`}>
-                <div className="gacha-altar__slots">
-                  {Array.from({ length: FUSION_INPUT_COUNT }, (_, i) => {
-                    const inputId = fuseInputs[i];
-                    const inputEntity = inputId ? findEntityById(inputId) : undefined;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        className={`gacha-slot ${inputEntity ? 'gacha-slot--filled' : ''}`}
-                        style={inputEntity ? ({ '--rarity-color': RARITY_COLORS[inputEntity.rarity] } as CSSProperties) : undefined}
-                        onClick={() => {
-                          if (!inputId) return;
-                          setFuseInputs((current) => current.filter((_, j) => j !== i));
-                          onUITap?.();
-                        }}
-                      >
-                        {inputEntity ? (
-                          <EntityGlyph entity={inputEntity} color={RARITY_COLORS[inputEntity.rarity]} />
-                        ) : (
-                          <span className="gacha-slot__plus">＋</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* user: drop the "용광로에 엔티티 3개를 넣으세요" line when empty (the ＋ slots already
-                    say it) — saves a row so the fuel list shows higher. Caption only when filling. */}
-                {fuseInputs.length > 0 ? (
-                  <div className="gacha-altar__caption">
-                    {ready ? t(language, 'fuseAltarReady') : t(language, 'fuseHint')}
-                  </div>
-                ) : null}
-                {sameEntityTray || sameSubsetTray ? (
-                  <div className="gacha-bonus">
-                    {sameEntityTray ? <span className="gacha-bonus__chip">★ {t(language, 'fuseBonusSameEntity')}</span> : null}
-                    {sameSubsetTray ? <span className="gacha-bonus__chip">◈ {t(language, 'fuseBonusSameCategory')}</span> : null}
-                  </div>
-                ) : null}
-                {/* 보호석 toggle — SINGLE fuse only (Fuse All never spends charges). When ON
-                    and a charge is held, a failed roll is forced up one rarity. Mirrors the
-                    enhance card's .enhance-protect-toggle (role=switch · ☑/☐ 🛡 N). */}
-                <div className="enhance-risk__toggles gacha-protect-toggles">
-                  <button
-                    type="button"
-                    className={`enhance-protect-toggle ${fuseUseProtect ? 'enhance-protect-toggle--on' : ''}`}
-                    role="switch"
-                    aria-checked={fuseUseProtect}
-                    aria-label={t(language, 'fuseUseProtect')}
-                    disabled={enhanceProtectCharges === 0 || fusing}
-                    onClick={(e) => { e.stopPropagation(); setFuseUseProtect((v) => !v); onUITap?.(); }}
-                  >
-                    {`${fuseUseProtect ? '☑' : '☐'} 🛡 ${enhanceProtectCharges}`}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className={`gacha-fuse-btn ${fusing ? 'gacha-fuse-btn--charging' : ''} ${ready && affordable && !fusing ? 'gacha-fuse-btn--armed' : ''}`}
-                  disabled={!ready || !affordable || fusing}
-                  onClick={() => triggerFuse()}
+              <p className="fuse-page__hint">{t(language, 'promoteHint')}</p>
+              {sel && nextTier ? (
+                <div
+                  className="promote-altar"
+                  style={{ '--rarity-color': RARITY_COLORS[nextTier] } as CSSProperties}
                 >
-                  <span className="gacha-fuse-btn__label">
-                    {fusing
-                      ? t(language, 'fuseChanting')
-                      : !ready
-                        ? t(language, 'fuseLeverNeed')
-                        : t(language, 'fuseLeverReady').replace('{cost}', formatEntityCost(cost))}
-                  </span>
-                </button>
-                <div className="gacha-odds">
-                  {capped ? (
-                    <span className="gacha-odds__cap">
-                      {t(language, 'fuseMaxRarity').replace('{r}', t(language, RARITY_LABEL_KEY[RARITY_ORDER[maxIdx]]))}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="gacha-odds__up1">{`⬆ ${t(language, 'fuseOddsUp1')} ${up1Pct}%`}</span>
-                      {up2Possible && up2Pct > 0 ? (
-                        <span className="gacha-odds__up2">{`⬆⬆ ${t(language, 'fuseOddsUp2')} ${up2Pct}%`}</span>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Fuel tray — quiet, adjacent; first tap locks rarity */}
-              <div className="entity-inv entity-inv--fuse">
-                <div className="entity-inv__head">
-                  <span className="entity-inv__title">{t(language, 'fuseFuel')}</span>
-                </div>
-                {rarityFilterBar}
-                {rarityFiltered.length === 0 ? (
-                  <div className="entity-panel__empty">{t(language, 'equipPickEmpty')}</div>
-                ) : (
-                  <div className="owned-grid">
-                    {rarityFiltered.map(({ entry, entity }) => {
-                      const usedCopies = fuseInputs.filter((id) => id === entity.id).length;
-                      const reserved = reservedOf(entity.id); // equipped copy held back
-                      const usable = entry.count - reserved;
-                      const blocked =
-                        fuseInputs.length >= FUSION_INPUT_COUNT ||
-                        usable <= usedCopies ||
-                        (trayRarity !== undefined && entity.rarity !== trayRarity);
-                      const fav = favoriteEntityIds.includes(entity.id);
-                      // S2 onboarding SPARKLE: pulse 인플라톤 폭주 to fuse three ("3개 골라 융합").
-                      // Stays lit while there is still a copy to add (drops once blocked/full).
-                      const sparked = !blocked && tutorialFuseSparkId === entity.id;
-                      return (
-                        <div
-                          key={entity.id}
-                          className={`owned-card-wrap ${fav ? 'owned-card-wrap--fav' : ''}`}
-                          style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
-                        >
-                          <button
-                            type="button"
-                            className={`owned-card ${blocked ? 'owned-card--dim' : ''} ${isTailQuality(entry?.quality) ? 'owned-card--tail' : ''} ${sparked ? 'owned-card--tutorial' : ''}`}
-                            disabled={blocked}
-                            onClick={() => addFuseInput(entity)}
-                          >
-                            {sparked ? (
-                              <span className="owned-card__tutorial-hint">{t(language, 'tutSparkFuseHere')}</span>
-                            ) : null}
-                            <TraitBadge entity={entity} className="trait-badge--card" />
-                            <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
-                            <span className="owned-card__name">{entityName(entity, language)}</span>
-                            <span className="owned-card__count">{`×${Math.max(0, usable - usedCopies)}`}</span>
-                            {reserved > 0 ? <span className="owned-card__reserved">{t(language, 'fuseEquippedReserved')}</span> : null}
-                          </button>
-                          {/* Overhaul-4 (v26): ★ favorite toggle — protects this item's
-                              copies from Fuse-All (and, later, pooled enhance fodder).
-                              Persistent (saved), replacing the old per-session ✕ exclude. */}
-                          <button
-                            type="button"
-                            className={`owned-card__fav ${fav ? 'owned-card__fav--on' : ''}`}
-                            aria-label={t(language, 'favoriteToggle')}
-                            title={t(language, 'favoriteToggle')}
-                            onClick={() => { onToggleFavorite?.(entity.id); onUITap?.(); }}
-                          >
-                            {fav ? '★' : '☆'}
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div className="promote-altar__who">
+                    <span className="promote-altar__formula" style={{ color: RARITY_COLORS[sel.cs.tier] }}>{sel.entity.formula}</span>
+                    <span className="promote-altar__name">{entityName(sel.entity, language)}</span>
+                    <span className="promote-altar__epithet">{pickCrewLang(sel.def.epithet, language)}</span>
                   </div>
-                )}
+                  <div className="promote-altar__tiers">
+                    <span className="promote-altar__tier" style={{ color: RARITY_COLORS[sel.cs.tier] }}>{t(language, RARITY_I18N[sel.cs.tier])}</span>
+                    <span className="promote-altar__arrow">→</span>
+                    <span className="promote-altar__tier promote-altar__tier--next" style={{ color: RARITY_COLORS[nextTier] }}>{t(language, RARITY_I18N[nextTier])}</span>
+                  </div>
+                  <div className="promote-altar__costs">
+                    <span className={cardsHave >= cardCost ? '' : 'promote-altar__cost--short'}>
+                      {t(language, 'promoteCards').replace('{have}', String(cardsHave)).replace('{need}', String(cardCost)).replace('{a}', String(Math.max(1, sel.def.joinStage - window))).replace('{b}', String(sel.def.joinStage + window))}
+                    </span>
+                    <span className={enhanceStones >= stoneCost ? '' : 'promote-altar__cost--short'}>{`◆ ${stoneCost}`}</span>
+                    <span>{t(language, 'promoteChance').replace('{pct}', String(successPct))}</span>
+                  </div>
+                  {isMythicStep ? (
+                    <div className="promote-altar__pity">
+                      {t(language, 'promotePity').replace('{n}', String(Math.min(fusionsSinceMythic, CREW_PROMOTE_MYTHIC_PITY))).replace('{max}', String(CREW_PROMOTE_MYTHIC_PITY))}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="promote-altar__btn"
+                    disabled={!affordable}
+                    onClick={() => { onPromoteCrew?.(sel.def.id); onUITap?.(); }}
+                  >
+                    {t(language, 'promoteBtn')}
+                  </button>
+                  {reveal ? (
+                    <div className={`promote-altar__result ${reveal.success ? 'promote-altar__result--up' : 'promote-altar__result--fail'}`}>
+                      {reveal.success
+                        ? `${t(language, 'promoteSuccess')}${reveal.pity ? ` · ${t(language, 'promotePityHit')}` : ''}`
+                        : t(language, 'promoteFail')}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="entity-panel__empty">{t(language, 'promotePick')}</div>
+              )}
+              <div className="owned-grid">
+                {promoteRoster.map(({ entry, entity }) => {
+                  const capped = crew[entity.id]?.tier === 'mythic';
+                  return (
+                    <button
+                      key={entity.id}
+                      type="button"
+                      className={`owned-card ${promoteTarget === entity.id ? 'owned-card--selected' : ''} ${capped ? 'owned-card--dim' : ''}`}
+                      style={{ '--rarity-color': RARITY_COLORS[entity.rarity] } as CSSProperties}
+                      onClick={() => { setPromoteTarget(entity.id); onUITap?.(); }}
+                    >
+                      <span className="owned-card__formula" style={{ color: RARITY_COLORS[entity.rarity] }}>{entity.formula}</span>
+                      <span className="owned-card__name">{entityName(entity, language)}</span>
+                      <span className="owned-card__count" style={levelTextStyle(entry.level)}>
+                        {capped ? t(language, 'promoteCapped') : `Lv.${entry.level}`}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );

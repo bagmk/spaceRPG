@@ -43,7 +43,8 @@ import {
   ENHANCE_UNLOCK_STAGE_ID,
   SHOP_UNLOCK_STAGE_ID,
 } from '../game/balance';
-import { getEntitiesForStage, getPurchasedEntityCount } from '../game/entities/stageItems';
+import { CREW_BY_ID, pickCrewLang } from '../game/crew/roster';
+import { getEntitiesForStage, getPurchasedEntityCount, findEntityById, entityName } from '../game/entities/stageItems';
 import { getParticleDefinitionLabel, getParticleNameLabel } from '../game/particles';
 import type { SoundManager } from '../game/audio';
 import type { EndingId, GameState } from '../game/types';
@@ -194,6 +195,15 @@ export function GameScreen({
   const questAnchorRef = useRef<HTMLButtonElement | null>(null);
   // Quest-milestone notification toast (fires when a quest's condition is met).
   const [questToast, setQuestToast] = useState<{ id: string; title: string } | null>(null);
+  // OVERHAUL5 review fix: a stale/unknown crew id at the head of the join queue is
+  // dequeued in an EFFECT (never during render) so a bad save can't jam the toast.
+  const crewJoinHead = state.pendingCrewJoinIds[0];
+  useEffect(() => {
+    if (!crewJoinHead) return;
+    const def = CREW_BY_ID.get(crewJoinHead);
+    if (!def || !findEntityById(def.id)) dispatch({ type: 'DISMISS_CREW_JOIN' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crewJoinHead]);
   const prevClaimableRef = useRef<Set<string>>(new Set());
   const questToastTimerRef = useRef<number | null>(null);
   const shopAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -1001,6 +1011,10 @@ export function GameScreen({
             codexSeenIds={state.codexSeenIds}
             seenPanelHints={state.seenPanelHints}
             quanta={state.quanta}
+            crew={state.crew}
+            cardInventory={state.cardInventory}
+            onPromoteCrew={(crewId) => { dispatch({ type: 'PROMOTE_CREW', crewId, successRoll: Math.random() }); soundManager?.playEntityLevelUp(); }}
+            lastCrewPromoteEvent={state.lastCrewPromoteEvent}
             enhanceStones={state.enhanceStones}
             enhanceProtectCharges={state.enhanceProtectCharges}
             fusionsSinceMythic={state.fusionsSinceMythic}
@@ -1386,6 +1400,32 @@ export function GameScreen({
           <span className="quest-milestone-toast__cta">{t(language, 'questMilestoneToastCta')}</span>
         </button>
       ) : null}
+
+      {/* OVERHAUL5: crew join beat — the new companion greets the player with its
+          one-line persona. Tap to dismiss (FIFO through pendingCrewJoinIds). */}
+      {state.pendingCrewJoinIds.length > 0 ? (() => {
+        const def = CREW_BY_ID.get(state.pendingCrewJoinIds[0]);
+        const ent = def ? findEntityById(def.id) : undefined;
+        // Unknown id (stale save): render nothing — the cleanup EFFECT above dequeues
+        // it (review fix: dispatching during render is a cross-component violation).
+        if (!def || !ent) return null;
+        return (
+          <button
+            type="button"
+            className="crew-join-toast"
+            style={{ '--rarity-color': ent.visual.color } as CSSProperties}
+            onClick={() => { dispatch({ type: 'DISMISS_CREW_JOIN' }); soundManager?.playQuestClaim(); }}
+          >
+            <span className="crew-join-toast__tag">{t(language, 'crewJoinTitle')}</span>
+            <span className="crew-join-toast__who">
+              <span className="crew-join-toast__formula">{ent.formula}</span>
+              {` ${entityName(ent, language)} · ${pickCrewLang(def.epithet, language)}`}
+            </span>
+            <span className="crew-join-toast__line">“{pickCrewLang(def.joinLine, language)}”</span>
+            <span className="crew-join-toast__cta">{t(language, 'crewTapToMeet')}</span>
+          </button>
+        );
+      })() : null}
 
       {/* #42: slot-machine matter rollup when a milestone/era-record is claimed. */}
       {state.lastQuestClaimEvent ? (

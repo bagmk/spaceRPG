@@ -381,7 +381,13 @@ function fuseOnce(
   const fusedQuality =
     rolls.qualityRoll !== undefined ? rollQualityScore(rolls.qualityRoll, rolls.pickRoll) : undefined;
   // P7b: the output carries the lowest consumed level so merge-leveling survives a fuse-up.
-  const { inventory, capRefund } = applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality, fusedLevel);
+  // OVERHAUL5 review fix (critical): a CREW-id output must land as a CARD — the legacy
+  // inventory is a dead array post-v33 (no UI reads it), so minting there silently
+  // swallowed the fusion reward. Crew-id cards are that crew's promotion/enhance fuel.
+  const outputIsCrew = isCrewId(output.id);
+  const { inventory, capRefund } = outputIsCrew
+    ? { inventory: consumed, capRefund: 0 }
+    : applyFusionOutput(consumed, output, currentStageIdForFusion, fusedQuality, fusedLevel);
   const totalRefund = enhanceRefund + capRefund;
   // A failed fusion (no rarity-up) mints 강화석 — the consolation that funds
   // Lv5+ enhancement (R1). Stones scale with the input tier; +bonus for same-entity.
@@ -440,6 +446,7 @@ function fuseOnce(
     enhanceProtectCharges: protectedUsed ? Math.max(0, state.enhanceProtectCharges - 1) : state.enhanceProtectCharges,
     fusionsSinceMythic: nextFusionsSinceMythic, // P7 mythic pity counter
     inventory,
+    cardInventory: outputIsCrew ? addCard(state.cardInventory, output.id) : state.cardInventory,
     almanacCollected: addToAlmanac(state.almanacCollected, output.stageId, output.id),
     tutorialFlags: nextTutorialFlags,
   };
