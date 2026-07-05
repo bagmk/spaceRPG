@@ -1,4 +1,5 @@
 import type { EntityInstance } from '../entities/types';
+import type { CrewMemberState } from '../types';
 import type { PrestigeUpgradeLevels } from '../prestige';
 import { getPrestigeMultiplier, getCondensationCoreMultiplier, getResonanceCoreMultiplier } from '../prestige';
 import { applyCollectionRewards, applyEntityModifiers, applySetBonuses, applyLaneMatch } from '../entities/effects';
@@ -151,13 +152,19 @@ export function getActiveModifiers(
   prestigeUpgrades?: PrestigeUpgradeLevels,
   almanacCollected?: Record<number, string[]>,
   claimedCodexSubsetIds?: readonly string[],
+  crew?: Record<string, CrewMemberState>,
 ): Modifiers {
   const mods = defaultModifiers();
 
+  // OVERHAUL5 (v33): equipped CREW power reads the crew's CURRENT tier, not the
+  // source entity's static rarity — this resolver is the single tier authority
+  // for the primary pipeline, the lane match AND the hex bingo below.
+  const tierOf = crew ? (entityId: string) => crew[entityId]?.tier : undefined;
+
   if (inventory && inventory.length > 0) {
-    applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 });
+    applyEntityModifiers(mods, inventory, { stageId: ctx.stageId, gateProgress01: ctx.gateProgress01 }, tierOf);
     applySetBonuses(mods, inventory);
-    applyLaneMatch(mods, inventory);
+    applyLaneMatch(mods, inventory, tierOf);
   }
 
   // CRIT GEAR CAP (P fix, 2026-06-24): CRIT_MULT_GEAR_CAP was defined but NEVER applied
@@ -171,7 +178,7 @@ export function getActiveModifiers(
   // #44 hexagon bingo: completed lines feed OFF-GATE matter multipliers (click →
   // wallet click matter, auto → wallet auto matter), never the entropy gate.
   if (ctx.hexSlots) {
-    const hb = computeHexBingo(ctx.hexSlots);
+    const hb = computeHexBingo(ctx.hexSlots, tierOf);
     mods.clickMatterMult *= hb.clickMult;
     mods.autoMatterMult *= hb.autoMult;
   }

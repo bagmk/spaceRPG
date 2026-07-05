@@ -7,6 +7,15 @@ import { createInitialUniverseSeed } from './multiverse';
 import { getStageStartCosmicTime } from './timeFlow';
 import { createDefaultPrestigeUpgrades } from './prestige';
 import { pickActiveQuests } from './quests';
+import { crewJoiningAtOrBefore } from './crew/roster';
+import type { CrewMemberState } from './types';
+
+/** OVERHAUL5: fresh-game crew — the stage-1 trio, common tier, level 1. */
+function createDefaultCrew(): Record<string, CrewMemberState> {
+  const crew: Record<string, CrewMemberState> = {};
+  for (const def of crewJoiningAtOrBefore(1)) crew[def.id] = { tier: 'common', level: 1 };
+  return crew;
+}
 import type {
   CondenseProgressEntry,
   DailyCheckInState,
@@ -103,6 +112,7 @@ export function createInitialGameState(now: number): GameState {
     lastEncounterEvent: null,
     lastFusionEvent: null,
     lastGachaEvent: null,
+    lastCrewPromoteEvent: null,
     lastDropEvent: null,
     lastCodexClaimEvent: null,
     offlineElapsedMs: 0,
@@ -131,6 +141,11 @@ export function createInitialGameState(now: number): GameState {
     unlockedSlotCount: 1,
     riftSlots: [],
     unlockedRiftSlotCount: 1,
+    // OVERHAUL5 (v33): the stage-1 crew join immediately — a fresh universe opens
+    // with companions, not an empty roster. Their join beats queue for dialogue.
+    crew: createDefaultCrew(),
+    cardInventory: {},
+    pendingCrewJoinIds: crewJoiningAtOrBefore(1).map((c) => c.id),
     almanacCollected: createDefaultAlmanacCollected(),
     prestigeUpgrades: createDefaultPrestigeUpgrades(),
     peakEntropy: 0,

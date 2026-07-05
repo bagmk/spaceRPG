@@ -5,7 +5,8 @@ import { ENHANCE_LEVEL_CAPS, ENTROPY_THRESHOLDS } from './balance';
 import { createDefaultPrestigeUpgrades } from './prestige';
 import { findEntityById } from './entities/stageItems';
 import { bestQuality } from './entities/quality';
-import type { EntityInstance, GameState, PersistentGameState, SaveState } from './types';
+import type { CrewMemberState, EntityInstance, GameState, PersistentGameState, SaveState } from './types';
+import { crewJoiningAtOrBefore, isCrewId } from './crew/roster';
 import type { SaveStateV1, SaveStateV2, SaveStateV3, SaveStateV4, SaveStateV5Legacy, SaveStateV6Legacy } from './storage/legacyTypes';
 import {
   migrateV1ToV2,
@@ -69,7 +70,7 @@ function repairSave(parsed: Partial<SaveState>): Partial<SaveState> {
  *  prestigeUpgrades sub-keys resonance_core (0) / echoFocus (50). Infinite
  *  prestige (특이점 잔향, derived from peakEntropy) + the mythic fusion pity floor.
  *  Earn side rides the carried peakEntropy (no migration); only the spend persists. */
-export const SAVE_SCHEMA_VERSION = 32;
+export const SAVE_SCHEMA_VERSION = 33;
 
 /** P6: per-entity ceiling when exploding a count-stack into flat copies, for
  *  unlimited-maxCount items (capped items use their own maxCount). Bounds the
@@ -295,6 +296,9 @@ export function createSaveSnapshot(state: GameState): SaveState {
     stageQuestProgress: state.stageQuestProgress,
     echoSpent: state.echoSpent,
     fusionsSinceMythic: state.fusionsSinceMythic,
+    crew: state.crew,
+    cardInventory: state.cardInventory,
+    pendingCrewJoinIds: state.pendingCrewJoinIds,
   };
 }
 
@@ -512,8 +516,11 @@ export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | 
   const sourceVersion = (parsedUnknown as { version?: number }).version ?? 0;
   const migrated = migrateByVersion(parsedUnknown as Partial<SaveState>);
   if (!migrated) return null;
-  const finalized = ensureFlatInstances(
-    finalizeV17(normalizeSavedEntityIds(migrated) as LegacyMigratedState, sourceVersion),
+  const finalized = ensureCrewState(
+    ensureFlatInstances(
+      finalizeV17(normalizeSavedEntityIds(migrated) as LegacyMigratedState, sourceVersion),
+    ),
+    sourceVersion,
   );
   // Pre-v17 loads reset the offline window once: both the v16 gear rebuff and
   // the v17 recalibrated (lower) gates would otherwise pay a first-load
@@ -522,6 +529,85 @@ export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | 
     return { ...finalized, lastSaveAt: Date.now() };
   }
   return finalized;
+}
+
+/**
+ * OVERHAUL5 v33 (docs/OVERHAUL5_CREW_PLAN.md §1-5): convert the flat per-copy
+ * inventory into CREW + CARDS. Runs AFTER ensureFlatInstances (needs flat copies).
+ *
+ * Seeding rules (critic-corrected — promotion did not exist pre-v33, so a copy's
+ * static rarity is the only correct tier source):
+ *  • own ≥1 copy of a crew id → joined, tier = the entity's STATIC rarity,
+ *    level = the highest-level copy (investment preserved);
+ *  • spare crew copies → 1 card each + (level−1) 강화석 refund per spare;
+ *  • every non-crew copy → cards (count preserved);
+ *  • crew whose joinStage ≤ the player's stage auto-join at common (no dialogue
+ *    flood on migration — pendingCrewJoinIds seeds EMPTY here);
+ *  • hex slots: stored instanceId → its entityId if that crew joined, else cleared;
+ *  • inventory empties (legacy container — dead post-v33).
+ *
+ * For sourceVersion ≥ 33 the loaded crew/cards pass through untouched (validateV5
+ * already sanitized them) — only the auto-join top-up runs (idempotent).
+ */
+function ensureCrewState(state: PersistentGameState, sourceVersion: number): PersistentGameState {
+  const stageId = Math.max(1, (state.stageIdx ?? 0) + 1);
+  if (sourceVersion >= 33) {
+    const crew = { ...(state.crew ?? {}) };
+    for (const def of crewJoiningAtOrBefore(stageId)) crew[def.id] ??= { tier: 'common', level: 1 };
+    return { ...state, crew, cardInventory: state.cardInventory ?? {}, pendingCrewJoinIds: state.pendingCrewJoinIds ?? [] };
+  }
+
+  const crew: Record<string, CrewMemberState> = {};
+  const cards: Record<string, number> = {};
+  let stoneRefund = 0;
+
+  const byEntity = new Map<string, EntityInstance[]>();
+  for (const inst of state.inventory ?? []) {
+    if (!inst || (inst.count ?? 0) <= 0) continue;
+    const id = canonicalEntityId(inst.entityId);
+    const arr = byEntity.get(id);
+    if (arr) arr.push(inst);
+    else byEntity.set(id, [inst]);
+  }
+
+  const instanceToEntity = new Map<string, string>();
+  for (const [entityId, insts] of byEntity) {
+    for (const inst of insts) if (inst.instanceId) instanceToEntity.set(inst.instanceId, entityId);
+    if (isCrewId(entityId)) {
+      const best = insts.reduce((a, b) => ((b.level ?? 1) > (a.level ?? 1) ? b : a));
+      const entity = findEntityById(entityId);
+      crew[entityId] = { tier: entity?.rarity ?? 'common', level: Math.max(1, best.level ?? 1) };
+      for (const inst of insts) {
+        if (inst === best) continue;
+        cards[entityId] = (cards[entityId] ?? 0) + Math.max(1, inst.count ?? 1);
+        stoneRefund += Math.max(0, (inst.level ?? 1) - 1);
+      }
+    } else {
+      for (const inst of insts) cards[entityId] = (cards[entityId] ?? 0) + Math.max(1, inst.count ?? 1);
+    }
+  }
+
+  // Join beats already passed for this save — unlock silently at common.
+  for (const def of crewJoiningAtOrBefore(stageId)) crew[def.id] ??= { tier: 'common', level: 1 };
+
+  // Slots: instanceId (or legacy entityId) → the crew id it referred to, if joined.
+  const remapSlot = (slotId: string): string => {
+    if (!slotId) return '';
+    const entityId = instanceToEntity.get(slotId) ?? canonicalEntityId(slotId);
+    return crew[entityId] ? entityId : '';
+  };
+
+  return {
+    ...state,
+    crew,
+    cardInventory: cards,
+    pendingCrewJoinIds: [],
+    inventory: [],
+    equippedSlots: (state.equippedSlots ?? []).map(remapSlot),
+    riftSlots: (state.riftSlots ?? []).map(remapSlot),
+    wildSlot: remapSlot(state.wildSlot ?? ''),
+    enhanceStones: Math.max(0, (state.enhanceStones ?? 0) + stoneRefund),
+  };
 }
 
 function migrateByVersion(
@@ -600,7 +686,7 @@ function migrateByVersion(
       };
     }
     const v = (parsed as { version?: number }).version;
-    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29 || v === 30 || v === 31 || v === 32) {
+    if (v === 14 || v === 15 || v === 16 || v === 17 || v === 18 || v === 19 || v === 20 || v === 21 || v === 22 || v === 23 || v === 24 || v === 25 || v === 26 || v === 27 || v === 28 || v === 29 || v === 30 || v === 31 || v === 32 || v === 33) {
       // v14..v26 share a field schema (v17 dropped the legacy skill fields;
       // v18 added codexSeenIds/seenPanelHints; v19 added enhanceStones; v20 added
       // activeQuests/completedQuestIds; v21 added the daily-shop fields; v22 added

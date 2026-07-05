@@ -20,6 +20,7 @@ import {
 } from '../multiverse';
 import { createInitialGameState } from '../defaults';
 import { pickActiveQuests, refillActiveQuests, snapshotStageQuestProgress } from '../quests';
+import { CREW_ROSTER } from '../crew/roster';
 import type { GameState } from '../types';
 import type { GameAction } from '../reducer';
 import {
@@ -137,8 +138,32 @@ export function handleAdvanceStage(state: GameState, action: AdvanceStageAction)
     stageQuestProgress,
     // 🅠5: top up the active quest set with any quests newly eligible at this stage.
     activeQuests: refillActiveQuests(progressedState.activeQuests, progressedState.completedQuestIds, nextStageId),
+    // OVERHAUL5: crew scheduled for the NEW stage join (free, at common), and
+    // their join beats queue for the dialogue bubble — every stage opens with
+    // new companions instead of a reskinned item template.
+    ...joinCrewForStage(progressedState, nextStageId),
   };
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({ ...nextState, ...resetMechanicState(nextState) }));
+}
+
+/**
+ * OVERHAUL5: crew + join-beat queue updates when the player reaches `stageId`.
+ * Crew scheduled for THIS stage join with a dialogue beat; any stragglers from
+ * earlier stages (multi-stage debug jumps) catch up silently.
+ */
+export function joinCrewForStage(
+  state: GameState,
+  stageId: number,
+): Pick<GameState, 'crew' | 'pendingCrewJoinIds'> {
+  const joining = CREW_ROSTER.filter((c) => c.joinStage <= stageId && !state.crew[c.id]);
+  if (joining.length === 0) return { crew: state.crew, pendingCrewJoinIds: state.pendingCrewJoinIds };
+  const crew = { ...state.crew };
+  for (const def of joining) crew[def.id] = { tier: 'common', level: 1 };
+  const beats = joining.filter((c) => c.joinStage === stageId).map((c) => c.id);
+  return {
+    crew,
+    pendingCrewJoinIds: beats.length > 0 ? [...state.pendingCrewJoinIds, ...beats] : state.pendingCrewJoinIds,
+  };
 }
 
 export function handleSelectEnding(state: GameState, action: SelectEndingAction): GameState {
@@ -237,6 +262,13 @@ export function handlePrestige(state: GameState, action: PrestigeAction): GameSt
     // refund every Resonance Core level; pity is a standard gacha global).
     echoSpent: state.echoSpent,
     fusionsSinceMythic: state.fusionsSinceMythic,
+    // OVERHAUL5: crew are THE persistent layer ("크루는 프레스티지에도 생존" — the
+    // attachment anchor; items reset, companions don't). Cards are collection
+    // meta like the almanac, so they carry too. No join-beat replays (crew
+    // already joined — resetState's stage-1 beats would double-greet).
+    crew: state.crew,
+    cardInventory: state.cardInventory,
+    pendingCrewJoinIds: [],
     // Daily shop is a real-calendar-day construct, not run-scoped — carry it so
     // prestige can't be used to re-roll/re-buy the day's offers.
     dailyShopDateKey: state.dailyShopDateKey,

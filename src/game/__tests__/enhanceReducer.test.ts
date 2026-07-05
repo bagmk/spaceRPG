@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
+import { isCrewId } from '../crew/roster';
 import { getEntitiesForStage } from '../entities/stageItems';
 import { applyEntityModifiers } from '../entities/effects';
 import { defaultModifiers } from '../skills/effects';
 import type { GameState } from '../types';
 
 const stage1 = getEntitiesForStage(1);
-const clickEntity = stage1.find((e) => e.effect.type === 'click')!;
+// OVERHAUL5: use a NON-crew click entity — a crew id would route ENHANCE_ENTITY
+// through the crew path (cards), not the legacy per-copy path under test here.
+// (Stage 1's only click entity IS crew, so pull the stage-2 non-crew click.)
+const clickEntity = getEntitiesForStage(2).find((e) => e.effect.type === 'click' && !isCrewId(e.id))!;
 
 /**
  * Regression for the "강화해도 숫자가 안 바뀜" report (2026-06-28). The user saw the

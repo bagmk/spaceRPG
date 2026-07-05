@@ -2,7 +2,9 @@ import type { GameState, FusionResultCard } from '../types';
 import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
-import { addToAlmanac, addToInventory, pickDropStage } from '../entities/drops';
+import { addCard, addToAlmanac, addToInventory, pickDropStage } from '../entities/drops';
+import { isCrewId, CREW_BY_ID } from '../crew/roster';
+import { getCrewTierView } from '../crew/tierView';
 import { makeInstance, pickFreeCopyId, reservedInstanceIds } from '../entities/instances';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
 import {
@@ -24,7 +26,18 @@ import {
   getSpecialEnhanceFailChance,
   rollBreakStones,
 } from '../entities/enhance';
-import { ENHANCE_STONE_THRESHOLD, SPECIAL_ENHANCE_CARD_COST, ENHANCE_DESTROY_ON_FAIL } from '../balance';
+import {
+  ENHANCE_STONE_THRESHOLD,
+  SPECIAL_ENHANCE_CARD_COST,
+  ENHANCE_DESTROY_ON_FAIL,
+  CREW_TIER_ORDER,
+  CREW_PROMOTE_CARD_COST,
+  CREW_PROMOTE_STONE_COST,
+  CREW_PROMOTE_SUCCESS,
+  CREW_PROMOTE_FAIL_STONE_REFUND,
+  CREW_CARD_ERA_WINDOW,
+  CREW_PROMOTE_MYTHIC_PITY,
+} from '../balance';
 import { rollQualityScore, bestQuality } from '../entities/quality';
 import { getSecondaryStats } from '../entities/substats';
 import {
@@ -78,12 +91,18 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   const entity = findEntityById(action.entityId);
   if (!entity) return state;
 
-  // P6: equip a SPECIFIC free copy. The UI still passes an entityId; the reducer
-  // picks the first un-equipped copy's instanceId, so clicking equip on the same
-  // item twice places two distinct copies in two slots (per-copy placement).
   const reserved = reservedInstanceIds(state.equippedSlots, state.riftSlots, state.wildSlot);
-  const instanceId = pickFreeCopyId(state.inventory, entity, reserved);
-  if (!instanceId) return state; // no spare (un-equipped) copy to place
+  // OVERHAUL5 (v33): a JOINED crew equips by its own id (crew are unique — one
+  // copy, one slot). Not-yet-joined crew and plain cards can't be equipped.
+  let instanceId: string | null;
+  if (state.crew[action.entityId] && isCrewId(action.entityId)) {
+    if (reserved.has(action.entityId)) return state; // already placed in a slot
+    instanceId = action.entityId;
+  } else {
+    // P6 legacy path: equip a SPECIFIC free copy from the (now legacy) inventory.
+    instanceId = pickFreeCopyId(state.inventory, entity, reserved);
+  }
+  if (!instanceId) return state; // nothing equippable
 
   // Vacuum-decay (crit-gear) flag — shared by the wild + normal equip paths.
   const isCritGear =
@@ -164,8 +183,8 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   // one tier early, but the shop never sells ahead of the gate).
   if ((RARITY_STAGE_GATES[entity.rarity] ?? 1) > currentStage.id) return state;
 
-  // P6: count is the total of all flat copies of this entity (each count 1).
-  const currentCount = getOwnedEntityCount(state.inventory, entity);
+  // OVERHAUL5 (v33): purchases buy CARDS — the owned count is the card stack.
+  const currentCount = state.cardInventory[entity.id] ?? getOwnedEntityCount(state.inventory, entity);
 
   // Max count check — Overhaul-4 P1: this cap is BUY-for-collection ONLY. Grants/mints
   // (drops, gacha, fusion output, the copy-token) go through addToInventory and are
@@ -180,21 +199,11 @@ export function handlePurchaseEntity(state: GameState, action: PurchaseAction): 
   const cost = getEntityCost(entity, currentCount, currentStage.id);
   if (state.quanta < cost) return state;
 
-  // #50: a purchased copy rolls quality too; the stack keeps its best specimen.
-  const rolledQuality =
-    action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
-      ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
-      : undefined;
-  // P6: every purchase adds a NEW flat copy (its own instanceId, level 1).
-  const updatedInventory = [
-    ...state.inventory,
-    makeInstance(action.entityId, rolledQuality !== undefined ? { quality: rolledQuality } : {}),
-  ];
-
   return withCurrentUniverseEndingProgress(syncSlotUnlocks({
     ...state,
     quanta: state.quanta - cost,
-    inventory: updatedInventory,
+    // OVERHAUL5 (v33): the purchase lands as a CARD (collection + promotion fuel).
+    cardInventory: addCard(state.cardInventory, entity.id),
     // Purchases count as collected for the almanac grid.
     almanacCollected: addToAlmanac(state.almanacCollected, entity.stageId, entity.id),
   }));
@@ -583,9 +592,170 @@ export function handleFuseBatch(state: GameState, action: FuseBatchAction): Game
  * still climbs MULTIPLE levels at once, but ONLY through the guaranteed band — it stops
  * at the threshold so every risky step is a deliberate, single, insurable attempt.
  */
+/**
+ * OVERHAUL5 승급 제단 (promotion altar, docs/OVERHAUL5_CREW_PLAN.md §3): feed
+ * era-matched cards + 강화석 to push a crew one tier up. Fail = cards consumed,
+ * half the stones refunded, the crew NEVER destroyed (crew are persistent).
+ * The legendary→mythic step shares the global pity counter with fusion
+ * (fusionsSinceMythic): CREW_PROMOTE_MYTHIC_PITY failed attempts guarantee
+ * the next one.
+ */
+type PromoteCrewAction = Extract<GameAction, { type: 'PROMOTE_CREW' }>;
+export function handlePromoteCrew(state: GameState, action: PromoteCrewAction): GameState {
+  if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
+    return state;
+  }
+  const crewState = state.crew[action.crewId];
+  const def = CREW_BY_ID.get(action.crewId);
+  if (!crewState || !def) return state;
+  const fromTier = crewState.tier;
+  const nextTier = CREW_TIER_ORDER[CREW_TIER_ORDER.indexOf(fromTier) + 1];
+  if (!nextTier) return state; // mythic = cap
+
+  const cardCost = CREW_PROMOTE_CARD_COST[fromTier];
+  const stoneCost = CREW_PROMOTE_STONE_COST[fromTier];
+  if (state.enhanceStones < stoneCost) return state;
+
+  // Era window: cards whose entity stage sits within ±window of the crew's join
+  // stage fuel this promotion. Consume the biggest stacks first (protects the
+  // player's rare singles without a picker UI).
+  const window = CREW_CARD_ERA_WINDOW[fromTier];
+  const eligible = Object.entries(state.cardInventory)
+    .filter(([id, n]) => {
+      if (n <= 0) return false;
+      const stage = findEntityById(id)?.stageId ?? -999;
+      return Math.abs(stage - def.joinStage) <= window;
+    })
+    .sort((a, b) => b[1] - a[1]);
+  const totalEligible = eligible.reduce((s, [, n]) => s + n, 0);
+  if (totalEligible < cardCost) return state;
+
+  const cards = { ...state.cardInventory };
+  let remaining = cardCost;
+  for (const [id, n] of eligible) {
+    if (remaining <= 0) break;
+    const take = Math.min(n, remaining);
+    remaining -= take;
+    if (n - take <= 0) delete cards[id];
+    else cards[id] = n - take;
+  }
+
+  const isMythicStep = nextTier === 'mythic';
+  const pityForced = isMythicStep && state.fusionsSinceMythic >= CREW_PROMOTE_MYTHIC_PITY;
+  const roll = action.successRoll ?? Math.random();
+  const success = pityForced || roll < (CREW_PROMOTE_SUCCESS[fromTier] ?? 0);
+  const stoneSpend = success ? stoneCost : Math.ceil(stoneCost * (1 - CREW_PROMOTE_FAIL_STONE_REFUND));
+  const eventId = nextEventId(state);
+
+  return {
+    ...state,
+    crew: success ? { ...state.crew, [action.crewId]: { ...crewState, tier: nextTier } } : state.crew,
+    cardInventory: cards,
+    enhanceStones: Math.max(0, state.enhanceStones - stoneSpend),
+    // Shared mythic pity: attempts at the mythic step count up; a mythic success
+    // (promoted OR fused) resets. Non-mythic steps leave the counter alone.
+    fusionsSinceMythic: isMythicStep
+      ? (success ? 0 : state.fusionsSinceMythic + 1)
+      : state.fusionsSinceMythic,
+    eventCounter: eventId,
+    lastCrewPromoteEvent: {
+      id: eventId,
+      crewId: action.crewId,
+      fromTier,
+      toTier: nextTier,
+      success,
+      cardsSpent: cardCost,
+      stonesSpent: stoneSpend,
+      pity: pityForced || undefined,
+    },
+  };
+}
+
+/** OVERHAUL5: dismiss the front join-dialogue beat (tap-through). */
+export function handleDismissCrewJoin(state: GameState): GameState {
+  if (state.pendingCrewJoinIds.length === 0) return state;
+  return { ...state, pendingCrewJoinIds: state.pendingCrewJoinIds.slice(1) };
+}
+
+/**
+ * OVERHAUL5: enhance (강화) for a JOINED crew — the crew's own spare CARDS are the
+ * merge fodder (guaranteed band), and the risky band mirrors the item rules
+ * (강화석 + optional 3 cards for 특수강화) except a fail NEVER destroys the crew:
+ * the level simply holds ('keep'). Level cap follows the crew's CURRENT tier.
+ */
+function handleEnhanceCrew(state: GameState, action: EnhanceAction, crewId: string): GameState {
+  const crewState = state.crew[crewId];
+  const entity0 = findEntityById(crewId);
+  if (!crewState || !entity0) return state;
+  const entity = getCrewTierView(entity0, crewState.tier);
+  const cap = getEnhanceLevelCap(entity);
+  const prevLevel = crewState.level;
+  if (prevLevel >= cap) return state;
+  if (!state.tutorialFlags['enhance-spark-done']) {
+    state = { ...state, tutorialFlags: { ...state.tutorialFlags, 'enhance-spark-done': true } };
+  }
+  const risky = isEnhanceRiskLevel(prevLevel);
+  const ownCards = state.cardInventory[crewId] ?? 0;
+  const eventId = nextEventId(state);
+
+  if (!risky) {
+    // Guaranteed band: merge own-entity cards up to the threshold (same greedy
+    // climb as items — applyMergeCopies works on counts, cards ARE counts).
+    const mergeCap = Math.min(cap, ENHANCE_STONE_THRESHOLD - 1);
+    const merge = applyMergeCopies(prevLevel, ownCards, mergeCap);
+    if (merge.levelsGained <= 0) return state;
+    const cards = { ...state.cardInventory };
+    if (ownCards - merge.consumed <= 0) delete cards[crewId];
+    else cards[crewId] = ownCards - merge.consumed;
+    return {
+      ...state,
+      crew: { ...state.crew, [crewId]: { ...crewState, level: merge.newLevel } },
+      cardInventory: cards,
+      eventCounter: eventId,
+      lastEnhanceEvent: {
+        id: eventId, entityId: crewId, instanceId: crewId,
+        outcome: 'up', level: merge.newLevel, prevLevel,
+        mergedCount: merge.consumed,
+      },
+    };
+  }
+
+  // Risky band: 강화석 required; 특수강화 (default) also feeds 3 own-entity cards
+  // for the boosted odds. Fail = costs consumed, level holds, crew survives.
+  const stoneCost = getEnhanceStoneCost(entity, prevLevel);
+  if (state.enhanceStones < stoneCost) return state;
+  const payWithCards = (action.useSpecial ?? true) && ownCards >= SPECIAL_ENHANCE_CARD_COST;
+  const cardSpend = payWithCards ? SPECIAL_ENHANCE_CARD_COST : 0;
+  const failRoll = action.failRoll ?? Math.random();
+  const effFail = payWithCards ? getSpecialEnhanceFailChance(prevLevel) : getEnhanceFailChance(prevLevel);
+  const failed = failRoll < effFail;
+  const cards = { ...state.cardInventory };
+  if (cardSpend > 0) {
+    if (ownCards - cardSpend <= 0) delete cards[crewId];
+    else cards[crewId] = ownCards - cardSpend;
+  }
+  return {
+    ...state,
+    crew: failed ? state.crew : { ...state.crew, [crewId]: { ...crewState, level: prevLevel + 1 } },
+    cardInventory: cards,
+    enhanceStones: Math.max(0, state.enhanceStones - stoneCost),
+    eventCounter: eventId,
+    lastEnhanceEvent: {
+      id: eventId, entityId: crewId, instanceId: crewId,
+      outcome: failed ? 'fail' : 'up',
+      level: failed ? prevLevel : prevLevel + 1, prevLevel,
+      mergedCount: cardSpend,
+    },
+  };
+}
+
 export function handleEnhanceEntity(state: GameState, action: EnhanceAction): GameState {
   if (state.completedRun || state.pendingCondenseStageIdx !== null || state.imploding || state.selectedEndingId !== null) {
     return state;
+  }
+  // OVERHAUL5: a joined crew enhances through its own card-fueled path.
+  if (isCrewId(action.instanceId) && state.crew[action.instanceId]) {
+    return handleEnhanceCrew(state, action, action.instanceId);
   }
   const equippedIds = new Set(
     [...state.equippedSlots, ...state.riftSlots, state.wildSlot].filter(Boolean) as string[],

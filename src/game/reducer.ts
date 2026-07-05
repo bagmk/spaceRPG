@@ -33,7 +33,9 @@ import {
   handleCompleteEnding,
   handlePrestige,
 } from './reducers/stage';
-import { handleEnhanceEntity, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
+import { handleEnhanceEntity,
+  handlePromoteCrew,
+  handleDismissCrewJoin, handleEquipEntity, handleFuseEntities, handleFuseBatch, handlePurchaseEntity, handleToggleFavorite, handleUnequipEntity } from './reducers/entities';
 import { handleClaimQuest } from './reducers/quests';
 import { handleClaimAdReward, handleCompleteShopPurchase, handleResumeBoosts, handleBuyEnhanceStones, handleBuyEnhanceProtect, handleBuyDailyItem, handleRefreshDailyShop, handleSyncDailyShop, handleOpenGachaBox, handleClaimAttendance } from './reducers/shop';
 import {
@@ -167,6 +169,10 @@ export type GameAction =
   // fail). useSpecial = the 특수강화 toggle — when OFF, force the 강화석 path even if spare
   // copies exist (default ON). Guaranteed levels ignore all of them.
   | { type: 'ENHANCE_ENTITY'; instanceId: string; failRoll?: number; breakRoll?: number; destroyRoll?: number; useProtect?: boolean; useSpecial?: boolean }
+  // OVERHAUL5 (v33): 승급 제단 — promote a joined crew one tier (cards + 강화석).
+  | { type: 'PROMOTE_CREW'; crewId: string; successRoll?: number }
+  // OVERHAUL5: tap-through the front crew join-dialogue beat.
+  | { type: 'DISMISS_CREW_JOIN' }
   | { type: 'TOGGLE_FAVORITE'; entityId: string }
   | { type: 'CLAIM_QUEST'; questId: string }
   | { type: 'CLEAR_FUSION_EVENT'; id: number }
@@ -262,6 +268,9 @@ export function toPersistentState(state: GameState): PersistentGameState {
     stageQuestProgress: state.stageQuestProgress,
     echoSpent: state.echoSpent,
     fusionsSinceMythic: state.fusionsSinceMythic,
+    crew: state.crew,
+    cardInventory: state.cardInventory,
+    pendingCrewJoinIds: state.pendingCrewJoinIds,
   };
 }
 
@@ -316,6 +325,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'FUSE_BATCH':            return handleFuseBatch(state, action);
     case 'CLAIM_QUEST':           return handleClaimQuest(state, action);
     case 'ENHANCE_ENTITY':        return handleEnhanceEntity(state, action);
+    case 'PROMOTE_CREW':          return handlePromoteCrew(state, action);
+    case 'DISMISS_CREW_JOIN':     return handleDismissCrewJoin(state);
     case 'TOGGLE_FAVORITE':       return handleToggleFavorite(state, action);
     case 'CLEAR_FUSION_EVENT':    return handleClearFusionEvent(state, action);
     case 'CLEAR_ENHANCE_EVENT':   return handleClearEnhanceEvent(state, action);

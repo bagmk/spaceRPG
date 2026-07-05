@@ -139,18 +139,59 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     // Name-derived ids (aliases) collapse to their canonical position-only id.
-    // P6: the count-3 stack explodes to 3 flat copies — one keeps the stack level.
-    const pulsarCopies = migrated!.inventory.filter((e) => e.entityId === 's13_07');
-    expect(pulsarCopies).toHaveLength(3);
-    expect(Math.max(...pulsarCopies.map((e) => e.level))).toBe(2);
-    expect(migrated?.inventory.some((e) => e.entityId === 's13_07_pulsar')).toBe(false);
+    // v33 (OVERHAUL5): the legacy inventory then converts to CARDS (neither id is
+    // crew) under the CANONICAL id — normalization survives the conversion.
+    expect(migrated?.inventory).toEqual([]);
+    expect(migrated?.cardInventory['s13_07']).toBe(3); // count-3 stack → 3 cards
+    expect(migrated?.cardInventory['s13_07_pulsar']).toBeUndefined();
+    expect(migrated?.cardInventory['s10_01']).toBe(1);
     expect(migrated?.almanacCollected[13]).toEqual(['s13_07']);
     expect(migrated?.almanacCollected[10]).toEqual(['s10_01']);
-    // Slots now hold an instanceId that resolves to the canonical entity.
-    const clickInst = migrated!.inventory.find((e) => e.instanceId === migrated!.equippedSlots[0]);
-    expect(clickInst?.entityId).toBe('s10_01');
-    const riftInst = migrated!.inventory.find((e) => e.instanceId === migrated!.riftSlots[0]);
-    expect(riftInst?.entityId).toBe('s13_07');
+    // Non-crew slot ids clear (cards can't be equipped — only crew can).
+    expect(migrated?.equippedSlots[0]).toBe('');
+    expect(migrated?.riftSlots[0]).toBe('');
+  });
+
+  it('v33 converts legacy inventory to CREW (tier = static rarity, max level kept) + cards + stone refund', () => {
+    // @ts-expect-error test bootstrap
+    global.window = {};
+    // @ts-expect-error test bootstrap
+    global.localStorage = localStorageMock;
+    const base = createInitialGameState(100);
+    localStorageMock.setItem(
+      'cosmic_coalescence_save_v7',
+      JSON.stringify({
+        ...base,
+        version: 32,
+        stageIdx: 1, // stage 2 → stage-1/2 crew auto-join silently
+        enhanceStones: 5,
+        inventory: [
+          { instanceId: 'i1', entityId: 's1_02', count: 1, level: 4 }, // crew (False Vacuum Bubble), best copy
+          { instanceId: 'i2', entityId: 's1_02', count: 1, level: 3 }, // spare → 1 card + 2 stones
+          { instanceId: 'i3', entityId: 's1_00', count: 1, level: 1 }, // not crew → card
+        ],
+        equippedSlots: ['i1'],
+        riftSlots: ['i3'],
+        wildSlot: '',
+      }),
+    );
+
+    const migrated = loadGame();
+    // Owned crew copy: joined at its STATIC rarity with the best copy's level.
+    expect(migrated?.crew['s1_02']?.level).toBe(4);
+    expect(migrated?.crew['s1_02']?.tier).toBe('common');
+    // Spare crew copy → 1 card of the crew id + (level−1) stone refund.
+    expect(migrated?.cardInventory['s1_02']).toBe(1);
+    expect(migrated?.enhanceStones).toBe(5 + 2);
+    // Non-crew copy → card; inventory empties.
+    expect(migrated?.cardInventory['s1_00']).toBe(1);
+    expect(migrated?.inventory).toEqual([]);
+    // Slots: instanceId of a joined crew remaps to the crew id; card slots clear.
+    expect(migrated?.equippedSlots[0]).toBe('s1_02');
+    expect(migrated?.riftSlots[0]).toBe('');
+    // Stage-1 crew whose join beat already passed auto-join silently at common.
+    expect(migrated?.crew['s1_01']).toEqual({ tier: 'common', level: 1 });
+    expect(migrated?.pendingCrewJoinIds).toEqual([]);
   });
 
   it('#50 v23 per-item quality round-trips; pre-v23 entries stay neutral (undefined)', () => {
@@ -173,9 +214,12 @@ describe('save migration', () => {
     );
 
     const migrated = loadGame();
-    expect(migrated?.inventory.find((e) => e.entityId === 's13_07')?.quality).toBeCloseTo(0.91);
-    // An entry with no quality stays undefined → neutral (×1.0), never invented.
-    expect(migrated?.inventory.find((e) => e.entityId === 's10_01')?.quality).toBeUndefined();
+    // v33 (OVERHAUL5): per-copy quality retires with the per-copy inventory — the
+    // copies convert to countable CARDS with no loss of count (quality was already
+    // a ×1 no-op in the power model). The load must not choke on the field.
+    expect(migrated?.inventory).toEqual([]);
+    expect(migrated?.cardInventory['s13_07']).toBe(2);
+    expect(migrated?.cardInventory['s10_01']).toBe(1);
   });
 
   it('#44 v24 wildSlot round-trips; pre-v24 saves default it to empty', () => {
@@ -187,14 +231,15 @@ describe('save migration', () => {
     // A pre-v24 save (no wildSlot field) → defaults to ''.
     localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify({ ...base, version: 23, equippedSlots: ['s1_00'] }));
     expect(loadGame()?.wildSlot).toBe('');
-    // A v24 save round-trips the wild slot — P6 remaps the entityId to the owned
-    // copy's instanceId, which must resolve back to that entity.
+    // A v24 save round-trips the wild slot — v33 remaps the owned copy to its
+    // CREW id (s10_02 = Dust Grain is crew), which stays equipped in the wild slot.
     localStorageMock.setItem(
       'cosmic_coalescence_save_v7',
-      JSON.stringify({ ...base, version: 24, wildSlot: 's10_01', inventory: [{ entityId: 's10_01', count: 1, level: 1 }] }),
+      JSON.stringify({ ...base, version: 24, wildSlot: 's10_02', inventory: [{ entityId: 's10_02', count: 1, level: 1 }] }),
     );
     const m = loadGame();
-    expect(m?.inventory.find((e) => e.instanceId === m.wildSlot)?.entityId).toBe('s10_01');
+    expect(m?.wildSlot).toBe('s10_02');
+    expect(m?.crew['s10_02']?.tier).toBe('common');
   });
 
   it('P7 v32: pre-v32 saves default echoSpent/fusionsSinceMythic to 0 + backfill resonance_core/echoFocus', () => {
@@ -268,11 +313,14 @@ describe('save migration', () => {
     const migrated = loadGame();
     // Offline window reset: the gear power rebuff must not pay a retroactive windfall.
     expect(migrated!.lastSaveAt).toBeGreaterThan(staleSaveAt + 86_000_000);
-    // P6: a runaway count explodes to flat copies but is BOUNDED (never millions).
-    const corruptCopies = migrated!.inventory.filter((e) => e.entityId === 's1_01');
-    expect(corruptCopies.length).toBeLessThanOrEqual(20 * 1000); // bounded, not 1e9
-    expect(Math.max(...corruptCopies.map((e) => e.level))).toBeLessThanOrEqual(25); // rarity level cap
-    expect(migrated!.inventory.filter((e) => e.entityId === 's1_02')).toHaveLength(3);
+    // P6 bounds the runaway count when exploding to flat copies; v33 then converts
+    // the copies to CREW + spare CARDS — both crew ids, so each joins once and the
+    // spares land as bounded card counts (never 1e9).
+    expect(migrated!.inventory).toEqual([]);
+    expect(migrated!.crew['s1_01']?.level).toBeLessThanOrEqual(25); // rarity level cap held
+    expect(migrated!.cardInventory['s1_01'] ?? 0).toBeLessThanOrEqual(20 * 1000); // bounded
+    expect(migrated!.crew['s1_02']?.level).toBe(1);
+    expect(migrated!.cardInventory['s1_02']).toBe(2); // 3 copies → 1 joined + 2 cards
   });
 
   it('v17 derives the crit flag and pays compensation from legacy skills, then strips them', () => {
@@ -497,10 +545,11 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     expect(migrated).not.toBeNull();
-    // purchasedEntities → inventory; P6 explodes the count-3 stack to 3 flat copies.
-    const copies = migrated!.inventory.filter((e) => e.entityId === entity.id);
-    expect(copies).toHaveLength(3);
-    expect(copies.every((e) => e.count === 1 && e.level === 1 && e.instanceId)).toBe(true);
+    // purchasedEntities → inventory → v33 crew conversion: s1_01 is CREW, so the
+    // count-3 stack becomes a joined crew (best copy) + 2 spare cards.
+    expect(migrated!.inventory).toEqual([]);
+    expect(migrated!.crew[entity.id]).toEqual({ tier: entity.rarity, level: 1 });
+    expect(migrated!.cardInventory[entity.id]).toBe(2);
     // almanac seeded from owned entities
     expect(migrated?.almanacCollected[entity.stageId]).toContain(entity.id);
     // new equip fields get defaults
@@ -555,20 +604,21 @@ describe('save migration', () => {
     localStorageMock.setItem('cosmic_coalescence_save_v7', JSON.stringify(save));
 
     const migrated = loadGame();
-    // P6: the count-2 stack explodes to 2 flat copies — one keeps the stack level.
-    const copies = migrated!.inventory.filter((e) => e.entityId === entity.id);
-    expect(copies).toHaveLength(2);
-    expect(Math.max(...copies.map((e) => e.level))).toBe(4);
+    // v33: s1_01 is CREW — the count-2 stack (best level 4) joins as the crew at
+    // level 4; the spare becomes a card. Investment preserved through conversion.
+    expect(migrated!.inventory).toEqual([]);
+    expect(migrated!.crew[entity.id]?.level).toBe(4);
+    expect(migrated!.cardInventory[entity.id]).toBe(1);
     // v17 remap: the v16 stage-1 gate maps EXACTLY onto the new stage-1 gate
     // (piecewise remap preserves gate progress).
     expect(migrated?.entropy).toBeCloseTo(STAGES[0].entropyThreshold, 6);
-    // The equipped slot remaps onto an owned copy that resolves to the entity.
-    expect(migrated!.inventory.find((e) => e.instanceId === migrated!.equippedSlots[0])?.entityId).toBe(entity.id);
+    // The equipped slot resolves THROUGH the copy to the crew id itself.
+    expect(migrated!.equippedSlots[0]).toBe(entity.id);
     expect(migrated?.unlockedSlotCount).toBe(2);
     expect(migrated?.almanacCollected[1]).toContain(entity.id);
   });
 
-  it('P6: a v25 flat save round-trips unchanged — per-copy levels survive, no re-explode', () => {
+  it('P6→v33: a v25 flat save converts — the BEST copy becomes the crew level, the spare a card', () => {
     // @ts-expect-error test bootstrap
     global.window = {};
     // @ts-expect-error test bootstrap
@@ -582,19 +632,20 @@ describe('save migration', () => {
         version: 25,
         inventory: [
           { entityId: ent.id, instanceId: 'inst-A', count: 1, level: 5 },
-          { entityId: ent.id, instanceId: 'inst-B', count: 1, level: 1 },
+          { entityId: ent.id, instanceId: 'inst-B', count: 1, level: 3 },
         ],
-        equippedSlots: ['inst-A'], // the Lv5 copy is worn; the Lv1 spare is not
+        equippedSlots: ['inst-A'], // the Lv5 copy is worn; the Lv3 spare is not
         unlockedSlotCount: 1,
       }),
     );
     const m = loadGame();
-    // Two distinct copies survive with their OWN levels — no merge, no re-flatten.
-    const copies = m!.inventory.filter((e) => e.entityId === ent.id);
-    expect(copies).toHaveLength(2);
-    expect(copies.find((e) => e.instanceId === 'inst-A')?.level).toBe(5);
-    expect(copies.find((e) => e.instanceId === 'inst-B')?.level).toBe(1);
-    // The equipped slot still points at the SAME (Lv5) copy by instanceId.
-    expect(m!.equippedSlots).toContain('inst-A');
+    // The Lv5 copy's investment lands on the crew; the Lv3 spare converts to
+    // 1 card + 2 refund stones ((level−1) per spare) — nothing is lost silently.
+    expect(m!.inventory).toEqual([]);
+    expect(m!.crew[ent.id]?.level).toBe(5);
+    expect(m!.cardInventory[ent.id]).toBe(1);
+    expect(m!.enhanceStones).toBe(2);
+    // The worn slot follows the copy to its crew id.
+    expect(m!.equippedSlots).toContain(ent.id);
   });
 });

@@ -99,7 +99,8 @@ describe('daily shop', () => {
     const rich = { ...s3(), quanta: 1e15, dailyShopDateKey: key, dailyShopRefreshCount: 0, dailyShopPurchased: [] };
     const after = gameReducer(rich, { type: 'BUY_DAILY_ITEM', slot: offer.slot, now: 10_000 });
     expect(after.dailyShopPurchased).toContain(offer.slot);
-    expect(after.inventory.some((e) => e.entityId === offer.entityId)).toBe(true);
+    // OVERHAUL5 (v33): the daily-shop buy lands as a CODEX CARD.
+    expect(after.cardInventory[offer.entityId]).toBeGreaterThan(0);
     expect(after.quanta).toBeLessThan(rich.quanta);
   });
 
@@ -140,7 +141,7 @@ describe('#43 stage/rarity pricing + gacha', () => {
     const rich = { ...s3(), quanta: 1e15, enhanceStones: 0 };
     const after = gameReducer(rich, { type: 'OPEN_GACHA_BOX', boxId: 'box_faint', rolls: mkRolls(0.5), stoneRoll: 0.5 });
     expect(after.quanta).toBeLessThan(rich.quanta);
-    expect(after.inventory.length).toBeGreaterThan(0);
+    expect(Object.keys(after.cardInventory).length).toBeGreaterThan(0); // cards granted
     expect(after.lastGachaEvent?.boxId).toBe('box_faint');
     // faint box (rank 0) → 3 items + 3 강화석.
     expect(after.lastGachaEvent?.items.length).toBe(3);
@@ -223,11 +224,13 @@ describe('daily attendance (출석체크, v27)', () => {
   it('day 7 grants a free gacha box (inventory grows + a reveal event) and the cycle loops', () => {
     let s = s3();
     for (let d = 0; d < 6; d++) s = claim(s, d); // days 1–6
-    const invBefore = s.inventory.length;
+    const cardsBefore = Object.values(s.cardInventory).reduce((a: number, n: number) => a + n, 0);
     s = claim(s, 6); // day 7 = box gift
     expect(s.attendanceStreak).toBe(7);
     expect(s.attendanceStreak % 7).toBe(0);           // cycle wrapped
-    expect(s.inventory.length).toBeGreaterThan(invBefore); // box items granted
+    // OVERHAUL5 (v33): box items land as CODEX CARDS.
+    const cardsAfter = Object.values(s.cardInventory).reduce((a: number, n: number) => a + n, 0);
+    expect(cardsAfter).toBeGreaterThan(cardsBefore); // box items granted
     expect(s.lastGachaEvent?.items.length).toBeGreaterThan(0);
     // day 8 keeps giving (loops back to day 1 matter)
     const d8 = claim(s, 7);

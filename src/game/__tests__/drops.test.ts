@@ -90,10 +90,12 @@ describe('entity drops', () => {
       dropRoll: 0,
       dropPickRoll: 0.1,
     });
-    expect(next.inventory.length).toBe(1);
-    const dropped = next.inventory[0];
-    expect(next.almanacCollected[1]).toContain(dropped.entityId);
-    expect(next.lastClickEvent?.droppedEntityId).toBe(dropped.entityId);
+    // OVERHAUL5 (v33): drops land as CODEX CARDS, not inventory copies.
+    const droppedIds = Object.keys(next.cardInventory);
+    expect(droppedIds).toHaveLength(1);
+    expect(next.cardInventory[droppedIds[0]]).toBe(1);
+    expect(next.almanacCollected[1]).toContain(droppedIds[0]);
+    expect(next.lastClickEvent?.droppedEntityId).toBe(droppedIds[0]);
   });
 
   it('isNewDiscovery mirrors addToAlmanac (true only when the id is not yet collected)', () => {
@@ -108,9 +110,9 @@ describe('entity drops', () => {
     const next = gameReducer(state, {
       type: 'CLICK', now: 1000, randomValue: 1, x: 0, y: 0, dropRoll: 0, dropPickRoll: 0.1,
     });
-    const dropped = next.inventory[0];
+    const droppedId = Object.keys(next.cardInventory)[0];
     expect(next.lastDropEvent).not.toBeNull();
-    expect(next.lastDropEvent?.entityId).toBe(dropped.entityId);
+    expect(next.lastDropEvent?.entityId).toBe(droppedId);
     expect(next.lastDropEvent?.stageId).toBe(1);
     expect(next.lastDropEvent?.rarity).toBeTruthy();
     // The CLEAR action keyed by the event id removes it (mirrors CLEAR_GACHA_EVENT).
@@ -129,7 +131,9 @@ describe('entity drops', () => {
     const second = gameReducer({ ...first, lastDropEvent: null }, {
       type: 'CLICK', now: 2000, randomValue: 1, x: 0, y: 0, dropRoll: 0, dropPickRoll: 0.1,
     });
-    expect(second.inventory.length).toBe(2); // a second copy still drops
+    // Same entity dropped twice → the card stack counts 2.
+    const stacked = Object.values(second.cardInventory).reduce((s, n) => s + n, 0);
+    expect(stacked).toBe(2); // a second copy still drops (as a card)
     expect(second.lastDropEvent).toBeNull(); // but no NEW-discovery reveal
   });
 
@@ -142,14 +146,15 @@ describe('entity drops', () => {
       x: 0,
       y: 0,
     });
-    expect(next.inventory).toEqual([]);
+    expect(next.cardInventory).toEqual({});
   });
 
   it('PURCHASE_ENTITY records the entity in the almanac', () => {
     const entity = getEntitiesForStage(1)[0];
     const state = { ...createInitialGameState(0), quanta: 1e12 };
     const next = gameReducer(state, { type: 'PURCHASE_ENTITY', entityId: entity.id });
-    expect(next.inventory.find((e) => e.entityId === entity.id)?.count).toBe(1);
+    // OVERHAUL5 (v33): purchases land as CODEX CARDS.
+    expect(next.cardInventory[entity.id]).toBe(1);
     expect(next.almanacCollected[entity.stageId]).toContain(entity.id);
   });
 

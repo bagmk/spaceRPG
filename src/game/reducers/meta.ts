@@ -54,6 +54,7 @@ function withHydratedTransient(payload: PersistentGameState): GameState {
     lastEnhanceEvent: null,
     lastQuestClaimEvent: null,
     lastGachaEvent: null,
+    lastCrewPromoteEvent: null,
     lastDropEvent: null,
     lastCodexClaimEvent: null,
     offlineElapsedMs: 0,

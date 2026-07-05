@@ -101,7 +101,7 @@ export function getCurrentModifiers(state: GameState) {
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot], state.crew), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds, state.crew);
 }
 
 export function getAdjustedClickPower(state: GameState): number {

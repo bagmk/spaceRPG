@@ -1488,3 +1488,50 @@ export const BALANCE = {
     depthDim: SOLAR_ORBIT_DEPTH_DIM,
   },
 } as const;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OVERHAUL5 — 크루 시스템 (docs/OVERHAUL5_CREW_PLAN.md). Save v33.
+// 50 promotable crew (승급형) + codex cards as promotion fuel.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Promotion order (승급 사다리). */
+export const CREW_TIER_ORDER: EntityRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+
+/**
+ * Crew primary-effect base value per TIER × effect type — PINNED to the real
+ * shipped bucket values of items of that (type, rarity), so a tier-T crew's
+ * gate power equals a rarity-T item's (sim parity; the entropy-gate sim's
+ * per-rarity model maps 1:1 onto tiers). Buckets with no shipped item
+ * (legendary click, sub-legendary multiplier…) are geometric interpolations
+ * between the neighbouring REAL anchors — never louder than the ladder.
+ */
+export const CREW_TIER_BASE_VALUE: Partial<Record<EntityEffectType, Record<EntityRarity, number>>> = {
+  click:      { common: 3.75, rare: 11,   epic: 33.25, legendary: 98,  mythic: 288 },
+  auto:       { common: 0.15, rare: 0.35, epic: 1.26,  legendary: 36,  mythic: 78 },
+  auto_mult:  { common: 0.5,  rare: 0.75, epic: 2.0,   legendary: 24,  mythic: 39 },
+  crit:       { common: 0.1,  rare: 0.2,  epic: 0.5,   legendary: 1.0, mythic: 1.5 },
+  multiplier: { common: 6,    rare: 12,   epic: 25,    legendary: 50,  mythic: 100 },
+};
+
+/** 승급 제단 — cards consumed per attempt, keyed by the crew's CURRENT tier. */
+export const CREW_PROMOTE_CARD_COST: Record<EntityRarity, number> = {
+  common: 8, rare: 14, epic: 24, legendary: 40, mythic: 0, // mythic = cap, no promotion
+};
+/** 승급 제단 — 강화석 per attempt, keyed by current tier. */
+export const CREW_PROMOTE_STONE_COST: Record<EntityRarity, number> = {
+  common: 3, rare: 9, epic: 35, legendary: 120, mythic: 0,
+};
+/** Success chance per attempt, keyed by current tier (fail = cards consumed,
+ *  half the stones refunded, crew NEVER destroyed — crew are persistent). */
+export const CREW_PROMOTE_SUCCESS: Record<EntityRarity, number> = {
+  common: 0.85, rare: 0.65, epic: 0.4, legendary: 0.12, mythic: 0,
+};
+/** On a failed promotion this fraction of the stone cost is refunded. */
+export const CREW_PROMOTE_FAIL_STONE_REFUND = 0.5;
+/** Era window (±stages around the crew's joinStage) whose cards fuel a promotion. */
+export const CREW_CARD_ERA_WINDOW: Record<EntityRarity, number> = {
+  common: 2, rare: 2, epic: 2, legendary: 3, mythic: 0,
+};
+/** Shared global pity: this many legendary→mythic attempts guarantee the next
+ *  succeeds (reuses the save's existing fusionsSinceMythic counter). */
+export const CREW_PROMOTE_MYTHIC_PITY = 40;

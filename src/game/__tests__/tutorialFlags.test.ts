@@ -19,7 +19,8 @@ describe('tutorial sparkle flags — equip (S2)', () => {
     };
     const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: 's1_02' });
     // s1_02 is auto → routes to a rift slot
-    expect(next.riftSlots).toContain('i-vac');
+    // OVERHAUL5: s1_02 is a JOINED crew — it equips by its own id (unique copy).
+    expect(next.riftSlots).toContain('s1_02');
     expect(next.tutorialFlags['equip-spark-vacuum-done']).toBe(true);
     expect(next.tutorialFlags['first-equip-done']).toBe(true);
     expect(next.tutorialFlags['equip-spark-quantum-done']).toBeUndefined();
@@ -32,7 +33,8 @@ describe('tutorial sparkle flags — equip (S2)', () => {
       inventory: [{ entityId: 's1_01', instanceId: 'i-q', count: 1, level: 1 }],
     };
     const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: 's1_01' });
-    expect(next.equippedSlots).toContain('i-q');
+    // OVERHAUL5: s1_01 is a JOINED crew — it equips by its own id.
+    expect(next.equippedSlots).toContain('s1_01');
     expect(next.tutorialFlags['equip-spark-quantum-done']).toBe(true);
     expect(next.tutorialFlags['equip-spark-vacuum-done']).toBeUndefined();
   });

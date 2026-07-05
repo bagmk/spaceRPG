@@ -274,6 +274,16 @@ export function addToInventory(
   return [...inventory, makeInstance(entityId, quality !== undefined ? { quality } : {})];
 }
 
+/**
+ * OVERHAUL5 (v33): the CARD grant path — drops/purchases land in the card
+ * inventory (countable stacks; collection + promotion fuel), replacing the
+ * legacy per-copy grant above. Crew-id cards are valid fuel for that crew's
+ * era — they simply never fill a hexagon slot themselves.
+ */
+export function addCard(cards: Record<string, number>, entityId: string): Record<string, number> {
+  return { ...cards, [entityId]: (cards[entityId] ?? 0) + 1 };
+}
+
 /** Record an entity in the almanac collection grid (immutable, idempotent). */
 export function addToAlmanac(
   almanacCollected: Record<number, string[]>,

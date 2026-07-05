@@ -33,14 +33,13 @@ import { getPrestigeMultiplier } from '../prestige';
 import { getMechanic } from '../mechanics';
 import { pickParticleName, getParticleEntropyBonus } from '../particles';
 import {
+  addCard,
   addToAlmanac,
-  addToInventory,
   getClickDropChance,
   getCollisionDropChance,
   isNewDiscovery,
   rollEntityDrop,
 } from '../entities/drops';
-import { rollQualityScore } from '../entities/quality';
 import { getEquippedInstances } from '../entities/effects';
 import { syncSlotUnlocks } from './entities';
 import { bumpRevisitMilestones } from '../quests';
@@ -87,7 +86,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot], state.crew), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds, state.crew);
   const shouldClearCombo =
     state.combo > 0 && action.now - state.lastClick >= modifiers.comboTimeoutMs;
   const canAccrue =
@@ -161,7 +160,7 @@ export function handleTick(state: GameState, action: TickAction): GameState {
   // gearless (base auto income) — entityId '' renders as a plain "+N/s" float.
   // Transient — driven off action.now, never persisted.
   // P6: slots store an instanceId — resolve it to the entity id the float renders.
-  const primaryRiftId = getEquippedInstances(state.inventory, state.riftSlots.slice(0, 1))[0]?.entityId ?? '';
+  const primaryRiftId = getEquippedInstances(state.inventory, state.riftSlots.slice(0, 1), state.crew)[0]?.entityId ?? '';
   const perSecAuto = (baseAuto + stageAutoBonus) * matterBoost * modifiers.autoMatterMult * stellarMemoryMult;
   const emitAutoIncome =
     canAccrue &&
@@ -205,7 +204,7 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
     gateProgress01: getEntropyGateProgress(state.entropy, state.stageIdx),
     progress01: getProgress(state.quanta, getEffectiveThreshold(stage)),
     hexSlots: getHexSlots(state),
-  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot]), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds);
+  }, getEquippedInstances(state.inventory, [...state.equippedSlots, ...state.riftSlots, state.wildSlot], state.crew), state.prestigeUpgrades, state.almanacCollected, state.claimedCodexSubsetIds, state.crew);
   const combo =
     action.now - state.lastClick < modifiers.comboTimeoutMs ? state.combo + 1 : 1;
   const clickPower = getAdjustedClickPower(state);
@@ -298,15 +297,10 @@ export function handleClick(state: GameState, action: ClickAction): GameState {
       dropIsNew && droppedEntity
         ? { id: dropEventId, entityId: droppedEntity.id, stageId: droppedEntity.stageId, rarity: droppedEntity.rarity }
         : state.lastDropEvent,
-    inventory: droppedEntity
-      ? addToInventory(
-          state.inventory,
-          droppedEntity.id,
-          action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
-            ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
-            : undefined,
-        )
-      : state.inventory,
+    // OVERHAUL5 (v33): drops are CODEX CARDS now — collection + promotion fuel.
+    cardInventory: droppedEntity
+      ? addCard(state.cardInventory, droppedEntity.id)
+      : state.cardInventory,
     almanacCollected: droppedEntity
       ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
       : state.almanacCollected,
@@ -396,15 +390,10 @@ export function handleAbsorbComet(state: GameState, action: AbsorbCometAction): 
       dropIsNew && droppedEntity
         ? { id: dropEventId, entityId: droppedEntity.id, stageId: droppedEntity.stageId, rarity: droppedEntity.rarity }
         : state.lastDropEvent,
-    inventory: droppedEntity
-      ? addToInventory(
-          state.inventory,
-          droppedEntity.id,
-          action.qualityRoll1 !== undefined && action.qualityRoll2 !== undefined
-            ? rollQualityScore(action.qualityRoll1, action.qualityRoll2)
-            : undefined,
-        )
-      : state.inventory,
+    // OVERHAUL5 (v33): comet drops are CODEX CARDS now too.
+    cardInventory: droppedEntity
+      ? addCard(state.cardInventory, droppedEntity.id)
+      : state.cardInventory,
     almanacCollected: droppedEntity
       ? addToAlmanac(state.almanacCollected, droppedEntity.stageId, droppedEntity.id)
       : state.almanacCollected,

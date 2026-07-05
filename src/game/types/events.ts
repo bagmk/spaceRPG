@@ -162,3 +162,16 @@ export interface QuestClaimEvent {
   /** 강화석 granted (flat). */
   stones: number;
 }
+
+/** OVERHAUL5: one promotion-altar attempt's outcome (drives the 승급 reveal). */
+export interface CrewPromoteEvent {
+  id: number;
+  crewId: string;
+  fromTier: string;
+  toTier: string;
+  success: boolean;
+  cardsSpent: number;
+  stonesSpent: number;
+  /** True when the shared mythic pity floor forced this success. */
+  pity?: boolean;
+}

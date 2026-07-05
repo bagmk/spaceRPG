@@ -84,7 +84,13 @@ export function getGearPowerMult(power: GearPower, itemStageId: number, carried 
  * player-stage curve at first read.
  */
 export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
-  const cached = cache.get(entity.id);
+  // OVERHAUL5: the cache key includes rarity because a CREW TIER VIEW passes the
+  // same id at a different rarity (crew/tierView.ts) — an id-only key would hand
+  // a promoted crew its old tier's stats forever. The stat ROLL stays id-seeded
+  // (`${entity.id}:${k}` below), so promotion only ADDS stats, never rerolls the
+  // ones the player already knows — a crew keeps its identity as it grows.
+  const cacheKey = `${entity.id}:${entity.rarity}`;
+  const cached = cache.get(cacheKey);
   if (cached) return cached;
 
   const count = SECONDARY_RARITY_COUNT[entity.rarity] ?? 0;
@@ -110,7 +116,7 @@ export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
     const type = commonPool[(rank + seed) % commonPool.length];
     const def = SECONDARY_STAT_DEFS[type];
     const stat: SecondaryStat[] = [{ type, value: def.base * rarityScale, scales: def.scales }];
-    cache.set(entity.id, stat);
+    cache.set(cacheKey, stat);
     return stat;
   }
 
@@ -127,6 +133,6 @@ export function getSecondaryStats(entity: StageEntity): SecondaryStat[] {
       stats.push({ type, value: def.base * rarityScale, scales: def.scales });
     }
   }
-  cache.set(entity.id, stats);
+  cache.set(cacheKey, stats);
   return stats;
 }

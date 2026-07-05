@@ -1,6 +1,7 @@
 /** Migration chain: v1 → v2 → v3 → v4 → v5 (current), plus validateV5. */
 
 import { getStageStartCosmicTime } from '../timeFlow';
+import type { EntityRarity } from '../entities/types';
 import { createInitialUniverseSeed, getCurrentUniverseEndingProgressFlags } from '../multiverse';
 import { createDefaultPrestigeUpgrades } from '../prestige';
 import { STAGES } from '../stages';
@@ -301,6 +302,11 @@ export function migrateV4ToV5(v4: SaveStateV4 | LegacySaveShape): LegacyMigrated
     stageQuestProgress: {},
     echoSpent: 0,
     fusionsSinceMythic: 0,
+    // v33 (OVERHAUL5): pre-v5 relics have no crew — ensureCrewState derives them
+    // from the migrated inventory downstream (storage.ts).
+    crew: {},
+    cardInventory: {},
+    pendingCrewJoinIds: [],
     ...convertEntityModelV14(record),
   };
 }
@@ -468,9 +474,48 @@ export function validateV5(
     // echoSpent = cumulative 특이점 잔향 spent (earnable rides peakEntropy); default 0.
     echoSpent: isFiniteNumber((parsed as any).echoSpent) ? Math.max(0, (parsed as any).echoSpent) : 0,
     // fusionsSinceMythic = the global mythic pity counter; default 0.
+    // (OVERHAUL5: the counter is shared by fusion AND crew-promotion pity.)
     fusionsSinceMythic: isFiniteNumber((parsed as any).fusionsSinceMythic) ? Math.max(0, Math.floor((parsed as any).fusionsSinceMythic)) : 0,
+    // v33 (OVERHAUL5 crew) — WHITELIST: omit and it's silently dropped on load +
+    // cloud pull. Defaults are the "not yet migrated" empties; ensureCrewState
+    // (storage.ts) derives real values from the legacy inventory when
+    // sourceVersion < 33 and passes these through untouched otherwise.
+    crew: sanitizeCrew((parsed as any).crew),
+    cardInventory: sanitizeCardInventory((parsed as any).cardInventory),
+    pendingCrewJoinIds: Array.isArray((parsed as any).pendingCrewJoinIds)
+      ? (parsed as any).pendingCrewJoinIds.filter((id: unknown) => typeof id === 'string')
+      : [],
     ...convertEntityModelV14(parsed),
   };
+}
+
+const CREW_TIERS = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
+
+/** v33: keep only well-formed crew entries — a malformed entry drops alone, never the save. */
+function sanitizeCrew(raw: unknown): Record<string, { tier: EntityRarity; level: number }> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, { tier: EntityRarity; level: number }> = {};
+  for (const [id, entry] of Object.entries(raw as Record<string, unknown>)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const tier = (entry as any).tier;
+    const level = (entry as any).level;
+    if (typeof tier !== 'string' || !CREW_TIERS.has(tier)) continue;
+    out[id] = {
+      tier: tier as EntityRarity,
+      level: typeof level === 'number' && Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1,
+    };
+  }
+  return out;
+}
+
+/** v33: entityId → non-negative integer count. */
+function sanitizeCardInventory(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, number> = {};
+  for (const [id, count] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof count === 'number' && Number.isFinite(count) && count > 0) out[id] = Math.floor(count);
+  }
+  return out;
 }
 
 /**

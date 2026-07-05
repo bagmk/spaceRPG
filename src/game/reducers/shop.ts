@@ -15,7 +15,7 @@ import {
 } from '../shop/pricing';
 import { GACHA_BOXES, RARITY_STAGE_GATES, gachaItemCount, GACHA_STONES_BY_RANK, ATTENDANCE_REWARDS, ENTITY_COST_ANCHORS } from '../balance';
 import type { GachaPullItem } from '../types/events';
-import { addToInventory, addToAlmanac, pickDropStage, pickEntityByRarity } from '../entities/drops';
+import { addCard, addToAlmanac, pickDropStage, pickEntityByRarity } from '../entities/drops';
 import { rollQualityScore } from '../entities/quality';
 import { findEntityById } from '../entities/stageItems';
 import { nextEventId } from './helpers';
@@ -64,7 +64,7 @@ export function handleClaimAttendance(state: GameState, action: ClaimAttendanceA
         const eventId = nextEventId(next);
         next = {
           ...next,
-          inventory: haul.inventory,
+          cardInventory: haul.cardInventory,
           almanacCollected: haul.almanacCollected,
           enhanceStones: Math.max(0, next.enhanceStones + haul.stonesEarned),
           eventCounter: eventId,
@@ -184,7 +184,8 @@ export function handleBuyDailyItem(state: GameState, action: BuyDailyItemAction)
   return {
     ...s,
     quanta: s.quanta - cost,
-    inventory: addToInventory(s.inventory, offer.entityId),
+    // OVERHAUL5 (v33): shop purchases grant CODEX CARDS (collection + promotion fuel).
+    cardInventory: addCard(s.cardInventory, offer.entityId),
     almanacCollected: entity
       ? addToAlmanac(s.almanacCollected, entity.stageId, offer.entityId)
       : s.almanacCollected,
@@ -225,7 +226,8 @@ export function handleSyncDailyShop(state: GameState, action: SyncDailyShopActio
 function rollBoxHaul(state: GameState, box: typeof GACHA_BOXES[number], rolls: OpenGachaBoxAction['rolls']) {
   const stage = playerStageId(state);
   const used = rolls.slice(0, gachaItemCount(box.rank));
-  let inventory = state.inventory;
+  // OVERHAUL5 (v33): gacha pulls grant CODEX CARDS (per-copy quality retired).
+  let cardInventory = state.cardInventory;
   let almanacCollected = state.almanacCollected;
   const items: GachaPullItem[] = [];
   for (const r of used) {
@@ -236,11 +238,11 @@ function rollBoxHaul(state: GameState, box: typeof GACHA_BOXES[number], rolls: O
       pickEntityByRarity(stage, 'common', r.pickRoll, true);
     if (!entity) continue;
     const quality = rollQualityScore(r.q1, r.q2);
-    inventory = addToInventory(inventory, entity.id, quality);
+    cardInventory = addCard(cardInventory, entity.id);
     almanacCollected = addToAlmanac(almanacCollected, entity.stageId, entity.id);
     items.push({ entityId: entity.id, quality });
   }
-  return { inventory, almanacCollected, items, stonesEarned: GACHA_STONES_BY_RANK[box.rank] ?? 0 };
+  return { cardInventory, almanacCollected, items, stonesEarned: GACHA_STONES_BY_RANK[box.rank] ?? 0 };
 }
 
 export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction): GameState {
@@ -257,7 +259,7 @@ export function handleOpenGachaBox(state: GameState, action: OpenGachaBoxAction)
   return {
     ...state,
     quanta: state.quanta - cost,
-    inventory: haul.inventory,
+    cardInventory: haul.cardInventory,
     almanacCollected: haul.almanacCollected,
     enhanceStones: Math.max(0, state.enhanceStones + haul.stonesEarned),
     eventCounter: eventId,

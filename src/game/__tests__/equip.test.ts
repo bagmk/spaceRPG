@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer, createInitialGameState } from '../reducer';
 import { getEntitiesForStage } from '../entities/stageItems';
+import { isCrewId } from '../crew/roster';
 import { getEquipCategory, getEquippedInstances } from '../entities/effects';
 import { getEntityCost } from '../entities/types';
 
@@ -22,8 +23,11 @@ describe('equip system (Phase 2)', () => {
   });
 
   it('rejects equipping an unowned entity', () => {
+    // OVERHAUL5: stage-1 clicks are mostly JOINED starter crew (equippable by id),
+    // so the unowned-reject case needs a NON-crew, un-joined entity.
+    const nonCrew = getEntitiesForStage(10).find((e) => getEquipCategory(e) === 'click' && !isCrewId(e.id))!;
     const state = createInitialGameState(0);
-    const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: nonCrew.id });
     expect(next.equippedSlots).toEqual([]);
   });
 

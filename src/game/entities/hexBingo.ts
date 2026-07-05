@@ -30,14 +30,18 @@ function familyOf(slotId: string | null | undefined): string | null {
   const ent = findEntityById(slotId);
   return ent ? getEquipSetKey(ent) : null;
 }
-function rarityOf(slotId: string | null | undefined): EntityRarity | null {
-  if (!slotId) return null;
-  return findEntityById(slotId)?.rarity ?? null;
-}
-
 /** Score the hex bingo board. `hexSlots` is a length-7 array of equipped entity
- *  ids (null/empty for an empty slot). */
-export function computeHexBingo(hexSlots: (string | null | undefined)[]): HexBingoResult {
+ *  ids (null/empty for an empty slot). OVERHAUL5: `tierOf` overrides an equipped
+ *  CREW's rarity with its CURRENT tier, so the same-rarity "color match" kicker
+ *  follows promotion (3 crew promoted to legendary = a legendary line). */
+export function computeHexBingo(
+  hexSlots: (string | null | undefined)[],
+  tierOf?: (entityId: string) => EntityRarity | undefined,
+): HexBingoResult {
+  const rarityOf = (slotId: string | null | undefined): EntityRarity | null => {
+    if (!slotId) return null;
+    return tierOf?.(slotId) ?? findEntityById(slotId)?.rarity ?? null;
+  };
   let clickSum = 0;
   let autoSum = 0;
   const completedLines: number[] = [];

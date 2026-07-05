@@ -11,8 +11,8 @@ export type * from './types/events';
 
 // These imports let us USE the sub-domain types in interface definitions below.
 import type { StageBackground, ClusterMode, Star, AmbientParticle, Flyer, Burst, WakeTrail, Rogue, Shockwave, MoteCluster } from './types/canvas';
-import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent, GachaEvent, FloatingDropEvent, CodexClaimEvent } from './types/events';
-import type { EntityInstance } from './entities/types';
+import type { FloatingClickEvent, FloatingAutoIncomeEvent, FloatingCollisionEvent, EncounterEvent, FusionEvent, EnhanceEvent, QuestClaimEvent, GachaEvent, FloatingDropEvent, CodexClaimEvent, CrewPromoteEvent } from './types/events';
+import type { EntityInstance, EntityRarity } from './entities/types';
 import type { PrestigeUpgradeLevels } from './prestige';
 
 // ---------------------------------------------------------------------------
@@ -225,8 +225,14 @@ export interface CanvasWorld {
 
 export type { PurchasedEntityEntry, EntityInstance } from './entities/types';
 
+/** OVERHAUL5: one crew member's persistent growth — TIER (승급 제단) × LEVEL (강화). */
+export interface CrewMemberState {
+  tier: EntityRarity;
+  level: number;
+}
+
 export interface SaveState {
-  version: 32;
+  version: 33;
   stageIdx: number;
   quanta: number;
   timeGauge: number;
@@ -281,6 +287,14 @@ export interface SaveState {
    *  gear category; unlocks at HEX_WILD_UNLOCK_STAGE. The 7-slot hex (for bingo
    *  bonuses) is derived = [...equippedSlots(3), ...riftSlots(3), wildSlot]. */
   wildSlot: string;
+  /** OVERHAUL5 (v33): joined crew — crew id (= entity id) → persistent growth.
+   *  Absent id = not yet joined. SURVIVES prestige (the attachment anchor). */
+  crew: Record<string, CrewMemberState>;
+  /** OVERHAUL5 (v33): codex cards — entityId → count. Drops/purchases land here;
+   *  cards are collection + promotion fuel. Survives prestige. */
+  cardInventory: Record<string, number>;
+  /** OVERHAUL5 (v33): crew join beats not yet shown (dialogue queue, FIFO). */
+  pendingCrewJoinIds: string[];
   /** Almanac collection grid: stageId → entity ids ever collected. Survives prestige (D2). */
   almanacCollected: Record<number, string[]>;
   prestigeUpgrades: PrestigeUpgradeLevels;
@@ -363,6 +377,8 @@ export interface GameState extends PersistentGameState {
   lastQuestClaimEvent: QuestClaimEvent | null;
   /** #43 transient gacha-pull reveal — drives the shop Nebula Box reveal (not persisted). */
   lastGachaEvent: GachaEvent | null;
+  /** OVERHAUL5 transient promotion-altar reveal (승급 성공/실패, not persisted). */
+  lastCrewPromoteEvent: CrewPromoteEvent | null;
   /** Persona #10 transient NEW-discovery reveal — drives the floating "발견!"
    *  toast when a drop adds an entity not yet in the almanac (not persisted). */
   lastDropEvent: FloatingDropEvent | null;

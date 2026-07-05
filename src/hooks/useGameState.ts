@@ -106,9 +106,11 @@ export function useGameState(): UseGameStateResult {
           stageId: stage.id,
           gateProgress01: getEntropyGateProgress(payload.entropy ?? 0, payload.stageIdx),
         },
-        getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? []), payload.wildSlot ?? '']),
+        getEquippedInstances(payload.inventory ?? [], [...(payload.equippedSlots ?? []), ...(payload.riftSlots ?? []), payload.wildSlot ?? ''], payload.crew ?? {}),
         payload.prestigeUpgrades,
         payload.almanacCollected,
+        undefined,
+        payload.crew ?? {},
       );
       const autoRate = getAutoRate(modifiers);
       const offlineMultiplier = modifiers.hawkingEcho || payload.singularityUnlocks.includes('hawking_echo')

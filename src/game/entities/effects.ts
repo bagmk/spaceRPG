@@ -25,6 +25,9 @@ import {
   WALLET_RARITY_WEIGHT,
 } from '../balance';
 import type { EntityRarity } from './types';
+import type { CrewMemberState } from '../types';
+import { isCrewId } from '../crew/roster';
+import { getCrewTierView } from '../crew/tierView';
 import { entityMatchesId, findEntityById, STAGE_ENTITIES } from './stageItems';
 import { getGearPowerExponent, getGearPowerMult, getSecondaryStats, type GearPower } from './substats';
 import { qualityMult } from './quality';
@@ -46,10 +49,19 @@ import {
 export function getEquippedInstances(
   inventory: EntityInstance[],
   equippedSlots: string[],
+  crew?: Record<string, CrewMemberState>,
 ): EntityInstance[] {
   const result: EntityInstance[] = [];
   for (const slotId of equippedSlots) {
     if (!slotId) continue;
+    // OVERHAUL5 (v33): a slot holding a JOINED crew id resolves to a synthesized
+    // single-copy instance carrying the crew's LEVEL. The crew's TIER is applied
+    // by the tierOf view in applyEntityModifiers — not here — so this stays a
+    // plain EntityInstance any existing consumer understands.
+    if (crew && isCrewId(slotId) && crew[slotId]) {
+      result.push({ instanceId: slotId, entityId: slotId, count: 1, level: crew[slotId].level });
+      continue;
+    }
     // P6: slots store an instanceId. Fall back to entityId resolution for any
     // legacy/unmigrated slot value so a stale save never blanks the loadout.
     let owned = inventory.find((e) => e.instanceId === slotId);
@@ -198,11 +210,19 @@ export function applyEntityModifiers(
   mods: Modifiers,
   inventory: EntityInstance[],
   power: GearPower,
+  tierOf?: (entityId: string) => EntityRarity | undefined,
 ): void {
   for (const entry of inventory) {
     if (entry.count <= 0) continue;
-    const entity = findEntityById(entry.entityId);
+    let entity = findEntityById(entry.entityId);
     if (!entity) continue;
+    // OVERHAUL5 (v33): an equipped CREW's power is decided by its CURRENT tier,
+    // not the source entity's static rarity — swap in the tier VIEW (same id,
+    // rarity/value/baseCost at the tier) so every read below (primary value,
+    // enhance curves, wallet anchors, substat count/scale) sees the tier.
+    // Reusing the static path silently no-ops promotion — this fork is the fix.
+    const crewTier = tierOf?.(entity.id);
+    if (crewTier && crewTier !== entity.rarity) entity = getCrewTierView(entity, crewTier);
 
     const { type, value, isFlat } = entity.effect;
     // Power contribution soft-caps at maxCount (collection itself is uncapped).
@@ -389,13 +409,20 @@ export function applySetBonuses(mods: Modifiers, equipped: EntityInstance[]): vo
  * independent dimensions and compound; allMythic supersedes the plain same-rarity tier. A hard
  * endgame goal (many near-identical items), so it pays big without touching the entropy gate.
  */
-export function applyLaneMatch(mods: Modifiers, equipped: EntityInstance[]): void {
+export function applyLaneMatch(
+  mods: Modifiers,
+  equipped: EntityInstance[],
+  tierOf?: (entityId: string) => EntityRarity | undefined,
+): void {
   const items = equipped
     .map((e) => findEntityById(e.entityId))
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
   if (items.length < LANE_MATCH_MIN_SLOTS) return;
-  const allMythic = items.every((e) => e.rarity === 'mythic');
-  const allSameRarity = items.every((e) => e.rarity === items[0].rarity);
+  // OVERHAUL5: a crew's lane rarity is its CURRENT tier ("전부 신화" must be
+  // reachable by promotion, not blocked by static source rarities).
+  const rarityOf = (e: (typeof items)[number]) => tierOf?.(e.id) ?? e.rarity;
+  const allMythic = items.every((e) => rarityOf(e) === 'mythic');
+  const allSameRarity = items.every((e) => rarityOf(e) === rarityOf(items[0]));
   const allSameGlyph = items.every((e) => e.visual.glyph === items[0].visual.glyph);
   let mult = 1;
   if (allMythic) mult *= LANE_MATCH_MULTS.allMythic;

@@ -344,13 +344,13 @@ describe('gameReducer', () => {
       y: 100,
     });
 
-    // P6: a purchase adds one flat copy (its own instanceId, count 1, level 1).
-    expect(purchased.inventory).toHaveLength(1);
-    expect(purchased.inventory[0]).toMatchObject({ entityId: entity.id, count: 1, level: 1 });
-    expect(purchased.inventory[0].instanceId).toBeTruthy();
+    // OVERHAUL5 (v33): the purchase lands as a CODEX CARD (s1_01 is also a joined
+    // starter crew — cards fuel it, they don't stack copies).
+    expect(purchased.cardInventory[entity.id]).toBe(1);
+    expect(purchased.inventory).toHaveLength(0);
     // Absorption (Phase 2): unequipped ownership gives no passive click bonus.
     expect(unequippedClick.lastClickEvent?.gained).toBe(baseline.lastClickEvent?.gained);
-    // CHECKPOINT: equipping changes click output.
+    // CHECKPOINT: equipping (the crew, by its own id) changes click output.
     expect(boosted.lastClickEvent?.gained).toBeGreaterThan(baseline.lastClickEvent?.gained ?? 0);
   });
 

@@ -123,11 +123,12 @@ describe('rarity gates', () => {
       inventory: ownedRest,
     };
     const next = gameReducer(state, { type: 'PURCHASE_ENTITY', entityId: epic.id });
-    expect(next.inventory.find((e) => e.entityId === epic.id)).toBeUndefined();
+    expect(next.cardInventory[epic.id]).toBeUndefined();
 
     const later = { ...state, stageIdx: 7 }; // stage 8 ≥ gate
     const bought = gameReducer(later, { type: 'PURCHASE_ENTITY', entityId: epic.id });
-    expect(bought.inventory.find((e) => e.entityId === epic.id)?.count).toBe(1);
+    // OVERHAUL5 (v33): the purchase lands as a CODEX CARD.
+    expect(bought.cardInventory[epic.id]).toBe(1);
   });
 
   it('caps fusion output one tier above the gate', () => {

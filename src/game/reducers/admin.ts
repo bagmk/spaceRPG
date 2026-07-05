@@ -13,6 +13,7 @@ import { getEntitiesForStage } from '../entities/stageItems';
 import { entityMatchesId } from '../entities/stageItems';
 import { makeInstance } from '../entities/instances';
 import { refillActiveQuests, snapshotStageQuestProgress } from '../quests';
+import { joinCrewForStage } from './stage';
 import { withCurrentUniverseEndingProgress } from '../multiverse';
 
 type AdminNextStageAction = Extract<GameAction, { type: 'ADMIN_NEXT_STAGE' }>;
@@ -67,6 +68,8 @@ export function handleAdminNextStage(state: GameState, action: AdminNextStageAct
     // (e.g. S12 "태양 소멸" showing on the S11 tab). Snapshot the era we leave + derive the new set.
     stageQuestProgress: snapshotStageQuestProgress(state, STAGES[state.stageIdx].id),
     activeQuests: refillActiveQuests(state.activeQuests, state.completedQuestIds, STAGES[nextStageIdx].id),
+    // OVERHAUL5: the debug jump fires the same crew join beats as a live advance.
+    ...joinCrewForStage(state, STAGES[nextStageIdx].id),
   };
   return { ...nextState, ...resetMechanicState(nextState) };
 }
