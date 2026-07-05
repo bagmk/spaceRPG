@@ -1,0 +1,891 @@
+{
+  "note": "OVERHAUL5 확정 로스터 50 (버그 교정 반영: s10_01→s10_02, s9_09 role→rift). Phase 0에서 src/game/crew/roster.ts로 변환, Phase 5에서 대사를 i18n으로.",
+  "crew": [
+    {
+      "sourceEntityId": "s1_01",
+      "nameEn": "Quantum Fluctuation",
+      "nameKo": "양자요동",
+      "epithetEn": "the Restless",
+      "epithetKo": "안절부절",
+      "joinLineEn": "I can't sit still — not even spacetime can make me.",
+      "joinLineKo": "가만히 못 있어요. 시공간도 절 못 붙잡아 두거든요.",
+      "joinStage": 1,
+      "primaryEffect": "click +15.0 base (common)",
+      "substatSignature": [
+        "crit_chance",
+        "combo_gain"
+      ],
+      "perk": "Each click has a small chance to trigger a free bonus click (echo click) — flat proc-chance modifier on the click pipeline.",
+      "personality": "jittery, impulsive, never stays on one topic",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s1_02",
+      "nameEn": "False Vacuum Bubble",
+      "nameKo": "거짓 진공 거품",
+      "epithetEn": "the Patient",
+      "epithetKo": "때를 기다리는 자",
+      "joinLineEn": "Everything looks calm. Trust me, it's not.",
+      "joinLineKo": "고요해 보이죠? 절대 아니에요.",
+      "joinStage": 1,
+      "primaryEffect": "auto +1.0 base (common)",
+      "substatSignature": [
+        "offline_rate",
+        "auto_mult"
+      ],
+      "perk": "Flat percentage boost to offline-progress accrual rate — a slow-burn payoff modifier on the offline system.",
+      "personality": "calm exterior hiding stored potential, deadpan",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s1_03",
+      "nameEn": "Inflaton Surge",
+      "nameKo": "인플레이톤 급증",
+      "epithetEn": "the Overachiever",
+      "epithetKo": "과잉성취자",
+      "joinLineEn": "Small to grapefruit-sized in an instant. I don't do 'gradual.'",
+      "joinLineKo": "찰나에 자몽만해졌죠. 저는 '천천히'를 몰라요.",
+      "joinStage": 1,
+      "primaryEffect": "crit +0.5 base (common, crit-flagged)",
+      "substatSignature": [
+        "crit_multiplier",
+        "comet"
+      ],
+      "perk": "Flat multiplicative bonus to comet-event reward size — ties the 'explosive growth' theme to the comet mechanic's payout modifier.",
+      "personality": "manic energy, everything is an emergency and an opportunity",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s2_02",
+      "nameEn": "Down Quark",
+      "nameKo": "다운 쿼크",
+      "epithetEn": "the Heavier Twin",
+      "epithetKo": "더 무거운 쌍둥이",
+      "joinLineEn": "A little heavier than Up. That's the whole reason neutrons decay.",
+      "joinLineKo": "업보다 살짝 무거울 뿐인데, 그게 중성자가 붕괴하는 이유예요.",
+      "joinStage": 2,
+      "primaryEffect": "click +15.0 base (common)",
+      "substatSignature": [
+        "click_flat",
+        "crit_chance"
+      ],
+      "perk": "Flat additive click-power bonus (not percentage) — a simple additive modifier distinct from every multiplicative click perk.",
+      "personality": "grounded, slightly self-conscious about being 'the heavy one'",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s2_05",
+      "nameEn": "Gluon",
+      "nameKo": "글루온",
+      "epithetEn": "the Clingy",
+      "epithetKo": "집착쟁이",
+      "joinLineEn": "I carry the force I respond to. I literally can't let go.",
+      "joinLineKo": "제가 나르는 힘에 저 자신도 반응해요. 절대 놓을 수가 없죠.",
+      "joinStage": 2,
+      "primaryEffect": "auto +2.0 base (rare)",
+      "substatSignature": [
+        "bingo_line",
+        "auto_mult"
+      ],
+      "perk": "Bonus multiplier when this crew's hexagon slot participates in a completed bingo line — bingo-line payout modifier scoped to self.",
+      "personality": "possessive, bonds intensely with neighbors, dramatic about attachment",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s2_07",
+      "nameEn": "W Boson",
+      "nameKo": "W 보손",
+      "epithetEn": "the Heavyweight Messenger",
+      "epithetKo": "묵직한 전령",
+      "joinLineEn": "Eighty times a proton's mass. That's why decay takes its sweet time.",
+      "joinLineKo": "양성자의 80배 무게죠. 그래서 붕괴가 그렇게 느린 거예요.",
+      "joinStage": 2,
+      "primaryEffect": "crit +0.5 base (rare, crit-flagged)",
+      "substatSignature": [
+        "crit_multiplier",
+        "quest"
+      ],
+      "perk": "Grants bonus quest-completion reward yield — a flat percentage modifier on the quest reward pipeline.",
+      "personality": "gruff courier persona, self-important about 'carrying the message'",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s3_05",
+      "nameEn": "Plasma Vortex",
+      "nameKo": "플라스마 소용돌이",
+      "epithetEn": "the Whirlwind",
+      "epithetKo": "회오리",
+      "joinLineEn": "Hottest fluid ever made, and I still flow smoother than anything.",
+      "joinLineKo": "역대 가장 뜨거운 유체인데, 흐름은 제일 매끄럽죠.",
+      "joinStage": 3,
+      "primaryEffect": "auto +3.0 base (rare)",
+      "substatSignature": [
+        "combo_gain",
+        "auto_mult"
+      ],
+      "perk": "Increases combo-meter gain rate per action — a rate modifier on the combo-charge system (distinct from combo-cap or combo-multiplier perks).",
+      "personality": "swirling, restless, talks in circles literally and figuratively",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s3_06",
+      "nameEn": "Charm Quark",
+      "nameKo": "참 쿼크",
+      "epithetEn": "the Trendsetter",
+      "epithetKo": "유행선도자",
+      "joinLineEn": "They called my discovery a revolution. I try to live up to it.",
+      "joinLineKo": "제 발견을 혁명이라 불렀죠. 그 기대에 부응하려 노력 중이에요.",
+      "joinStage": 3,
+      "primaryEffect": "click +22.0 base (rare)",
+      "substatSignature": [
+        "click_percent",
+        "crit_chance"
+      ],
+      "perk": "Percentage click-power boost that scales with the number of distinct rarities currently equipped in the hexagon (rainbow synergy) — reads existing equipped-rarity state as a modifier input.",
+      "personality": "flashy showoff, loves being a big deal",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s3_10",
+      "nameEn": "Top Quark",
+      "nameKo": "톱 쿼크",
+      "epithetEn": "the Fleeting Giant",
+      "epithetKo": "찰나의 거인",
+      "joinLineEn": "Heavy as gold, gone in a billionth of a trillionth of a second. Enjoy me now.",
+      "joinLineKo": "금 원자만큼 무겁지만 찰나에 사라져요. 지금 절 만끽하세요.",
+      "joinStage": 3,
+      "primaryEffect": "click +35.0 base (epic)",
+      "substatSignature": [
+        "click_percent",
+        "drop_rate"
+      ],
+      "perk": "Small flat increase to codex-card drop rate on click-triggered drops — a drop-rate modifier scoped to the click-drop channel.",
+      "personality": "brief, intense, lives fast and philosophical about impermanence",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s4_02",
+      "nameEn": "Neutron",
+      "nameKo": "중성자",
+      "epithetEn": "the Stoic Tank",
+      "epithetKo": "과묵한 탱커",
+      "joinLineEn": "Fifteen minutes free, forever stable locked in a nucleus. I know my place.",
+      "joinLineKo": "혼자면 15분, 원자핵 안이면 영원히 안정적이죠. 제 자리를 압니다.",
+      "joinStage": 4,
+      "primaryEffect": "click +15.0 base (common)",
+      "substatSignature": [
+        "click_percent",
+        "enhance_cost"
+      ],
+      "perk": "Reduces this crew's own enhance (강화) cost per level — a cost-reduction modifier scoped to self on the leveling system.",
+      "personality": "stoic, few words, quietly dependable",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s4_04",
+      "nameEn": "Photon",
+      "nameKo": "광자",
+      "epithetEn": "the Impatient Speedster",
+      "epithetKo": "성급한 스피드광",
+      "joinLineEn": "Massless, tireless, always first. Try to keep up.",
+      "joinLineKo": "질량도 없고 지치지도 않아요. 항상 제가 제일 빠르죠. 따라와 보세요.",
+      "joinStage": 4,
+      "primaryEffect": "crit +0.4 base (common, crit-flagged)",
+      "substatSignature": [
+        "crit_chance",
+        "click_flat"
+      ],
+      "perk": "Flat percentage-point increase to global crit chance — the simplest possible crit-chance modifier, foundational tutorial perk.",
+      "personality": "massless, hyperactive, impatient, always racing ahead",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s4_06",
+      "nameEn": "Helium-3",
+      "nameKo": "헬륨-3",
+      "epithetEn": "the Dreamer",
+      "epithetKo": "몽상가",
+      "joinLineEn": "People want to mine me off the Moon. I have big dreams too.",
+      "joinLineKo": "다들 절 달에서 캐고 싶어하죠. 저도 큰 꿈이 있거든요.",
+      "joinStage": 4,
+      "primaryEffect": "click +22.0 base (rare)",
+      "substatSignature": [
+        "click_percent",
+        "fusion_burst"
+      ],
+      "perk": "Grants a chance for fusion attempts to trigger a bonus fusion-burst charge — a proc modifier on the fusion-burst mechanic.",
+      "personality": "wistful, aspirational, talks about being 'the future fuel'",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s4_13",
+      "nameEn": "BBN Completion",
+      "nameKo": "BBN 완결",
+      "epithetEn": "the Perfectionist",
+      "epithetKo": "완벽주의자",
+      "joinLineEn": "Three minutes to lock in the recipe forever. No do-overs.",
+      "joinLineKo": "3분 만에 레시피를 영원히 확정지었죠. 재시도는 없어요.",
+      "joinStage": 4,
+      "primaryEffect": "multiplier +50.0 base (legendary)",
+      "substatSignature": [
+        "global_mult",
+        "entropy"
+      ],
+      "perk": "Small flat bonus to entropy-gate progress rate — a rate modifier on the entropy-gate system tying the 'locked forever' theme to stage advancement.",
+      "personality": "meticulous, finality-obsessed, treats every action as irreversible",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s5_02",
+      "nameEn": "Free Electron",
+      "nameKo": "자유 전자",
+      "epithetEn": "the Troublemaker",
+      "epithetKo": "말썽꾸러기",
+      "joinLineEn": "I scattered so much light the universe was an opaque fog. You're welcome for the drama.",
+      "joinLineKo": "빛을 하도 흩뜨려서 우주가 안개였죠. 그 드라마, 제 덕분이에요.",
+      "joinStage": 5,
+      "primaryEffect": "click +15.0 base (common)",
+      "substatSignature": [
+        "click_percent",
+        "crit_chance"
+      ],
+      "perk": "Percentage click-power boost that is stronger the earlier the current stage's gate progress is (front-loaded early-stage modifier) — reads gateProgress01 as input to a click modifier.",
+      "personality": "chaotic, mischievous, thrives on being an obstacle",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s5_04",
+      "nameEn": "CMB Photon",
+      "nameKo": "우주배경복사 광자",
+      "epithetEn": "the Old Soul",
+      "epithetKo": "오래된 영혼",
+      "joinLineEn": "13.8 billion years on the road. I've seen everything.",
+      "joinLineKo": "138억 년을 여행했어요. 안 본 게 없죠.",
+      "joinStage": 5,
+      "primaryEffect": "crit +0.4 base (common, crit-flagged)",
+      "substatSignature": [
+        "crit_multiplier",
+        "codex"
+      ],
+      "perk": "Grants bonus codex-completion reward yield — a flat percentage modifier on the codex-subset reward pipeline.",
+      "personality": "ancient, wise, speaks slowly with cosmic perspective",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s5_09",
+      "nameEn": "Dark Matter Halo",
+      "nameKo": "암흑물질 헤일로",
+      "epithetEn": "the Silent Architect",
+      "epithetKo": "말없는 설계자",
+      "joinLineEn": "I dug the valleys before anyone noticed I existed. Someone had to.",
+      "joinLineKo": "아무도 눈치채기 전에 골짜기를 파놨어요. 누군가는 해야 할 일이었죠.",
+      "joinStage": 5,
+      "primaryEffect": "auto +6.0 base (epic)",
+      "substatSignature": [
+        "auto_mult",
+        "condense"
+      ],
+      "perk": "Boosts the yield of the matter condense/burst (물질 응축/분사) mechanic by a flat percentage — modifier scoped to the condense system.",
+      "personality": "invisible, unassuming, works quietly behind the scenes",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s5_13",
+      "nameEn": "Cosmic Transparency",
+      "nameKo": "우주 투명화",
+      "epithetEn": "the Open Book",
+      "epithetKo": "열린 책",
+      "joinLineEn": "I made the universe see-through. I don't believe in secrets.",
+      "joinLineKo": "제가 우주를 투명하게 만들었죠. 비밀 같은 건 안 믿어요.",
+      "joinStage": 5,
+      "primaryEffect": "multiplier +50.0 base (legendary)",
+      "substatSignature": [
+        "global_mult",
+        "drop_rate"
+      ],
+      "perk": "Flat increase to codex-card drop rate across ALL sources (click and auto) — a broader drop-rate modifier than Top Quark's click-only version.",
+      "personality": "candid, transparent, dislikes obfuscation, blunt honesty",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s6_01",
+      "nameEn": "Cold Hydrogen",
+      "nameKo": "차가운 수소",
+      "epithetEn": "the Loner",
+      "epithetKo": "외톨이",
+      "joinLineEn": "A hundred million years, alone in the dark. I got used to it.",
+      "joinLineKo": "1억 년을 어둠 속에서 혼자 있었죠. 이제 익숙해요.",
+      "joinStage": 6,
+      "primaryEffect": "click +15.0 base (common)",
+      "substatSignature": [
+        "click_percent",
+        "offline_rate"
+      ],
+      "perk": "Boosts offline-progress accrual specifically for long-idle stretches (long-idle bonus tier) — a tiered offline-rate modifier distinct from False Vacuum Bubble's flat one.",
+      "personality": "withdrawn, melancholic, comfortable with solitude",
+      "role": "click"
+    },
+    {
+      "sourceEntityId": "s6_02",
+      "nameEn": "21cm Signal",
+      "nameKo": "21cm 신호",
+      "epithetEn": "the Faint Whisperer",
+      "epithetKo": "속삭이는 자",
+      "joinLineEn": "The only voice from an age with no stars. Listen closely.",
+      "joinLineKo": "별 하나 없던 시대의 유일한 목소리예요. 잘 들어보세요.",
+      "joinStage": 6,
+      "primaryEffect": "crit +0.4 base (common, crit-flagged)",
+      "substatSignature": [
+        "crit_chance",
+        "comet"
+      ],
+      "perk": "Increases the spawn frequency of comet events — a frequency modifier on the comet-event scheduler, distinct from Inflaton Surge's payout-size perk.",
+      "personality": "soft-spoken, subtle, easy to overlook but always present",
+      "role": "wild"
+    },
+    {
+      "sourceEntityId": "s6_05",
+      "nameEn": "Molecular Hydrogen",
+      "nameKo": "분자수소",
+      "epithetEn": "the Coolant",
+      "epithetKo": "냉각제",
+      "joinLineEn": "Without me as coolant, not one star would have ever collapsed. Small but essential.",
+      "joinLineKo": "제가 냉각제가 아니었다면 별은 하나도 못 태어났어요. 작지만 필수죠.",
+      "joinStage": 6,
+      "primaryEffect": "auto +5.0 base (rare)",
+      "substatSignature": [
+        "auto_mult",
+        "milestone"
+      ],
+      "perk": "Boosts progress-rate toward milestone/quest track completion (fills quest-progress counters faster) — a progress-rate modifier on the milestone tracking system, distinct from W Boson's reward-size perk.",
+      "personality": "humble, self-effacing, insists small contributions matter most",
+      "role": "rift"
+    },
+    {
+      "sourceEntityId": "s7_02",
+      "nameEn": "UV Photon",
+      "nameKo": "자외선 광자",
+      "epithetEn": "the Impatient",
+      "epithetKo": "성급한 자",
+      "joinStage": 7,
+      "role": "click",
+      "primaryEffect": "click +15.0 (common)",
+      "substatSignature": [
+        "crit_chance"
+      ],
+      "perk": "Every Nth click (N scales down with tier) is auto-treated as a guaranteed critical hit — massless speedster who never waits its turn.",
+      "personality": "Massless, impossibly fast, can't sit still — fires off before thinking.",
+      "joinLineEn": "No mass, no patience — let's move.",
+      "joinLineKo": "질량도 없고 기다릴 시간도 없어요. 바로 갑니다."
+    },
+    {
+      "sourceEntityId": "s7_04",
+      "nameEn": "Hydrogen Fusion",
+      "nameKo": "수소 핵융합",
+      "epithetEn": "the Engine",
+      "epithetKo": "엔진",
+      "joinStage": 7,
+      "role": "rift",
+      "primaryEffect": "auto_mult +2.0 (common)",
+      "substatSignature": [
+        "auto_flat"
+      ],
+      "perk": "Converts a small fixed fraction of the crew's own auto output into bonus offline income accrual rate — the engine that keeps burning while you're away.",
+      "personality": "Steady, reliable, quietly powers everything else without complaint.",
+      "joinLineEn": "0.7% of me becomes energy. All of it becomes yours.",
+      "joinLineKo": "제 질량의 0.7%가 에너지가 됩니다. 전부 당신 것입니다."
+    },
+    {
+      "sourceEntityId": "s7_10",
+      "nameEn": "Iron",
+      "nameKo": "철",
+      "epithetEn": "the Dead End",
+      "epithetKo": "종착점",
+      "joinStage": 7,
+      "role": "click",
+      "primaryEffect": "click +35.0 (epic)",
+      "substatSignature": [
+        "combo_gain"
+      ],
+      "perk": "Landing a click while combo is already at max instantly banks the overflow as a one-time entropy-gate burst instead of wasting it.",
+      "personality": "Nothing left to give, so it converts endings into new beginnings.",
+      "joinLineEn": "Fusing me costs more than it pays. So I pay it forward instead.",
+      "joinLineKo": "저를 융합해봐야 손해예요. 대신 다른 방식으로 갚죠."
+    },
+    {
+      "sourceEntityId": "s7_13",
+      "nameEn": "Pop III Supernova",
+      "nameKo": "3세대 초신성",
+      "epithetEn": "the Seeder",
+      "epithetKo": "씨뿌리는 자",
+      "joinStage": 7,
+      "role": "wild",
+      "primaryEffect": "multiplier x50.0 (legendary)",
+      "substatSignature": [
+        "card_drop_rate"
+      ],
+      "perk": "Each fusion attempt has a small extra chance to drop a bonus codex card of the same rarity, seeding the collection the way the first supernovae seeded the elements.",
+      "personality": "One explosive act that scatters gifts across the whole universe.",
+      "joinLineEn": "I go out once. Everything after is made of me.",
+      "joinLineKo": "저는 단 한 번 터집니다. 그 이후의 모든 것이 저로 만들어지죠."
+    },
+    {
+      "sourceEntityId": "s8_05",
+      "nameEn": "Quasar",
+      "nameKo": "퀘이사",
+      "epithetEn": "the Loudmouth",
+      "epithetKo": "떠벌이",
+      "joinStage": 8,
+      "role": "rift",
+      "primaryEffect": "auto +5.0 (rare)",
+      "substatSignature": [
+        "auto_flat"
+      ],
+      "perk": "Outshines its host: while equipped, all OTHER equipped rift-role crew get a small flat auto bump, scaling with Quasar's own tier.",
+      "personality": "Small in size, impossibly loud — outshines everything around it.",
+      "joinLineEn": "I'm no bigger than a solar system. Watch me outshine a galaxy.",
+      "joinLineKo": "태양계보다 크지도 않은데, 은하 전체보다 밝게 빛나 볼게요."
+    },
+    {
+      "sourceEntityId": "s8_08",
+      "nameEn": "X-Ray Background",
+      "nameKo": "엑스선 배경복사",
+      "epithetEn": "the Whisperer",
+      "epithetKo": "속삭이는 자",
+      "joinStage": 8,
+      "role": "wild",
+      "primaryEffect": "crit +0.8 flat (rare)",
+      "substatSignature": [
+        "crit_chance"
+      ],
+      "perk": "Adds a small passive chance per auto-tick (not just clicks) to trigger a crit-equivalent bonus tick — the only crew whose crit effect fires off the auto loop instead of clicks.",
+      "personality": "A faint hum you never notice until you add it all up.",
+      "joinLineEn": "Millions of tiny signals too far to see alone. Together, unmistakable.",
+      "joinLineKo": "혼자서는 안 보이는 수백만 개의 신호. 하지만 합치면 분명해지죠."
+    },
+    {
+      "sourceEntityId": "s8_13",
+      "nameEn": "Reionization Complete",
+      "nameKo": "재이온화 완료",
+      "epithetEn": "the Clarifier",
+      "epithetKo": "정화자",
+      "joinStage": 8,
+      "role": "click",
+      "primaryEffect": "multiplier x50.0 (legendary)",
+      "substatSignature": [
+        "bingo_line_bonus"
+      ],
+      "perk": "Completing any hexagon bingo line while this crew is slotted grants a temporary click-power spike, as if the fog clearing lit up the whole board at once.",
+      "personality": "The moment everything suddenly becomes clear and stays that way.",
+      "joinLineEn": "The last fog just burned away. Everything's visible now.",
+      "joinLineKo": "마지막 안개가 걷혔습니다. 이제 모든 게 보입니다."
+    },
+    {
+      "sourceEntityId": "s9_05",
+      "nameEn": "Massive Dark Halo",
+      "nameKo": "거대 암흑헤일로",
+      "epithetEn": "the Unseen Giant",
+      "epithetKo": "보이지 않는 거인",
+      "joinStage": 9,
+      "role": "rift",
+      "primaryEffect": "auto_mult +3.0 (rare)",
+      "substatSignature": [
+        "auto_flat"
+      ],
+      "perk": "Its own displayed power is always understated: actual auto contribution is boosted by a hidden flat percentage never shown on its card, mirroring dark matter's invisibility.",
+      "personality": "Outweighs everything visible twenty to one, yet never gets the credit.",
+      "joinLineEn": "You can't see most of me. That's kind of the point.",
+      "joinLineKo": "제 대부분은 보이지 않습니다. 원래 그런 존재니까요."
+    },
+    {
+      "sourceEntityId": "s9_09",
+      "nameEn": "Active Galactic Nucleus",
+      "nameKo": "활동은하핵",
+      "epithetEn": "the Glutton",
+      "epithetKo": "폭식가",
+      "joinStage": 9,
+      "role": "rift",
+      "primaryEffect": "auto +7.0 (epic)",
+      "substatSignature": [
+        "condense_burst"
+      ],
+      "perk": "Gorging: each condense-burst (물질 응축/분사) used while equipped is amplified, converting more matter per use than normal, up to the stage cap.",
+      "personality": "Feeds on everything nearby until it blazes brighter than its whole galaxy.",
+      "joinLineEn": "Feed me matter. I'll turn it into light you can see from anywhere.",
+      "joinLineKo": "물질을 먹여주세요. 어디서든 보일 빛으로 바꿔드리죠."
+    },
+    {
+      "sourceEntityId": "s9_13",
+      "nameEn": "Cosmic Void",
+      "nameKo": "우주 공동",
+      "epithetEn": "the Empty One",
+      "epithetKo": "텅 빈 자",
+      "joinStage": 9,
+      "role": "wild",
+      "primaryEffect": "multiplier x50.0 (legendary)",
+      "substatSignature": [
+        "quest_reward_bonus"
+      ],
+      "perk": "Claiming any quest or milestone reward while equipped grants a bonus proportional to how long the quest was pending — patience rewarded, like a void slowly outlasting everything around it.",
+      "personality": "Vast, patient, defined entirely by what isn't there.",
+      "joinLineEn": "I contain almost nothing. And yet I'm most of the universe.",
+      "joinLineKo": "저는 거의 텅 비어 있어요. 그런데도 우주 대부분을 차지하죠."
+    },
+    {
+      "sourceEntityId": "s10_02",
+      "nameEn": "Dust Grain",
+      "nameKo": "먼지 알갱이",
+      "epithetEn": "the Humble Beginning",
+      "epithetKo": "소박한 시작",
+      "joinStage": 10,
+      "role": "click",
+      "primaryEffect": "click +15.0 (common)",
+      "substatSignature": [
+        "fusion_burst"
+      ],
+      "perk": "Every successful fusion involving this crew's matching cards has a small chance to not consume one fodder card, letting tiny things accumulate into something bigger, cost-free.",
+      "personality": "Started as nothing, became everything you're standing on.",
+      "joinLineEn": "Everything starts small. I'm proof.",
+      "joinLineKo": "모든 건 작게 시작해요. 제가 증거입니다."
+    },
+    {
+      "sourceEntityId": "s10_06",
+      "nameEn": "Comet",
+      "nameKo": "혜성",
+      "epithetEn": "the Wanderer",
+      "epithetKo": "방랑자",
+      "joinStage": 10,
+      "role": "click",
+      "primaryEffect": "click +22.0 (rare)",
+      "substatSignature": [
+        "comet_event_bonus"
+      ],
+      "perk": "Directly boosts the 혜성 (comet) random-event bonus multiplier while equipped, and slightly increases how often comet events appear — the comet crew literally brings more comets.",
+      "personality": "Shows up rarely, leaves a trail everyone remembers.",
+      "joinLineEn": "I swing by once in a long while. Make it count.",
+      "joinLineKo": "아주 가끔 지나가니까, 그 순간을 제대로 써야죠."
+    },
+    {
+      "sourceEntityId": "s10_11",
+      "nameEn": "Magnetic Field",
+      "nameKo": "자기장",
+      "epithetEn": "the Shield",
+      "epithetKo": "방패",
+      "joinStage": 10,
+      "role": "wild",
+      "primaryEffect": "click +35.0 (epic)",
+      "substatSignature": [
+        "enhance_protect"
+      ],
+      "perk": "While equipped, enhancement attempts get a passively refreshing chance-based free protect (independent of 보호석 charges) — deflecting failure like a planet deflecting solar wind.",
+      "personality": "Invisible, defensive, quietly prevents disaster before you notice.",
+      "joinLineEn": "You never see me working. You'd definitely notice if I stopped.",
+      "joinLineKo": "제가 일하는 건 안 보여요. 하지만 멈추면 바로 알게 될 겁니다."
+    },
+    {
+      "sourceEntityId": "s11_02",
+      "nameEn": "Moon Formation",
+      "nameKo": "달의 형성",
+      "epithetEn": "the Impact Child",
+      "epithetKo": "충돌의 자식",
+      "joinStage": 11,
+      "role": "click",
+      "primaryEffect": "crit +0.5 flat (common)",
+      "substatSignature": [
+        "crit_chance"
+      ],
+      "perk": "Born from a single catastrophic hit: this crew's crit chance is boosted specifically on the click immediately following any other crit, chaining critical impacts together.",
+      "personality": "Exists only because of one violent collision — thrives on chain reactions.",
+      "joinLineEn": "One impact made me. I like starting from a hit.",
+      "joinLineKo": "저는 한 번의 충돌에서 태어났어요. 강한 한 방으로 시작하는 게 좋더라고요."
+    },
+    {
+      "sourceEntityId": "s11_06",
+      "nameEn": "Photosynthesis",
+      "nameKo": "광합성",
+      "epithetEn": "the Polluter",
+      "epithetKo": "오염자",
+      "joinStage": 11,
+      "role": "rift",
+      "primaryEffect": "click +22.0 (rare)",
+      "substatSignature": [
+        "auto_flat",
+        "entropy_gate"
+      ],
+      "perk": "The only crew that converts a slice of click income into passive auto income over time (a slow 'exhale') — its own waste product literally builds the next system, echoing how oxygen rebuilt the planet.",
+      "personality": "Quietly poisoned the old world to build a better one — patient, world-changing.",
+      "joinLineEn": "My waste product is your future atmosphere. You're welcome.",
+      "joinLineKo": "제 부산물이 미래의 대기가 될 거예요. 천만에요."
+    },
+    {
+      "sourceEntityId": "s12_09",
+      "nameEn": "Neutron Star",
+      "nameKo": "중성자별",
+      "epithetEn": "the Unbreakable",
+      "epithetKo": "부서지지 않는 자",
+      "joinStage": 12,
+      "role": "rift",
+      "primaryEffect": "auto (common 7.0 base)",
+      "substatSignature": [
+        "auto_flat_bonus",
+        "offline_efficiency"
+      ],
+      "perk": "+15% offline progress efficiency while equipped — density that never stops working, even while you're away.",
+      "personality": "Stoic, impossibly dense, unshaken tank; speaks in short clipped facts",
+      "joinLineEn": "A teaspoon of me outweighs your whole fleet. I don't rest, I compress.",
+      "joinLineKo": "제 한 스푼이 함대 전체보다 무겁죠. 쉬지 않습니다, 압축할 뿐."
+    },
+    {
+      "sourceEntityId": "s12_12",
+      "nameEn": "Gravitational Wave",
+      "nameKo": "중력파",
+      "epithetEn": "the Faint Whisper",
+      "epithetKo": "희미한 속삭임",
+      "joinStage": 12,
+      "role": "click",
+      "primaryEffect": "click (epic 35.0 base)",
+      "substatSignature": [
+        "crit_chance",
+        "combo_extend"
+      ],
+      "perk": "Every 10th click extends your current combo window by 1 extra tick, however small — a ripple detected only by patient observers.",
+      "personality": "Impossibly subtle, patient, easy to miss but always there",
+      "joinLineEn": "You won't feel me arrive. You'll only notice the universe rippled.",
+      "joinLineKo": "제가 오는 걸 느끼진 못할 거예요. 우주가 흔들렸다는 것만 알아채겠죠."
+    },
+    {
+      "sourceEntityId": "s12_13",
+      "nameEn": "Type Ia Supernova",
+      "nameKo": "Ia형 초신성",
+      "epithetEn": "the Standard Candle",
+      "epithetKo": "표준 촛불",
+      "joinStage": 12,
+      "role": "wild",
+      "primaryEffect": "multiplier (legendary 50.0 base)",
+      "substatSignature": [
+        "global_mult",
+        "fusion_burst"
+      ],
+      "perk": "Fusion Burst results are always shown at guaranteed consistent value (no variance roll) — because I always detonate at exactly the same brightness.",
+      "personality": "Unyieldingly consistent, precise, allergic to randomness",
+      "joinLineEn": "Same mass, same blast, every time. Consistency is my whole point.",
+      "joinLineKo": "언제나 같은 질량, 같은 폭발. 일관성이 제 존재 이유입니다."
+    },
+    {
+      "sourceEntityId": "s13_10",
+      "nameEn": "Binary Black Hole Merger",
+      "nameKo": "쌍성 블랙홀 병합",
+      "epithetEn": "the Collision Course",
+      "epithetKo": "충돌의 길",
+      "joinStage": 13,
+      "role": "click",
+      "primaryEffect": "click (epic 35.0 base)",
+      "substatSignature": [
+        "crit_chance",
+        "click_burst"
+      ],
+      "perk": "Landing 2 crits back-to-back triggers one bonus 'merger' click at full crit power — collision breeds collision.",
+      "personality": "Explosive duo-energy, inevitable, builds to a climax",
+      "joinLineEn": "Two of us spiral in. Only one shockwave walks out.",
+      "joinLineKo": "둘이 나선을 그리며 다가옵니다. 걸어 나가는 충격파는 하나뿐이죠."
+    },
+    {
+      "sourceEntityId": "s13_12",
+      "nameEn": "Stellar Mass Black Hole",
+      "nameKo": "항성질량 블랙홀",
+      "epithetEn": "the Quiet Devourer",
+      "epithetKo": "조용한 포식자",
+      "joinStage": 13,
+      "role": "rift",
+      "primaryEffect": "auto_mult (epic 5.0 base)",
+      "substatSignature": [
+        "auto_mult_bonus",
+        "drop_rate"
+      ],
+      "perk": "+8% card drop rate from auto-income sources specifically — everything eventually falls in.",
+      "personality": "Silent, patient, gravity does the talking",
+      "joinLineEn": "I don't chase. I wait. Everything falls in eventually.",
+      "joinLineKo": "쫓지 않습니다. 기다릴 뿐이죠. 결국 모든 건 빨려 들어옵니다."
+    },
+    {
+      "sourceEntityId": "s13_13",
+      "nameEn": "Last Red Dwarf",
+      "nameKo": "마지막 적색왜성",
+      "epithetEn": "the Marathoner",
+      "epithetKo": "마라토너",
+      "joinStage": 13,
+      "role": "wild",
+      "primaryEffect": "multiplier (legendary 50.0 base)",
+      "substatSignature": [
+        "global_mult",
+        "prestige_carryover"
+      ],
+      "perk": "Retains 10% of its level (rounded down) after prestige instead of resetting fully — burns so slow it outlasts the reset.",
+      "personality": "Frugal, endlessly patient, outlives everyone else",
+      "joinLineEn": "Ten trillion years of burning teaches you not to waste anything — even a reset.",
+      "joinLineKo": "10조 년을 타고 나면 알게 됩니다. 리셋마저도 아껴 써야 한다는 걸요."
+    },
+    {
+      "sourceEntityId": "s14_07",
+      "nameEn": "Higgs Boson",
+      "nameKo": "힉스 보손",
+      "epithetEn": "the Mass-Giver",
+      "epithetKo": "질량을 주는 자",
+      "joinStage": 14,
+      "role": "click",
+      "primaryEffect": "click (rare 22.0 base)",
+      "substatSignature": [
+        "click_flat_bonus",
+        "codex_bonus"
+      ],
+      "perk": "+5% to all codex set completion bonuses while equipped — everything else's weight quietly depends on me.",
+      "personality": "Foundational, unassuming, secretly load-bearing for everyone else",
+      "joinLineEn": "Nothing else would have mass without me. I just don't like to brag.",
+      "joinLineKo": "제가 없으면 아무것도 질량을 갖지 못해요. 그냥 자랑을 안 할 뿐이죠."
+    },
+    {
+      "sourceEntityId": "s14_09",
+      "nameEn": "Z Boson",
+      "nameKo": "Z 보손",
+      "epithetEn": "the Neutral Mediator",
+      "epithetKo": "중립의 중재자",
+      "joinStage": 14,
+      "role": "click",
+      "primaryEffect": "click (epic 35.0 base)",
+      "substatSignature": [
+        "click_flat_bonus",
+        "quest_progress"
+      ],
+      "perk": "Quest progress from clicking is tracked 10% faster — chargeless, but always moving something forward.",
+      "personality": "Neutral, diplomatic, quietly efficient go-between",
+      "joinLineEn": "I carry no charge, but I always get the message across.",
+      "joinLineKo": "전하는 없지만, 메시지는 항상 제대로 전달하죠."
+    },
+    {
+      "sourceEntityId": "s14_13",
+      "nameEn": "Last Baryon",
+      "nameKo": "마지막 바리온",
+      "epithetEn": "the Final Atom",
+      "epithetKo": "마지막 원자",
+      "joinStage": 14,
+      "role": "wild",
+      "primaryEffect": "multiplier (legendary 50.0 base)",
+      "substatSignature": [
+        "global_mult",
+        "enhance_efficiency"
+      ],
+      "perk": "Enhance (강화) attempts on this crew cost 10% less 강화석 — the last of its kind learned to make every resource count.",
+      "personality": "Elegiac, resourceful, deeply aware it is the end of a line",
+      "joinLineEn": "When I'm gone, ordinary matter is gone too. I intend to make this count.",
+      "joinLineKo": "제가 사라지면 평범한 물질도 끝입니다. 그러니 헛되이 쓰지 않을 거예요."
+    },
+    {
+      "sourceEntityId": "s14_14",
+      "nameEn": "Baryon Washout",
+      "nameKo": "바리온 워시아웃",
+      "epithetEn": "the Great Eraser",
+      "epithetKo": "위대한 지우개",
+      "joinStage": 14,
+      "role": "rift",
+      "primaryEffect": "auto (legendary 12.0 base)",
+      "substatSignature": [
+        "auto_flat_bonus",
+        "entropy_reduction"
+      ],
+      "perk": "Reduces entropy-gate cost by 3% while equipped — the same asymmetry that let matter survive also trims the toll ahead.",
+      "personality": "Ancient, cosmic-scale bureaucrat, rewrote the universe's opening balance sheet",
+      "joinLineEn": "I decided who got to exist before the universe was a second old. I still balance ledgers.",
+      "joinLineKo": "우주가 1초도 되기 전에 누가 존재할지 정한 게 저예요. 지금도 장부는 맞춰드리죠."
+    },
+    {
+      "sourceEntityId": "s15_06",
+      "nameEn": "Black Hole Merger Wave",
+      "nameKo": "블랙홀 병합파",
+      "epithetEn": "the Rising Chirp",
+      "epithetKo": "치솟는 지저귐",
+      "joinStage": 15,
+      "role": "click",
+      "primaryEffect": "click (rare 22.0 base)",
+      "substatSignature": [
+        "click_flat_bonus",
+        "combo_ramp"
+      ],
+      "perk": "Combo multiplier ramps 20% faster during the first 5 seconds of a combo, then normal — a chirp that rises fast, then settles.",
+      "personality": "Building, urgent, dramatic crescendo then calm",
+      "joinLineEn": "Watch the pitch rise. For one heartbeat, I outshine everything.",
+      "joinLineKo": "음이 치솟는 걸 보세요. 단 한 순간, 제가 모든 걸 압도합니다."
+    },
+    {
+      "sourceEntityId": "s15_10",
+      "nameEn": "Firewall",
+      "nameKo": "파이어월",
+      "epithetEn": "the Paradox",
+      "epithetKo": "역설",
+      "joinStage": 15,
+      "role": "click",
+      "primaryEffect": "click (epic 35.0 base)",
+      "substatSignature": [
+        "crit_chance",
+        "crit_damage"
+      ],
+      "perk": "Crits have a 5% chance to deal double crit damage ('firewall breach') — smooth crossing isn't guaranteed here.",
+      "personality": "Contradictory, unsettling, breaks the rules everyone expected to hold",
+      "joinLineEn": "Einstein promised you a smooth fall. I promise you a wall of fire instead.",
+      "joinLineKo": "아인슈타인은 매끄러운 낙하를 약속했죠. 전 불의 벽을 약속합니다."
+    },
+    {
+      "sourceEntityId": "s15_13",
+      "nameEn": "Final Evaporation Flash",
+      "nameKo": "최후의 증발 섬광",
+      "epithetEn": "the Last Blaze",
+      "epithetKo": "마지막 불꽃",
+      "joinStage": 15,
+      "role": "wild",
+      "primaryEffect": "multiplier (legendary 50.0 base)",
+      "substatSignature": [
+        "global_mult",
+        "comet_power"
+      ],
+      "perk": "Comet events triggered while equipped are 25% stronger — the smaller I get, the brighter and hotter the finale burns.",
+      "personality": "Explosive finisher, gets brighter as the end nears, goes out in style",
+      "joinLineEn": "Shrinking makes me hotter, not weaker. Watch the finale.",
+      "joinLineKo": "작아질수록 전 더 뜨거워집니다, 약해지는 게 아니라요. 피날레를 지켜보세요."
+    },
+    {
+      "sourceEntityId": "s16_06",
+      "nameEn": "Thermal Equilibrium",
+      "nameKo": "열평형",
+      "epithetEn": "the Great Leveler",
+      "epithetKo": "위대한 평준화자",
+      "joinStage": 16,
+      "role": "rift",
+      "primaryEffect": "auto (rare 3.0 base)",
+      "substatSignature": [
+        "auto_flat_bonus",
+        "bingo_line_flat"
+      ],
+      "perk": "Adds +1 flat to any bingo-line bonus tier while equipped — flattening the hexagon's differences, the way it flattens everything else.",
+      "personality": "Calm, final, evens out every difference until nothing moves",
+      "joinLineEn": "Given enough time, everything reaches the same temperature as me. Even your hexagon.",
+      "joinLineKo": "시간이 충분하면 결국 모든 게 저와 같은 온도가 됩니다. 당신의 육각형도요."
+    },
+    {
+      "sourceEntityId": "s16_09",
+      "nameEn": "Quantum Fluctuation (Final)",
+      "nameKo": "최후의 양자 요동",
+      "epithetEn": "the Last Flicker",
+      "epithetKo": "마지막 깜빡임",
+      "joinStage": 16,
+      "role": "rift",
+      "primaryEffect": "auto (epic 8.0 base)",
+      "substatSignature": [
+        "auto_flat_bonus",
+        "bingo_line_double"
+      ],
+      "perk": "One chosen bingo lane (player-selected) counts double toward line-completion bonuses — even 'dead' vacuum still has one lane that never stops flickering.",
+      "personality": "Stubborn, refuses to fully go quiet, the last one still twitching",
+      "joinLineEn": "They call it a dead vacuum. I'm still flickering, and I pick which lane I flicker in.",
+      "joinLineKo": "죽은 진공이라고들 하죠. 전 아직 깜빡이고 있고, 어느 자리에서 깜빡일지는 제가 고릅니다."
+    }
+  ]
+}
