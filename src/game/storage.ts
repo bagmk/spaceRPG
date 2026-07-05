@@ -552,9 +552,35 @@ export function migrateToCurrent(parsedUnknown: unknown): PersistentGameState | 
 function ensureCrewState(state: PersistentGameState, sourceVersion: number): PersistentGameState {
   const stageId = Math.max(1, (state.stageIdx ?? 0) + 1);
   if (sourceVersion >= 33) {
-    const crew = { ...(state.crew ?? {}) };
+    // Reconcile against the CURRENT roster (v2 shrank 50 crew → 12 evolution
+    // lines): entries whose id is no longer a line refund their investment
+    // ((level−1) 강화석 + 1 card) and drop; slots pointing at them clear;
+    // lines already earned by stage top up. Idempotent — a clean save passes.
+    const crew: Record<string, CrewMemberState> = {};
+    let staleRefund = 0;
+    const cards = { ...(state.cardInventory ?? {}) };
+    for (const [id, entry] of Object.entries(state.crew ?? {})) {
+      if (isCrewId(id)) crew[id] = entry;
+      else {
+        staleRefund += Math.max(0, (entry.level ?? 1) - 1);
+        cards[id] = (cards[id] ?? 0) + 1;
+      }
+    }
     for (const def of crewJoiningAtOrBefore(stageId)) crew[def.id] ??= { tier: 'common', level: 1 };
-    return { ...state, crew, cardInventory: state.cardInventory ?? {}, pendingCrewJoinIds: state.pendingCrewJoinIds ?? [] };
+    const clearStale = (slotId: string): string =>
+      slotId && findEntityById(slotId) && !state.inventory?.some((e) => e.instanceId === slotId) && !crew[slotId]
+        ? ''
+        : slotId;
+    return {
+      ...state,
+      crew,
+      cardInventory: cards,
+      pendingCrewJoinIds: (state.pendingCrewJoinIds ?? []).filter((id) => isCrewId(id)),
+      enhanceStones: Math.max(0, (state.enhanceStones ?? 0) + staleRefund),
+      equippedSlots: (state.equippedSlots ?? []).map(clearStale),
+      riftSlots: (state.riftSlots ?? []).map(clearStale),
+      wildSlot: clearStale(state.wildSlot ?? ''),
+    };
   }
 
   const crew: Record<string, CrewMemberState> = {};

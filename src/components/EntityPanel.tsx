@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EntityInstance, FusionEvent, EnhanceEvent, CrewMemberState, CrewPromoteEvent } from '../game/types';
-import { CREW_ROSTER, CREW_BY_ID, isCrewId, pickCrewLang } from '../game/crew/roster';
+import { CREW_ROSTER, CREW_BY_ID, isCrewId, pickCrewLang, crewFormAt } from '../game/crew/roster';
 import { getCrewTierView } from '../game/crew/tierView';
 import {
   CREW_TIER_ORDER,
@@ -1737,7 +1737,15 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
           const sel = selDef && selState && selEntity0
             ? { def: selDef, cs: selState, entity: getCrewTierView(selEntity0, selState.tier) }
             : null;
-          const nextTier = sel ? CREW_TIER_ORDER[CREW_TIER_ORDER.indexOf(sel.cs.tier) + 1] : undefined;
+          const selTierIdx = sel ? CREW_TIER_ORDER.indexOf(sel.cs.tier) : -1;
+          const nextTier = sel ? CREW_TIER_ORDER[selTierIdx + 1] : undefined;
+          // 진화: the next FORM (name changes!) + its era lock.
+          const nextForm = sel && nextTier ? crewFormAt(sel.def, selTierIdx + 1) : undefined;
+          const nextFormEntity = nextForm?.entityId ? findEntityById(nextForm.entityId) : undefined;
+          const nextFormName = nextForm
+            ? (nextFormEntity ? entityName(nextFormEntity, language) : (language === 'ko' ? nextForm.nameKo : nextForm.nameEn) ?? '')
+            : '';
+          const eraLocked = Boolean(nextForm && nextForm.stage > currentStageId);
           const window = sel ? CREW_CARD_ERA_WINDOW[sel.cs.tier] : 0;
           const cardCost = sel ? CREW_PROMOTE_CARD_COST[sel.cs.tier] : 0;
           const stoneCost = sel ? CREW_PROMOTE_STONE_COST[sel.cs.tier] : 0;
@@ -1749,7 +1757,7 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
               }, 0)
             : 0;
           const isMythicStep = nextTier === 'mythic';
-          const affordable = Boolean(sel && nextTier && cardsHave >= cardCost && enhanceStones >= stoneCost);
+          const affordable = Boolean(sel && nextTier && !eraLocked && cardsHave >= cardCost && enhanceStones >= stoneCost);
           const reveal = lastCrewPromoteEvent && promoteTarget && lastCrewPromoteEvent.crewId === promoteTarget
             ? lastCrewPromoteEvent
             : null;
@@ -1768,10 +1776,17 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                     <span className="promote-altar__epithet">{pickCrewLang(sel.def.epithet, language)}</span>
                   </div>
                   <div className="promote-altar__tiers">
-                    <span className="promote-altar__tier" style={{ color: RARITY_COLORS[sel.cs.tier] }}>{t(language, RARITY_I18N[sel.cs.tier])}</span>
+                    <span className="promote-altar__tier" style={{ color: RARITY_COLORS[sel.cs.tier] }}>{entityName(sel.entity, language)}</span>
                     <span className="promote-altar__arrow">→</span>
-                    <span className="promote-altar__tier promote-altar__tier--next" style={{ color: RARITY_COLORS[nextTier] }}>{t(language, RARITY_I18N[nextTier])}</span>
+                    <span className="promote-altar__tier promote-altar__tier--next" style={{ color: RARITY_COLORS[nextTier] }}>
+                      {eraLocked ? '???' : nextFormName}
+                    </span>
                   </div>
+                  {eraLocked ? (
+                    <div className="promote-altar__pity">
+                      {t(language, 'evolveLockedUntil').replace('{n}', String(nextForm?.stage ?? 0))}
+                    </div>
+                  ) : null}
                   <div className="promote-altar__costs">
                     <span className={cardsHave >= cardCost ? '' : 'promote-altar__cost--short'}>
                       {t(language, 'promoteCards').replace('{have}', String(cardsHave)).replace('{need}', String(cardCost)).replace('{a}', String(Math.max(1, sel.def.joinStage - window))).replace('{b}', String(sel.def.joinStage + window))}
@@ -1797,6 +1812,11 @@ export function EntityPanel({ page, equipCategory, currentStageId, recentDiscove
                       {reveal.success
                         ? `${t(language, 'promoteSuccess')}${reveal.pity ? ` · ${t(language, 'promotePityHit')}` : ''}`
                         : t(language, 'promoteFail')}
+                      {reveal.success ? (
+                        <div className="promote-altar__evolve-line">
+                          “{pickCrewLang(crewFormAt(sel.def, CREW_TIER_ORDER.indexOf(reveal.toTier as EntityRarity)).line, language)}”
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

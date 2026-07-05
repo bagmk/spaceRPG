@@ -166,9 +166,9 @@ describe('save migration', () => {
         stageIdx: 1, // stage 2 → stage-1/2 crew auto-join silently
         enhanceStones: 5,
         inventory: [
-          { instanceId: 'i1', entityId: 's1_02', count: 1, level: 4 }, // crew (False Vacuum Bubble), best copy
-          { instanceId: 'i2', entityId: 's1_02', count: 1, level: 3 }, // spare → 1 card + 2 stones
-          { instanceId: 'i3', entityId: 's1_00', count: 1, level: 1 }, // not crew → card
+          { instanceId: 'i1', entityId: 's1_01', count: 1, level: 4 }, // crew LINE (바리온), best copy
+          { instanceId: 'i2', entityId: 's1_01', count: 1, level: 3 }, // spare → 1 card + 2 stones
+          { instanceId: 'i3', entityId: 's1_02', count: 1, level: 1 }, // not a line → card
         ],
         equippedSlots: ['i1'],
         riftSlots: ['i3'],
@@ -178,19 +178,19 @@ describe('save migration', () => {
 
     const migrated = loadGame();
     // Owned crew copy: joined at its STATIC rarity with the best copy's level.
-    expect(migrated?.crew['s1_02']?.level).toBe(4);
-    expect(migrated?.crew['s1_02']?.tier).toBe('common');
+    expect(migrated?.crew['s1_01']?.level).toBe(4);
+    expect(migrated?.crew['s1_01']?.tier).toBe('common');
     // Spare crew copy → 1 card of the crew id + (level−1) stone refund.
-    expect(migrated?.cardInventory['s1_02']).toBe(1);
+    expect(migrated?.cardInventory['s1_01']).toBe(1);
     expect(migrated?.enhanceStones).toBe(5 + 2);
-    // Non-crew copy → card; inventory empties.
-    expect(migrated?.cardInventory['s1_00']).toBe(1);
+    // Non-line copy → card; inventory empties.
+    expect(migrated?.cardInventory['s1_02']).toBe(1);
     expect(migrated?.inventory).toEqual([]);
     // Slots: instanceId of a joined crew remaps to the crew id; card slots clear.
-    expect(migrated?.equippedSlots[0]).toBe('s1_02');
+    expect(migrated?.equippedSlots[0]).toBe('s1_01');
     expect(migrated?.riftSlots[0]).toBe('');
-    // Stage-1 crew whose join beat already passed auto-join silently at common.
-    expect(migrated?.crew['s1_01']).toEqual({ tier: 'common', level: 1 });
+    // Stage-1 lines whose join beat already passed auto-join silently at common.
+    expect(migrated?.crew['s1_03']).toEqual({ tier: 'common', level: 1 });
     expect(migrated?.pendingCrewJoinIds).toEqual([]);
   });
 
@@ -319,8 +319,9 @@ describe('save migration', () => {
     expect(migrated!.inventory).toEqual([]);
     expect(migrated!.crew['s1_01']?.level).toBeLessThanOrEqual(25); // rarity level cap held
     expect(migrated!.cardInventory['s1_01'] ?? 0).toBeLessThanOrEqual(20 * 1000); // bounded
-    expect(migrated!.crew['s1_02']?.level).toBe(1);
-    expect(migrated!.cardInventory['s1_02']).toBe(2); // 3 copies → 1 joined + 2 cards
+    // s1_02 is a plain CARD in the v2 roster (not a line) → all 3 copies stack.
+    expect(migrated!.crew['s1_02']).toBeUndefined();
+    expect(migrated!.cardInventory['s1_02']).toBe(3);
   });
 
   it('v17 derives the crit flag and pays compensation from legacy skills, then strips them', () => {

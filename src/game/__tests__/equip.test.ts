@@ -38,17 +38,16 @@ describe('equip system (Phase 2)', () => {
   });
 
   it('replaces the occupant when equipping into an occupied slot', () => {
-    const other = getEntitiesForStage(1).filter((e) => getEquipCategory(e) === 'click')[1];
+    // OVERHAUL5 v2: `other` must be another CLICK-lane crew LINE (s2_02, the
+    // Alchemist) — join it manually since its joinStage is 2.
+    const base = createInitialGameState(0);
     const state = {
-      ...createInitialGameState(0),
-      inventory: [
-        { entityId: entity.id, count: 1, level: 1 },
-        { entityId: other.id, count: 1, level: 1 },
-      ],
+      ...base,
+      crew: { ...base.crew, s2_02: { tier: 'common' as const, level: 1 } },
       equippedSlots: [entity.id],
     };
-    const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: other.id, slot: 0 });
-    expect(next.equippedSlots).toEqual([other.id]);
+    const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: 's2_02', slot: 0 });
+    expect(next.equippedSlots).toEqual(['s2_02']);
   });
 
   it('unequips a slot', () => {

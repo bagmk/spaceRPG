@@ -5,6 +5,7 @@ import { getEntityCost } from '../entities/types';
 import { getComboCapBonus } from '../reducers/helpers';
 import { getSetKey, getEquipSetKey } from '../entities/effects';
 import { getEntitiesForStage, STAGE_ENTITIES } from '../entities/stageItems';
+import { isCrewId } from '../crew/roster';
 import { BIG_CRUNCH_ENTROPY_THRESHOLD_KB } from '../multiverse';
 import { STAGES } from '../stages';
 import { getActiveModifiers } from '../skills/effects';
@@ -276,12 +277,13 @@ describe('gameReducer', () => {
   });
 
   it('🅠3: TICK emits a throttled auto-income float for the primary equipped rift entity', () => {
-    const entity = getEntitiesForStage(1).find((candidate) => candidate.effect.type === 'auto');
+    // OVERHAUL5 v2: the rift lane is crewed by LINES — s1_03 (급팽창의 유산,
+    // auto_mult) joins at stage 1, so it equips by its own id.
+    const entity = getEntitiesForStage(1).find((candidate) => candidate.id === 's1_03');
     expect(entity).toBeDefined();
     if (!entity) return;
-    const funded = { ...createInitialGameState(0), quanta: getEntityCost(entity, 0, 1) * 10 };
-    const purchased = gameReducer(funded, { type: 'PURCHASE_ENTITY', entityId: entity.id });
-    const equipped = gameReducer(purchased, { type: 'EQUIP_ENTITY', entityId: entity.id });
+    const funded = { ...createInitialGameState(0), quanta: 1e9 };
+    const equipped = gameReducer(funded, { type: 'EQUIP_ENTITY', entityId: entity.id });
     // P6: slots store the equipped copy's instanceId (resolves back to the entity).
     expect(equipped.riftSlots[0]).toBeTruthy();
 
@@ -498,12 +500,14 @@ describe('gameReducer', () => {
 
   it('tracks Critical gear equips for the current universe and resets that flag on prestige', () => {
     // Equipping crit-flavored gear marks the universe (vacuum decay in gear terms).
-    const critEntity = getEntitiesForStage(1).find((e) => e.effect.type === 'crit')!;
+    // OVERHAUL5 v2: stage-1's static crit entity (s1_03) is now an auto_mult LINE,
+    // so use a NON-line crit item (s2_03 Electron) through the legacy copy path.
+    const critEntity = getEntitiesForStage(2).find((e) => e.effect.type === 'crit' && !isCrewId(e.id))!;
     const purchased = gameReducer(
       {
         ...createInitialGameState(0),
         quanta: 1e9,
-        inventory: [{ entityId: critEntity.id, count: 1, level: 1 }],
+        inventory: [{ entityId: critEntity.id, instanceId: 'c1', count: 1, level: 1 }],
       },
       { type: 'EQUIP_ENTITY', entityId: critEntity.id },
     );

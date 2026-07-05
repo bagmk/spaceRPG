@@ -19,8 +19,9 @@ describe('tutorial sparkle flags — equip (S2)', () => {
     };
     const next = gameReducer(state, { type: 'EQUIP_ENTITY', entityId: 's1_02' });
     // s1_02 is auto → routes to a rift slot
-    // OVERHAUL5: s1_02 is a JOINED crew — it equips by its own id (unique copy).
-    expect(next.riftSlots).toContain('s1_02');
+    // OVERHAUL5 v2: s1_02 is a CARD again (not one of the 12 lines) — the legacy
+    // copy path equips the specific instance.
+    expect(next.riftSlots).toContain('i-vac');
     expect(next.tutorialFlags['equip-spark-vacuum-done']).toBe(true);
     expect(next.tutorialFlags['first-equip-done']).toBe(true);
     expect(next.tutorialFlags['equip-spark-quantum-done']).toBeUndefined();

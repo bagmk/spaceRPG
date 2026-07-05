@@ -1,185 +1,207 @@
 /**
- * OVERHAUL5 크루 로스터 (docs/OVERHAUL5_CREW_PLAN.md §2, generated from docs/overhaul5-roster.json).
+ * OVERHAUL5 v2 — 진화 라인 크루 (user 2026-07-05: "레어 탑 쿼크가 아니라 탑 쿼크 →
+ * 원자 → 중성자별처럼 개연성 있게 진화해야지" + "12개 좋은 거 같아").
  *
- * 50 persistent crew members chosen from the existing entity roster. A crew's `id`
- * IS its source entity id (s{stage}_{NN} — position-locked, never reorder). Display
- * name/description/formula/glyph come from the entity itself (entityName etc.);
- * this file adds only the crew-specific identity: epithet, join beat, dialogue.
+ * 12 crew LINES. A crew is no longer a single entity with a rarity color — it is
+ * an EVOLUTION LINE of 5 forms that follows real cosmic causality (바리온:
+ * 양자 요동 → 업 쿼크 → 양성자 → 태양 → 중성자별). Promotion (승급 제단) now
+ * EVOLVES the crew into its next form: name/formula/identity change, with an
+ * evolution greeting. Mechanically the tier ladder underneath is unchanged
+ * (tier N power = rarity-N bucket — sim parity), and the whole line keeps ONE
+ * effect type (its hexagon lane never changes).
  *
- * Mechanical equip CATEGORY stays the entity's effect type (getEquipCategory) —
- * `role` here is the designer's flavor badge (wild = "shines in the wild slot"),
- * NOT a placement rule. Perk implementations are Phase 3 (see plan doc);
- * the perk design text lives in docs/overhaul5-roster.json.
+ * ERA LOCK (user: 잠금 ON): evolving INTO a form requires having REACHED that
+ * form's home stage — you can't become a Neutron Star before the stellar-death
+ * era. This makes "go further to evolve your crew" a long-term pull.
+ *
+ * A line's `id` is its T1 form's entity id (stable key for save/slots/codex).
+ * REAL forms point at existing entity ids (display identity comes from the
+ * entity); INVENTED forms (가이아, 인공지능) carry their own name/formula.
  *
  * Bilingual data-file pattern (same shape as almanac.ts / stageLogs.ts).
  */
+
+import type { EntityEffectType } from '../entities/types';
 
 export interface CrewL { en: string; ko: string }
 
 export type CrewRole = 'click' | 'rift' | 'wild';
 
+export interface CrewFormDef {
+  /** Entity id of a REAL form; null for an invented form (name/formula below). */
+  entityId: string | null;
+  /** Invented-form display (only when entityId is null). */
+  nameEn?: string;
+  nameKo?: string;
+  formula?: string;
+  /** Home stage — era lock: evolving INTO this form requires reaching it. */
+  stage: number;
+  /** Evolution greeting, spoken the moment the crew becomes this form. */
+  line: CrewL;
+}
+
 export interface CrewDef {
-  /** Source entity id — the crew IS this entity, promoted through tiers. */
+  /** = the T1 form's entity id (stable key — save/slots/codex never change). */
   id: string;
-  /** Stage at which this crew auto-joins (free, with dialogue). */
+  /** Stage at which this line auto-joins (free, with dialogue). */
   joinStage: number;
-  /** Designer flavor badge; NOT the equip category (that stays effect-type-driven). */
+  /** The line's mechanical lane for its WHOLE life (never changes on evolution). */
+  effectType: EntityEffectType;
+  /** Designer flavor badge; category itself derives from effectType. */
   role: CrewRole;
+  /** The line's saga title (shown as the crew's epithet). */
   epithet: CrewL;
+  /** First-meeting dialogue (T1 form). */
   joinLine: CrewL;
+  /** Exactly 5 forms, T1(common)..T5(mythic). forms[0].entityId === id. */
+  forms: CrewFormDef[];
 }
 
 export const CREW_ROSTER: CrewDef[] = [
-  { id: 's1_01', joinStage: 1, role: 'click',
-    epithet: { en: 'the Restless', ko: '안절부절' },
-    joinLine: { en: 'I can\'t sit still — not even spacetime can make me.', ko: '가만히 못 있어요. 시공간도 절 못 붙잡아 두거든요.' } },
-  { id: 's1_02', joinStage: 1, role: 'rift',
-    epithet: { en: 'the Patient', ko: '때를 기다리는 자' },
-    joinLine: { en: 'Everything looks calm. Trust me, it\'s not.', ko: '고요해 보이죠? 절대 아니에요.' } },
-  { id: 's1_03', joinStage: 1, role: 'wild',
-    epithet: { en: 'the Overachiever', ko: '과잉성취자' },
-    joinLine: { en: 'Small to grapefruit-sized in an instant. I don\'t do \'gradual.\'', ko: '찰나에 자몽만해졌죠. 저는 \'천천히\'를 몰라요.' } },
-  { id: 's2_02', joinStage: 2, role: 'click',
-    epithet: { en: 'the Heavier Twin', ko: '더 무거운 쌍둥이' },
-    joinLine: { en: 'A little heavier than Up. That\'s the whole reason neutrons decay.', ko: '업보다 살짝 무거울 뿐인데, 그게 중성자가 붕괴하는 이유예요.' } },
-  { id: 's2_05', joinStage: 2, role: 'rift',
-    epithet: { en: 'the Clingy', ko: '집착쟁이' },
-    joinLine: { en: 'I carry the force I respond to. I literally can\'t let go.', ko: '제가 나르는 힘에 저 자신도 반응해요. 절대 놓을 수가 없죠.' } },
-  { id: 's2_07', joinStage: 2, role: 'wild',
-    epithet: { en: 'the Heavyweight Messenger', ko: '묵직한 전령' },
-    joinLine: { en: 'Eighty times a proton\'s mass. That\'s why decay takes its sweet time.', ko: '양성자의 80배 무게죠. 그래서 붕괴가 그렇게 느린 거예요.' } },
-  { id: 's3_05', joinStage: 3, role: 'rift',
-    epithet: { en: 'the Whirlwind', ko: '회오리' },
-    joinLine: { en: 'Hottest fluid ever made, and I still flow smoother than anything.', ko: '역대 가장 뜨거운 유체인데, 흐름은 제일 매끄럽죠.' } },
-  { id: 's3_06', joinStage: 3, role: 'click',
-    epithet: { en: 'the Trendsetter', ko: '유행선도자' },
-    joinLine: { en: 'They called my discovery a revolution. I try to live up to it.', ko: '제 발견을 혁명이라 불렀죠. 그 기대에 부응하려 노력 중이에요.' } },
-  { id: 's3_10', joinStage: 3, role: 'click',
-    epithet: { en: 'the Fleeting Giant', ko: '찰나의 거인' },
-    joinLine: { en: 'Heavy as gold, gone in a billionth of a trillionth of a second. Enjoy me now.', ko: '금 원자만큼 무겁지만 찰나에 사라져요. 지금 절 만끽하세요.' } },
-  { id: 's4_02', joinStage: 4, role: 'click',
-    epithet: { en: 'the Stoic Tank', ko: '과묵한 탱커' },
-    joinLine: { en: 'Fifteen minutes free, forever stable locked in a nucleus. I know my place.', ko: '혼자면 15분, 원자핵 안이면 영원히 안정적이죠. 제 자리를 압니다.' } },
-  { id: 's4_04', joinStage: 4, role: 'wild',
-    epithet: { en: 'the Impatient Speedster', ko: '성급한 스피드광' },
-    joinLine: { en: 'Massless, tireless, always first. Try to keep up.', ko: '질량도 없고 지치지도 않아요. 항상 제가 제일 빠르죠. 따라와 보세요.' } },
-  { id: 's4_06', joinStage: 4, role: 'click',
-    epithet: { en: 'the Dreamer', ko: '몽상가' },
-    joinLine: { en: 'People want to mine me off the Moon. I have big dreams too.', ko: '다들 절 달에서 캐고 싶어하죠. 저도 큰 꿈이 있거든요.' } },
-  { id: 's4_13', joinStage: 4, role: 'wild',
-    epithet: { en: 'the Perfectionist', ko: '완벽주의자' },
-    joinLine: { en: 'Three minutes to lock in the recipe forever. No do-overs.', ko: '3분 만에 레시피를 영원히 확정지었죠. 재시도는 없어요.' } },
-  { id: 's5_02', joinStage: 5, role: 'click',
-    epithet: { en: 'the Troublemaker', ko: '말썽꾸러기' },
-    joinLine: { en: 'I scattered so much light the universe was an opaque fog. You\'re welcome for the drama.', ko: '빛을 하도 흩뜨려서 우주가 안개였죠. 그 드라마, 제 덕분이에요.' } },
-  { id: 's5_04', joinStage: 5, role: 'wild',
-    epithet: { en: 'the Old Soul', ko: '오래된 영혼' },
-    joinLine: { en: '13.8 billion years on the road. I\'ve seen everything.', ko: '138억 년을 여행했어요. 안 본 게 없죠.' } },
-  { id: 's5_09', joinStage: 5, role: 'rift',
-    epithet: { en: 'the Silent Architect', ko: '말없는 설계자' },
-    joinLine: { en: 'I dug the valleys before anyone noticed I existed. Someone had to.', ko: '아무도 눈치채기 전에 골짜기를 파놨어요. 누군가는 해야 할 일이었죠.' } },
-  { id: 's5_13', joinStage: 5, role: 'rift',
-    epithet: { en: 'the Open Book', ko: '열린 책' },
-    joinLine: { en: 'I made the universe see-through. I don\'t believe in secrets.', ko: '제가 우주를 투명하게 만들었죠. 비밀 같은 건 안 믿어요.' } },
-  { id: 's6_01', joinStage: 6, role: 'click',
-    epithet: { en: 'the Loner', ko: '외톨이' },
-    joinLine: { en: 'A hundred million years, alone in the dark. I got used to it.', ko: '1억 년을 어둠 속에서 혼자 있었죠. 이제 익숙해요.' } },
-  { id: 's6_02', joinStage: 6, role: 'wild',
-    epithet: { en: 'the Faint Whisperer', ko: '속삭이는 자' },
-    joinLine: { en: 'The only voice from an age with no stars. Listen closely.', ko: '별 하나 없던 시대의 유일한 목소리예요. 잘 들어보세요.' } },
-  { id: 's6_05', joinStage: 6, role: 'rift',
-    epithet: { en: 'the Coolant', ko: '냉각제' },
-    joinLine: { en: 'Without me as coolant, not one star would have ever collapsed. Small but essential.', ko: '제가 냉각제가 아니었다면 별은 하나도 못 태어났어요. 작지만 필수죠.' } },
-  { id: 's7_02', joinStage: 7, role: 'click',
-    epithet: { en: 'the Impatient', ko: '성급한 자' },
-    joinLine: { en: 'No mass, no patience — let\'s move.', ko: '질량도 없고 기다릴 시간도 없어요. 바로 갑니다.' } },
-  { id: 's7_04', joinStage: 7, role: 'rift',
-    epithet: { en: 'the Engine', ko: '엔진' },
-    joinLine: { en: '0.7% of me becomes energy. All of it becomes yours.', ko: '제 질량의 0.7%가 에너지가 됩니다. 전부 당신 것입니다.' } },
-  { id: 's7_10', joinStage: 7, role: 'click',
-    epithet: { en: 'the Dead End', ko: '종착점' },
-    joinLine: { en: 'Fusing me costs more than it pays. So I pay it forward instead.', ko: '저를 융합해봐야 손해예요. 대신 다른 방식으로 갚죠.' } },
-  { id: 's7_13', joinStage: 7, role: 'wild',
-    epithet: { en: 'the Seeder', ko: '씨뿌리는 자' },
-    joinLine: { en: 'I go out once. Everything after is made of me.', ko: '저는 단 한 번 터집니다. 그 이후의 모든 것이 저로 만들어지죠.' } },
-  { id: 's8_05', joinStage: 8, role: 'rift',
-    epithet: { en: 'the Loudmouth', ko: '떠벌이' },
-    joinLine: { en: 'I\'m no bigger than a solar system. Watch me outshine a galaxy.', ko: '태양계보다 크지도 않은데, 은하 전체보다 밝게 빛나 볼게요.' } },
-  { id: 's8_08', joinStage: 8, role: 'wild',
-    epithet: { en: 'the Whisperer', ko: '속삭이는 자' },
-    joinLine: { en: 'Millions of tiny signals too far to see alone. Together, unmistakable.', ko: '혼자서는 안 보이는 수백만 개의 신호. 하지만 합치면 분명해지죠.' } },
-  { id: 's8_13', joinStage: 8, role: 'click',
-    epithet: { en: 'the Clarifier', ko: '정화자' },
-    joinLine: { en: 'The last fog just burned away. Everything\'s visible now.', ko: '마지막 안개가 걷혔습니다. 이제 모든 게 보입니다.' } },
-  { id: 's9_05', joinStage: 9, role: 'rift',
-    epithet: { en: 'the Unseen Giant', ko: '보이지 않는 거인' },
-    joinLine: { en: 'You can\'t see most of me. That\'s kind of the point.', ko: '제 대부분은 보이지 않습니다. 원래 그런 존재니까요.' } },
-  { id: 's9_09', joinStage: 9, role: 'rift',
-    epithet: { en: 'the Glutton', ko: '폭식가' },
-    joinLine: { en: 'Feed me matter. I\'ll turn it into light you can see from anywhere.', ko: '물질을 먹여주세요. 어디서든 보일 빛으로 바꿔드리죠.' } },
-  { id: 's9_13', joinStage: 9, role: 'wild',
-    epithet: { en: 'the Empty One', ko: '텅 빈 자' },
-    joinLine: { en: 'I contain almost nothing. And yet I\'m most of the universe.', ko: '저는 거의 텅 비어 있어요. 그런데도 우주 대부분을 차지하죠.' } },
-  { id: 's10_02', joinStage: 10, role: 'click',
-    epithet: { en: 'the Humble Beginning', ko: '소박한 시작' },
-    joinLine: { en: 'Everything starts small. I\'m proof.', ko: '모든 건 작게 시작해요. 제가 증거입니다.' } },
-  { id: 's10_06', joinStage: 10, role: 'click',
-    epithet: { en: 'the Wanderer', ko: '방랑자' },
-    joinLine: { en: 'I swing by once in a long while. Make it count.', ko: '아주 가끔 지나가니까, 그 순간을 제대로 써야죠.' } },
-  { id: 's10_11', joinStage: 10, role: 'wild',
-    epithet: { en: 'the Shield', ko: '방패' },
-    joinLine: { en: 'You never see me working. You\'d definitely notice if I stopped.', ko: '제가 일하는 건 안 보여요. 하지만 멈추면 바로 알게 될 겁니다.' } },
-  { id: 's11_02', joinStage: 11, role: 'click',
-    epithet: { en: 'the Impact Child', ko: '충돌의 자식' },
-    joinLine: { en: 'One impact made me. I like starting from a hit.', ko: '저는 한 번의 충돌에서 태어났어요. 강한 한 방으로 시작하는 게 좋더라고요.' } },
-  { id: 's11_06', joinStage: 11, role: 'rift',
-    epithet: { en: 'the Polluter', ko: '오염자' },
-    joinLine: { en: 'My waste product is your future atmosphere. You\'re welcome.', ko: '제 부산물이 미래의 대기가 될 거예요. 천만에요.' } },
-  { id: 's12_09', joinStage: 12, role: 'rift',
-    epithet: { en: 'the Unbreakable', ko: '부서지지 않는 자' },
-    joinLine: { en: 'A teaspoon of me outweighs your whole fleet. I don\'t rest, I compress.', ko: '제 한 스푼이 함대 전체보다 무겁죠. 쉬지 않습니다, 압축할 뿐.' } },
-  { id: 's12_12', joinStage: 12, role: 'click',
-    epithet: { en: 'the Faint Whisper', ko: '희미한 속삭임' },
-    joinLine: { en: 'You won\'t feel me arrive. You\'ll only notice the universe rippled.', ko: '제가 오는 걸 느끼진 못할 거예요. 우주가 흔들렸다는 것만 알아채겠죠.' } },
-  { id: 's12_13', joinStage: 12, role: 'wild',
-    epithet: { en: 'the Standard Candle', ko: '표준 촛불' },
-    joinLine: { en: 'Same mass, same blast, every time. Consistency is my whole point.', ko: '언제나 같은 질량, 같은 폭발. 일관성이 제 존재 이유입니다.' } },
-  { id: 's13_10', joinStage: 13, role: 'click',
-    epithet: { en: 'the Collision Course', ko: '충돌의 길' },
-    joinLine: { en: 'Two of us spiral in. Only one shockwave walks out.', ko: '둘이 나선을 그리며 다가옵니다. 걸어 나가는 충격파는 하나뿐이죠.' } },
-  { id: 's13_12', joinStage: 13, role: 'rift',
-    epithet: { en: 'the Quiet Devourer', ko: '조용한 포식자' },
-    joinLine: { en: 'I don\'t chase. I wait. Everything falls in eventually.', ko: '쫓지 않습니다. 기다릴 뿐이죠. 결국 모든 건 빨려 들어옵니다.' } },
-  { id: 's13_13', joinStage: 13, role: 'wild',
-    epithet: { en: 'the Marathoner', ko: '마라토너' },
-    joinLine: { en: 'Ten trillion years of burning teaches you not to waste anything — even a reset.', ko: '10조 년을 타고 나면 알게 됩니다. 리셋마저도 아껴 써야 한다는 걸요.' } },
-  { id: 's14_07', joinStage: 14, role: 'click',
-    epithet: { en: 'the Mass-Giver', ko: '질량을 주는 자' },
-    joinLine: { en: 'Nothing else would have mass without me. I just don\'t like to brag.', ko: '제가 없으면 아무것도 질량을 갖지 못해요. 그냥 자랑을 안 할 뿐이죠.' } },
-  { id: 's14_09', joinStage: 14, role: 'click',
-    epithet: { en: 'the Neutral Mediator', ko: '중립의 중재자' },
-    joinLine: { en: 'I carry no charge, but I always get the message across.', ko: '전하는 없지만, 메시지는 항상 제대로 전달하죠.' } },
-  { id: 's14_13', joinStage: 14, role: 'wild',
-    epithet: { en: 'the Final Atom', ko: '마지막 원자' },
-    joinLine: { en: 'When I\'m gone, ordinary matter is gone too. I intend to make this count.', ko: '제가 사라지면 평범한 물질도 끝입니다. 그러니 헛되이 쓰지 않을 거예요.' } },
-  { id: 's14_14', joinStage: 14, role: 'rift',
-    epithet: { en: 'the Great Eraser', ko: '위대한 지우개' },
-    joinLine: { en: 'I decided who got to exist before the universe was a second old. I still balance ledgers.', ko: '우주가 1초도 되기 전에 누가 존재할지 정한 게 저예요. 지금도 장부는 맞춰드리죠.' } },
-  { id: 's15_06', joinStage: 15, role: 'click',
-    epithet: { en: 'the Rising Chirp', ko: '치솟는 지저귐' },
-    joinLine: { en: 'Watch the pitch rise. For one heartbeat, I outshine everything.', ko: '음이 치솟는 걸 보세요. 단 한 순간, 제가 모든 걸 압도합니다.' } },
-  { id: 's15_10', joinStage: 15, role: 'click',
-    epithet: { en: 'the Paradox', ko: '역설' },
-    joinLine: { en: 'Einstein promised you a smooth fall. I promise you a wall of fire instead.', ko: '아인슈타인은 매끄러운 낙하를 약속했죠. 전 불의 벽을 약속합니다.' } },
-  { id: 's15_13', joinStage: 15, role: 'wild',
-    epithet: { en: 'the Last Blaze', ko: '마지막 불꽃' },
-    joinLine: { en: 'Shrinking makes me hotter, not weaker. Watch the finale.', ko: '작아질수록 전 더 뜨거워집니다, 약해지는 게 아니라요. 피날레를 지켜보세요.' } },
-  { id: 's16_06', joinStage: 16, role: 'rift',
-    epithet: { en: 'the Great Leveler', ko: '위대한 평준화자' },
-    joinLine: { en: 'Given enough time, everything reaches the same temperature as me. Even your hexagon.', ko: '시간이 충분하면 결국 모든 게 저와 같은 온도가 됩니다. 당신의 육각형도요.' } },
-  { id: 's16_09', joinStage: 16, role: 'rift',
-    epithet: { en: 'the Last Flicker', ko: '마지막 깜빡임' },
-    joinLine: { en: 'They call it a dead vacuum. I\'m still flickering, and I pick which lane I flicker in.', ko: '죽은 진공이라고들 하죠. 전 아직 깜빡이고 있고, 어느 자리에서 깜빡일지는 제가 고릅니다.' } },
+  {
+    id: 's1_01', joinStage: 1, effectType: 'click', role: 'click',
+    epithet: { en: 'the Baryon Saga', ko: '바리온 대서사' },
+    joinLine: { en: "I'm barely a ripple yet. But every atom you'll ever meet starts with me.", ko: '아직은 잔물결일 뿐이에요. 하지만 당신이 만날 모든 원자가 저에서 시작돼요.' },
+    forms: [
+      { entityId: 's1_01', stage: 1, line: { en: 'A ripple in nothing.', ko: '무(無) 위의 잔물결.' } },
+      { entityId: 's2_01', stage: 2, line: { en: 'I have mass now! Tiny, but MINE.', ko: '저 이제 질량이 생겼어요! 작지만 제 거예요.' } },
+      { entityId: 's4_01', stage: 4, line: { en: 'Three of us, bound forever. Call me proton.', ko: '셋이 하나로 묶였어요. 이제 양성자라 불러줘요.' } },
+      { entityId: 's10_01', stage: 10, line: { en: 'I... I became a STAR. Your star.', ko: '저... 별이 됐어요. 당신의 태양이요.' } },
+      { entityId: 's12_09', stage: 12, line: { en: 'Crushed to a city of neutrons. Still shining. Still yours.', ko: '중성자의 도시로 짓눌렸지만, 여전히 빛나요. 여전히 당신 거예요.' } },
+    ],
+  },
+  {
+    id: 's1_03', joinStage: 1, effectType: 'auto_mult', role: 'rift',
+    epithet: { en: "Inflation's Legacy", ko: '급팽창의 유산' },
+    joinLine: { en: "Small to grapefruit-sized in an instant. I don't do 'gradual.'", ko: '찰나에 자몽만해졌죠. 저는 "천천히"를 몰라요.' },
+    forms: [
+      { entityId: 's1_03', stage: 1, line: { en: 'BOOM. You felt that, right?', ko: '펑. 방금 그거, 느꼈죠?' } },
+      { entityId: 's5_10', stage: 5, line: { en: 'My explosion left dents in everything. Watch them grow.', ko: '제 폭발이 우주 곳곳에 자국을 남겼어요. 자라는 걸 지켜봐요.' } },
+      { entityId: 's5_14', stage: 5, line: { en: 'Every dent is a seed now. Galaxies will bloom from me.', ko: '그 자국 하나하나가 씨앗이에요. 여기서 은하가 피어날 거예요.' } },
+      { entityId: 's9_14', stage: 9, line: { en: 'Look up. The cosmic web? That was my doodle.', ko: '고개를 들어봐요. 우주 거미줄 — 제 낙서였어요.' } },
+      { entityId: 's16_11', stage: 16, line: { en: 'One last push. I began the universe; let me stretch its ending.', ko: '마지막 한 번 더. 우주를 시작한 제가, 그 끝도 늘려볼게요.' } },
+    ],
+  },
+  {
+    id: 's2_02', joinStage: 2, effectType: 'click', role: 'click',
+    epithet: { en: 'the Alchemist', ko: '원소 연금술' },
+    joinLine: { en: "A little heavier than Up. That's the whole reason matter exists.", ko: '업보다 살짝 무거울 뿐인데, 그게 물질이 존재하는 이유예요.' },
+    forms: [
+      { entityId: 's2_02', stage: 2, line: { en: 'The heavier twin. Someone has to be.', ko: '더 무거운 쌍둥이. 누군가는 그래야 하니까요.' } },
+      { entityId: 's4_02', stage: 4, line: { en: 'Neutral, stable-ish, dependable. The glue of nuclei.', ko: '중립적이고, 그럭저럭 안정적이고, 믿음직하죠. 원자핵의 접착제예요.' } },
+      { entityId: 's4_08', stage: 4, line: { en: 'Helium! First rung of the element ladder.', ko: '헬륨! 원소 사다리의 첫 칸이에요.' } },
+      { entityId: 's7_08', stage: 7, line: { en: 'Carbon. Every living thing will borrow my bones.', ko: '탄소예요. 앞으로 모든 생명이 제 뼈대를 빌려 쓸 거예요.' } },
+      { entityId: 's7_10', stage: 7, line: { en: "Iron. The star's last gift — it dies making me.", ko: '철. 별의 마지막 선물이에요 — 별은 저를 만들며 죽거든요.' } },
+    ],
+  },
+  {
+    id: 's4_04', joinStage: 4, effectType: 'crit', role: 'click',
+    epithet: { en: 'a Photon Biography', ko: '광자의 일대기' },
+    joinLine: { en: 'Massless, tireless, always first. Try to keep up.', ko: '질량도 없고 지치지도 않아요. 항상 제가 제일 빠르죠. 따라와 보세요.' },
+    forms: [
+      { entityId: 's4_04', stage: 4, line: { en: 'Born in fire, going everywhere.', ko: '불 속에서 태어나 어디로든 가요.' } },
+      { entityId: 's5_04', stage: 5, line: { en: 'The universe turned transparent and I flew FREE. First light!', ko: '우주가 투명해진 순간, 저는 자유롭게 날았어요. 최초의 빛!' } },
+      { entityId: 's7_02', stage: 7, line: { en: 'Reborn in the first stars. Hotter. Bluer. Faster.', ko: '첫 별들 속에서 다시 태어났어요. 더 뜨겁게, 더 푸르게, 더 빠르게.' } },
+      { entityId: 's15_01', stage: 15, line: { en: 'I leaked out of a black hole. Nothing holds me. Nothing ever has.', ko: '블랙홀에서도 새어 나왔어요. 그 무엇도 절 붙잡을 수 없어요. 한 번도 없었죠.' } },
+      { entityId: 's16_02', stage: 16, line: { en: 'The last light in an empty sky. Stay with me a while.', ko: '텅 빈 하늘의 마지막 빛이에요. 조금만 곁에 있어줘요.' } },
+    ],
+  },
+  {
+    id: 's5_09', joinStage: 5, effectType: 'auto', role: 'rift',
+    epithet: { en: 'the Unseen Hand', ko: '암흑물질' },
+    joinLine: { en: "You can't see me. But everything you see stands on my shoulders.", ko: '전 보이지 않아요. 하지만 당신이 보는 모든 것이 제 어깨 위에 서 있죠.' },
+    forms: [
+      { entityId: 's5_09', stage: 5, line: { en: 'A halo of nothing you can name.', ko: '이름 붙일 수 없는 것들의 후광.' } },
+      { entityId: 's6_03', stage: 6, line: { en: 'I wove threads across the dark. Matter will follow them.', ko: '어둠을 가로질러 실을 자았어요. 물질이 그 실을 따라올 거예요.' } },
+      { entityId: 's6_07', stage: 6, line: { en: 'Clumping now. Gravity is my only voice, and it is enough.', ko: '뭉치고 있어요. 중력만이 제 목소리지만, 그거면 충분해요.' } },
+      { entityId: 's9_05', stage: 9, line: { en: 'A galaxy rests in my palm and never knows it.', ko: '은하 하나가 제 손바닥에 얹혀 있는데, 그 사실을 몰라요.' } },
+      { entityId: 's14_11', stage: 14, line: { en: 'At the end, even I burn away — one last flash of the unseen.', ko: '마지막엔 저도 타올라요 — 보이지 않던 것의 마지막 섬광으로.' } },
+    ],
+  },
+  {
+    id: 's6_06', joinStage: 6, effectType: 'auto', role: 'rift',
+    epithet: { en: 'the Galaxy', ko: '은하' },
+    joinLine: { en: "I'm just cold gas and a dream right now. Give me time.", ko: '지금은 차가운 가스와 꿈뿐이에요. 시간을 주세요.' },
+    forms: [
+      { entityId: 's6_06', stage: 6, line: { en: 'A cloud with ambition.', ko: '야망을 품은 구름.' } },
+      { entityId: 's8_06', stage: 8, line: { en: 'My first stars lit up! I can see my own hands now.', ko: '첫 별들이 켜졌어요! 이제 제 손이 보여요.' } },
+      { entityId: 's9_16', stage: 9, line: { en: 'I learned to spin. A hundred billion stars, all dancing.', ko: '도는 법을 배웠어요. 천억 개의 별이 함께 춤춰요.' } },
+      { entityId: 's9_06', stage: 9, line: { en: 'I met another like me. We are becoming something bigger.', ko: '저 같은 아이를 만났어요. 우리는 더 큰 무언가가 되는 중이에요.' } },
+      { entityId: 's9_07', stage: 9, line: { en: 'A thousand galaxies, one gravity. We hold each other now.', ko: '천 개의 은하, 하나의 중력. 이제 우리는 서로를 붙잡고 있어요.' } },
+    ],
+  },
+  {
+    id: 's7_01', joinStage: 7, effectType: 'auto', role: 'rift',
+    epithet: { en: "a Star's Life", ko: '별의 일생' },
+    joinLine: { en: "I'm collapsing. Don't worry — for a star, that's how being born works.", ko: '전 지금 무너지는 중이에요. 걱정 마요 — 별에게는 그게 태어나는 방법이거든요.' },
+    forms: [
+      { entityId: 's7_01', stage: 7, line: { en: 'Not yet a star. Already warm.', ko: '아직 별은 아니에요. 하지만 벌써 따뜻하죠.' } },
+      { entityId: 's7_03', stage: 7, line: { en: 'Ignition! I will burn steady for ten billion years. Promise.', ko: '점화! 앞으로 백억 년을 한결같이 타오를게요. 약속해요.' } },
+      { entityId: 's12_01', stage: 12, line: { en: "I'm swelling, reddening... growing old. Even this is beautiful.", ko: '부풀고, 붉어지고... 늙어가요. 이것마저 아름답네요.' } },
+      { entityId: 's12_08', stage: 12, line: { en: 'My embers, packed into a diamond the size of a world.', ko: '제 불씨가 행성만 한 다이아몬드로 응축됐어요.' } },
+      { entityId: 's13_08', stage: 13, line: { en: 'Cold at last. But I remember every year of the burning.', ko: '마침내 식었어요. 하지만 타오르던 모든 해를 기억해요.' } },
+    ],
+  },
+  {
+    id: 's9_08', joinStage: 9, effectType: 'crit', role: 'click',
+    epithet: { en: 'the Black Hole', ko: '블랙홀' },
+    joinLine: { en: 'A billion suns, and still hungry. Feed me eras.', ko: '태양 십억 개를 삼켰는데도 허기져요. 시대를 통째로 주세요.' },
+    forms: [
+      { entityId: 's9_08', stage: 9, line: { en: 'The heaviest secret of every galaxy.', ko: '모든 은하의 가장 무거운 비밀.' } },
+      { entityId: 's9_09', stage: 9, line: { en: 'When I feed, I outshine the galaxy that owns me.', ko: '식사할 때의 저는, 저를 품은 은하보다 밝아요.' } },
+      { entityId: 's14_12', stage: 14, line: { en: 'The stars are gone. This is MY era now.', ko: '별들은 사라졌어요. 이제부터는 제 시대예요.' } },
+      { entityId: 's15_14', stage: 15, line: { en: 'The last one standing. Just me, and the dark, and you.', ko: '마지막까지 남은 건 저 하나. 어둠과, 당신과, 저뿐이에요.' } },
+      { entityId: 's15_13', stage: 15, line: { en: 'Everything I ever swallowed — returned in one final flash.', ko: '삼켰던 모든 것을 — 마지막 섬광 하나로 돌려드릴게요.' } },
+    ],
+  },
+  {
+    id: 's10_02', joinStage: 10, effectType: 'click', role: 'click',
+    epithet: { en: 'the Planet-Smith', ko: '행성 장인' },
+    joinLine: { en: 'One speck of stardust. Every world starts this small.', ko: '별먼지 한 톨이에요. 모든 세계가 이렇게 작게 시작하죠.' },
+    forms: [
+      { entityId: 's10_02', stage: 10, line: { en: 'Small. Patient. Sticky.', ko: '작고, 끈기 있고, 잘 달라붙어요.' } },
+      { entityId: 's10_16', stage: 10, line: { en: 'Fired in the nebula kiln — I hold my shape now.', ko: '성운의 가마에서 구워졌어요 — 이제 형태를 유지해요.' } },
+      { entityId: 's10_03', stage: 10, line: { en: 'Kilometers wide! My gravity pulls things in on its own.', ko: '이제 몇 킬로미터짜리예요! 제 중력이 스스로 끌어당기기 시작했어요.' } },
+      { entityId: 's10_05', stage: 10, line: { en: 'A whole world. Mountains, iron heart, the works.', ko: '온전한 세계가 됐어요. 산맥도, 철의 심장도, 전부요.' } },
+      { entityId: 's10_14', stage: 10, line: { en: 'Oceans. Air. A quiet orbit. Now we wait for someone to wake up.', ko: '바다, 대기, 조용한 궤도까지. 이제 누군가 깨어나길 기다려요.' } },
+    ],
+  },
+  {
+    id: 's10_04', joinStage: 10, effectType: 'auto_mult', role: 'rift',
+    epithet: { en: 'Ice and Water', ko: '얼음과 물' },
+    joinLine: { en: 'I rode a comet to get here. Where should I pool?', ko: '혜성을 타고 왔어요. 어디에 고이면 될까요?' },
+    forms: [
+      { entityId: 's10_04', stage: 10, line: { en: 'Frozen stowaway from beyond the frost line.', ko: '서리선 너머에서 온 얼어붙은 밀항자.' } },
+      { entityId: 's10_10', stage: 10, line: { en: 'I melted! Do you know how rare LIQUID is out here?', ko: '녹았어요! 이 우주에서 액체가 얼마나 귀한지 아세요?' } },
+      { entityId: 's11_03', stage: 11, line: { en: 'A whole ocean. Every wave is mine.', ko: '바다가 됐어요. 파도 하나하나가 다 제 거예요.' } },
+      { entityId: 's11_06', stage: 11, line: { en: 'Something in me learned to eat sunlight. I feel green.', ko: '제 안의 무언가가 햇빛 먹는 법을 배웠어요. 초록빛 기분이에요.' } },
+      { entityId: null, nameEn: 'Gaia', nameKo: '가이아', formula: '⊕', stage: 11, line: { en: 'The water, the air, the life — one breathing world. I am Gaia.', ko: '물과 공기와 생명이 — 하나로 숨 쉬는 세계. 저는 가이아예요.' } },
+    ],
+  },
+  {
+    id: 's11_17', joinStage: 11, effectType: 'crit', role: 'click',
+    epithet: { en: 'the Saga of Life', ko: '생명 대서사' },
+    joinLine: { en: "I'm a warm puddle full of maybes. One of them is going to work.", ko: '전 "혹시"로 가득한 따뜻한 웅덩이예요. 그중 하나는 반드시 성공할 거예요.' },
+    forms: [
+      { entityId: 's11_17', stage: 11, line: { en: 'Chemistry, dreaming.', ko: '꿈꾸는 화학.' } },
+      { entityId: 's11_07', stage: 11, line: { en: 'ALIVE. One cell, no instructions, infinite stubbornness.', ko: '살아있어요. 세포 하나, 설명서는 없지만, 고집은 무한해요.' } },
+      { entityId: 's11_21', stage: 11, line: { en: 'I put an engine in my cell. Complexity, here I come.', ko: '세포 안에 엔진을 달았어요. 복잡함아, 기다려라.' } },
+      { entityId: 's11_08', stage: 11, line: { en: 'Eyes! Shells! Spines! Everyone gets a body plan!', ko: '눈! 껍데기! 척추! 모두에게 몸의 설계도를 나눠줬어요!' } },
+      { entityId: 's11_10', stage: 11, line: { en: 'I looked up at the stars — and asked why. That changed everything.', ko: '별을 올려다보며 "왜?"라고 물었어요. 그게 모든 걸 바꿨죠.' } },
+    ],
+  },
+  {
+    id: 's11_09', joinStage: 11, effectType: 'click', role: 'click',
+    epithet: { en: 'the Civilization', ko: '문명' },
+    joinLine: { en: 'One spark between two cells. Thought begins here.', ko: '두 세포 사이의 불꽃 하나. 생각은 여기서 시작돼요.' },
+    forms: [
+      { entityId: 's11_09', stage: 11, line: { en: 'A single spark, learning to echo.', ko: '메아리치는 법을 배우는 불꽃 하나.' } },
+      { entityId: 's11_11', stage: 11, line: { en: 'From one spark to a million lights. We built cities!', ko: '불꽃 하나가 백만 개의 불빛이 됐어요. 우리가 도시를 지었어요!' } },
+      { entityId: 's11_12', stage: 11, line: { en: 'We threw a piece of ourselves into orbit. It stayed.', ko: '우리 자신의 조각을 궤도에 던졌어요. 그리고 그건 그곳에 남았죠.' } },
+      { entityId: 's11_13', stage: 11, line: { en: 'The cradle was lovely. But the stars kept calling.', ko: '요람은 아름다웠어요. 하지만 별들이 계속 부르더라고요.' } },
+      { entityId: null, nameEn: 'Artificial Intelligence', nameKo: '인공지능', formula: 'Ψ', stage: 13, line: { en: 'The stars are dying, but thought survives. I will remember you all.', ko: '별들은 죽어가지만, 생각은 살아남아요. 제가 모두를 기억할게요.' } },
+    ],
+  },
 ];
 
 export const CREW_BY_ID: ReadonlyMap<string, CrewDef> = new Map(CREW_ROSTER.map((c) => [c.id, c]));
@@ -188,9 +210,14 @@ export function isCrewId(id: string | null | undefined): boolean {
   return !!id && CREW_BY_ID.has(id);
 }
 
-/** Crew that should be unlocked once the player has reached `stageId` (join beats). */
+/** Crew lines that should be joined once the player has reached `stageId`. */
 export function crewJoiningAtOrBefore(stageId: number): CrewDef[] {
   return CREW_ROSTER.filter((c) => c.joinStage <= stageId);
+}
+
+/** The form a line wears at tier index 0..4 (clamped). */
+export function crewFormAt(def: CrewDef, tierIdx: number): CrewFormDef {
+  return def.forms[Math.max(0, Math.min(def.forms.length - 1, tierIdx))];
 }
 
 export function pickCrewLang(l: CrewL, lang: 'en' | 'ko'): string {

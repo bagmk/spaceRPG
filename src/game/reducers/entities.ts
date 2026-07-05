@@ -3,7 +3,7 @@ import type { GameAction } from '../reducer';
 import { entityMatchesId, findEntityById, getEntitiesForStage, getOwnedEntityCount } from '../entities/stageItems';
 import { isEntityLockedByAnchor } from '../entities/anchors';
 import { addCard, addToAlmanac, addToInventory, pickDropStage } from '../entities/drops';
-import { isCrewId, CREW_BY_ID } from '../crew/roster';
+import { isCrewId, CREW_BY_ID, crewFormAt } from '../crew/roster';
 import { getCrewTierView } from '../crew/tierView';
 import { makeInstance, pickFreeCopyId, reservedInstanceIds } from '../entities/instances';
 import { getDerivedRiftSlotCount, getDerivedUnlockedSlotCount, getEquipCategory } from '../entities/effects';
@@ -105,9 +105,14 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
   if (!instanceId) return state; // nothing equippable
 
   // Vacuum-decay (crit-gear) flag — shared by the wild + normal equip paths.
+  // OVERHAUL5 v2: a crew line's lane is its roster effectType (the tier VIEW),
+  // not the T1 entity's static type — category/crit checks must read the view.
+  const equipView = state.crew[action.entityId] && isCrewId(action.entityId)
+    ? getCrewTierView(entity, state.crew[action.entityId].tier)
+    : entity;
   const isCritGear =
-    entity.effect.type === 'crit' ||
-    getSecondaryStats(entity).some((sub) => sub.type === 'critChance' || sub.type === 'critMult');
+    equipView.effect.type === 'crit' ||
+    getSecondaryStats(equipView).some((sub) => sub.type === 'critChance' || sub.type === 'critMult');
   const critFlags = isCritGear && !state.endingProgressFlags.criticalUpgradedThisUniverse
     ? { ...state.endingProgressFlags, criticalUpgradedThisUniverse: true, vacuumDecayEligible: false }
     : state.endingProgressFlags;
@@ -131,7 +136,7 @@ export function handleEquipEntity(state: GameState, action: EquipAction): GameSt
     return { ...state, wildSlot: instanceId, endingProgressFlags: critFlags, tutorialFlags: eqFlags };
   }
 
-  const category = getEquipCategory(entity);
+  const category = getEquipCategory(equipView);
   const slots = category === 'rift' ? state.riftSlots : state.equippedSlots;
   const slotCount = category === 'rift' ? state.unlockedRiftSlotCount : state.unlockedSlotCount;
 
@@ -616,8 +621,15 @@ export function handlePromoteCrew(state: GameState, action: PromoteCrewAction): 
   const def = CREW_BY_ID.get(action.crewId);
   if (!crewState || !def) return state;
   const fromTier = crewState.tier;
-  const nextTier = CREW_TIER_ORDER[CREW_TIER_ORDER.indexOf(fromTier) + 1];
-  if (!nextTier) return state; // mythic = cap
+  const nextTierIdx = CREW_TIER_ORDER.indexOf(fromTier) + 1;
+  const nextTier = CREW_TIER_ORDER[nextTierIdx];
+  if (!nextTier) return state; // final form = cap
+
+  // ERA LOCK (진화 개연성, user: 잠금 ON): the next FORM's home stage must have been
+  // reached — a proton can't become the Sun before the planet-forming era exists.
+  const nextForm = crewFormAt(def, nextTierIdx);
+  const currentStageIdForCrew = STAGES[Math.min(state.stageIdx, STAGES.length - 1)].id;
+  if (nextForm.stage > currentStageIdForCrew) return state;
 
   const cardCost = CREW_PROMOTE_CARD_COST[fromTier];
   const stoneCost = CREW_PROMOTE_STONE_COST[fromTier];
